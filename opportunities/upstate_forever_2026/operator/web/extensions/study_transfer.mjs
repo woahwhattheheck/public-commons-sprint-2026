@@ -1,3 +1,4 @@
+import {retainedStudyControl,openRetainedStudyRecord,studyReviewPreview} from '../study_report_navigation.mjs';
 import {receivedGaugePreview} from '../gauge_received_studies.mjs';
 import {receivedNativeEnsemblePreview} from '../ensemble_received_studies.mjs';
 import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studies.mjs';
@@ -79,7 +80,7 @@ export function attachStudyTransfer(host) {
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
-  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0;
+  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0;
   let pendingSubmission=null;
   let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
     typeof host.openExtension==='function'?
@@ -239,7 +240,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+retainedStudyControl(host,row)+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
@@ -279,7 +280,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Contents</th>'+
       '<th scope="col">Files</th><th scope="col">Uncompressed size</th></tr></thead><tbody>'+groups+'</tbody></table></div>';
     if(plan.scientific_report_editions?.length)html+='<section class="st-details"><h4>Original report order</h4>'+
-      plan.scientific_report_editions.map(edition=>'<div><strong>'+escapeHTML(edition.title)+'</strong>'+
+      plan.scientific_report_editions.map(edition=>'<div><strong>'+escapeHTML(edition.title)+'</strong>'+retainedStudyControl(host,{kind:'scientific-report-editions',id:edition.id})+
         '<ol>'+edition.sources.map(source=>'<li>'+escapeHTML(source.title||source.source_id)+
           '<small class="st-identity">'+escapeHTML(source.source_id)+' · '+escapeHTML(source.body_sha256)+'</small></li>').join('')+
         '</ol></div>').join('')+'</section>';
@@ -300,11 +301,12 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
       plan.related_result_issues.map(row=>'<li>'+escapeHTML(row.path)+': '+escapeHTML(row.message)+'</li>').join('')+'</ul></details>';
+    html+=studyReviewPreview(host,plan.customer_reviews);
     html+=receivedFieldworkPreview(plan.implementation_report_sources);
     html+=receivedGaugePreview(plan.scientific_report_sources);
     html+=receivedNativeEnsemblePreview(plan.scientific_report_sources);
@@ -483,7 +485,19 @@ export function attachStudyTransfer(host) {
     event.preventDefault();event.stopPropagation();
     const action=target.dataset.studyAction;
     try{
-      if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
+      if(action==='open-retained-report-review'){
+        const kind=target.dataset.recordKind,id=target.dataset.recordId;
+        const available=[...visiblePage().items,...(plan?.nodes||[]),
+          ...(plan?.scientific_report_editions||[]).map(row=>({...row,kind:'scientific-report-editions'})),
+          ...(plan?.customer_reviews||[]).map(row=>({...row,kind:'reviews'}))]
+          .find(row=>row.kind===kind&&row.id===id&&row.state!=='unreadable');
+        if(!available)throw Error('Refresh the original saved report or review before opening it.');
+        const captured=stamp(),serial=++retainedRecordRequest;
+        await openRetainedStudyRecord(host,{kind,id,tab:target.dataset.recordTab},{
+          workspace_key:captured.workspace,current:()=>current(captured)&&serial===retainedRecordRequest,
+        });
+      }
+      else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-report-comparison'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);

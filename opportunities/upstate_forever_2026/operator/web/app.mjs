@@ -94,8 +94,31 @@ async function openScientificReport(selection){
  navigate('sources');
  return sourceReports.openForSources(selection,$('#content'));
 }
+async function openRetainedBuiltIn(selection,target,open){
+ if(selection?.workspace_key!==workspace||!/^[0-9a-f]{64}$/.test(selection?.id||''))
+  throw Error('Open the saved report or review in its original Workspace.');
+ const request={workspace,workspaceRevision,connectionEpoch};
+ const admitted=()=>capability&&workspace===request.workspace&&workspaceRevision===request.workspaceRevision&&connectionEpoch===request.connectionEpoch;
+ if(!admitted())return null;
+ detailDialog.close();detailContext=null;
+ const navigation=navigate(target),targetNavigation=navigationRevision;
+ await navigation;
+ if(!admitted()||view!==target||navigationRevision!==targetNavigation)return null;
+ const container=$('#content'),anchor=container?.firstChild;
+ const isCurrent=()=>admitted()&&view===target&&navigationRevision===targetNavigation&&
+  container?.isConnected&&$('#content')===container&&container.firstChild===anchor;
+ if(!isCurrent())return null;
+ try{return await open({...selection,isCurrent},container);}
+ catch(error){if(!isCurrent())return null;toast(error.message||String(error));throw error;}
+}
+async function openSavedScientificReport(selection){
+ return openRetainedBuiltIn(selection,'sources',(value,container)=>sourceReports.openForStudy(value,container));
+}
+async function openSavedCustomerReview(selection){
+ return openRetainedBuiltIn(selection,'customer-reviews',value=>customerReviews.openForStudy(value));
+}
 const community=attachCommunity({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState:refresh,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
-const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,closeForm:()=>{formDialog.close();formContext=null;},openStudyTransfer:async selection=>{await extensions.openExtension('study-transfer','openForStudies',selection);if(workspace===selection.workspace_key){detailDialog.close();detailContext=null;}}});
+const customerReviews=attachCustomerReviews({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,uploadFile,showTask,toast,openSavedScientificReport,closeForm:()=>{formDialog.close();formContext=null;},openStudyTransfer:async selection=>{await extensions.openExtension('study-transfer','openForStudies',selection);if(workspace===selection.workspace_key){detailDialog.close();detailContext=null;}}});
 const receivingWaters=attachReceivingWaters({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,navigate,openDelivery:selection=>deliveryForm(undefined,selection),openScientificReport});
 const deliveryInspection=attachDeliveryInspection({getState:()=>state,api,endpoint,openItem,toast,
  openExtension:(...args)=>extensions.openExtension(...args),
@@ -108,7 +131,7 @@ const journeyForm=async open=>{await open();return {operation_id:formContext?.op
 const extensions=createExtensionHost({
  openParameterStudy:selection=>parameterStudies.openSavedStudy(selection),
  openNativeProgramme:options=>experiments.openForInvestigation(options),
- openScientificReport,
+ openScientificReport,openSavedScientificReport,openSavedCustomerReview,
 getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
  navigationRoot:'.sidebar',refreshState:refresh,openItem,showTask,showRunLog,navigate,
  openForm,submitAction,detail,fileList,uploadFile,sourceForm,
