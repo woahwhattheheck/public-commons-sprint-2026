@@ -16,8 +16,8 @@ POLLUTANTS = tuple(core.POLLUTANTS)
 LABELS = {"nitrogen_export": "Nitrogen", "phosphorus_export": "Phosphorus",
           "sediment_export": "Sediment"}
 PHASES = {"selections": "Binding original source areas", "analysis": "Planning priorities",
-          "native_decisions": "Native physical comparisons",
-          "utility_comparisons": "Joining utility comparisons", "complete": "Complete"}
+          "native_decisions": "Native physical outcomes",
+          "utility_comparisons": "Joining utility outcomes", "complete": "Complete"}
 
 
 def _signature(path):
@@ -53,6 +53,8 @@ def _compact(value):
         "id", "title", "state", "phase", "created_at", "updated_at", "completed_at",
         "failed_at", "baseline_run_id", "run_ids", "grid_id", "row_count", "error")}
     result.update(schema="upstate.utility-cohort-operator-summary/v1",
+                  report_kind=value.get("report_kind") or (
+                      "reference_totals" if len(value.get("run_ids", [])) == 1 else "scenario_comparison"),
                   products=products, weight_grid=value.get("weight_grid", {}),
                   comparison_pollutants=value.get("comparison_pollutants", list(POLLUTANTS)),
                   source={name: value.get("source", {}).get(name) for name in (
@@ -67,7 +69,7 @@ def _compact(value):
             "phase": result.get("phase"), "label": PHASES.get(result.get("phase"), "Preparing"),
             "completed": value.get("row_count") if value.get("state") == "complete" else None,
             "total": value.get("row_count") if value.get("state") == "complete" else None,
-            "unit": "comparison rows" if value.get("state") == "complete" else None,
+            "unit": "outcome rows" if value.get("state") == "complete" else None,
             "percent": 100.0 if value.get("state") == "complete" else None,
             "updated_at": value.get("updated_at"), "detail": progress,
         }
@@ -261,7 +263,7 @@ def read(operator, workspace_key, operation, payload, fault):
             # The HTTP bridge passes workspace in the JSON body. Only selection enters the model.
             requested = payload.get("selection")
             if not isinstance(requested, dict):
-                raise ValueError("Select the source edition, baseline and alternatives first")
+                raise ValueError("Select the source edition and completed native reference first")
             gate = operator.gates[workspace_key]
             if not gate.acquire(blocking=False):
                 raise fault("UTILITY_WORKSPACE_BUSY", "The current operation is updating this workspace. Inspect source areas after it finishes.", 409)
@@ -271,7 +273,7 @@ def read(operator, workspace_key, operation, payload, fault):
                 gate.release()
             return {"schema": "upstate.utility-cohort-preview/v1", "workspace_key": workspace_key,
                     **{name: plan[name] for name in (
-                        "title", "run_ids", "baseline_run_id", "grid_id", "source",
+                        "title", "report_kind", "run_ids", "baseline_run_id", "grid_id", "source",
                         "zone_bindings", "weight_grid", "notes")},
                     "comparison_pollutants": plan.get("comparison_pollutants", list(POLLUTANTS)),
                     "analysis_selection": plan["analysis_selection"],
@@ -306,8 +308,8 @@ def read(operator, workspace_key, operation, payload, fault):
             rows = [row for row in value.get("rows", []) if all(
                 not selected or row.get(name) == selected for name, selected in filters.items())]
             view = payload.get("view", "physical")
-            if view not in ("physical", "priority"):
-                raise ValueError("Choose the physical or priority table")
+            if view not in ("physical", "priority", "coverage"):
+                raise ValueError("Choose the physical, priority or native coverage table")
             if view == "priority":
                 unique = {}
                 for row in rows:
@@ -351,7 +353,7 @@ def invoke(operator, workspace_key, action, payload, fault):
         unit = "source areas" if total is not None else None
         if phase == "complete":
             completed = total = value.get("row_count", 0)
-            unit = "comparison rows"
+            unit = "outcome rows"
         label = PHASES.get(phase, phase or "Preparing")
         if pollutant:
             label += " / " + str(pollutant).replace("_", " ").capitalize()

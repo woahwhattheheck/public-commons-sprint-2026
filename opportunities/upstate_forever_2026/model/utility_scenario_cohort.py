@@ -94,9 +94,11 @@ def prepare(workspace, requested):
                  "scenario_run_ids", "planning", "weight_grid"}
     if set(requested) - permitted:
         raise ValueError("Unknown utility cohort fields: " + ", ".join(sorted(set(requested) - permitted)))
-    alternatives = requested.get("scenario_run_ids")
-    if not isinstance(alternatives, list) or not alternatives:
-        raise ValueError("Select at least one completed alternative native run")
+    alternatives = requested.get("scenario_run_ids", [])
+    if not isinstance(alternatives, list):
+        raise ValueError("scenario_run_ids must list completed alternative native runs")
+    requested["scenario_run_ids"] = alternatives
+    report_kind = "scenario_comparison" if alternatives else "reference_totals"
     ids = [requested["baseline_run_id"]] + alternatives
     if any(not isinstance(key, str) or not key for key in ids) or len(set(ids)) != len(ids):
         raise ValueError("Use distinct complete baseline and alternative run IDs")
@@ -199,10 +201,16 @@ def prepare(workspace, requested):
             "original_area_ha": geometry.area / 10000.0,
             "reporting_intersection_area_ha": intersected.area / 10000.0,
             "scope": "reporting_intersection", "additional_buffer_m": 0})
+    if not any(item["reporting_intersection_area_ha"] > 0 for item in bindings):
+        raise ValueError(
+            "The selected native reporting area does not overlap any of the original "
+            "ARJWS or Pioneer protection polygons. Select the retained Upper Savannah "
+            "or South Carolina study and a completed native run covering these source areas.")
     from .scenario_decisions import selection as decision_selection
     decision_selection(decisions)
     return {
         "schema": SCHEMA, "title": title, "requested": requested, "run_ids": ids,
+        "report_kind": report_kind,
         "baseline_run_id": ids[0], "grid_id": grid["id"],
         "comparison_pollutants": list(comparison_pollutants),
         "source": {"source_collection_id": collection["id"], "source_id": source["id"],
@@ -214,8 +222,12 @@ def prepare(workspace, requested):
         "notes": [
             "Original layer-2 upstream source-water protection polygons retain the publisher's BUFFER_FT attributes.",
             "Published 200-foot and 1,500-foot selections form separate rank groups; no additional geometry buffer is applied.",
-            "Each zone is intersected with the same retained reporting area. Overlapping zone masses remain separate.",
-            "Both producers use the same ordered baseline and alternative cohort. Native physical quantities retain their pollutant units.",
+            "Each zone is intersected with the same retained reporting area. At least one original protection area overlaps the study; individually outside areas retain their source identity and empty results.",
+            "Overlapping protection-area masses remain separate.",
+            ("The single selected native run supplies source-area reference totals and planning priorities."
+             if report_kind == "reference_totals" else
+             "Both producers use the same ordered baseline and alternative cohort."),
+            "Native physical quantities retain their pollutant units; original stream and missing-data counts remain visible.",
             "Weight-grid points are declared planning alternatives; they do not assign probabilities to preferences.",
         ],
     }
@@ -277,7 +289,8 @@ def _joined_rows(plan, analysis, report):
                 native_name = POLLUTANTS[pollutant]
                 mass = physical[(region_id, run_id, pollutant)]
                 native = zone["pollutants"][native_name] if zone is not None else None
-                current = native["runs"][run_id]["common_mass"] if native else None
+                native_run = native["runs"][run_id] if native else {}
+                current = native_run.get("common_mass")
                 baseline = native["runs"][plan["baseline_run_id"]]["common_mass"] if native else None
                 coverage = native["coverage"] if native else {}
                 count = coverage.get("common_valid_cells", 0)
@@ -299,7 +312,18 @@ def _joined_rows(plan, analysis, report):
                 row.update({
                     "baseline_run_id": plan["baseline_run_id"], "run_id": run_id,
                     "comparison_kind": details[run_id]["comparison_kind"],
+                    "report_kind": plan.get("report_kind", "scenario_comparison"),
                     "pollutant": pollutant, "units": mass["units"],
+                    "common_yield_per_ha_year": native_run.get("common_yield_per_ha_year"),
+                    "native_all_valid_mass": native_run.get("all_valid_mass"),
+                    "native_valid_cells": native_run.get("valid_cells"),
+                    "native_valid_area_ha": native_run.get("valid_area_ha"),
+                    "native_structural_stream_cells": native_run.get("structural_stream_cells"),
+                    "native_unexpected_missing_cells": native_run.get("unexpected_missing_cells"),
+                    "native_unknown_stream_cells": native_run.get("unknown_stream_cells"),
+                    "native_complete_support": native_run.get("complete_native_support"),
+                    "selected_cells": coverage.get("selected_cells"),
+                    "common_native_support_fraction": coverage.get("common_native_support_fraction"),
                     "common_valid_cells": count,
                     "common_area_ha": coverage.get("common_valid_area_ha", 0),
                     "common_coverage_fraction": coverage.get("common_valid_fraction"),
@@ -345,7 +369,7 @@ def _response(directory, state, *, reused=False):
 
 
 def build(workspace, requested, *, progress=None):
-    """Execute both native producers and retain their joined utility comparison."""
+    """Retain native utility reference totals or a complete scenario comparison."""
     from . import scenario_analysis, scenario_decisions
     plan = prepare(workspace, requested)
     viewer = Path(scenario_decisions.__file__).resolve().parent.parent / "operator" / "web" / "scenario_decisions.html"
@@ -435,8 +459,8 @@ def main(argv=None):
                         help="Actual collection ID returned by prepare_public_water.py")
     parser.add_argument("--source-id", help="Original protection-area source ID when the collection has more than one")
     parser.add_argument("--baseline-run", required=True)
-    parser.add_argument("--scenario-run", action="append", required=True,
-                        help="Actual completed alternative; repeat to select the complete cohort")
+    parser.add_argument("--scenario-run", action="append", default=[],
+                        help="Optional actual completed alternative; repeat for the complete comparison cohort")
     parser.add_argument("--title", default="ARJWS and Pioneer native scenario priorities")
     parser.add_argument("--planning", type=Path,
                         help="JSON with weights, optional fixed caps or percentile, and weight_sets")
@@ -458,7 +482,7 @@ def main(argv=None):
                                                     file=sys.stderr, flush=True))
         if not args.full:
             result = {key: result[key] for key in (
-                "schema", "id", "title", "state", "baseline_run_id", "run_ids", "grid_id",
+                "schema", "id", "title", "state", "report_kind", "baseline_run_id", "run_ids", "grid_id",
                 "source", "zone_bindings", "comparison_pollutants", "weight_grid", "normalization", "row_count",
                 "files", "products", "cohort_artifact", "reused")}
         print(json.dumps(result, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False))
