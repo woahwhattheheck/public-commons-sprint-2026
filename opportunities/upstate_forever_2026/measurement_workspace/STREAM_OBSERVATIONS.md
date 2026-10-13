@@ -21,7 +21,7 @@ python measurement_workspace/published_studies.py --application "$APPLICATION" -
 python measurement_workspace/published_studies.py --application "$APPLICATION" --workspace "$WORKSPACE" export scdes-eighteenmile-streams-2020-2025 --destination "$WORKSPACE/stream-reports/eighteenmile-stream-study.zip"
 ```
 
-The selected report carries the exact original observation record selectors and source inventory. The complete-study ZIP preserves the original inputs and can be reimported with the same version identity. The optional installed lake-context flag belongs to the original lake study; this stream builtin uses its own complete inventory automatically.
+The selected report carries the exact original observation record selectors and source inventory. Its concentration-support CSV preserves the same fraction, analytical method, result type, basis and unit series dimensions used by the displayed calculations. The complete-study ZIP preserves the original inputs and can be reimported with the same version identity. Builtin intake includes the exact original study-files.json body alongside its declared members, matching direct directory intake. The optional installed lake-context flag belongs to the original lake study; this stream builtin uses its own complete inventory automatically.
 
 ## Source contract and actual counts
 

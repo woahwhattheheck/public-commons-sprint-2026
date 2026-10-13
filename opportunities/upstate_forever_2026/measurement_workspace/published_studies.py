@@ -638,7 +638,9 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             support = "Microcystin campaign context"
             basis += " All original campaign microcystin activities are shown with their actual activity type and calendar; printed report statistics retain their separate analytical cohort."
         if censored:
-            basis += " This quantified-only mean uses no substituted values; the published mean retains the report's separate censor treatment."
+            basis += " This quantified-only mean uses no substituted values."
+            if published:
+                basis += " The published mean retains the report's separate censor treatment."
         if parameter == "microcystins" and (missing_reference_dates or additional_dates):
             basis += " The original microcystin calendar differs from the chlorophyll visit calendar; the exact missing and additional dates are retained."
         if len(identifiers) != len(set(identifiers)):
@@ -1252,19 +1254,25 @@ class PublishedStudyStore:
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
         support_output = io.StringIO(newline="")
-        support_columns = (
+        series_columns = (
             "site_id", "parameter", "project_id", "activity_type", "sample_support",
+            "series_key", "sample_fraction", "method_authority", "method_id",
+            "result_value_type", "result_weight_basis", "result_time_basis",
+            "result_temperature_basis", "result_particle_size_basis", "support_unit",
+        )
+        interval_columns = (
             "record_count", "distinct_activity_count", "quantified_count", "below_limit_count",
             "unresolved_count", "unit", "mean_lower", "mean_upper",
             "mean_upper_inclusive", "complete_interval_support", "basis",
         )
+        support_columns = series_columns + interval_columns
         support_writer = csv.DictWriter(support_output, fieldnames=support_columns, lineterminator="\n")
         support_writer.writeheader()
         for series in context["observations"]["series"]:
             support = series.get("observation_support", {})
             support_writer.writerow({
-                **{name: series.get(name, "") for name in support_columns[:5]},
-                **{name: support.get(name, "") for name in support_columns[5:]},
+                **{name: series.get(name, "") for name in series_columns},
+                **{name: support.get(name, "") for name in interval_columns},
             })
         _atomic(destination / "observation-support-selected.csv", support_output.getvalue().encode("utf-8"))
         written.append("observation-support-selected.csv")

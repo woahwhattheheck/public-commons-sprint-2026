@@ -43,23 +43,23 @@
     },
     {
       "path": "measurement_workspace/observation_support.py",
-      "bytes": 14103,
-      "sha256": "d03bd81ea2cb8d3ae91a1df26404ce4c8ea98306c9fa1d93ff3bf8d84627dfad"
+      "bytes": 14477,
+      "sha256": "3cde49622b18951f37500c44b8d24d7a4b04c5abbc94c695e64d0778d288607a"
     },
     {
       "path": "measurement_workspace/published_studies.py",
-      "bytes": 93160,
-      "sha256": "2417eeb5628190ebe1f9f2159ad78bd1ca52b6c8742d1d9ebc85ee3c1ef5cce5"
+      "bytes": 93545,
+      "sha256": "b069f0fee542abf759efa19d4fba34b035f2a06dc1d8eb8565cda1706f6a18a8"
     },
     {
       "path": "measurement_workspace/source_observations.py",
-      "bytes": 6873,
-      "sha256": "4e8b92eb84526c71b1fbb7106d0386801747c85d7705f2c6879eb264f6072a84"
+      "bytes": 7273,
+      "sha256": "b2810da4265a25c3ffbbba9a8d900d9f6d3a63c28abc394e0563c811ab8fe0de"
     },
     {
       "path": "measurement_workspace/STREAM_OBSERVATIONS.md",
-      "bytes": 6282,
-      "sha256": "fc3fbea819cb5a7eb31177ad127303908f2a4559b836dde893d82bd801dc55e0"
+      "bytes": 6573,
+      "sha256": "e0c7234db9994bb53fc24a2022ffe5d6ca0154193959489b3fafe98b3382917f"
     },
     {
       "path": "observations/eighteenmile_2023/cohort_reconciliation_20261013/cohort_reconciliation.json",
@@ -468,13 +468,13 @@
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/basin-membership.json",
-      "bytes": 3904,
-      "sha256": "cc5245c593d176ccd5c2811490b6ba9325f20bac0ce0fa8a32f4a4d6713cbac5"
+      "bytes": 4144,
+      "sha256": "e7679daa7b828259f5e90a273b7bf59fcd73585106121d35ee84daef1159791d"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/model-sources.json",
-      "bytes": 3925,
-      "sha256": "5fbf4e8615eeb3ba73cd2015aad47864e6bc47b71e14d618537955a16fd9d6f7"
+      "bytes": 3985,
+      "sha256": "5f69784bfbb793c6455fafc4576c5f81bb6f985311f40401caf8c8291a614d4b"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/observation-sources.json",
@@ -539,7 +539,7 @@
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/study-files.json",
       "bytes": 2444,
-      "sha256": "ba2aeae2c59cbdc07659aa87a3ba613220e6d3e387e7edbf82984217fbe99f6b"
+      "sha256": "5b987193fbbfffcc80d315fe1511769f77574115c7e4a32f54e0594006fe0b00"
     },
     {
       "path": "observations/eighteenmile_stream_nutrients_2020_2025/study.json",
@@ -553,8 +553,8 @@
     },
     {
       "path": "operator/published_study_operator.py",
-      "bytes": 20059,
-      "sha256": "f15e7b300ff7d144f6924424fc419f5634c15de8f693a7f56914dcab4c35c44d"
+      "bytes": 20100,
+      "sha256": "358afed82421cad35dcda6d2c1832f2566108e5d970128803d8acce150e66b5e"
     },
     {
       "path": "operator/web/published_studies.css",
@@ -563,8 +563,8 @@
     },
     {
       "path": "operator/web/published_studies.mjs",
-      "bytes": 43463,
-      "sha256": "44e6e5e86719bee92207b24fdc232e05bbaa91330f628675ada5e79461a34701"
+      "bytes": 43652,
+      "sha256": "28efe1b4ad7f91dae20618842bcf99827c1b8a8ee3c96fa52bd8781a1215e5f4"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
@@ -578,8 +578,8 @@
     },
     {
       "path": "source_tools/build_eighteenmile_stream_study.mjs",
-      "bytes": 15109,
-      "sha256": "098e226ef567c51336454a107359115eb228f0aff154dc31d878d507ab62a4e2"
+      "bytes": 15219,
+      "sha256": "75d8a835a20bd9e55b5ab02a74a3d9586b56c17e9d7d2348e9a4d10247f2aafa"
     },
     {
       "path": "tools/attach_published_report.py",

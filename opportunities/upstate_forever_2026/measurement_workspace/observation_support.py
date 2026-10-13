@@ -26,6 +26,13 @@ BASIS = (
 )
 
 
+def _basis(records):
+    if records and records[0].get("source_observation"):
+        return BASIS.replace("The published report retains its separate analytical cohort and censor treatment.",
+                             "Fraction, method, original result type, basis fields and effective support unit remain separate source series.")
+    return BASIS
+
+
 def _number(value: Any) -> float | None:
     if value is None or isinstance(value, bool):
         return None
@@ -100,7 +107,7 @@ def summarize_series(records: list[dict[str, Any]]) -> dict[str, Any]:
     lower = math.fsum(item["lower"] for item in details) / len(details) if complete else None
     upper = math.fsum(item["upper"] for item in details) / len(details) if complete else None
     limits = sorted({(item["upper"], item["unit"]) for item in below})
-    notes = [BASIS]
+    notes = [_basis(records)]
     if not applicable:
         notes.append("A nonnegative-concentration interval is not defined for this parameter.")
     if len(units) != 1:
@@ -175,7 +182,7 @@ def report_sections(context: dict[str, Any]) -> list[tuple[str, list[Any]]]:
             ])
         title = "Original concentration support: " + parameter.replace("_", " ")
         blocks = [
-            "Source project: " + project + "; activity type: " + activity_type + ". " + BASIS,
+            "Source project: " + project + "; activity type: " + activity_type + ". " + _basis(records),
             *([ "Sample fraction: " + str(records[0].get("sample_fraction", "")) +
                 "; analytical method: " + str(records[0].get("method_authority", "")) + " / " + str(records[0].get("method_id", "")) +
                 "; original result type: " + str(records[0].get("result_value_type", "")) +

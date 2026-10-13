@@ -161,11 +161,13 @@ export function createPublishedStudiesDesk(host) {
     find("[data-ps-sites]").innerHTML = availableSites.map(id => '<label class="ps-check"><input type="checkbox" name="site" value="' +
       esc(id) + '"' + (selection.site_ids.includes(id) ? " checked" : "") + ">" + esc(id) + "</label>").join("");
     const years = [...new Set(sourceCohort ? arr(complete.observation_rows).map(row => Number(row.date.slice(0,4))) : [...arr(complete.tables.monthly_do),...arr(complete.tables.monthly_ph)].map(row => row.year))].sort();
+    if (selection.year != null && !years.includes(selection.year)) selection.year = null;
     const yearControl = find('form[data-ps-filters] select[name="year"]');
     yearControl.innerHTML = '<option value="">All years</option>' + years.map(year => '<option value="' + year + '">' + year + "</option>").join("");
     yearControl.value = selection.year || "";
     const parameterControl = find('form[data-ps-filters] select[name="parameter"]');
     const parameterOptions = [...new Set([...(sourceCohort ? [] : Object.keys(PARAMETERS)), ...arr(complete.original_measurements).map(row => row.parameter)])].sort((a,b) => label(a).localeCompare(label(b)));
+    selection.parameters = selection.parameters.filter(value => parameterOptions.includes(value));
     parameterControl.innerHTML = '<option value="">All parameters</option>' + parameterOptions.map(value => '<option value="' + esc(value) + '">' + esc(label(value)) + "</option>").join("");
     parameterControl.value = selection.parameters[0] || "";
     find('form[data-ps-filters] select[name="stratum"]').value = selection.strata[0] || "";

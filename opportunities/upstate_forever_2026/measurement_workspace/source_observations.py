@@ -117,7 +117,8 @@ def observation_files(original, available):
 def builtin_companion(root):
     """Read a complete installed source set using exact declared file identities."""
     root = root.resolve(strict=True)
-    manifest = json.loads((root / "study-files.json").read_text(encoding="utf-8-sig"))
+    inventory_bytes = (root / "study-files.json").read_bytes()
+    manifest = json.loads(inventory_bytes.decode("utf-8-sig"))
     if manifest.get("schema") != "upstate.study-file-inventory/v1":
         raise ValueError("Unsupported installed study file inventory.")
     files, seen = [], set()
@@ -135,5 +136,10 @@ def builtin_companion(root):
         files.append({**entry, "encoding": "utf-8", "content": raw.decode("utf-8")})
     if not {"study.json", "stations.csv", "seasonal_summaries.csv", "source_notes.json", INDEX}.issubset(seen):
         raise ValueError("The installed observation cohort is incomplete.")
+    if "study-files.json" in seen:
+        raise ValueError("The installed study inventory must not recursively list itself.")
+    files.append({"path": "study-files.json", "encoding": "utf-8",
+                  "bytes": len(inventory_bytes), "sha256": hashlib.sha256(inventory_bytes).hexdigest(),
+                  "content": inventory_bytes.decode("utf-8")})
     return json.dumps({"schema": "upstate.published-study-files/v1", "files": files},
                       ensure_ascii=False).encode("utf-8"), {}

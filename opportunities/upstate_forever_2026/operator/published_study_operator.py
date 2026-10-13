@@ -293,7 +293,7 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    directory = BUILTIN_DIRECTORIES.get(builtin_id)
+                    directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
                     if directory is None or not (self.builtin.parent / directory / "study.json").is_file():
                         self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
                     source, evidence = self._builtin_source(builtin_id)
