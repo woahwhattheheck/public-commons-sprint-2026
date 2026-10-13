@@ -830,15 +830,18 @@
         "model/receiving_water_cli.py",
         "model/receiving_water_delivery.py",
         "model/receiving_water_journey.py",
+        "model/receiving_water_monitoring.py",
         "model/receiving_water_spatial.py",
         "model/receiving_waters.py",
         "operator/RECEIVING_WATERS_OPERATOR.md",
+        "operator/RECEIVING_WATER_MONITORING.md",
         "operator/extensions/receiving-waters.json",
         "operator/install_receiving_waters.py",
         "operator/receiving_water_actions.py",
         "operator/receiving_water_browser.mjs",
         "operator/receiving_water_operate.py",
         "operator/receiving_waters.extension.json",
+        "operator/web/receiving_water_monitoring.mjs",
         "operator/web/receiving_water_spatial.mjs",
         "operator/web/receiving_waters.css",
         "operator/web/receiving_waters.mjs",
@@ -856,7 +859,8 @@
         "source_tools/receiving_water_selection.schema.json"
       ],
       "requires": [
-        "core"
+        "core",
+        "monitoring"
       ]
     },
     "receptors": {
@@ -1592,9 +1596,11 @@
         "integrations/monitoring/MANIFEST.json",
         "integrations/monitoring/PREDECESSORS.json",
         "integrations/monitoring/README.md",
+        "integrations/monitoring/RECEIVING.md",
         "integrations/monitoring/install_monitoring.py",
         "integrations/monitoring/install_native_monitoring.py",
         "integrations/monitoring/requirements-monitoring.txt",
+        "integrations/monitoring/source_adoption.json",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/MONITORING.md",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
         "integrations/monitoring/src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
