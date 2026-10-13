@@ -1,0 +1,270 @@
+{
+  "schema": "upstate.source-context-run/v1",
+  "id": "ES-HUC217-CONTEXT-20261013",
+  "operation": "Executed unchanged water_context.mjs buildContext on original source arrays and verified original model-domain HUC12 IDs",
+  "created_at": "2026-10-13",
+  "source_package": "F0C9J6KRJDN",
+  "source_notebook": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+  "domain": {
+    "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089",
+    "original_path": "/dev/shm/dbc61-upstate-model-domain-20261012/model-domain.esri.json.gz",
+    "body_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+    "selected_huc12_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+  },
+  "implementation": {
+    "path": "source_tools/water_context.mjs",
+    "sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+  },
+  "nrcs_source": {
+    "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7",
+    "original_body_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+    "csv_sha256": "27e4169e5ddbd3607c660904e94d2dc938e663a3649734f67353d93e636f09af"
+  },
+  "summary": {
+    "ids": 217,
+    "unique_ids": 217,
+    "ids_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+    "nrcs": {
+      "edition": "FY26",
+      "state_huc_rows": 337,
+      "unique_source_hucs": 303,
+      "matched_state_huc_rows": 240,
+      "missing_domain_hucs": [],
+      "outside_domain_state_huc_rows": 97
+    },
+    "joined_status_groups": {
+      "NC/Not Selected//": 9,
+      "SC/Not Selected//": 111,
+      "SC/High Priority Area/Ground/Water Quality": 3,
+      "GA/Not Selected//": 102,
+      "GA/High Priority Area/Both/Water Quality": 3,
+      "GA/High Priority Area/Ground/Water Quality": 5,
+      "SC/High Priority Area/Both/Water Quality": 2,
+      "GA/High Priority Area/Surface/Water Quality": 5
+    },
+    "known_priority_hucs": 15,
+    "missing_by_prefix": {},
+    "context_json_bytes": 152659,
+    "context_json_sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566",
+    "csv_bytes": 24474,
+    "source_domain_prefixes": [
+      "03060101",
+      "03060102",
+      "03060103",
+      "03060104",
+      "03060105",
+      "03060106",
+      "03060107"
+    ]
+  },
+  "priority_hucs": [
+    {
+      "huc12": "030601010701",
+      "rows": [
+        {
+          "state": "SC",
+          "name": "Upper Three And Twenty Creek",
+          "system": "Ground",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601020503",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Gum Log Creek",
+          "system": "Both",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601020507",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Lower Tugaloo River",
+          "system": "Ground",
+          "concern": "Water Quality"
+        },
+        {
+          "state": "SC",
+          "name": "Lower Tugaloo River",
+          "system": "Ground",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601030100",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Lightwood Log Creek-Savannah River",
+          "system": "Both",
+          "concern": "Water Quality"
+        },
+        {
+          "state": "SC",
+          "name": "Lightwood Log Creek-Savannah River",
+          "system": "Both",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601030206",
+      "rows": [
+        {
+          "state": "SC",
+          "name": "Wilson Creek",
+          "system": "Both",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601030303",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Lower Beaverdam Creek",
+          "system": "Both",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601030712",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Murry Creek-J. Strom Thurmond Reservoir-Savannah River",
+          "system": "Ground",
+          "concern": "Water Quality"
+        },
+        {
+          "state": "SC",
+          "name": "Murry Creek-J. Strom Thurmond Reservoir-Savannah River",
+          "system": "Ground",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040106",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Middle North Fork Broad River",
+          "system": "Surface",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040107",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Unawatti Creek",
+          "system": "Surface",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040108",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Lower North Fork Broad River",
+          "system": "Surface",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040205",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Upper Grove Creek",
+          "system": "Surface",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040402",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Brush Creek",
+          "system": "Ground",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040404",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Clouds Creek",
+          "system": "Ground",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601040406",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Lower South Fork Broad River",
+          "system": "Ground",
+          "concern": "Water Quality"
+        }
+      ]
+    },
+    {
+      "huc12": "030601050201",
+      "rows": [
+        {
+          "state": "GA",
+          "name": "Beaverdam Creek Lake",
+          "system": "Surface",
+          "concern": "Water Quality"
+        }
+      ]
+    }
+  ],
+  "classification_capture_scope": {
+    "original_count": 1886,
+    "all_1886_publisher_hucs_in_selected_domain": true,
+    "publisher_huc_count": 19,
+    "source_huc8_selection": [
+      "03060101",
+      "03060102",
+      "03060103"
+    ],
+    "full_domain_huc8_selection": [
+      "03060101",
+      "03060102",
+      "03060103",
+      "03060104",
+      "03060105",
+      "03060106",
+      "03060107"
+    ],
+    "expanded_capture_request": "classified-full-domain-query.json",
+    "class_counts": {
+      "TPGT": 599,
+      "ORW": 1040,
+      "TN": 247
+    }
+  }
+}

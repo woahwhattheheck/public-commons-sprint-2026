@@ -89,7 +89,8 @@ def shared_display_scale(paths, *, signed=False, percentile=98, units=""):
             "raster_percentiles": quantiles, "raster_count": len(paths),
             "neutral_zero_range": not available, "label": label}
 
-def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, dpi=220):
+def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, dpi=220,
+            paper=None, project_title="", pdf_pages=None, page_number=None, page_count=None):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -101,8 +102,16 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
     dpi = int(finite(dpi, "Map DPI", minimum=120))
     if dpi > 600 or not panels or len(panels) > 3:
         raise ValueError("Select one to three map panels and 120–600 DPI")
+    if path is None and pdf_pages is None:
+        raise ValueError("Select a standalone map path or an open atlas document")
     count = len(panels)
-    fig, axes = plt.subplots(1, count, figsize=(11.7 * max(1, count / 2), 8.3), squeeze=False)
+    dimensions = (11.7 * max(1, count / 2), 8.3)
+    if paper is not None:
+        from .map_atlas import PAPER
+        if paper not in PAPER:
+            raise ValueError("Choose Letter, A4 or A3 landscape paper")
+        dimensions = PAPER[paper]
+    fig, axes = plt.subplots(1, count, figsize=dimensions, squeeze=False)
     try:
         legend = []
         for overlay in overlays:
@@ -170,19 +179,32 @@ def map_pdf(path, title, panels, *, overlays, boundary, crs, subtitle, footer, d
                 ax.text(.01, -.13, "\n".join(textwrap.wrap(
                     scale_note + " Numerical GeoTIFF values are preserved.", 105)),
                     transform=ax.transAxes, fontsize=6, va="top")
-        fig.suptitle(title, fontsize=15, x=.07, y=.97, ha="left")
-        fig.text(.07, .925, "\n".join(textwrap.wrap(subtitle, 140)), fontsize=8, va="top")
+        if project_title:
+            fig.text(.07, .976, textwrap.shorten(str(project_title), 145, placeholder="…"),
+                     fontsize=8, va="top", color="#444444")
+        fig.suptitle(title, fontsize=14 if project_title else 15, x=.07,
+                     y=.945 if project_title else .97, ha="left")
+        fig.text(.07, .898 if project_title else .925,
+                 "\n".join(textwrap.wrap(subtitle, 140)), fontsize=8, va="top")
         if legend:
             fig.legend(handles=legend, loc="lower center", bbox_to_anchor=(.5, .085),
                        fontsize=7, frameon=False, ncol=min(3, len(legend)))
         fig.text(.07, .04, "\n".join(textwrap.wrap(footer, 155)), fontsize=6, va="bottom")
-        fig.subplots_adjust(left=.07, right=.93, bottom=.19, top=.86, wspace=.30)
-        Path(path).parent.mkdir(parents=True, exist_ok=True)
-        fig.savefig(path, dpi=dpi, metadata={"Title": title, "Subject": subtitle,
-                                           "Creator": "Upper Savannah scientific workbench"})
+        if page_number is not None:
+            fig.text(.97, .018, str(page_number) + ((" / " + str(page_count)) if page_count else ""),
+                     fontsize=7, ha="right", va="bottom")
+        fig.subplots_adjust(left=.07, right=.93, bottom=.19,
+                            top=.815 if project_title else .86, wspace=.30)
+        if path is not None:
+            Path(path).parent.mkdir(parents=True, exist_ok=True)
+            fig.savefig(path, format="pdf", dpi=dpi, metadata={"Title": title, "Subject": subtitle,
+                                               "Creator": "Upper Savannah scientific workbench"})
+        if pdf_pages is not None:
+            pdf_pages.savefig(fig, dpi=dpi)
     finally:
         plt.close(fig)
-    return {"path": str(path), "title": title, "panels": len(panels), "dpi": dpi,
+    return {"path": str(path) if path is not None else None, "title": title,
+            "panels": len(panels), "dpi": dpi, "paper": paper,
             "display_resampling": "nearest; full numerical GeoTIFFs remain unchanged"}
 
 def report_pdf(path, title, sections, *, contact, source_records):
@@ -376,6 +398,33 @@ def _review_plain_lines(value, width=108):
                                  break_on_hyphens=False) or [""]
 
 
+def _review_category_key(fig, image, *, x, width, page_width, page_height, title):
+    """Draw a source-bound discrete key in the saved map's legend space."""
+    from matplotlib.patches import Rectangle
+    categories = image.get("categories", [])
+    columns = 2 if width >= 3.0 else 1
+    shown = categories[:columns * 6]
+    key = fig.add_axes([x / page_width, .84 / page_height,
+                        max(.01, width - .13) / page_width, .75 / page_height])
+    key.set_axis_off()
+    font_size = 5.8
+    label_chars = max(12, int((width / columns - .20) * 72 / (font_size * .55)))
+    for index, item in enumerate(shown):
+        column, row = index // 6, index % 6
+        left, top = column / columns, 1 - row * .145
+        key.add_patch(Rectangle((left, top - .075), .040 / columns, .065,
+                                facecolor=item["colour"], edgecolor="#333333", linewidth=.3))
+        label = str(item["value"]) + " " + item["label"]
+        key.text(left + .056 / columns, top - .038, _review_excerpt(label, label_chars),
+                 fontsize=font_size, va="center", ha="left", color="#222222")
+    key.set_title(_review_excerpt(title + " / original classes", 90), fontsize=6.5, loc="left", pad=4)
+    if not categories:
+        key.text(0, .84, "No valid class samples in this view", fontsize=6)
+    elif len(shown) < len(categories):
+        key.text(0, .005, "Full " + str(len(categories)) + "-class key follows in the PDF.",
+                 fontsize=5.5, va="bottom")
+
+
 def render_spatial_review(directory, *, review, project, frame, layout, overlay_file,
                           overlays, annotation_file, descriptions, created_at, export_id):
     """Write paper-sized PDF/SVG/PNG from one actual native print frame."""
@@ -417,7 +466,8 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
             continue
         summary_images.append({name: image[name] for name in (
             "title", "units", "scale", "statistics", "source_sha256", "source_sha256s",
-            "direction", "sampling", "width", "height", "nodata_transparent") if name in image} | {"key": key})
+            "direction", "sampling", "width", "height", "nodata_transparent",
+            "categorical", "categories", "category_source") if name in image} | {"key": key})
     metadata = {"Title": review["title"], "Author": project["title"],
                 "Subject": "Saved spatial review " + review["id"],
                 "Keywords": "native spatial review, source-bound map, " + review["mode"],
@@ -521,6 +571,15 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                 for number, key in enumerate(keys):
                     image = images[key]
                     x = cell["x"] + number * legend_width
+                    if image.get("categorical"):
+                        # Use the complete column width even for a narrow map extent.
+                        group_width = (width - .95 - .46 * (len(panels) - 1)) / len(panels)
+                        category_width = group_width / len(keys)
+                        category_x = .63 + panels.index(panel) * (group_width + .46) + number * category_width
+                        _review_category_key(fig, image, x=category_x, width=category_width,
+                                             page_width=width, page_height=height,
+                                             title=key.capitalize() if panel["key"] == "swipe" else "Land cover")
+                        continue
                     bar = fig.add_axes([x / width, 1.125 / height,
                                         max(.01, legend_width - .13) / width, .07 / height])
                     low, high = image["scale"]["minimum"], image["scale"]["maximum"]
@@ -625,6 +684,13 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                     paragraph(image["key"].capitalize() + ": " + image["title"], heading=True)
                     paragraph("Units: " + str(image["units"]) + "; scale: " + json.dumps(image["scale"], sort_keys=True))
                     paragraph("Actual print sample statistics: " + json.dumps(image["statistics"], sort_keys=True))
+                    if image.get("categorical"):
+                        paragraph("Class swatches identify original codes; grey shade has no quantitative meaning.")
+                        for category in image.get("categories", []):
+                            paragraph(str(category["value"]) + " | " + category["label"] +
+                                      " | swatch " + category["colour"])
+                        paragraph("Original class tables: " + json.dumps(image.get("category_source", {}),
+                                                                         ensure_ascii=False, sort_keys=True))
                     paragraph("Source SHA256: " + str(image["source_sha256"]) +
                               ("; paired sources: " + json.dumps(image["source_sha256s"], sort_keys=True)
                                if image.get("source_sha256s") else ""))
@@ -708,7 +774,8 @@ def render_spatial_review(directory, *, review, project, frame, layout, overlay_
                     "sampling": "native nearest-neighbour print sampling at the exact saved extent",
                     "swipe_convention": "primary underlay; comparison covers the left retained percentage",
                     "grayscale": {"minimum": 28, "maximum": 232, "constant": 127,
-                                  "nodata": "transparent"},
+                                  "nodata": "transparent",
+                                  "categorical": "Discrete per-panel codes and colours are retained in panels.categories"},
                     "overlay_geometry": "original viewport query, clipped and simplified for the actual print pixel size"}
         finally:
             fig.clear()

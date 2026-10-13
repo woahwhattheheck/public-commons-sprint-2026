@@ -221,7 +221,7 @@ def decode_parts(parts):
 
 
 def decode_addon_parts(parts):
-    """Decode the complete E7A1 plain-base64 transport with its declared identity."""
+    """Decode the complete conservation transport with its declared identity."""
     first = parts[0]
     count = first.get("parts")
     if type(count) is not int or not 0 < count <= MAX_FILES:
@@ -279,9 +279,22 @@ def join_source_banks(documents):
         layer = layer_from_document(item)
         for name, content in layer.files.items():
             entry = {**layer.metadata[name], "path": name, "content": content}
-            if name in joined and any(joined[name].get(key) != entry.get(key)
-                                      for key in ("bytes", "sha256", "mode")):
-                raise ValueError("Source-bank blocks contain different bodies: " + name)
+            if name in joined:
+                previous = joined[name]
+                if any(previous.get(key) != entry.get(key)
+                       for key in ("bytes", "sha256", "mode")):
+                    raise ValueError("Source-bank blocks contain different bodies: " + name)
+                before, incoming = previous.get("base_sha256"), entry.get("base_sha256")
+                if before is not None and incoming is not None and before != incoming:
+                    raise ValueError("Source-bank blocks select different predecessors: " + name)
+                if before is not None:
+                    entry["base_sha256"] = before
+                declarations = list(previous.get("predecessor_declarations", []))
+                for declared in entry.get("predecessor_declarations", []):
+                    if declared not in declarations:
+                        declarations.append(declared)
+                if declarations:
+                    entry["predecessor_declarations"] = declarations
             joined[name] = entry
         for original in item.get("external_sources", []):
             name = original["path"]
@@ -313,7 +326,8 @@ def provider_payload(value, depth=0):
                 recovered = provider_payload(parsed, depth + 1)
                 # A text field retains the actual JSON serialization and its pin.
                 return value if is_source_document(parsed) else recovered
-        return value if FENCE in value else None
+        return value if (FENCE in value or re.search(
+            r"(?m)^SOURCE_TRANSPORT_METADATA=", value)) else None
     if isinstance(value, list):
         candidates = [provider_payload(item, depth + 1) for item in value]
         return next((item for item in candidates if item is not None), None)
@@ -345,6 +359,72 @@ def provider_payload(value, depth=0):
 
 
 
+def decode_complete_transport(text):
+    """Read the complete application exported as one or ordered text parts."""
+    marker = r"(?m)^SOURCE_TRANSPORT_METADATA=(.+)\r?$"
+    headers = list(re.finditer(marker, text))
+    if not headers:
+        return None
+    received = []
+    for index, header in enumerate(headers):
+        metadata = transport_json(header.group(1))
+        if (not isinstance(metadata, dict)
+                or metadata.get("schema") != "upstate.complete-application-transport/v1"):
+            raise ValueError("Unsupported complete application transport")
+        stop = headers[index + 1].start() if index + 1 < len(headers) else len(text)
+        section = text[header.end():stop]
+        starts = list(re.finditer(
+            r"(?m)^BEGIN_UPSTATE_SOURCE_GZIP_BASE64[ \t]*\r?$", section))
+        ends = list(re.finditer(
+            r"(?m)^END_UPSTATE_SOURCE_GZIP_BASE64[ \t]*\r?$", section))
+        if len(starts) != 1 or len(ends) != 1 or starts[0].end() >= ends[0].start():
+            raise ValueError("A complete source text part needs its original begin/end markers")
+        encoded = "".join(section[starts[0].end():ends[0].start()].split())
+        part_lines = re.findall(
+            r"(?m)^SOURCE_TRANSPORT_PART=(.+)\r?$", section[:starts[0].start()])
+        if len(part_lines) > 1:
+            raise ValueError("A complete source text part has duplicated metadata")
+        part = transport_json(part_lines[0]) if part_lines else None
+        if part is not None:
+            if (not isinstance(part, dict)
+                    or type(part.get("part")) is not int
+                    or type(part.get("parts")) is not int
+                    or part["parts"] < 1
+                    or not 1 <= part["part"] <= part["parts"]):
+                raise ValueError("Invalid complete source text part identity")
+            check_identity(encoded.encode("ascii"), part.get("base64_chars"),
+                           part.get("base64_sha256"), "complete source text part")
+        received.append((metadata, part, encoded))
+    metadata = received[0][0]
+    if any(item[0] != metadata for item in received):
+        raise ValueError("Complete source text parts belong to different application editions")
+    if all(item[1] is None for item in received):
+        if len(received) != 1:
+            raise ValueError("Multiple complete source text parts need numbered identities")
+        encoded = received[0][2]
+    else:
+        if any(item[1] is None for item in received):
+            raise ValueError("A complete source text part is missing its numbered identity")
+        total = received[0][1]["parts"]
+        if (len(received) != total
+                or any(item[1]["parts"] != total for item in received)
+                or sorted(item[1]["part"] for item in received) != list(range(1, total + 1))):
+            raise ValueError("Receive every complete source text part exactly once")
+        encoded = "".join(item[2] for item in sorted(
+            received, key=lambda item: item[1]["part"]))
+    compressed = decode_base64(encoded)
+    check_identity(compressed, metadata.get("gzip_bytes"),
+                   metadata.get("gzip_sha256"), "complete application gzip")
+    decoded = uncompress(compressed)
+    check_identity(decoded, metadata.get("json_bytes"),
+                   metadata.get("json_sha256"), "complete application JSON")
+    document = transport_json(decoded.decode("utf-8"))
+    if (not is_source_document(document)
+            or document.get("schema") != metadata["schema"]):
+        raise ValueError("The complete application differs from its transport schema")
+    return decoded
+
+
 def decode_carrier(data, _depth=0):
     """Return the complete decoded JSON bytes from a published source carrier."""
     if _depth > 12:
@@ -362,6 +442,9 @@ def decode_carrier(data, _depth=0):
         if payload is None:
             raise ValueError("Provider result contains no complete source payload")
         return decode_carrier(payload.encode("utf-8"), _depth + 1)
+    complete = decode_complete_transport(text)
+    if complete is not None:
+        return complete
     blocks = re.findall(FENCE + r"([a-zA-Z0-9_-]*)[ \t]*\r?\n(.*?)\r?\n" + FENCE,
                         text, re.S)
     parts, addon_parts, plain_parts, documents, encoded = [], [], [], [], []
@@ -433,9 +516,82 @@ def _source_fingerprint(value):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
+def _installed_source_directories(root):
+    """Read the installed portable inventory as data, without importing the application."""
+    defaults = ("model", "operator", "source_tools", "source", "ecsa_runs",
+                "integration", "integrations", "tools", "receiving", "eco_intelligence",
+                "observations")
+    portable = root / "model" / "portable.py"
+    if (root / "model").is_symlink() or portable.is_symlink():
+        raise ValueError("Installed portable inventory contains a file alias")
+    if not portable.exists():
+        return defaults
+    fd = os.open(portable, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) |
+                 getattr(os, "O_NONBLOCK", 0))
+    with os.fdopen(fd, "rb") as stream:
+        before = os.fstat(stream.fileno())
+        if not stat.S_ISREG(before.st_mode) or before.st_size > MAX_BYTES:
+            raise ValueError("Installed portable inventory is not a regular source file")
+        body = stream.read(MAX_BYTES + 1)
+        if (len(body) != before.st_size or
+                _source_fingerprint(before) != _source_fingerprint(os.fstat(stream.fileno()))):
+            raise ValueError("Installed portable inventory changed during receiving")
+    tree = ast.parse(body, filename=str(portable))
+    declared = []
+
+    def sequence(node):
+        if isinstance(node, ast.Name) and node.id == "APPLICATION_DIRECTORIES":
+            return list(declared)
+        if isinstance(node, (ast.Tuple, ast.List, ast.Set)):
+            result = []
+            for item in node.elts:
+                if isinstance(item, ast.Starred):
+                    result.extend(sequence(item.value))
+                elif isinstance(item, ast.Constant) and isinstance(item.value, str):
+                    result.append(item.value)
+                else:
+                    raise ValueError("Portable source directories must contain literal names")
+            return result
+        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+            return sequence(node.left) + sequence(node.right)
+        if isinstance(node, ast.Call) and len(node.args) == 1 and not node.keywords:
+            constructor = (isinstance(node.func, ast.Name)
+                           and node.func.id in {"tuple", "list", "set"})
+            deduplicate = (isinstance(node.func, ast.Attribute)
+                           and node.func.attr == "fromkeys"
+                           and isinstance(node.func.value, ast.Name)
+                           and node.func.value.id == "dict")
+            if constructor or deduplicate:
+                return sequence(node.args[0])
+        raise ValueError("Cannot read the installed portable source-directory declaration")
+
+    for statement in tree.body:
+        if isinstance(statement, ast.Assign):
+            targets, value = statement.targets, statement.value
+        elif isinstance(statement, ast.AnnAssign):
+            targets, value = [statement.target], statement.value
+        elif (isinstance(statement, ast.AugAssign)
+              and isinstance(statement.target, ast.Name)
+              and statement.target.id == "APPLICATION_DIRECTORIES"
+              and isinstance(statement.op, ast.Add)):
+            declared += sequence(statement.value)
+            continue
+        else:
+            continue
+        if any(isinstance(target, ast.Name) and target.id == "APPLICATION_DIRECTORIES"
+               for target in targets):
+            if value is not None:
+                declared = sequence(value)
+    roots = tuple(dict.fromkeys((*defaults, *declared)))
+    for name in roots:
+        path = member_name(name)
+        if len(path.parts) != 1:
+            raise ValueError("Portable source directory must be a top-level name: " + name)
+    return roots
+
+
 def _source_inventory(root):
-    roots = ("model", "operator", "source_tools", "source", "ecsa_runs",
-             "integration", "tools", "receiving", "eco_intelligence")
+    roots = _installed_source_directories(root)
     skip = {"__pycache__", ".git", ".venv", "venv", "node_modules"}
     selected = {}
 
@@ -457,6 +613,8 @@ def _source_inventory(root):
         if path.is_file():
             add(path)
     for name in roots:
+        if name.startswith(".") or name in skip:
+            continue
         folder = root / name
         if not folder.exists():
             continue
@@ -578,6 +736,31 @@ def read_layer(path, *, payload_sha256=None):
     })
 
 
+def predecessor_sha256(entry, name):
+    """Normalize published predecessor spellings without treating refs as hashes."""
+    declarations = entry.get("predecessor_declarations", [])
+    if not isinstance(declarations, list) or any(not isinstance(item, dict)
+                                                  for item in declarations):
+        raise ValueError("Invalid predecessor declarations: " + name)
+    identities = []
+    for declared in (entry, *declarations):
+        for key in ("base_sha256", "replaces_sha256", "before_sha256"):
+            value = declared.get(key)
+            if value is not None:
+                identities.append((key, value))
+        for key in ("before", "base"):
+            value = declared.get(key)
+            # Existing banks use base="commit-ref"; only objects declare identities.
+            if isinstance(value, dict) and value.get("sha256") is not None:
+                identities.append((key + ".sha256", value["sha256"]))
+    for key, value in identities:
+        if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
+            raise ValueError("Invalid predecessor identity " + key + ": " + name)
+    if len({value for _, value in identities}) > 1:
+        raise ValueError("Conflicting predecessor identities: " + name)
+    return identities[0][1] if identities else None
+
+
 def layer_from_document(document, receipt=None):
     """Validate a source-map, current customer component or base64 source bank."""
     if not is_source_document(document):
@@ -648,11 +831,17 @@ def layer_from_document(document, receipt=None):
             raise ValueError("Unsupported source file mode: " + name)
         record = {"bytes": len(body), "sha256": sha256(body), "git_blob": git_blob, "mode": mode,
                   "encoding": member_encoding}
-        expected_base = entry.get("base_sha256", entry.get("replaces_sha256"))
+        expected_base = predecessor_sha256(entry, name)
         if expected_base is not None:
-            if not isinstance(expected_base, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_base):
-                raise ValueError("Invalid predecessor identity: " + name)
             record["base_sha256"] = expected_base
+        declarations = list(entry.get("predecessor_declarations", []))
+        declared = {key: entry[key] for key in (
+            "base_sha256", "replaces_sha256", "before_sha256", "before_bytes",
+            "before", "base_ref", "base_git_blob", "base") if key in entry}
+        if declared and declared not in declarations:
+            declarations.append(declared)
+        if declarations:
+            record["predecessor_declarations"] = declarations
         files[name], checked[name] = content, record
     if sum(record["bytes"] for record in checked.values()) > MAX_BYTES:
         raise ValueError("Source members exceed the receiving limit")
@@ -682,35 +871,61 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         raise ValueError("First layer must be a complete application map or recovered application source")
     if not isinstance(edition, str) or not edition.strip():
         raise ValueError("Choose an application edition")
-    files, metadata, changes, externals = {}, {}, [], {}
+    files, metadata, changes, externals, references = {}, {}, [], {}, {}
     for index, layer in enumerate(layers):
         origin = layer.receipt["payload_sha256"]
         for name, content in sorted(layer.files.items()):
             item = dict(layer.metadata[name])
             previous = metadata.get(name)
             expected = item.pop("base_sha256", None)
-            if expected is not None and (previous is None or previous["sha256"] not in
-                                         (expected, item["sha256"])):
-                raise ValueError("Selected predecessor differs for layer " + str(index) + ": " + name)
+            declarations = item.pop("predecessor_declarations", [])
             item["mode"] = item["mode"] or (previous or {}).get("mode") or "100644"
-            if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:
-                item["git_blob"] = previous.get("git_blob")
-            prior_origins = list((previous or {}).get("origins", []))
-            item["origins"] = prior_origins + ([origin] if origin not in prior_origins else [])
             if previous is None:
                 action = "added"
             elif previous["sha256"] == item["sha256"] and previous["mode"] == item["mode"]:
                 action = "identical"
             else:
                 action = "replaced"
+            # Complete snapshots belong at layer zero. A changed overlay must
+            # identify the actual member it joins; later arrival is not recency.
+            if ((action == "added" and expected is not None)
+                    or (action == "replaced"
+                        and (expected is None or expected != previous["sha256"]))):
+                current = previous["sha256"] if previous else "<absent>"
+                raise ValueError(
+                    "Source join differs for layer " + str(index) + ": " + name
+                    + "; current_sha256=" + current
+                    + "; incoming_sha256=" + item["sha256"]
+                    + "; expected_predecessor_sha256=" + (expected or "<undeclared>")
+                    + ". Join this member against the current source and publish its "
+                    + "before_sha256; unchanged bodies and new members compose directly.")
+            if previous and previous["sha256"] == item["sha256"] and item["git_blob"] is None:
+                item["git_blob"] = previous.get("git_blob")
+            prior_origins = list((previous or {}).get("origins", []))
+            item["origins"] = prior_origins + ([origin] if origin not in prior_origins else [])
             if index or action != "identical":
-                changes.append({"layer": index, "path": name, "action": action,
-                                "previous_sha256": previous["sha256"] if previous else None,
-                                "sha256": item["sha256"]})
+                change = {"layer": index, "path": name, "action": action,
+                          "previous_sha256": previous["sha256"] if previous else None,
+                          "sha256": item["sha256"]}
+                if expected is not None:
+                    change["base_sha256"] = expected
+                if declarations:
+                    change["predecessor_declarations"] = declarations
+                changes.append(change)
             files[name], metadata[name] = content, item
+        def keep_reference(original):
+            if (not isinstance(original, dict) or not isinstance(original.get("reference"), str)
+                    or not original["reference"]):
+                raise ValueError("Invalid original external-reference declaration")
+            references[canonical(original)] = dict(original)
+        for original in layer.document.get("external_references", []):
+            keep_reference(original)
         for original in layer.document.get("external_sources", []):
             if not isinstance(original, dict):
                 raise ValueError("Invalid original external-source declaration")
+            if "path" not in original and isinstance(original.get("reference"), str):
+                keep_reference(original)
+                continue
             name = source_member_name(original.get("path"), layer.document.get("prefix"))
             original = {**original, "path": name}
             checked_bytes(original.get("bytes"), name, limit=(1 << 63) - 1)
@@ -742,16 +957,18 @@ def compose(layers, *, edition, operation_id=None, include_receiver=True):
         "members": {name: {key: item[key] for key in ("bytes", "sha256", "mode")}
                     for name, item in sorted(metadata.items())},
         "external_sources": [externals[name] for name in sorted(externals)],
+        "external_references": [references[key] for key in sorted(references)],
     }
     assembly_id = sha256(canonical(composition))
     return {
         "schema": MAP_SCHEMA, "kind": MAP_KIND, "edition": edition,
-        "repository": base.get("repository", "woahwhattheheck/commons"),
+        "repository": base.get("repository", "woahwhattheheck/public-commons-sprint-2026"),
         "source_ref": "assembly:" + assembly_id,
         "prefix": base.get("prefix", "opportunities/upstate_forever_2026"),
         "state": "source_stage_complete_application",
         "files": dict(sorted(files.items())), "file_metadata": dict(sorted(metadata.items())),
         "assembly": composition, "external_sources": composition["external_sources"],
+        "external_references": composition["external_references"],
     }
 
 

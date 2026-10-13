@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.original-gura-tables/v1",
+  "title": "Original Gura biophysical tables used by InVEST 3.20.0",
+  "invest_version": "3.20.0",
+  "publisher": "Natural Capital Project",
+  "publisher_repository": "https://bitbucket.org/natcap/invest-sample-data/",
+  "publisher_revision": "098183806c0c715e6422d4d0570db91321c0f4e8",
+  "release_datastacks": "https://github.com/natcap/invest/tree/3.20.0/sample_datastacks",
+  "files": [
+    {
+      "path": "NDR/biophysical_table_gura.csv",
+      "bytes": 848,
+      "sha256": "e3f503cb1c82fb1035225eb68eb84303de8de7842b1bda6e94f4754fe538c42c",
+      "source_uri": "https://bitbucket.org/natcap/invest-sample-data/raw/098183806c0c715e6422d4d0570db91321c0f4e8/NDR/biophysical_table_gura.csv"
+    },
+    {
+      "path": "SDR/biophysical_table_Gura.csv",
+      "bytes": 535,
+      "sha256": "b27b1549a41c4929f161e3b18962d6bc8627c10ed7ed27e504203c175a0f5f69",
+      "source_uri": "https://bitbucket.org/natcap/invest-sample-data/raw/098183806c0c715e6422d4d0570db91321c0f4e8/SDR/biophysical_table_Gura.csv"
+    }
+  ],
+  "notes": [
+    "Original publisher CSV bytes retained without editing.",
+    "NDR and SDR tables are joined by original lucode by source_tools.receive_gura.",
+    "These tables belong to the original Gura example; regional profiles retain their own scientific sources."
+  ]
+}

@@ -13,11 +13,12 @@ from model.compute_programme import ComputeProgrammes
 ACTIONS = {
     "compute.programme.save",
     "compute.programme.experiment",
+    "compute.programme.pair-completion",
     "compute.programme.run",
     "compute.programme.report",
     "compute.programme.delivery",
 }
-READS = {"catalog", "detail", "report"}
+READS = {"catalog", "detail", "report", "pair-completion-preview"}
 
 
 class Programmes:
@@ -34,9 +35,10 @@ class Programmes:
             raise self.Fault("PROGRAMME_REQUIRED", "Choose a saved run programme.")
         return key
 
-    def catalogue(self, workspace):
+    def catalogue(self, workspace, *, include_completed_sources=False):
         from model.programme_experiments import catalog
-        return {**self._manager(workspace).catalog(), **catalog(self.operator.ws(workspace))}
+        return {**self._manager(workspace).catalog(include_completed_sources=include_completed_sources),
+                **catalog(self.operator.ws(workspace))}
 
     def _decorate(self, workspace, result):
         result = json.loads(json.dumps(result))
@@ -53,8 +55,11 @@ class Programmes:
     def read(self, workspace, operation, payload):
         manager = self._manager(workspace)
         if operation == "catalog":
-            return {"workspace_key": workspace, **self.catalogue(workspace)}
+            include_sources = payload.get("include_sources") in (True, 1, "1", "true")
+            return {"workspace_key": workspace, **self.catalogue(workspace, include_completed_sources=include_sources)}
         key = self._id(payload)
+        if operation == "pair-completion-preview":
+            return {"workspace_key": workspace, **manager.pair_completion_preview(key)}
         if operation == "detail":
             return {"workspace_key": workspace, **self._decorate(workspace, manager.status(key))}
         if operation == "report":
@@ -98,6 +103,12 @@ class Programmes:
                 raise self.Fault("PROGRAMME_SELECTION", "Create or import a programme selection.")
             return manager.create(selection, source_reference=payload.get("source_reference"))
         key = self._id(payload)
+        if action == "compute.programme.pair-completion":
+            result = manager.create_pair_completion(key, expected_preview_id=payload.get("expected_preview_id"))
+            if payload.get("run") is not True:
+                return result
+            key = result["id"]
+            action = "compute.programme.run"
         if action == "compute.programme.run":
             result = manager.resume(key, only_runs=payload.get("only_runs"))
             if result.get("state") == "failed" or result.get("counts", {}).get("failed", 0):
@@ -134,11 +145,21 @@ class Programmes:
         payload = task.get("payload", {})
         result = task.get("result", {})
         key = payload.get("programme_id")
+        manager = self._manager(task["workspace"])
+        if task["action"] == "compute.programme.pair-completion":
+            key = result.get("id") or key
+            if not result.get("id") and key and payload.get("expected_preview_id"):
+                try:
+                    parent = manager.status(key, include_ensemble_candidates=False)
+                    continuation = parent.get("pair_completions", {}).get(payload["expected_preview_id"], {})
+                    key = continuation.get("programme_id") or key
+                except (FileNotFoundError, KeyError, ValueError):
+                    pass
         if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
             key = result.get("id")
         if key:
             try:
-                row = self._manager(task["workspace"]).status(key)
+                row = manager.status(key, include_ensemble_candidates=False)
                 task["programme"] = {
                     "id": row["id"], "title": row.get("title"),
                     "state": row.get("state"), "phase": row.get("phase"),

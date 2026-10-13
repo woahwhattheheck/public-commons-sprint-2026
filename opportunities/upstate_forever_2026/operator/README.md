@@ -22,7 +22,7 @@ The default listener binds `127.0.0.1` on an available port. The interface, styl
 
 1. **Retain source data.** Open Original sources and select an operator-registered manifest, an original source ZIP, or a single original table/file with its title, URI, vintage, kind and units. Preview the exact selected manifest before import. The native intake verifies and retains source bodies and sidecars. Native source inspection shows raster headers, vector fields/layers or the first original CSV rows and offers the complete original download.
 2. **Save a parameter profile.** Select the actual combined biophysical CSV and its source edition, add original references, and enter the intended NDR and SDR parameters. The original model checks all required coefficients and parameters. Revising a profile creates another immutable selection.
-3. **Prepare the reporting grid.** Select the actual DEM, 30 m land cover, precipitation, rainfall erosivity and soil erodibility; choose the original reporting boundary, covering hydrologic model domain and positive context buffer. Optional selections use exact native field equality. The original engine preserves the source pixel grid, source vintages, units and native resampling decisions.
+3. **Prepare the reporting grid.** Select the actual DEM, original reference land cover, precipitation, rainfall erosivity and soil erodibility; preserve the land-cover cell size separately from the upstream buffer; choose the original reporting boundary, covering hydrologic model domain and positive context buffer. Optional selections use exact native field equality. The original engine preserves the source pixel grid, source vintages, units and native resampling decisions.
 4. **Define scenarios.** Retain an unchanged source baseline. For each alternative, select an actual polygon mask, original integer land-cover codes, replacement code, and a reason. The source edition stays intact.
 5. **Run the original models.** Prepare a run from a complete grid, saved profile and scenario, review the retained selection, then start it. The interface reads original stage status, native logs and output hashes. A failed or interrupted task resumes its original selection; completed native stages are reused by the model.
 6. **Compare outputs and observations.** Compare completed baseline and alternative runs on the same grid. Upload original observation CSVs with their column mapping, source period and source URI. Explicit annual mass-rate inputs require their actual annualization method. Context measurements, unaccepted qualifiers and other excluded rows remain retained. Observed comparisons join the original catchment identifiers and display annual mass, residuals, coverage and summary metrics.
@@ -30,6 +30,29 @@ The default listener binds `127.0.0.1` on an available port. The interface, styl
 8. **Receive the workspace.** Create a complete native backup, download the archive, and use Restore an archive to verify all members into a new receiving directory. The restored copy appears in the workspace selector with the original project identity. The delivered CLI and application are also retained in the native archive.
 
 The interface starts with actual imported entities. It supplies no sample coefficient table, synthetic observations, invented source designations or prepared model result.
+
+## Guided analysis and portable working view
+
+Open **Guided journey** to select a retained baseline, explain its original
+inputs and geography, revise a case, calculate through the original queue,
+compare physical results, open maps and create the working handover. The native
+run desk and scenario experiments preserve each run's actual model selection.
+
+Choose **Save view and notes** to retain the current analysis in the scientific
+workspace. A complete backup also captures that selected baseline, alternative,
+comparison, map view, delivery and notes in `operator-session.json`. When its
+archive opens in a receiving workspace or a new browser, the saved guide resumes
+against the same project and scientific records. Distinct prior notes remain
+available in the guide's note versions.
+
+The original reference resolution is preserved when revising a prepared grid.
+For the official Gura study, the cell size is 300 m and the upstream context
+buffer is an independent 300 m setting. The issuer requires final Upper Savannah map data on a 30 × 30 m regional
+grid, with an external modeling buffer chosen for the catchment (RFP p. 2).
+The Gura grid supports the original working demonstration. An omitted `resolution_m` retains the historic
+30 m selection identity.
+
+See `GUIDED_JOURNEY.md` for the complete operating sequence.
 
 ## Original operation lifecycle
 
@@ -78,6 +101,7 @@ All routes below require `Authorization: Bearer <operator capability>`. File dow
 | `GET /api/runtime` | Actual installed package versions |
 | `POST /api/upload` | Stream an original file with `X-Upload-Filename` |
 | `POST /api/source-preview` | Preview a registered manifest or retained upload |
+| `POST /api/operator-session` | Save the selected guide and notes with project identity and revision checks |
 | `POST /api/actions` | Submit one original action |
 | `POST /api/task/resume` | Resume the same retained task |
 | `POST /api/task/cancel` | Cancel a task before it starts |
@@ -86,3 +110,8 @@ All routes below require `Authorization: Bearer <operator capability>`. File dow
 Action requests use `{workspace, action, payload, operation_id}`. Supported actions are `source.import`, `profile.save`, `scenario.save`, `grid.prepare`, `run.prepare`, `run.start`, `run.compare`, `observation.import`, `observation.compare`, `delivery.build`, `workspace.backup` and `workspace.restore`.
 
 The native CLI remains available for reproducible source acquisition, original analysis and command-line receiving. Browser forms use those same persisted model selections.
+
+
+### Original land-cover classes and source inspection
+
+Raster cell size follows the original land-cover reference. Spatial land-cover legends and point inspection show descriptions from retained original biophysical tables, including the Gura sources, while physical outputs keep their native numeric scales. The original profile table remains available from the profile detail during a native calculation. Guided Step 7 opens the scenario report desk as well as full regional delivery generation.

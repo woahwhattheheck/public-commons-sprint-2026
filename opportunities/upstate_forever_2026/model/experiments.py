@@ -593,8 +593,19 @@ def _recover_case_bindings(workspace, plan, directory, state):
                 case["binding_recovered_at"] = now()
                 _persist_case(directory, case)
     state.update(native_binding_models=active, models=list(active),
-                 pollutants=list(output_models(active)))
-    return _progress(directory, state)
+                 pollutants=list(output_models(active)), bindings_recovered_at=now())
+    # Previous summaries describe the old model bindings. Keep their files,
+    # and advertise a new summary after the recovered cases are summarized.
+    state.pop("summary_at", None)
+    state["files"] = {}
+    state = _progress(directory, state)
+    if state["progress"]["complete"] != plan["counts"]["cases"]:
+        state["state"] = ("partial" if state["progress"]["complete"] else
+                          "failed" if state["progress"]["failed"] else "prepared")
+        state.pop("completed_at", None)
+        state.pop("error", None)
+        atomic_json(directory / "state.json", state)
+    return state
 
 
 def list_experiments(workspace):
@@ -774,9 +785,26 @@ def _pair_metrics(workspace, baseline, alternative, reporting_cells, pixel_area_
 
 def _records(directory):
     result = []
+    lineage_keys = ("source_run_id", "source_baseline_run_id", "source_selection")
     for path in (directory / "cases").glob("*.json"):
         value = read_json(path)
         identity = {key: value[key] for key in ("run_id", "baseline_run_id", "kind")}
+        retained_lineage = [key in value for key in lineage_keys]
+        if any(retained_lineage):
+            if not all(retained_lineage):
+                raise ValueError("A retained experiment case has incomplete source lineage")
+            source = value["source_selection"]
+            current = value["selection"]
+            if (not isinstance(source, dict) or not isinstance(current, dict)
+                    or digest(source) != value["source_run_id"]
+                    or "models" in source
+                    or source != {key: item for key, item in current.items() if key != "models"}):
+                raise ValueError("A retained experiment case has changed source selection")
+            # A recovered partial-model case keeps its original plan case ID.
+            # Its current native selection is independently checked below.
+            identity = {"run_id": value["source_run_id"],
+                        "baseline_run_id": value["source_baseline_run_id"],
+                        "kind": value["kind"]}
         if (value.get("schema") != CASE_SCHEMA or value.get("id") != path.stem
                 or digest(identity) != path.stem or digest(value["selection"]) != value["run_id"]):
             raise ValueError("A retained experiment case has changed")
@@ -940,11 +968,15 @@ def summarize(workspace, experiment_id):
             state.pop("error", None)
         elif state["progress"]["failed"] or state["state"] == "running":
             state["state"] = "partial" if state["progress"]["complete"] else "failed"
+            state.pop("completed_at", None)
+        else:
+            state["state"] = "partial" if state["progress"]["complete"] else "prepared"
+            state.pop("completed_at", None)
         return _summarize_locked(workspace, experiment_id, plan, state)
 
 
 def read_summary(workspace, experiment_id):
-    _plan(workspace, experiment_id)
+    plan = _plan(workspace, experiment_id)
     directory = _directory(workspace, experiment_id)
     path = directory / "summary.json"
     if not path.exists():
@@ -953,8 +985,31 @@ def read_summary(workspace, experiment_id):
     if (summary.get("schema") != SUMMARY_SCHEMA or summary.get("id") != experiment_id
             or summary.get("workspace_id") != workspace.project["id"]):
         raise ValueError("The retained summary belongs to another experiment")
+    models = selected_models(plan["baseline"])
+    if selected_models(summary) != models:
+        return None
+    if (summary.get("state") == "complete"
+            and summary.get("progress", {}).get("complete") != plan["counts"]["cases"]):
+        return None
+    if plan.get("_legacy_case_ids"):
+        state = _state(workspace, experiment_id)
+        if (state.get("native_binding_models") != models
+                or (state.get("bindings_recovered_at") and not state.get("summary_at"))):
+            return None
     return {**summary, "files": {**summary.get("files", {}),
                                  "json": describe_file(directory, path)}}
+
+
+def _remember_reuse_source(candidates, case):
+    """Keep the reference and recent same-scenario donors while streaming cases."""
+    values = candidates.setdefault(case["scenario_id"], [])
+    if case["run_id"] not in values:
+        values.append(case["run_id"])
+        # This is an opportunistic cache, not a limit on the experiment matrix.
+        # Preserve the first profile and the latest fifteen; the native indexed
+        # cache continues to find exact inputs throughout the entire workspace.
+        if len(values) > 16:
+            del values[1]
 
 
 def execute(workspace, experiment_id, *, completed_only=False):
@@ -981,6 +1036,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
         state.pop("error", None)
         atomic_json(directory / "state.json", state)
         active = None
+        reuse_sources = {}
         try:
             if "reporting_cells" not in state:
                 count, area = _reporting_cells(workspace, plan["baseline"]["grid_id"])
@@ -989,6 +1045,7 @@ def execute(workspace, experiment_id, *, completed_only=False):
             for expected, option in _case_definitions(workspace, plan):
                 case = _retained_case(directory, expected)
                 if case["state"] == "complete":
+                    _remember_reuse_source(reuse_sources, case)
                     continue
                 active = case
                 if case["state"] == "failed":
@@ -1001,12 +1058,21 @@ def execute(workspace, experiment_id, *, completed_only=False):
                 state["progress"]["active_case_id"] = case["id"]
                 state["updated_at"] = now()
                 atomic_json(directory / "state.json", state)
+                run = None
                 try:
                     run = _prepare_case_run(workspace, case, option)
                     if run["state"] != "complete":
                         if completed_only:
                             raise RuntimeError("Complete the selected native run before synchronizing experiment results")
-                        run = workspace.run(run["id"])
+                        # Profile tables can differ only in the other model's
+                        # columns. Retain explicit same-scenario candidates so
+                        # the native matcher can compare the relevant inputs.
+                        donors = list(dict.fromkeys(
+                            list(run.get("reuse_source_run_ids", [])) +
+                            list(reversed(reuse_sources.get(case["scenario_id"], [])))))
+                        donors = [key for key in donors if key != run["id"]]
+                        run = (workspace.run(run["id"], reuse_source_run_ids=donors)
+                               if donors else workspace.run(run["id"]))
                     if run["state"] != "complete":
                         raise RuntimeError("The selected native model run has not completed")
                     reference = workspace.inspect_run(case["baseline_run_id"])
@@ -1021,12 +1087,19 @@ def execute(workspace, experiment_id, *, completed_only=False):
                                 comparison_id=comparison["id"] if comparison else None,
                                 native_completed_at=run["completed_at"],
                                 native_runtime=run.get("runtime"),
+                                native_stage_reuse={model: stage["reused_from"]
+                                    for model, stage in run.get("stages", {}).items()
+                                    if stage.get("reused_from")},
                                 output_artifacts=run["artifacts"])
                     state["progress"]["complete"] += 1
                 except Exception as exc:
                     case.update(state="failed", updated_at=now(),
                                 error={"type": type(exc).__name__, "message": str(exc)})
                     state["progress"]["failed"] += 1
+                if run is not None:
+                    # A failed later model may still leave a complete reusable
+                    # earlier stage. The native matcher verifies each stage.
+                    _remember_reuse_source(reuse_sources, case)
                 state["progress"]["pending"] -= 1
                 state["progress"]["active_case_id"] = None
                 state["updated_at"] = now()

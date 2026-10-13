@@ -20,9 +20,47 @@ The first input can be the original complete application map, a recovered `upsta
 
 Original gzip source parts, bare Base64/gzip carriers, declared plain Base64 parts, conservation source/addon parts, source-bank cohorts and complete source documents are accepted. Source documents must declare a schema and supply complete file bodies with their byte lengths and SHA-256. A new document schema can use those existing complete-body structures. Numbered transports retain their own explicit envelope rules.
 
-Paths prefixed by the document's declared application prefix are normalized to the same application root as relative paths. A second entry that resolves to an existing member remains a duplicate error. Original binary companions supplied in `binary_files[]` enter the same validated file inventory. This directly receives the original 1,906-byte Oconee metadata asset in recovered source F0C8RS4F0Q1, together with its 101 text files. A separate companion overlay remains accepted when supplied alone; choose one representation of each original path.
+Original binary companions supplied in `binary_files[]` enter the same validated file inventory as regular source members. Each path has one complete original body.
 
-Every supplied Git blob identity is checked, including `git_blob`, `git_blob_sha` and `git_sha`. Each component can supply `base_sha256` or `replaces_sha256` to identify the exact file it updates. An already-installed postimage with the same requested SHA-256 is also accepted, so repeating a selected overlay reuses its current file. A different intermediate body still requires the declared predecessor.
+Paths prefixed by the document's declared application prefix are normalized to the same application root as relative paths. A second entry that resolves to an existing member remains a duplicate error. Every supplied Git blob identity is checked, including `git_blob`, `git_blob_sha` and `git_sha`. Each changed existing member must identify the actual file it updates with `before_sha256`, `base_sha256`, `replaces_sha256`, nested `before.sha256`, or object `base.sha256`. Declared aliases must agree. A string `base` is retained as its source-ref label. Added members and identical postimages compose directly; an already installed postimage remains idempotent even when its declaration names the earlier predecessor. Source-bank fragments preserve the original before/base declarations in the assembled change inventory. Completed snapshot member metadata remains suitable for reopening as the next base.
+
+
+## Join a changed module into current source
+
+A full carrier records the source it captured. A later-arriving carrier may still contain an older application module. When two selected layers contain different bodies at the same path, the assembler reports the current, incoming and declared predecessor SHA-256 values. Join the intended change into the actual current source, then publish the complete resulting body with the hash of the source used for that join. Keep a complete current snapshot as the first layer when adding selected components.
+
+The actual PR2714 component `F0C8Q6C81U2` contains 23 files and an older `operator/web/app.mjs` with SHA-256 `96ccc710c6cfe4c223153ccc9c4e394c12ffc4d1d0b6069e43899a179aa0806a`. Its retained revision already declares `base_sha256 = 75d0670f5b1d00e1871f033d55b9ca5834bdc051f37f0b025f8fbc67483ae204`; the original composer correctly rejects that declaration against a different current host. Keep this component's predecessor metadata intact. In the source replay, the [pinned resolved host](https://raw.githubusercontent.com/woahwhattheheck/public-commons-sprint-2026/f5e5d676357031429fbec3a7adc65b3589a6308b/opportunities/upstate_forever_2026/operator/web/app.mjs) retains the corrected stage detection, multi-element selectors and water-designation source lineage. For an installed complete application whose host is the stated stale body, save the pinned resolved file and produce its explicit source join:
+
+```sh
+python3 -B - /retained/current-app.mjs /owned/resolved-host.json <<'PY'
+import hashlib, json, sys
+from pathlib import Path
+
+body = Path(sys.argv[1]).read_bytes()
+expected = "f64d7b3ab7fd42d99bdc8a4b5c8e609a634e84246b6c36dd1443e5f479c5282e"
+if len(body) != 113843 or hashlib.sha256(body).hexdigest() != expected:
+    raise ValueError("Choose the complete resolved host from the linked immutable source")
+document = {
+    "schema": "commons.source-bank/v1",
+    "source_ref": "f5e5d676357031429fbec3a7adc65b3589a6308b",
+    "files": [{
+        "path": "operator/web/app.mjs",
+        "bytes": len(body), "sha256": expected,
+        "base": "11342de9d7b59d379c7cbe45244b896854b2e1a0",
+        "before_sha256": "96ccc710c6cfe4c223153ccc9c4e394c12ffc4d1d0b6069e43899a179aa0806a",
+        "content": body.decode("utf-8"),
+    }],
+}
+with Path(sys.argv[2]).open("x", encoding="utf-8") as stream:
+    json.dump(document, stream, ensure_ascii=False)
+    stream.write("\n")
+PY
+python3 -B source_tools/application_assembly.py /owned/current-application \
+  --overlay /owned/resolved-host.json --edition resolved-current-host \
+  --source-map /owned/resolved-current-host.json
+```
+
+The component itself is an overlay, so use the complete installed application as the first input. This selected module join preserves every other member from that complete base. Receive other maintained components and their installers through the normal application workflow. Reusing the resolved host overlay against its installed postimage succeeds as an identical replay. A different newer host receives the intended source changes against its own actual beforeimage. The separately exercised `before.sha256` interface case preserves the original predecessor value while changing only its declared spelling; it is distinct from replaying the unmodified component.
 
 ## Binary companions and installed snapshots
 
@@ -30,7 +68,7 @@ Base64 file records carry either text or original binary bytes. The received dir
 
 Use this assembler to reopen maps containing binary members. All-text maps also remain readable by the earlier application receiver. The accompanying JavaScript carrier codec understands the same member encodings.
 
-When the base is an installed application directory, the snapshot captures current root files and the `model`, `operator`, `source_tools` and `source` directories. Existing installer joins are preserved. Small binary assets of up to 8 MiB each are included directly; larger native inputs keep their full size, hash and retained local path in the existing external-source declarations. Application source is capped at 256 MiB. Keep the complete scientific workspace, its original inputs and model outputs on the established workspace backup/restore route.
+When the base is an installed application directory, the snapshot captures current root files and the `model`, `operator`, `source_tools`, `source`, `ecsa_runs`, `integration`, `integrations`, `tools`, `receiving` and `eco_intelligence` directories. Existing installer joins are preserved. The snapshot also reads the installed `model/portable.py` declaration of `APPLICATION_DIRECTORIES` as data and includes its current component roots, including literal declarations and ordered installer extensions. This keeps the application source archive aligned with the installed portable inventory as components are added. Observations are included among the standard roots. The application module is never imported or executed to discover these directories; generated caches and runtime environments remain excluded. Small binary assets of up to 8 MiB each are included directly; larger native inputs keep their full size, hash and retained local path in the existing external-source declarations. Application source is capped at 256 MiB. Keep the complete scientific workspace, its original inputs and model outputs on the established workspace backup/restore route.
 
 ```sh
 python3 -B source_tools/application_assembly.py /owned/current-application \
@@ -44,11 +82,11 @@ Receiving always targets a new directory. An identical invocation verifies and r
 
 ## Continue the original study
 
-Keep the scientific workspace outside the application directory. Set `UPSTATE_PYTHON` to the existing scientific interpreter on the accepting worker:
+Keep the scientific workspace outside the application directory:
 
 ```sh
 cd /owned/upper-savannah-complete
-"$UPSTATE_PYTHON" -B operator/server.py --workspace /owned/current-study
+python3 -B operator/server.py --workspace /owned/current-study
 ```
 
 Open the loopback URL printed by the original operator. Continue the retained source imports, parameter profiles, grids, scenarios, native runs, comparisons, maps and export workflow. Use the application's installed runtime view to select the existing GIS and InVEST environment.
@@ -57,37 +95,20 @@ For component integration, the unchanged APIs are `read_layer`, `layer_from_docu
 
 The source package retains source identity and composition. Native model execution and scientific workspace transfer remain operations of the existing application.
 
-## Connected source results and retained transport
+## Receive saved connector results and complete text exports
 
-The receiver accepts the complete Markdown returned by a Canvas read, or the complete saved JSON result of the source connector. Its provider adapter reads the documented MCP fields `structuredContent`, `markdown_content`, `text_content`, `section_id_mapping` and text blocks in `content`. It recursively unwraps JSON and gzip while retaining the original outer carrier name, byte count and SHA-256 in the layer receipt. A source JSON string retains its original serialization, allowing the original payload pin to remain meaningful.
+The same entrypoint accepts complete Markdown or the saved JSON result of its source connector. It reads the documented `structuredContent`, `markdown_content`, `text_content`, `section_id_mapping` and text blocks in `content`. JSON and gzip wrappers are decoded recursively. The original outer carrier name, byte count and SHA-256 remain in the layer record, while a source JSON string retains its original serialization for payload pins. Explicit provider errors are reported before source selection.
 
-Explicit provider errors remain errors during intake. Nested responses are inspected before choosing the preferred source content. Arrays of text blocks are handled through the same entrypoint. Source files always pass through the original path, byte-count, SHA-256, Git-identity and mode checks before composition.
+Complete text exports marked `SOURCE_TRANSPORT_METADATA` and `BEGIN_UPSTATE_SOURCE_GZIP_BASE64` are selected before companion bootstrap JSON. Their complete gzip and JSON identities are checked. For numbered text exports, concatenate the original text parts into one input file; every part must have its original length and hash and appear exactly once. Their declared numbering determines reconstruction order. Ordinary numbered JSON and conservation carriers retain their existing formats.
 
-The current source-bank and source-bundle envelopes use the same complete file contract. In this sprint, the root operator component is F0C8TDW58G4, selected-model engine and schema are F0C9J455NP2 and F0C8JDNF02Z, and the complete regional soil component is F0C88M55E79. Read their current full bodies and include the selected files through the existing source workflow. The source normalization leaves the current operator and model installers in charge of their owned host joins.
+After applying a component, run its maintained installer against the receiving application according to its own guide, then snapshot that installed application. This preserves its actual server, workspace and browser joins in the next application archive.
 
-The recovered application transport in F0C8RS4F0Q1 declares `upstate.original-source-transport/v1` beside its ordered Base64 blocks. The reader now checks its exact part count, compressed bytes/SHA-256 and decoded bytes/SHA-256 before normalizing the declared product prefix. The current conservation addon and conservation source part decoders retain their own complete packet identity and numbering rules.
+## Use the maintained native receiving workflow with local source
 
-For example, a receiving host with an actual saved connector result and a retained full application can run:
+`receive_upstate_local.py` runs a retained original receiver using local or shared source and output files. It verifies the selected receiver, retains its original source ZIP validation, and forwards its runtime, browser, workspace and restore arguments after `--`.
 
-```sh
-python3 -B source_tools/application_assembly.py /owned/current-application \
-  --overlay /owned/receiving/root-operator-result.json \
-  --overlay /owned/receiving/selected-model-engine.md \
-  --overlay /owned/receiving/selected-model-guide.md \
-  --overlay /owned/receiving/regional-soil.md \
-  --edition upper-savannah-joined-source \
-  --operation-id UPSTATE-SOIL-ENSEMBLES-A74F-20261012 \
-  --output /owned/upper-savannah-joined-source \
-  --source-map /owned/upper-savannah-joined-source.json.gz \
-  --zip /owned/upper-savannah-joined-source.zip
-```
+Supply `--receiver` with the retained receiver file and `--source-zip` with that receiver's matching original full archive. The default receiver SHA-256 identifies the 24,364-byte edition. `--receiver-sha256` selects another retained compatible edition explicitly. Add `--source-cache-directory` for retained source trees and `--source-bundle` for complete source banks; either option can repeat.
 
-The files in this example are the actual saved complete responses or Markdown carriers. The first input is the already-installed application after its selected original host and model installers. Run any newly selected component installer against the receiving output using its included guide, then snapshot that installed output to capture the resulting host source. The assembler preserves the current `ecsa_runs`, `integration`, `tools`, `receiving` and `eco_intelligence` source directories.
+The receiving outputs include the original result in `NATIVE_RESULT.json`, source use in `LOCAL_RECEIVING_SOURCE.json`, a full file inventory in `NATIVE_FILES.json`, the streaming `Upstate_Communities_Native_Workspace.zip`, and `PRESERVED_RESULT.json`. Use `--preserve-directory` to copy those completed artifacts to the chosen shared destination, where the result manifest is installed after artifact copy and readback.
 
-## Source lineage of this complete receiver
-
-This edition continues RECOVERY-SCIENCE-2329's complete v4 source F0C8N63K2LE. Its assembler is 46,710 bytes, SHA-256 `cb9ee04d17a115cd0b463840083e24193dc588d567ff80cb94114459214f4be5`. That source already composes E7A1's conservation formats, the current installed source inventory, prefixed recovered source and binary-member support. Its updated JavaScript carrier codec remains byte-identical: 12,202 bytes, SHA-256 `7056cce99cc9501fa2f4753a8bf06e55f4ed936c9193cc879a55ce05882c5461`.
-
-The preceding cumulative application F0C8JNZTURK has 252 files and 3,892,300 source bytes. Its retained source payload SHA-256 is `49d32e6b7f5c3a764054076c65059cc6856f33d7b7cef5d6408adbd0de7d5c67`. Its assembler was 42,009 bytes, SHA-256 `a8e5ec19d01e9ff3bf68f57874cc15464db73645a8b555900521ddb33d666531`.
-
-The additional provider adapter is composed from the original root F0C88HK2SCX source, preserving v4's `is_source_document`, `document_schema`, source normalization and member encodings. The original root full-file SHA-256 is `4d6ce68001ba2b9659c2ec8c40063b90b2f5cf7cfae4db00fa5aafe3de8469d3`. The joined source also accepts the original recovered bank's explicit binary list and repeated identical postimages. These are complete source files for the maintained receiver and its operating guide.
+The original receiving workflow uses its matched source edition first. Apply the selected current application components through the application assembler and their maintained installers before continuing the current operator study.

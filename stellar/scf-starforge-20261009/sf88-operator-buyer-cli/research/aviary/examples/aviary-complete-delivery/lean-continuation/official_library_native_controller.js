@@ -7,19 +7,70 @@ need(hash(wire)===journal.transportSha256,"The original complete input changed")
 const hashBinarySource=load("sha256-utf8-code").replace("function sha256utf8(text)","function sha256binary(text)").replace("const utf8=unescape(encodeURIComponent(text)), n=utf8.length;","const utf8=text, n=utf8.length;");
 const hashBinary=new Function(hashBinarySource+";return sha256binary;")();
 const base64Decode=source=>{const alphabet="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/",clean=source;need(clean.length%4===0&&/^[A-Za-z0-9+/]*={0,2}$/.test(clean),"Invalid image base64");let bits=0,count=0,out="";for(const ch of clean){if(ch==="=")break;const v=alphabet.indexOf(ch);need(v>=0,"Invalid base64 digit");bits=(bits<<6)|v;count+=6;if(count>=8){count-=8;out+=String.fromCharCode((bits>>>count)&255);}}return out;};
-let session=null,buffer="",ended=false,ready=null,paused=null;const saves=[];
+let session=null,buffer="",ended=false,ready=null,paused=null;const saves=[];const preparedSaves=[];
 const chunks=new Map();
 const transferUrls=load("aviary-lean-v6-envelope").runtimeArchives.flatMap(x=>x.transfer?.download_url?[x.transfer.download_url]:[]);
-const safeOutput=value=>transferUrls.reduce((s,url)=>s.split(url).join("[original signed transfer URL]"),String(value));
+const safeOutput=value=>transferUrls.reduce((s,url)=>s.split(url).join("[original signed transfer URL]"),String(value)).replace(/https?:\/\/[^\s"<>]+/g,url=>url.split("?")[0].split("#")[0]+(url.includes("?")?"?[private query]":""));
+const publicValue=value=>{if(Array.isArray(value))return value.map(publicValue);if(value&&typeof value==="object"){const out={};for(const[k,v]of Object.entries(value))out[k]=/^(upload_url|download_url|required_headers|authorization|cookie)$/i.test(k)?"[private prepared transfer]":publicValue(v);return out;}return typeof value==="string"?safeOutput(value):value;};
+const stable=value=>value&&typeof value==="object"?Array.isArray(value)?value.map(stable):Object.fromEntries(Object.keys(value).sort().map(k=>[k,stable(value[k])])):value;
+const equal=(a,b)=>JSON.stringify(stable(a))===JSON.stringify(stable(b));
+function resultArray(result,key){const structured=result?.structuredContent;if(structured!=null){need(Array.isArray(structured[key]),"Canonical Library structured result lacks "+key);return structured[key];}for(const item of result?.content||[]){try{const value=JSON.parse(item.text);if(Array.isArray(value?.[key]))return value[key];}catch{}}throw Error("The canonical Library result lacks "+key);}
+const libraryNameMatches=(actual,requested)=>{
+ if(typeof actual!=="string"||actual.includes("/")||actual.includes("\\"))return false;
+ if(actual===requested)return true;
+ const dot=requested.lastIndexOf("."),stem=dot>0?requested.slice(0,dot):requested,suffix=dot>0?requested.slice(dot):"";
+ const escape=value=>Array.from(value,ch=>".^$*+?()[]{}\\|".includes(ch)?"\\"+ch:ch).join("");
+ return new RegExp("^"+escape(stem)+"\\([1-9][0-9]*\\)"+escape(suffix)+"$").test(actual);
+};
+async function servicePrepared(request){
+ need(request.connector==="connector_openai_library"&&["prepare_uploads","finalize_uploads"].includes(request.tool),"Unexpected prepared Library action");
+ need(typeof request.name==="string"&&request.source?.path?.startsWith("/dev/aviary-complete-final-6ba15/")&&request.source.path.split("/").pop()===request.name&&Number.isInteger(request.source.bytes)&&request.source.bytes>0&&/^[a-f0-9]{64}$/.test(request.source.sha256)&&/^[a-f0-9]{64}$/.test(request.requestSha256),"Invalid original prepared source identity");
+ const rows=request.arguments?.uploads;
+ need(Array.isArray(rows)&&rows.length===1&&Object.keys(request.arguments).length===1,"Prepared Library call changed its ordered source count");
+ const sourceRoot=request.source.path.slice(0,request.source.path.lastIndexOf("/"));
+ need(["/dev/aviary-complete-final-6ba15/checkpoints","/dev/aviary-complete-final-6ba15/deliverables"].includes(sourceRoot),"Prepared source left the original artifact roots");
+ const sourceKey="aviary-prepared-source-"+request.name;
+ const retainedSource=load(sourceKey);need(!retainedSource||equal(retainedSource,request.source),"Retained prepared source changed");store(sourceKey,request.source);
+ if(request.tool==="prepare_uploads"){
+  need(rows[0].file_name===request.name&&rows[0].file_size_bytes===request.source.bytes&&rows[0].purpose==="create_library_file"&&rows[0].workspace_path===undefined,"Prepared create source differs");
+ }else{
+  const prepared=load(sourceKey+"-prepared");
+  need(Array.isArray(prepared)&&equal(prepared,rows),"Finalization changed the exact original prepared objects");
+ }
+ const key="aviary-prepared-call-"+request.requestSha256;
+ const bound={operation:journal.operation,source:request.source,connector:request.connector,tool:request.tool,arguments:request.arguments};
+ const before=load(key+"-request");need(!before||equal(before,bound),"An existing prepared call has another request");
+ let result=load(key+"-result");
+ if(result===undefined){
+  need(!request.recoverOnly&&!before,"Original prepared response is uncertain; reconcile this exact request before dispatch");
+  store(key+"-request",bound);
+  store(key+"-started",{startedAt:new Date().toISOString(),tool:request.tool,source:request.source});
+  try{
+   result=await (request.tool==="prepare_uploads"?tools.mcp__codex_apps__library_prepare_uploads(request.arguments):tools.mcp__codex_apps__library_finalize_uploads(request.arguments));
+   store(key+"-result",result);store(key+"-completed",{completedAt:new Date().toISOString(),isError:result?.isError===true});
+  }catch(error){store(key+"-error",{at:new Date().toISOString(),error:String(error)});throw error;}
+ }else{need(before&&equal(before,bound),"Retained prepared response lacks its original request");}
+ if(result?.isError!==true){
+  const returned=resultArray(result,request.tool==="prepare_uploads"?"uploads":"results");
+  need(returned.length===1,"Canonical prepared result count differs");
+  if(request.tool==="prepare_uploads"){
+   need(libraryNameMatches(returned[0].file_name,request.name)&&returned[0].purpose==="create_library_file"&&returned[0].upload_url&&!returned[0].workspace_path,"The original private preparation has another transfer identity");
+   store(sourceKey+"-prepared",returned);
+  }
+ }
+ text({event:"ORIGINAL_PREPARED_LIBRARY_RESPONSE",tool:request.tool,name:request.name,requestSha256:request.requestSha256,isError:result?.isError===true});
+ accept(await tools.write_stdin({session_id:session,chars:JSON.stringify({action:"library-prepared-tool-result",requestSha256:request.requestSha256,tool:request.tool,result})+"\n",yield_time_ms:1000,max_output_tokens:9000}),"original-prepared-save-response");
+}
 function retain(){store("aviary-lean-v6-controller",journal);if(session!==null)store("aviary-lean-v6-session",session);}
 function accept(result,kind){
- journal.calls.push({kind,at:new Date().toISOString(),...result,output:safeOutput(result.output||"")});
+ journal.calls.push({kind,at:new Date().toISOString(),session_id:result.session_id??null,exit_code:result.exit_code??null,wall_time_seconds:result.wall_time_seconds??null,outputBytes:unescape(encodeURIComponent(result.output||"")).length,outputSha256:hash(result.output||"")});
  if(result.session_id!==undefined){session=result.session_id;journal.session=session;}
  buffer+=result.output||"";
  let at;while((at=buffer.indexOf("\n"))>=0){const line=buffer.slice(0,at).replace(/\r/g,"");buffer=buffer.slice(at+1);if(!line.trim())continue;
   let value;try{value=JSON.parse(line);}catch{if(!line.includes("base64"))text(safeOutput(line));continue;}
   if(value.event==="QA_IMAGE_CHUNK"){chunks.set(value.name+":"+value.offset,value);journal.events.push({event:value.event,name:value.name,offset:value.offset,chunkBytes:value.chunkBytes,bytes:value.bytes,sha256:value.sha256,complete:value.complete});}
-  else {const safe=JSON.parse(safeOutput(JSON.stringify(value)));journal.events.push(safe);text(safe);}
+  else if(value.event==="LIBRARY_PREPARED_TOOL_REQUEST"){preparedSaves.push(value);const shown={event:value.event,name:value.name,source:value.source,tool:value.tool,requestSha256:value.requestSha256,recoverOnly:value.recoverOnly};journal.events.push(shown);text(shown);}
+  else {const safe=publicValue(value);journal.events.push(safe);text(safe);}
   if(value.event==="AVIARY_CONTINUATION_PAUSED"||value.event==="ORIGINAL_COMMAND_FAILED")paused=value;
   if(value.event==="LIBRARY_SAVE_REQUEST")saves.push(value);
   if(value.event==="READY_FOR_VISUAL_REVIEW"){ready=value;store("aviary-newhost-official-save-qa-ready",value);}
@@ -34,7 +85,8 @@ try{
  while(!journal.events.some(e=>e.event==="AVIARY_INPUT_READY")){accept(await tools.write_stdin({session_id:session,chars:"",yield_time_ms:1000,max_output_tokens:5000}),"bootstrap-poll");need(!ended,"Native bootstrap exited before input");await yield_control();}
  accept(await tools.write_stdin({session_id:session,chars:wire,yield_time_ms:1000,max_output_tokens:9000}),"single-full-input");
  while(!ended&&!ready&&!paused){
-  if(saves.length){
+  if(preparedSaves.length){await servicePrepared(preparedSaves.shift());}
+  else if(saves.length){
    const request=saves.shift();
    need(request.arguments?.file===request.staged.path&&request.source.bytes===request.staged.bytes&&request.source.sha256===request.staged.sha256,"Official save staging binding differs");
    const key="aviary-newhost-official-save-result-"+request.requestSha256;
@@ -68,5 +120,19 @@ try{
    await yield_control();
   }
   journal.awaitingVisualReview=true;retain();text({event:"AWAITING_ACTUAL_VISUAL_DECISION",session,screenshots:ready.screenshots.map(({path,bytes,sha256})=>({name:path.split("/").pop(),path,bytes,sha256})),requestedInput:ready.requestedInput});
- }else if(paused){journal.pausedAt=new Date().toISOString();journal.nativePaused=true;retain();text({event:"NATIVE_CONTROLLER_PAUSED",session,error:paused.error,message:safeOutput(paused.message)});}else{journal.endedAt=new Date().toISOString();retain();text({event:"NATIVE_CONTROLLER_CLOSED",session,exitCode:journal.exitCode,events:journal.events.length});}
-}catch(error){journal.controllerError=String(error);journal.endedAt=new Date().toISOString();retain();text({event:"NATIVE_CONTROLLER_ERROR",session,error:safeOutput(error)});}
+  const decisionKey="aviary-original-visual-decision-"+journal.inputSha256;
+  store(decisionKey+"-requested",{session,inputSha256:journal.inputSha256,screenshots:ready.screenshots,requestedInput:ready.requestedInput});
+  while(load(decisionKey)===undefined&&!ended){await new Promise(resolve=>setTimeout(resolve,1000));await yield_control();}
+  const decision=load(decisionKey);
+  need(!ended&&decision&&decision.inputSha256===journal.inputSha256&&decision.session===session,"Actual visual decision belongs to another native run");
+  need(decision.reviewed===true&&decision.command?.action==="complete-visual-review","The four actual images require their completed review");
+  journal.awaitingVisualReview=false;retain();
+  accept(await tools.write_stdin({session_id:session,chars:JSON.stringify(decision.command)+"\n",yield_time_ms:1000,max_output_tokens:9000}),"original-completed-visual-review");
+  while(!ended){
+   if(preparedSaves.length){await servicePrepared(preparedSaves.shift());}
+   else {await yield_control();accept(await tools.write_stdin({session_id:session,chars:"",yield_time_ms:1000,max_output_tokens:9000}),"original-final-delivery");}
+  }
+  journal.endedAt=new Date().toISOString();retain();
+  text({event:"NATIVE_CONTROLLER_CLOSED",session,exitCode:journal.exitCode,events:journal.events.length});
+ }else if(paused&&!ended){journal.pausedAt=new Date().toISOString();journal.nativePaused=true;retain();text({event:"NATIVE_CONTROLLER_PAUSED",session,error:paused.error,message:safeOutput(paused.message)});}else{journal.endedAt=new Date().toISOString();retain();text({event:"NATIVE_CONTROLLER_CLOSED",session,exitCode:journal.exitCode,events:journal.events.length});}
+}catch(error){journal.controllerError=safeOutput(error);journal.endedAt=new Date().toISOString();retain();text({event:"NATIVE_CONTROLLER_ERROR",session,error:safeOutput(error)});}

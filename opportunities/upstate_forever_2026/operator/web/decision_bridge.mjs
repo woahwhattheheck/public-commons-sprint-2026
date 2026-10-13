@@ -1,6 +1,8 @@
 /* TokenJunkieLabs: retained native comparisons joined to saved decision views. */
 import {mount as mountPanel} from './scenario_decisions.mjs';
-import {prepareAssessment,uploadAssessment,operationId} from './decision_transfer.mjs';
+import {prepareAssessment,uploadAssessment,operationId,submissionIdentity} from './decision_transfer.mjs';
+import {createDecisionSubmissionJournal,sameSubmissionTask} from './decision_submission.mjs';
+import {buildScenarioAnalysisSeed} from './scenario_handoff.mjs';
 
 const escape = value => String(value ?? '').replace(/[&<>"']/g, character =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[character]));
@@ -151,7 +153,8 @@ export function buildDecisionInput(catalog, baselineId) {
       label:titleFor(catalog.scenarios, selected.scenario_id) + ' · ' +
         titleFor(catalog.profiles, selected.profile_id),
       run_id:run.id, grid_id:gridId, profile_id:selected.profile_id,
-      scenario_id:selected.scenario_id, invest_version:selected.invest_version,
+      scenario_id:selected.scenario_id, invest_version:run.runtime?.version || '',
+      declared_invest_version:selected.invest_version || '',
       domain_id:gridId, period_id:'annual-model-grid:' + gridId,
       profile_changed:!!baseline && selected.profile_id !== baseline.selection?.profile_id,
       stage_summary:run.stage_summary || {},
@@ -187,12 +190,16 @@ export function workspaceSourceSignature(state){
   });
 }
 
-export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
+export function attachDecisionWorkbench({getState, api, endpoint, toast, openExtension}) {
   let root=null, frame=null, controller=null, snapshot=null, liveCatalog=null, workspaceKey=null;
   let selection=null, loadedView=null, previousViewId=null,generation=0,lastBaseline=null;
+  let panelData=null, handoffMarkup='';
   let sourceStamp='',savedStamp='',backgroundRefresh=null,nextSourceRefresh=0;
   let pending=null, currentError='', currentMessage='', loading=false;
-  let savedViews=[], requestKeys=new Map(), objectiveId='',transferring=null;
+  let savedViews=[], objectiveId='',transferring=null;
+  let taskRefresh=null,nextTaskRefresh=0,finishing=null;
+  const dispatching=new Map();
+  const submissions=createDecisionSubmissionJournal();
   const localKey = () => 'upstate-scenario-decisions:' + workspaceKey;
   const node = selector => frame?.querySelector(selector);
   const currentWorkspace = () => getState()?.workspace_key;
@@ -207,12 +214,16 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
   };
   const remember = () => {
-    if (!selection || !workspaceKey || !frame) return;
-    try {localStorage.setItem(localKey(), JSON.stringify({
-      selection, title:node('[name="decision-title"]')?.value || '',
-      purpose:node('[name="decision-purpose"]')?.value || '',
-      previous_view_id:previousViewId,
-    }));} catch (_) {}
+    if (!selection || !workspaceKey) return;
+    try {
+      let retained={};
+      try{retained=JSON.parse(localStorage.getItem(localKey())||'null')||{};}catch(_){}
+      localStorage.setItem(localKey(), JSON.stringify({
+        selection, title:node('[name="decision-title"]')?.value ?? retained.title ?? '',
+        purpose:node('[name="decision-purpose"]')?.value ?? retained.purpose ?? '',
+        previous_view_id:previousViewId,
+      }));
+    } catch (_) {}
   };
   function initialState(catalog) {
     const comparison=(catalog.comparisons || [])[0];
@@ -254,6 +265,11 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       '<p data-decision-objective-description class="note"></p>' +
       '<p data-decision-origin class="note"></p></section>' +
       '<div data-decision-panel></div>' +
+      '<section class="section decision-continuation" aria-labelledby="decision-analysis-title">' +
+      '<h2 id="decision-analysis-title">Continue with fixed-scale analysis</h2>' +
+      '<p>Carry the selected native runs into Scenario analysis. Choose its fixed baseline scales, planning weights and retained geographic areas in the analysis form.</p>' +
+      '<div data-decision-handoff></div>' +
+      '<button type="button" data-decision-action="analysis" data-decision-primary-analysis disabled>Continue in Scenario analysis</button></section>' +
       '<details class="section decision-interpretation"><summary>Method and original source choices</summary><div data-decision-methods></div></details>';
   }
   function choiceCatalog(){
@@ -304,7 +320,41 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         showObjective();
       }
     }
-    selection={...next,objective_id:objectiveId};remember();
+    selection={...next,objective_id:objectiveId};remember();showHandoff();
+  }
+  function currentHandoff() {
+    const current=getState();
+    return buildScenarioAnalysisSeed({
+      data:panelData,selection,
+      nativeRuns:Array.isArray(current?.data?.runs)?current.data.runs:(liveCatalog?.runs||[]),
+      workspaceKey:current?.workspace_key,
+      title:node('[name="decision-title"]')?.value?.trim() || 'Selected watershed scenarios',
+    });
+  }
+  function showHandoff() {
+    const target=node('[data-decision-handoff]'),button=node('[data-decision-primary-analysis]');
+    if(!target||!button)return;
+    const handoff=currentHandoff();
+    const available=typeof openExtension==='function';
+    button.disabled=!available||!handoff.ready;
+    const issues=[...handoff.baseline_issues,...(handoff.cohort_issues||[])];
+    if(!available)issues.unshift('Open this assessment in the current integrated operator to continue.');
+    let content='<p>'+escape(handoff.accepted_run_count+' native alternative'+(handoff.accepted_run_count===1?'':'s')+
+      ' available from '+handoff.selected_case_count+' selected case'+(handoff.selected_case_count===1?'':'s')+'.')+'</p>';
+    if(handoff.target_metric_ids?.length)content+='<p class="note">Available analysis outputs: '+
+      escape(handoff.target_metric_ids.map(id=>METRICS.find(metric=>metric.id===id)?.label||id).join(', '))+'.</p>';
+    if(issues.length)content+='<ul>'+issues.map(issue=>'<li>'+escape(issue)+'</li>').join('')+'</ul>';
+    if(handoff.rejected_cases.length)content+='<details><summary>'+
+      escape(handoff.rejected_cases.length+' selected case'+(handoff.rejected_cases.length===1?' is':'s are')+' unavailable for this analysis')+
+      '</summary><ul>'+handoff.rejected_cases.map(item=>'<li>'+escape(item.label)+': '+
+        escape(item.reasons.join(' '))+'</li>').join('')+'</ul></details>';
+    if(handoff.ready&&!handoff.selected_case_count)content+='<p>The analysis will use the selected native baseline.</p>';
+    if(handoff.compatible_cohorts?.length)content+='<div class="actions">'+handoff.compatible_cohorts.map(cohort=>
+      '<button type="button" data-decision-action="analysis" data-decision-cohort="'+escape(cohort.id)+'">'+
+      escape('Open '+cohort.title+' · '+cohort.alternative_count+' alternative'+(cohort.alternative_count===1?'':'s'))+
+      '</button>').join('')+'</div>';
+    if(content!==handoffMarkup){target.innerHTML=content;handoffMarkup=content;}
+    return handoff;
   }
   function showMethods() {
     const target=node('[data-decision-methods]');if(!target||!snapshot)return;
@@ -329,7 +379,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
   }
   function mountValues() {
     if (!snapshot || !node('[data-decision-panel]'))return;
-    const data=buildDecisionInput(snapshot,selection?.baseline_id);
+    const data=buildDecisionInput(snapshot,selection?.baseline_id);panelData=data;
     controller?.destroy?.();
     lastBaseline=selection?.baseline_id;objectiveId=selection?.objective_id||'';
     controller=mountPanel(node('[data-decision-panel]'),data,{
@@ -339,12 +389,13 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         retainSelection(next);
         if (next.baseline_id!==lastBaseline) {
           lastBaseline=next.baseline_id;
-          controller?.setData?.(buildDecisionInput(snapshot,next.baseline_id));
+          panelData=buildDecisionInput(snapshot,next.baseline_id);
+          controller?.setData?.(panelData);
         }
       },
     });
     selection=currentSelection();
-    optionLists();showMethods();
+    optionLists();showMethods();showHandoff();
     node('[data-decision-origin]').textContent=loadedView ?
       'Saved assessment '+short(loadedView.id)+' · original source snapshot '+short(loadedView.source_snapshot_sha256)+
       '. Editing creates a new saved revision; the original remains available.' :
@@ -360,7 +411,8 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(!keepSelection)previousViewId=null;
       if(!selection||!keepSelection)selection=initialState(result);
       mountValues();status(result.runs.length+' completed native runs available. Choose the assessment scope and directions.');
-    } catch(error) {if(ticket===generation)status(error.message||String(error),true);}
+      return true;
+    } catch(error) {if(ticket===generation)status(error.message||String(error),true);return false;}
     finally {if(ticket===generation)loading=false;}
   }
   async function openView(id) {
@@ -373,37 +425,144 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       loadedView=row;previousViewId=row.id;snapshot=row.source_snapshot;selection=row.selection;
       node('[name="decision-title"]').value=row.title||'';
       node('[name="decision-purpose"]').value=row.purpose||'';
-      mountValues();status('Saved assessment reopened with its original run references and decision settings.');
-    }catch(error){if(ticket===generation)status(error.message||String(error),true);}
+      mountValues();remember();status('Saved assessment reopened with its original run references and decision settings.');
+      return true;
+    }catch(error){if(ticket===generation)status(error.message||String(error),true);return false;}
     finally{if(ticket===generation)loading=false;}
   }
-  async function submit(action,payload) {
-    if(pending && ['queued','running'].includes(pending.state)) {
+  const pendingEntry = workspace => submissions.entries(workspace)[0] || null;
+  function currentDraft(){
+    return {title:node('[name="decision-title"]')?.value.trim()||'',
+      purpose:node('[name="decision-purpose"]')?.value.trim()||'',
+      selection:controller?currentSelection():selection,
+      ...(previousViewId?{previous_view_id:previousViewId}:{}),};
+  }
+  const selectedStill = workspace => workspaceKey===workspace&&currentWorkspace()===workspace;
+  function receiveTask(entry,task,options={}){
+    if(submissions.isAcknowledged(entry))return null;
+    const retained=submissions.accepted(entry,task,options).entry;
+    if(selectedStill(entry.workspace)){
+      pending={...retained,...task,workspace:entry.workspace,action:entry.action,
+        operation_id:entry.operation_id,payload_sha256:entry.payload_sha256};
+    }
+    return retained;
+  }
+  async function confirmTask(entry,task){
+    const expected=entry.native_operation_id||entry.operation_id;
+    let canonical=false;
+    if(task?.operation_id&&task.operation_id!==expected){
+      if(task.workspace!==entry.workspace||task.action!==entry.action||!task.payload||
+         await submissionIdentity(task.action,task.payload)!==entry.payload_sha256)
+        throw Error('The operator returned a task for different Decisions operands.');
+      // The original queue reuses an already-active identical request. Bind
+      // its actual native operation and task identities after comparing the
+      // complete returned payload, including the original assessment.
+      canonical=true;
+    }
+    return receiveTask(entry,task,{canonical});
+  }
+  function currentTask(entry,state=getState()){
+    if(!entry||state?.workspace_key!==entry.workspace)return null;
+    return (state.tasks||[]).find(task=>sameSubmissionTask(task,entry))||null;
+  }
+  async function reconcileSubmission(entry){
+    const visible=currentTask(entry);
+    if(visible){receiveTask(entry,visible);return visible;}
+    const workspace=entry.workspace;
+    if(entry.id){
+      const task=await api(endpoint('/api/task',{workspace,id:entry.id}));
+      await confirmTask(entry,task);return task;
+    }
+    const state=await api(endpoint('/api/state',{workspace}));
+    const task=currentTask(entry,{...state,workspace_key:state.workspace_key||workspace});
+    if(task){receiveTask(entry,task);return task;}
+    if(['complete','failed','cancelled','interrupted'].includes(entry.state))return null;
+    const original=await submissions.original(entry);
+    if(!original||!selectedStill(workspace))return null;
+    // The original API reconciles operation_id and its complete request before
+    // queue admission. This is the retained request, including its exact
+    // assessment transfer reference, without rebuilding the calculation.
+    const replay=await api('/api/actions',{method:'POST',body:original});
+    await confirmTask(entry,replay);
+    return replay;
+  }
+  async function submit(action,payload,draft=currentDraft()) {
+    const requested=workspaceKey;
+    if(dispatching.has(requested)||
+       (pending&&['queued','running'].includes(pending.state))){
       status('The current workspace task is still running. Its progress remains visible.');return;
     }
-    const bodyKey=action+':'+JSON.stringify(payload);
-    let operation=requestKeys.get(bodyKey);
-    if(!operation){operation=operationId();requestKeys.set(bodyKey,operation);}
-    status('Submitting the original workspace operation…');
-    const result=await api('/api/actions',{method:'POST',body:{
-      workspace:workspaceKey,action,payload,operation_id:operation,
-    }});
-    pending={...result,bodyKey,action};
-    status(action==='decision.view.save'?'Saving the assessment in the scientific workspace…':
-      'The native comparison is queued. Existing completed differences are reused.');
+    const dispatch={workspace:requested};
+    dispatching.set(requested,dispatch);
+    try{
+      const draft_sha256=await submissionIdentity('decision.draft',draft);
+      const prepared=await submissions.prepare(requested,action,payload,{draft_sha256});
+      let entry=prepared.entry;
+      if(!selectedStill(requested)){
+        if(!prepared.reused&&entry.state==='prepared')submissions.acknowledge(entry);
+        throw Error('Reopen the original workspace to continue its retained operation.');
+      }
+      if(prepared.reused&&entry.state==='complete'&&entry.result_id){
+        pending=entry;observe();return entry;
+      }
+      if(prepared.reused){
+        status('Reconciling the original workspace operation…');
+        const task=await reconcileSubmission(entry);
+        if(task){if(selectedStill(requested))observe();return task;}
+        if(!selectedStill(requested))return;
+      }
+      entry=submissions.update(entry,{state:'submitting'}).entry;
+      pending=entry;
+      status(prepared.durable?
+        (prepared.reused?'Continuing the original workspace operation…':'Submitting the original workspace operation…'):
+        'Browser continuation storage is unavailable. Keep this page open until the original task appears.');
+      try{
+        const result=await api('/api/actions',{method:'POST',body:{
+          workspace:requested,action,payload,operation_id:entry.operation_id,
+        }});
+        await confirmTask(entry,result);
+        if(selectedStill(requested)){
+          status(action==='decision.view.save'?'Saving the assessment in the scientific workspace…':
+            'The native comparison is queued. Existing completed differences are reused.');
+          observe();
+        }
+        return result;
+      }catch(error){
+        if(submissions.isAcknowledged(entry))return;
+        const retained=submissions.update(entry,{state:'uncertain'}).entry;
+        const message='The original submission is retained. Reconnecting will find its task; repeat the same choice to continue it. '+(error.message||String(error));
+        if(selectedStill(requested)){pending=retained;status(message,true);}
+        throw Error(message);
+      }
+    }finally{
+      if(dispatching.get(requested)===dispatch)dispatching.delete(requested);
+    }
   }
-  async function act(action) {
+  async function act(action,cohortId='') {
     if(transferring?.workspace===workspaceKey&&['save','compare','refresh'].includes(action)){
       status('The original assessment transfer is in progress. Its retained parts will be reused after an interruption.');return;
     }
     if(action==='refresh')return loadCurrent({keepSelection:true});
     if(action==='retry'&&pending?.id) {
-      pending={...pending,...await api('/api/task/resume',{method:'POST',body:{id:pending.id}})};
-      if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=true;
-      return status('The original task is queued for continuation.');
+      const entry=pending;
+      const task=await api('/api/task/resume',{method:'POST',body:{id:entry.id}});
+      await confirmTask(entry,task);
+      if(selectedStill(entry.workspace)){
+        if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=true;
+        status('The original task is queued for continuation.');observe();
+      }
+      return;
     }
     if(!controller||loading)throw Error('Wait for the original operands to open.');
     selection=currentSelection();remember();
+    if(action==='analysis') {
+      const handoff=showHandoff()||currentHandoff();
+      if(typeof openExtension!=='function')throw Error('Open this assessment in the current integrated operator to continue.');
+      const cohort=cohortId?(handoff.compatible_cohorts||[]).find(item=>item.id===cohortId):null;
+      if(cohortId&&!cohort)throw Error('The native selection changed. Choose an available analysis group.');
+      if(!cohort&&!handoff.ready)throw Error(handoff.baseline_issues[0]||handoff.cohort_issues?.[0]||'Choose a compatible native cohort in the comparison.');
+      return await openExtension('scenario-analysis','create',cohort?.request||handoff.request);
+    }
     if(action==='save') {
       const title=node('[name="decision-title"]').value.trim();
       if(!title)throw Error('Give this assessment a title before saving.');
@@ -426,7 +585,7 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         });
         if(workspaceKey!==selectedWorkspace||currentWorkspace()!==selectedWorkspace)
           throw Error('Reopen the original workspace to save its retained assessment.');
-        return await submit('decision.view.save',{...original,...transmitted});
+        return await submit('decision.view.save',{...original,...transmitted},original);
       }finally{if(transferring===transfer)transferring=null;}
     }
     if(action==='compare'){
@@ -449,14 +608,15 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(backgroundRefresh!==request||request.workspace!==workspaceKey||request.generation!==generation||!root)return;
       liveCatalog=result;sourceStamp=stamp;nextSourceRefresh=0;savedViews=result.saved_views||savedViews;
       if(loadedView){
-        optionLists();
+        optionLists();showHandoff();
         status('New workspace results are available in the report and comparison selectors.');
       }else{
         const retained=controller?currentSelection():selection;
         snapshot=result;
-        controller?.setData(buildDecisionInput(snapshot,retained?.baseline_id));
+        panelData=buildDecisionInput(snapshot,retained?.baseline_id);
+        controller?.setData(panelData);
         if(controller&&retained)controller.setState(retained);
-        optionLists();showMethods();
+        optionLists();showMethods();showHandoff();
         status('The completed native results and watershed reports have refreshed. The current decision settings are retained.');
       }
     }).catch(error=>{
@@ -465,27 +625,75 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
         status('Refreshing workspace results: '+(error.message||String(error)),true);
     }).finally(()=>{if(backgroundRefresh===request)backgroundRefresh=null;});
   }
+  function refreshPendingTask(entry){
+    if(taskRefresh||Date.now()<nextTaskRefresh)return;
+    const request={workspace:entry.workspace,operation_id:entry.operation_id};
+    taskRefresh=request;nextTaskRefresh=Date.now()+5000;
+    Promise.resolve(reconcileSubmission(entry)).then(task=>{
+      if(task&&selectedStill(request.workspace)&&root)observe();
+      else if(selectedStill(request.workspace)&&root&&pending?.operation_id===request.operation_id&&
+              ['prepared','submitting','uncertain'].includes(pending.state))
+        status('The original submission identity is retained. Repeat the same Save or comparison choice to reconcile it through the original queue.');
+    }).catch(error=>{
+      if(selectedStill(request.workspace)&&root&&pending?.operation_id===request.operation_id)
+        status('Reconnecting to the original task: '+(error.message||String(error)),true);
+    }).finally(()=>{if(taskRefresh===request)taskRefresh=null;});
+  }
+  function finishSubmission(entry){
+    if(finishing||loading||!root)return;
+    const request={workspace:entry.workspace,operation_id:entry.operation_id};
+    finishing=request;
+    Promise.resolve().then(async()=>{
+      const current=await submissionIdentity('decision.draft',currentDraft());
+      if(!selectedStill(request.workspace)||!root)return false;
+      if(entry.draft_sha256&&entry.draft_sha256!==current){
+        remember();
+        if(entry.action==='decision.view.save'){
+          status('The original assessment is saved. Your current draft is retained. Open its result from saved assessments.');
+          optionLists();
+        }else status('The original native comparison is complete. Your current decision draft is retained.');
+        return true;
+      }
+      if(entry.action==='decision.view.save'&&entry.result_id){
+        const opened=await openView(entry.result_id);
+        if(opened&&selectedStill(request.workspace))toast('Scenario assessment saved.');
+        return opened===true;
+      }
+      return await loadCurrent({keepSelection:true})===true;
+    }).then(handled=>{
+      if(handled&&selectedStill(request.workspace)){
+        submissions.acknowledge(entry);
+        if(pending?.operation_id===entry.operation_id)pending=pendingEntry(request.workspace);
+        if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=true;
+      }
+    }).catch(error=>{
+      if(selectedStill(request.workspace)&&root)status(error.message||String(error),true);
+    }).finally(()=>{
+      if(finishing===request)finishing=null;
+      if(selectedStill(request.workspace)&&root&&pending&&pending.operation_id!==entry.operation_id)observe();
+    });
+  }
   function observe() {
-    if(workspaceKey!==currentWorkspace())return;
+    if(!root||workspaceKey!==currentWorkspace())return;
     savedViews=getState()?.data?.decision_views||savedViews;
     const changedSaved=JSON.stringify(savedViews.map(row=>row.id));
     if(changedSaved!==savedStamp){savedStamp=changedSaved;if(frame)optionLists();}
-    if(!pending){refreshExternalSources();return;}
-    const task=(getState()?.tasks||[]).find(item=>item.id===pending.id);
-    if(!task)return;
-    pending={...pending,...task};
-    if(task.state==='failed'){
-      status(task.error?.message||'The workspace task failed; its original error and draft are retained.',true);
-      if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=false;
-    }else if(task.state==='complete'){
-      const finished=pending;pending=null;
-      requestKeys.delete(finished.bodyKey);
-      if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=true;
-      if(finished.action==='decision.view.save'&&task.result?.id) {
-        toast('Scenario assessment saved.');
-        openView(task.result.id);
-      }else loadCurrent({keepSelection:true});
-    }else status('Workspace operation: '+task.state+'. Its original task and progress are retained.');
+    if(!pending)pending=pendingEntry(workspaceKey);
+    if(!pending){showHandoff();refreshExternalSources();return;}
+    const task=currentTask(pending);
+    if(task)receiveTask(pending,task);
+    if(pending.state==='complete'){
+      finishSubmission(pending);return;
+    }
+    if(task?.state==='failed'||pending.state==='failed'||pending.state==='interrupted'){
+      status(task?.error?.message||'The original workspace task needs continuation; its draft and task identity are retained.',true);
+      if(node('[data-decision-action="retry"]'))node('[data-decision-action="retry"]').hidden=!pending.id;
+    }else if(pending.state==='cancelled'){
+      status('The original workspace operation was cancelled. Its task and current draft remain available.');
+    }else if(['queued','running'].includes(pending.state)){
+      status('Workspace operation: '+pending.state+'. Its original task and progress are retained.');
+    }
+    if(!task)refreshPendingTask(pending);
   }
   function mount(container) {
     const nextWorkspace=currentWorkspace();
@@ -494,9 +702,11 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     }
     const changingWorkspace=workspaceKey!==nextWorkspace;
     detach();
-    if(changingWorkspace){pending=null;snapshot=null;liveCatalog=null;loadedView=null;previousViewId=null;savedViews=[];requestKeys=new Map();transferring=null;sourceStamp='';savedStamp='';backgroundRefresh=null;nextSourceRefresh=0;}
+    if(changingWorkspace){panelData=null;pending=null;snapshot=null;liveCatalog=null;loadedView=null;previousViewId=null;savedViews=[];transferring=null;sourceStamp='';savedStamp='';backgroundRefresh=null;nextSourceRefresh=0;}
+    taskRefresh=null;nextTaskRefresh=0;finishing=null;
+    pending=pendingEntry(nextWorkspace);
     root=container;workspaceKey=nextWorkspace;
-    frame=document.createElement('div');frame.className='decision-workbench';frame.innerHTML=controls();
+    frame=document.createElement('div');frame.className='decision-workbench';frame.innerHTML=controls();handoffMarkup='';
     container.replaceChildren(frame);
     let draft;
     try{draft=JSON.parse(localStorage.getItem(localKey())||'null');}catch(_){}
@@ -508,10 +718,10 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
       if(!button)return;event.preventDefault();event.stopPropagation();
       button.disabled=true;
       const actionWorkspace=workspaceKey;
-      Promise.resolve(act(button.dataset.decisionAction)).catch(error=>{
+      Promise.resolve(act(button.dataset.decisionAction,button.dataset.decisionCohort||'')).catch(error=>{
         if(workspaceKey===actionWorkspace)status(error.message||String(error),true);
       })
-        .finally(()=>{button.disabled=false;});
+        .finally(()=>{button.disabled=false;if(button.dataset.decisionAction==='analysis')showHandoff();});
     });
     frame.addEventListener('change',event=>{
       if(event.target.name==='saved-decision')openView(event.target.value);
@@ -548,11 +758,11 @@ export function attachDecisionWorkbench({getState, api, endpoint, toast}) {
     frame.addEventListener('input',event=>{
       if(event.target.name==='decision-title'||event.target.name==='decision-purpose')remember();
     });
-    loadCurrent({keepSelection:true});
+    Promise.resolve(loadCurrent({keepSelection:true})).then(()=>{if(root&&selectedStill(nextWorkspace))observe();});
   }
   function detach() {
     remember();generation++;controller?.destroy?.();controller=null;
-    root=null;frame=null;loading=false;backgroundRefresh=null;
+    root=null;frame=null;loading=false;backgroundRefresh=null;taskRefresh=null;finishing=null;
   }
   return {mount,detach,update:observe};
 }

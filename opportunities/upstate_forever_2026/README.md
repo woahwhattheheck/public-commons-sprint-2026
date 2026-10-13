@@ -16,6 +16,17 @@ Large assessments use resumable authenticated transfers within the original oper
 
 See [Scenario decisions](operator/SCENARIO_DECISIONS.md), the [component contract](operator/SCENARIO_DECISIONS_COMPONENT.md), and [performance notes](operator/SCENARIO_DECISIONS_PERFORMANCE.md).
 
+## Regional decision context
+
+Open **Decision context** in the operator to combine a saved receiving-water analysis or source plan with retained NRCS state/HUC context and the classified-water crosswalk. The desk preserves original paired physical quantities and source editions, saves portable HTML/CSV/ZIP reports, and links compatible map deliveries. See [DECISION_CONTEXT.md](DECISION_CONTEXT.md) for the operator workflow and original-workspace receiving journey.
+
+The retained [217-watershed source edition](source/water_context/20261013/README.md) covers the complete selected model domain. It contains the original composed context, 240 matching NRCS state/HUC rows, the exact domain identifiers and the original classified-water coverage record. Import it into the existing scientific workspace from this application directory:
+
+    python -B -m model.cli --workspace /path/to/scientific-workspace \
+      source-import source/water_context/sources-20261013.json
+
+The [watershed programme guide](model/WATERSHED_CONTEXT.md) covers HUC, state and HUC8 summaries, selected-watershed tables, and upstream/downstream relationships from original HUC12/ToHUC records. Programme designations accompany the original receiving-water calculations.
+
 ## Install additional source editions
 
 This checkout already joins the core operator and its current source/native descriptors. When adopting a maintained component into another existing application, keep that component's complete source and descriptor together and run the shared installer against the actual destination:
@@ -56,6 +67,12 @@ The [original archive receiver](source_tools/USGS_ARCHIVE.md) receives the publi
 Run `python -B -m source_tools.usgs_contract inspect --help` for original-member inspection and `python -B -m source_tools.usgs_contract compile --help` for compilation from the resulting binding. The complete guide supplies the receiving, field-selection, review-join and annualization commands.
 
 The compiler reads the actual ten-column data dictionary, resolves native variable definitions and unit meanings, joins model-review records without multiplying source rows, and preserves every original record. Its source contract feeds the existing station qualification and annualization tools. Import the resulting annual observations and catchment source manifest into the Workspace used by the original baseline runs.
+
+### Published 2012 annual estimates
+
+The [published annual-reference importer](source_tools/USGS_ANNUAL.md) adds the original national [USGS F7DN436B release](https://doi.org/10.5066/F7DN436B). It receives the small `load_est.zip` and `sitegage.zip` files, selects each station's publisher-chosen Beale or Fluxmaster estimate, and retains the exact annual rate, standard error, original station/flow-station identity and source periods. Nitrogen, phosphorus, suspended sediment and total suspended solids retain their original constituent codes.
+
+Run `source_tools.usgs_annual` through `receive`, `inventory`, `prepare` and `bind` to place the selected original annual rows and upstream catchments directly into the existing Workspace and Calibration catalog. The retained [Upper Savannah station and basin sources](source/usgs-nldi-upper-savannah-20261013/source-manifest.json) include full original NLDI responses and a source-component review, so the preparation can adopt those actual files directly. The importer guide contains the complete commands and station/geometry selection contract.
 
 ## Calibration in the existing application
 

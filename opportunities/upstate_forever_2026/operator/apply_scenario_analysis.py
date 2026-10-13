@@ -3,10 +3,12 @@ from __future__ import annotations
 
 import argparse
 import ast
+import base64
+import binascii
 import hashlib
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import runpy
 import tempfile
 
@@ -15,7 +17,70 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
+def source_packet(value):
+    """Decode a verified standard source bank or retain an original plaintext packet."""
+    if not isinstance(value, dict):
+        raise ValueError("Use an original source packet or a complete source-bank object")
+    if value.get("schema") != "commons.source-bank/v1":
+        if not isinstance(value.get("files"), dict):
+            raise ValueError("The original source packet must contain a files dictionary")
+        return value
+
+    metadata = value.get("installer_packet")
+    if not isinstance(metadata, dict) or not isinstance(value.get("files"), list):
+        raise ValueError("The source bank must include its complete installer metadata and files")
+    packet = dict(metadata)
+    if value.get("source_root") != packet.get("prefix"):
+        raise ValueError("The source bank and installer target different application roots")
+    if not isinstance(packet.get("prefix"), str) or not packet["prefix"]:
+        raise ValueError("The installer application prefix is missing")
+
+    bodies, file_metadata = {}, {}
+    for item in value["files"]:
+        if not isinstance(item, dict) or not isinstance(item.get("path"), str):
+            raise ValueError("Each source-bank file needs an original relative path")
+        name = item["path"]
+        relative = PurePosixPath(name)
+        if (not name or relative.is_absolute() or ".." in relative.parts
+                or "\\" in name or str(relative) != name or name in bodies):
+            raise ValueError("Invalid or duplicate source path: " + name)
+        try:
+            data = base64.b64decode(item["content_base64"], validate=True)
+        except (KeyError, TypeError, ValueError, binascii.Error) as error:
+            raise ValueError("Invalid base64 source: " + name) from error
+        if (type(item.get("bytes")) is not int or len(data) != item["bytes"]
+                or sha(data) != item.get("sha256")):
+            raise ValueError("Source bytes or SHA256 differ: " + name)
+        if item.get("mode") not in ("100644", "100755"):
+            raise ValueError("Use a regular source-file Git mode: " + name)
+        try:
+            bodies[name] = data.decode("utf-8")
+        except UnicodeDecodeError as error:
+            raise ValueError("Source is not UTF-8: " + name) from error
+        file_metadata[name] = {key: item[key] for key in ("bytes", "sha256", "mode")}
+    if not bodies:
+        raise ValueError("The complete source bank has no files")
+
+    required = {"operator/apply_scenario_analysis.py",
+                "operator/web/scenario_analysis.mjs",
+                "model/scenario_analysis.py"}
+    required.update(packet.get("registry_files", []))
+    if not required <= set(bodies):
+        raise ValueError("Use the complete scenario source bank, including its runtime and registration")
+
+    history = value.get("predecessor_history", {})
+    if not isinstance(history, dict) or any(
+            not isinstance(entries, list) or any(not isinstance(entry, dict) for entry in entries)
+            for entries in history.values()):
+        raise ValueError("Use the source bank's original predecessor metadata")
+    packet.update(files=bodies, file_metadata=file_metadata,
+                  predecessor_history=history)
+    packet["operation_id"] = value.get("operation_id") or packet["operation_id"]
+    return packet
+
+
 def apply(root, packet, integration="auto"):
+    packet = source_packet(packet)
     root = Path(root).resolve(strict=True)
     prefix = packet["prefix"].rstrip("/") + "/"
     application = root if (root / "model" / "workspace.py").is_file() else root / packet["prefix"]
@@ -48,7 +113,8 @@ def apply(root, packet, integration="auto"):
     def allowed_predecessor(name, data):
         candidates = [packet.get(key, {}).get(name)
                       for key in ("previous_file_metadata", "historical_file_metadata")]
-        return any(previous and len(data) == previous.get("bytes")
+        candidates.extend(packet.get("predecessor_history", {}).get(name, []))
+        return any(isinstance(previous, dict) and len(data) == previous.get("bytes")
                    and sha(data) == previous.get("sha256") for previous in candidates)
 
     for name, body in packet["files"].items():
@@ -154,7 +220,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, help="Existing checkout or Upper Savannah application directory")
     carrier = parser.add_mutually_exclusive_group(required=True)
-    carrier.add_argument("--bundle", help="Decoded complete source bundle JSON")
+    carrier.add_argument("--bundle", help="Complete commons.source-bank/v1 JSON or decoded original source packet")
     carrier.add_argument("--carrier", help="Saved complete source Canvas Markdown, JSON or JSON.gz")
     parser.add_argument("--receiver", help="Original receive_application_source.py, required with --carrier")
     parser.add_argument("--integration", choices=("auto", "extensions", "legacy"), default="auto")
@@ -166,7 +232,7 @@ def main():
             receiver = runpy.run_path(str(Path(args.receiver).resolve(strict=True)))
             packet, _files, _receipt = receiver["read_carrier"](Path(args.carrier))
         else:
-            packet = json.loads(Path(args.bundle).read_text(encoding="utf-8"))
+            packet = json.loads(Path(args.bundle).read_text(encoding="utf-8-sig"))
         result = apply(args.root, packet, args.integration)
     except (OSError, ValueError, KeyError, TypeError, SyntaxError) as error:
         parser.exit(2, "scenario operator integration: " + str(error) + "\n")
