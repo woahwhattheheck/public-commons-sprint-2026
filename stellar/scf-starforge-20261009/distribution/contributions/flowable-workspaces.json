@@ -9,7 +9,10 @@
     "flowable-history-analysis": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/history-cli.mjs",
     "flowable-document-capture": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-alfresco-document.mjs",
     "flowable-installation": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation.mjs",
-    "flowable-installation-receive": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs"
+    "flowable-installation-receive": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs",
+    "flowable-document-comparison": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-comparison-cli.mjs",
+    "flowable-document-comparison-capture": "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/capture-document-comparison.mjs",
+    "flowable-installation-source": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation/service-cli.mjs"
   },
   "commandDescriptions": {
     "flowable-workspace": "Open, operate, receive and export native Flowable process, case and decision workspaces.",
@@ -18,7 +21,10 @@
     "flowable-history-analysis": "Analyse an exact saved process-history cohort and receive its complete source into an independent workspace.",
     "flowable-document-capture": "Retain a selected Alfresco version and complete content for reviewed native document process intake.",
     "flowable-installation": "Prepare and reopen a complete Flowable programme, original commercial Workshare and customer Installation.",
-    "flowable-installation-receive": "Save or select the original customer Installation and independently receive both full native applications."
+    "flowable-installation-receive": "Save or select the original customer Installation and independently receive both full native applications.",
+    "flowable-document-comparison": "Reproduce complete selected document comparisons, review dispositions and portable receiving outputs.",
+    "flowable-document-comparison-capture": "Read and retain explicitly selected Alfresco source/target versions through the original capture adapter.",
+    "flowable-installation-source": "Operate complete case-bound Flowable source catalogues and customer preparations through the original Source Desk."
   },
   "exports": {
     "./seller/flowable/native": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/native.mjs",
@@ -50,7 +56,10 @@
     "./seller/flowable/workspace/document-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-receiving.mjs",
     "./seller/flowable/workspace/alfresco-document": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/alfresco-document.mjs",
     "./seller/flowable/customer-installation": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation.mjs",
-    "./seller/flowable/customer-installation-receiving": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs"
+    "./seller/flowable/customer-installation-receiving": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-receiving.mjs",
+    "./seller/flowable/workspace/document-comparison": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-comparison.mjs",
+    "./seller/flowable/workspace/document-comparison-receiving": "./source/stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/document-comparison-cli.mjs",
+    "./seller/flowable/customer-installation-service": "./source/stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation/service.mjs"
   },
   "supportFiles": [
     "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/README.md",
@@ -126,7 +135,11 @@
     "products/flowable-merchant/DOCUMENT_INTAKE.md",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-customer.json",
     "stellar/scf_2026/sf49_data_commissioning/installation-workorders/flowable-installation-operations.py",
-    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_CUSTOMER.md"
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/FLOWABLE_CUSTOMER.md",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/comparison-source.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/comparison-selection.json",
+    "stellar/scf-starforge-20261009/sf30-seller-sdk/flowable/workspace/examples/documents/comparison-capture.example.json",
+    "products/flowable-merchant/DOCUMENT_COMPARISON.md"
   ],
   "browserAssets": [
     {

@@ -85,3 +85,42 @@ export async function inspectFlowableInstallationSource(archive,{programmeId,pro
   if(closing){if(primary){primary.cleanupError=closing;primary.retainedDirectory=temporary;}else throw closing;}
  }
 }
+
+/** List every saved original programme edition from the complete native archive. */
+export async function catalogueFlowableInstallationSource(archive,{expectedArchiveSha256,signal}={}){
+ need(Buffer.isBuffer(archive)&&archive.length>0&&archive.length<=MAX_ARCHIVE&&
+  /^[a-f0-9]{64}$/.test(expectedArchiveSha256??'')&&hash(archive)===expectedArchiveSha256,
+  'Select the complete original Flowable archive and its exact whole-byte SHA-256.');
+ const temporary=await mkdtemp(join(tmpdir(),'flowable-installation-catalogue-'));let workspace,primary;
+ try{
+  signal?.throwIfAborted();const path=join(temporary,'original.ndjson');await writeFile(path,archive,{flag:'wx',mode:0o600});
+  workspace=await openFlowableWorkspace({directory:join(temporary,'receiver'),connections:[],environment:{},
+   fetch:async()=>{throw Error('Programme selection uses the retained original archive.');},signal});
+  const inspected=await workspace.inspectDelivery({requestId:request(expectedArchiveSha256+'\ncatalogue-inspect'),path,
+   label:'Complete original customer programme catalogue',signal});
+  need(inspected.value.state==='INSPECTED'&&inspected.value.original.bytes===archive.length&&
+   inspected.value.original.sha256===expectedArchiveSha256,'The complete original archive selection differs.');
+  const manifest=(await workspace.readSource({reference:inspected.value.manifest,signal})).value;
+  need(Array.isArray(manifest?.records),'Retain the complete original saved-record manifest.');
+  const adopted=await workspace.adoptDelivery({requestId:request(expectedArchiveSha256+'\ncatalogue-adopt'),id:inspected.id,
+   expectedRevision:inspected.revision,manifestSha256:inspected.value.manifestSha256,signal});
+  need(adopted.value.state==='ADOPTED','Complete the original archive adoption before selecting programmes.');
+  const programmes=[];
+  for(const record of manifest.records.filter(row=>row.kind==='programme').sort((a,b)=>a.id.localeCompare(b.id)||a.revision-b.revision)){
+   signal?.throwIfAborted();const view=await workspace.readProgramme({id:record.id,revision:record.revision,signal});
+   need(view.record.sha256===record.sha256,'A selected immutable programme differs from the original archive.');
+   programmes.push({record:view.record,programmeSha256:view.programmeSha256,basisSha256:view.basisSha256,
+    key:view.programmeKey,connectionId:view.connectionId,state:view.progress.state,
+    total:view.progress.total,confirmed:view.progress.confirmed,source:view.source});
+  }
+  return{schema:SCHEMA+'.catalogue',workspaceId:inspected.value.sourceWorkspace.workspaceId,
+   archive:{name:'flowable-workspace.ndjson',bytes:archive.length,sha256:expectedArchiveSha256,
+    bodySha256:inspected.value.original.bodySha256,sourceDeliveryId:inspected.value.sourceDeliveryId},
+   programmes,completeArchiveSummary:inspected.value.summary};
+ }catch(error){primary=error;throw error;}
+ finally{
+  let closing;try{if(workspace)await workspace.close();}catch(error){closing=error;closing.retainedDirectory=temporary;}
+  if(!closing)try{await rm(temporary,{recursive:true,force:true});}catch(error){closing=error;closing.retainedDirectory=temporary;}
+  if(closing){if(primary){primary.cleanupError=closing;primary.retainedDirectory=temporary;}else throw closing;}
+ }
+}

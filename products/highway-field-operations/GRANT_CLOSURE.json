@@ -1,0 +1,107 @@
+{
+  "schema": "commons.highway-grant-closure.v1",
+  "operation": "HIGHWAY-PUBLIC-GRANT-RESTORE-675D-20261013",
+  "grant": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "2977f57d845ef90679de46a7e96addff6c4d8c70",
+    "pull_request": 4664,
+    "source_selection": "stellar/scf-starforge-20261009/distribution/selections/grant-operations.json",
+    "contributions": [
+      "grant-cohort-planning",
+      "grant-issuer-terms",
+      "grant-procedures",
+      "grant-reporting"
+    ],
+    "support_files": 335,
+    "managed_source_members": 684
+  },
+  "highway": {
+    "prior_merge": "b0025d91589c39c1bf82f6065d737b3882aa6fc0",
+    "source_selection": "stellar/scf-starforge-20261009/distribution/selections/highway-field-operations.json",
+    "contributions": [
+      "grant-workspace",
+      "grant-agent",
+      "merchant-provider-grant-workspaces",
+      "grant-source-tables",
+      "grant-application-handoff",
+      "operator-discovery",
+      "highway-field-operations-interfaces",
+      "grant-cohort-planning",
+      "grant-issuer-terms",
+      "grant-procedures",
+      "grant-reporting"
+    ],
+    "support_files": 529,
+    "all_prior_selection_members_preserved": true,
+    "app_files": 170,
+    "application_changed": false,
+    "managed_receiving_changed": false,
+    "original_adoption_preserved": "products/highway-field-operations/PUBLIC_ADOPTION.json"
+  },
+  "continuation": {
+    "native_operation": "352d7b0a-548a-4d96-82fc-27394485a43f",
+    "native_owner": "9B23",
+    "commercial_owner": "B57F",
+    "new_invocation": false,
+    "private_sources": "Retained only in their original authorized private destination"
+  },
+  "verification": {
+    "schema": "commons.highway-grant-selection-receiving.v1",
+    "operation": "HIGHWAY-PUBLIC-GRANT-RESTORE-675D-20261013",
+    "grant_commit": "2977f57d845ef90679de46a7e96addff6c4d8c70",
+    "source_execution": "Actual maintained validateSourceSelection/selectDistributionSources/composeDistribution executed in V8 against complete original registrations. No Node package build, filesystem or browser outcome claimed.",
+    "contributions": [
+      "grant-workspace",
+      "grant-agent",
+      "merchant-provider-grant-workspaces",
+      "grant-source-tables",
+      "grant-application-handoff",
+      "operator-discovery",
+      "highway-field-operations-interfaces",
+      "grant-cohort-planning",
+      "grant-issuer-terms",
+      "grant-procedures",
+      "grant-reporting"
+    ],
+    "components": 15,
+    "support_files": 529,
+    "added_support_files": 183,
+    "declared_required_paths": 703,
+    "missing_paths": [],
+    "missing_components": [],
+    "registered_commands": [
+      "installation",
+      "runtime-profile",
+      "runtime-install",
+      "runtime-workspace",
+      "runtime-transfer",
+      "grant-workspace",
+      "merchant-mcp",
+      "merchant-mcp-stdio",
+      "merchant-mcp-client-config",
+      "grant-application-handoff",
+      "grant-cohort-plan",
+      "grant-procedures",
+      "grant-procedures-receiving",
+      "grant-reporting",
+      "grant-source-tables",
+      "grant-installation-workorder",
+      "grant-installation-receive",
+      "grant-installation-source-desk",
+      "grant-source-collection",
+      "highway-field-operations",
+      "discover",
+      "grant-reporting-plan"
+    ],
+    "managed_manifests": [
+      "stellar/scf_2026/sf47_budget_model/workspace/managed-source.json"
+    ],
+    "existing_selection_members_preserved": true,
+    "original_highway_application_unchanged": true,
+    "native_operation": "352d7b0a-548a-4d96-82fc-27394485a43f",
+    "native_rendered_status": "Pending original 9B23 equipped receiving",
+    "managed_source_members": 684,
+    "managed_missing_paths": [],
+    "new_source_metadata": "products/highway-field-operations/GRANT_CLOSURE.json"
+  }
+}

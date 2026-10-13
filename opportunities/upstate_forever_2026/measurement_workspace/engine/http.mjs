@@ -1,3 +1,4 @@
+import {intakeOperation} from './intake.mjs';
 import {flowOperation,readFlowStudy,flowCSV} from './flow_workspace.mjs';
 import {largeOperation} from './large_http.mjs';
 import {previewCollection,receiveCollection,listCollections,publishCollection,readEdition,editionMember,editionBundle} from './collections.mjs';
@@ -36,6 +37,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
     }
     const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);
       const s=get();
+      if(parts[0]==='intake'){send(response,200,intakeOperation(s,method,parts.slice(1),['POST','PUT'].includes(method)?await readBody(request):{}));return;}
       if(parts[0]==='flow'){
         if(method==='GET'&&parts[1]==='studies'&&parts.length===4&&['daily.csv','periods.csv','samples.csv'].includes(parts[3])){send(response,200,flowCSV(readFlowStudy(s,parts[2]),parts[3].split('.')[0]),'text/csv; charset=utf-8',parts[3]);return;}
         send(response,200,await flowOperation(s,method,parts.slice(1),method==='POST'?await readBody(request):{}));return;
