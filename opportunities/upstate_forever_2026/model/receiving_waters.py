@@ -96,22 +96,53 @@ def _source(workspace, selection, crs, *, cache=None):
     vector_key = ("vector", collection, source_id, layer, str(crs))
     if vector_key not in cache:
         raw_rows, native_ids = [], defaultdict(list)
-        with rasters.vector_environment(), fiona.open(
-            rasters.native_vector_path(path), **({"layer": layer} if layer else {})
-        ) as original:
+        from .spatial_esri import OriginalEsriFeatures, UnsupportedEsriGeometry, is_esri_source
+        reader = None
+        with ExitStack() as stack:
+            original = None
+            if is_esri_source(path, entry):
+                try:
+                    original = OriginalEsriFeatures(path, entry)
+                except UnsupportedEsriGeometry:
+                    # Non-polygon Esri originals retain the existing GDAL reader.
+                    pass
+            if original is None:
+                stack.enter_context(rasters.vector_environment())
+                original = stack.enter_context(fiona.open(
+                    rasters.native_vector_path(path), **({"layer": layer} if layer else {})
+                ))
+            else:
+                if layer is not None and layer not in original.layers:
+                    raise ValueError("Select the retained original Esri polygon layer")
+                reader = {
+                    **_json_copy(original.reader_metadata),
+                    "adapter": "model/spatial_esri.py:OriginalEsriFeatures",
+                    "adapter_source_sha256": file_digest(
+                        Path(__file__).with_name("spatial_esri.py")),
+                    "analysis_axes": "XY",
+                    "analysis_crs": CRS.from_user_input(crs).to_wkt(),
+                }
             native = CRS.from_user_input(original.crs_wkt or original.crs)
             target = CRS.from_user_input(crs)
             project = Transformer.from_crs(native, target, always_xy=True)
             for feature in original:
-                if not feature["geometry"]:
+                geometry = feature["geometry"]
+                if not geometry:
                     continue
                 row = {"id": str(feature.id), "properties": dict(feature["properties"]),
-                       "native_geometry": feature["geometry"]}
+                       "native_geometry": geometry}
+                if reader is not None:
+                    row["source_feature"] = {
+                        "source_array_index": feature.source_feature_index,
+                        "native_id_basis": feature.id_basis,
+                        "geometry_operations": _json_copy(feature.geometry_operations),
+                    }
                 native_ids[row["id"]].append(len(raw_rows))
                 raw_rows.append(row)
         cache[vector_key] = {
             "rows": raw_rows, "native_ids": dict(native_ids), "geometries": {},
             "project": project, "transform_required": native != target,
+            "geometry_reader": reader,
         }
     retained = cache[vector_key]
     if wanted is None:
@@ -135,7 +166,9 @@ def _source(workspace, selection, crs, *, cache=None):
         geometry = retained["geometries"][position]
         if not geometry.is_empty:
             rows.append({"id": original["id"], "properties": original["properties"],
-                         "geometry": geometry})
+                         "geometry": geometry,
+                         **({"source_feature": original["source_feature"]}
+                            if "source_feature" in original else {})})
     if wanted is not None and {row["id"] for row in rows} != wanted:
         raise ValueError("One or more selected native feature IDs are absent")
     if not rows:
@@ -152,6 +185,12 @@ def _source(workspace, selection, crs, *, cache=None):
             for item in entry.get("companions", [])
         ],
     }
+    if retained["geometry_reader"] is not None:
+        identity["geometry_reader"] = retained["geometry_reader"]
+        identity["selected_features"] = [
+            {"native_feature_id": row["id"], **row["source_feature"]}
+            for row in rows
+        ]
     return rows, identity
 
 
@@ -392,7 +431,8 @@ def prepare(workspace, selection):
             "classification": _json_copy(descriptor.get("classification", {})),
             "metadata": _json_copy(descriptor.get("metadata", {})),
             "original_features": [
-                {"native_feature_id": row["id"], "properties": row["properties"]}
+                {"native_feature_id": row["id"], "properties": row["properties"],
+                 **row.get("source_feature", {})}
                 for row in original_rows
             ],
             "contribution_area_ha": contribution.area / 10000,
