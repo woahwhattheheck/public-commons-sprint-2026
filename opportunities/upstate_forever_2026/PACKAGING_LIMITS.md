@@ -162,7 +162,11 @@ through `package_delivery.pack` and `package_delivery.verify`. The carrier
 retains that complete inventory and adds the original verification tools,
 package index, handoff view, and transfer manifest; those additions do not
 redefine the scientific cohort or introduce a second scenario-count ceiling.
-The tools directory now includes this guide. After extraction, the original
+Newly built carriers include this guide in their tools directory. Keep the
+merged delivery_snapshot.py and package_delivery.py beside the original
+application model package when installing this archive successor; its metadata
+policy imports that same retained capture_limits implementation. After
+extraction, the original
 `tools/package_delivery.py verify PACKAGE_ROOT` command accepts the same
 capture-policy flags described above.
 
