@@ -31,6 +31,20 @@ import uuid
 
 OPERATION = "SCF-DATASETTE-SOURCE-EDITIONS-07476-20261012"
 ORIGINAL_ROOT = pathlib.Path("/dev/datasette-publisher-a49aa-fq7r4j79")
+
+
+def selected_storage_root(selection):
+    value = selection.get("storage_root", str(ORIGINAL_ROOT))
+    if not isinstance(value, str) or "\0" in value:
+        raise ValueError("Select the original receiver's actual physical storage root.")
+    root = pathlib.Path(value)
+    if (not root.is_absolute() or str(root) != value or ".." in root.parts
+            or root == pathlib.Path("/") or root.parent.resolve(strict=True) != root.parent
+            or not root.parent.is_dir() or not os.access(root.parent, os.W_OK)):
+        raise ValueError("The physical storage root needs an existing canonical writable parent.")
+    if os.path.lexists(root) and (root.is_symlink() or not root.is_dir() or root.resolve() != root):
+        raise ValueError("The retained physical storage root changed type.")
+    return root
 CONNECTOR = "connector_openai_library"
 ACTIONS = ("prepare_materialize", "prepare_uploads", "finalize_uploads")
 PROTOCOL = "commons.datasette.connected-library.v1"
@@ -281,7 +295,8 @@ class InvocationTransport:
         # This is the connected provider workspace. It need not be mounted on the
         # native host when the provider returns an actual signed download URL.
         self.library_destination = destination
-        self.upload_roots = (directory.resolve(), ORIGINAL_ROOT.resolve())
+        self.storage_root = selected_storage_root(selection)
+        self.upload_roots = (directory.resolve(), self.storage_root)
         self.azcopy = shutil.which("azcopy")
         if self.azcopy is None and os.access("/usr/local/bin/azcopy", os.X_OK):
             self.azcopy = "/usr/local/bin/azcopy"
@@ -819,6 +834,7 @@ def receive_connected(selection):
     environment["CODEX_APPS_AUTHORIZATION"] = "Bearer " + transport.library_nonce
     environment.pop("CODEX_APPS_CHATGPT_ACCOUNT_ID", None)
     environment["DATASETTE_TRANSFER_DIRECTORY"] = str(directory)
+    environment["DATASETTE_PHYSICAL_ROOT"] = str(transport.storage_root)
     for key, value in runtime.items():
         if key in ("CODEX_PRIMARY_RUNTIME_NODE", "DATASETTE_PLAYWRIGHT", "DATASETTE_CHROMIUM"):
             environment[key] = value
