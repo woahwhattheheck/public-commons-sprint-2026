@@ -2,8 +2,8 @@
 """Import the captured ARJWS/PRWD sources and prepare their published protection areas.
 
 Requires the existing model.workspace and model.receiving_waters modules and their
-GIS environment. The original SCDES polygon response is the only large external
-input; its retained location is documented beside the source dictionary.
+GIS environment. The original SCDES polygon response is bundled beside the
+source dictionary; --protection-areas can supply the same captured bytes elsewhere.
 """
 from __future__ import annotations
 
@@ -82,8 +82,8 @@ def main():
     parser.add_argument("--source-dir", type=Path,
                         default=Path(__file__).resolve().parents[1] /
                         "source/water_context/20261012/public-water")
-    parser.add_argument("--protection-areas", required=True, type=Path,
-                        help="Retained complete SCDES OBJECTIDs 11,12,131,132 JSON, optionally gzip.")
+    parser.add_argument("--protection-areas", type=Path,
+                        help="Original SCDES polygon JSON, optionally gzip; defaults to the bundled capture.")
     parser.add_argument("--out", type=Path)
     parser.add_argument("--create-workspace", action="store_true",
                         help="Create a new native workspace when explicitly requested.")
@@ -93,7 +93,12 @@ def main():
     _, dictionary = read_json(source_dir / "source-dictionary.json")
     _, selection = read_json(source_dir / "receiving-waters-spec.template.json")
     intake_body, intakes = read_json(source_dir / "raw/public-intakes.esri.json")
-    protection_body, protections = read_json(args.protection_areas.resolve())
+    protection_record = dictionary["source_bodies"][1]
+    protection_path = (args.protection_areas or source_dir / protection_record["path"]).resolve()
+    protection_body, protections = read_json(protection_path)
+    if (len(protection_body) != protection_record["bytes"] or
+            sha256(protection_body) != protection_record["sha256"]):
+        raise ValueError("The protection body differs from the recorded captured edition.")
     intake_index = original_features(intakes, "esriGeometryPoint")
     protection_index = original_features(protections, "esriGeometryPolygon")
     expected_ids = {
@@ -123,7 +128,7 @@ def main():
         return item
 
     intake_file = save("raw/public-intakes.esri.json", intake_body)
-    protection_file = save("raw/arjws-prwd-swpa.esri.json", protection_body)
+    protection_file = save(protection_record["path"], protection_body)
     dictionary_file = save("source-dictionary.json", json_bytes(dictionary))
     metadata = {}
     for layer in (0, 2, 3):
