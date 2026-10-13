@@ -1,4 +1,5 @@
 import {openSoilReport} from './soil_component_report.mjs';
+import {DESK_FILE_BYTES,createDeskFile,validateDeskFile,prepareDeskImport,restoreDeskHistory,reconcileDeskSources,serializeDeskFile} from './source_working_desk.mjs';
 /**
  * Source preparation desk for the original Upper Savannah operator.
  * TokenJunkieLabs. Uses the existing native helpers and retained task queue.
@@ -43,6 +44,7 @@ export function createSourceWorkbench(host, configuration = {}) {
   let selectedMethod = '', drafts = {}, mergeDraft = {title:'', prepared:[], collections:[], registered:[], import_sources:true};
   let requests = [], browser = null, browserGeneration = 0, controls = null;
   let inputHistory = [], uploadReceipts = [], editRevision = 0, openingRevision = 0;
+  let deskHistory=[],deskImportHistory=[],sourceDescriptions=[],retiredRequests=[];
   const uploadsInFlight = new Map();
   let operationView = {query:'', status:'all', offset:0}, operationCache = null;
   let resultTask = null, resultDocument = null, resultBusy = false, resultGeneration = 0;
@@ -54,9 +56,10 @@ export function createSourceWorkbench(host, configuration = {}) {
       selectedMethod = saved.method || '';
       drafts = saved.drafts || {};
       mergeDraft = {...mergeDraft, ...(saved.merge || {})};
-      requests = list(saved.requests);
+      requests = list(saved.requests);retiredRequests=list(saved.retired_requests);
       inputHistory = list(saved.input_history);
       uploadReceipts = list(saved.upload_receipts);
+      deskHistory=list(saved.desk_history);deskImportHistory=list(saved.desk_import_history);sourceDescriptions=list(saved.source_descriptions);
       currentTask = saved.task_id || null;
       operationView = {...operationView, ...(saved.operation_view || {})};
       operationView.offset = Math.max(0, Number(operationView.offset) || 0);
@@ -65,8 +68,9 @@ export function createSourceWorkbench(host, configuration = {}) {
     } catch { selectedMethod = ''; drafts = {}; requests = []; currentTask = null; }
   };
   const stateDocument = (overrides={}) => ({method:selectedMethod,drafts,merge:mergeDraft,
-    requests,task_id:currentTask,operation_view:operationView,
-    input_history:inputHistory,upload_receipts:uploadReceipts,...overrides});
+    requests,retired_requests:retiredRequests,task_id:currentTask,operation_view:operationView,
+    input_history:inputHistory,upload_receipts:uploadReceipts,
+    desk_history:deskHistory,desk_import_history:deskImportHistory,source_descriptions:sourceDescriptions,...overrides});
   const retainState = value => {
     const exact=JSON.stringify(value);sessionStorage.setItem(local(),exact);
     if(sessionStorage.getItem(local())!==exact)throw new Error('The complete working state did not read back.');
@@ -90,7 +94,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     for (const field of list(method?.inputs)) {
       const proposed = value.inputs[field.name] || field.default;
       const absentBuiltin = proposed?.builtin_id && !list(catalog?.bundled).some(row => row.id === proposed.builtin_id && row.available !== false);
-      if (absentBuiltin && value.inputs[field.name]?.builtin_id) value.inputs[field.name] = null;
+      // Retain an unavailable explicit original; only an unavailable default is omitted.
       if (!(field.name in value.inputs) && field.default && typeof field.default === 'object' && !absentBuiltin) value.inputs[field.name] = field.default;
     }
     return value;
@@ -187,16 +191,25 @@ export function createSourceWorkbench(host, configuration = {}) {
       }
       recoveredHistory=merge(inputHistory,recovered.input_history,'working-input');
       recoveredUploads=merge(uploadReceipts,recovered.upload_receipts,'upload');
-      recoveredRequests=merge(requests,recovered.original_requests,'request');
+      recoveredRequests=merge(requests,recovered.original_requests,'request').filter(row=>!retiredRequests.some(retired=>retired.id===row.id));
+      const dispatchKeys=new Set();recoveredRequests=recoveredRequests.filter(row=>{if(dispatchKeys.has(row.key))return false;dispatchKeys.add(row.key);return true;});
     }
     const nextDrafts={...drafts,[next.method]:copy(next)};delete nextDrafts[next.method].method;
     const history=canonical(previous)===canonical(next)?recoveredHistory:
       [...recoveredHistory,{id:crypto.randomUUID(),at:new Date().toISOString(),reason,selection:previous}];
-    const retained={method:next.method,drafts:nextDrafts,merge:mergeDraft,requests:recoveredRequests,
-      task_id:currentTask,operation_view:operationView,input_history:history,upload_receipts:recoveredUploads};
+    let nextDeskHistory=deskHistory;
+    const retained=stateDocument({method:next.method,drafts:nextDrafts,requests:recoveredRequests,
+      input_history:history,upload_receipts:recoveredUploads});
+    if(recovered){
+      const before=fullDesk(),{desk_history,desk_import_history,source_descriptions,...afterState}=retained,at=new Date().toISOString(),id=crypto.randomUUID();
+      nextDeskHistory=[...deskHistory,{id:id+':before',at,reason:'Before reopening original selected-method file',state:before.state,source_descriptions:before.source_descriptions},
+        {id:id+':incoming',at,reason:'Complete original selected-method file',state:copy(afterState),source_descriptions:copy(sourceDescriptions),original_working_input_file:copy(recovered)}];
+      createDeskFile({namespace:settings.namespace,workspaceKey:workspace,actions:[settings.prepareAction,settings.composeAction],state:afterState,sourceDescriptions,deskHistory:nextDeskHistory,importHistory:deskImportHistory});
+      retained.desk_history=nextDeskHistory;
+    }
     // Retain one complete replacement before changing any live field.
     try{retainState(retained);}catch(problem){throw new Error('Complete working inputs could not be retained; current choices are unchanged. '+problem.message);}
-    selectedMethod=next.method;drafts=nextDrafts;inputHistory=history;uploadReceipts=recoveredUploads;requests=recoveredRequests;editRevision++;openingRevision++;
+    selectedMethod=next.method;drafts=nextDrafts;inputHistory=history;uploadReceipts=recoveredUploads;requests=recoveredRequests;deskHistory=nextDeskHistory;editRevision++;openingRevision++;
     const select=container.querySelector('[data-sp-method]');if(select)select.value=selectedMethod;
     renderForm();message=reason+'. The previous complete selection remains in Working input history.';error='';notice();
     container.dispatchEvent(new CustomEvent('source-selection-replaced',{bubbles:true,detail:{method:selectedMethod}}));
@@ -212,10 +225,89 @@ export function createSourceWorkbench(host, configuration = {}) {
       workspace_key:workspace,selection:currentSelection(),input_history:copy(inputHistory),
       upload_receipts:copy(uploadReceipts),original_requests:copy(requests)};
   }
+
+  function fullDesk({describe=true}={}) {
+    const {desk_history,desk_import_history,source_descriptions,...working}=stateDocument();
+    let file=createDeskFile({namespace:settings.namespace,workspaceKey:workspace,
+      actions:[settings.prepareAction,settings.composeAction],state:working,
+      sourceDescriptions,deskHistory,importHistory:deskImportHistory});
+    if(describe&&catalog){
+      const reconciliation=reconcileDeskSources(file,{catalogue:catalog,state:state||{},operations:sourceOperations()});
+      file.source_descriptions=reconciliation.source_descriptions;
+    }
+    return validateDeskFile(file);
+  }
+  function reconcileDesk() {
+    return reconcileDeskSources(fullDesk({describe:false}),{catalogue:catalog||{},state:state||{},operations:sourceOperations()});
+  }
+  function renderMethodChoices() {
+    const select=container?.querySelector('[data-sp-method]');if(!select)return;
+    const methods=list(catalog?.methods),missing=Object.keys(drafts).filter(id=>!methods.some(row=>row.id===id));
+    select.innerHTML=methods.map(method=>'<option value="'+escapeHTML(method.id)+'"'+(method.id===selectedMethod?' selected':'')+'>'+escapeHTML(method.title||method.id)+'</option>').join('')+
+      missing.map(id=>'<option value="'+escapeHTML(id)+'"'+(id===selectedMethod?' selected':'')+'>Unavailable method · '+escapeHTML(id)+'</option>').join('');
+    select.value=selectedMethod;
+  }
+  function acceptDesk(file,reason) {
+    if(!container||loading||!catalog||busy||hasUploads())throw new Error('Wait for the current original source operation and catalogue before reopening this desk.');
+    const next=validateDeskFile(file,{namespace:settings.namespace,workspaceKey:workspace,actions:[settings.prepareAction,settings.composeAction]});
+    const retained={...next.state,desk_history:next.desk_history,desk_import_history:next.import_history,source_descriptions:next.source_descriptions};
+    try{retainState(retained);}catch(problem){throw new Error('The complete desk could not be retained. Current working choices are unchanged. '+problem.message);}
+    selectedMethod=next.state.method;drafts=next.state.drafts;mergeDraft=next.state.merge;
+    requests=next.state.requests;retiredRequests=next.state.retired_requests||[];inputHistory=next.state.input_history;uploadReceipts=next.state.upload_receipts;
+    currentTask=next.state.task_id;operationView=next.state.operation_view;
+    deskHistory=next.desk_history;deskImportHistory=next.import_history;sourceDescriptions=next.source_descriptions;
+    editRevision++;openingRevision++;renderMethodChoices();renderForm();renderTasks();
+    const missing=reconcileDesk().missing.length;
+    error='';message=reason+'. Original local request identities are retained. '+(missing?missing+' unavailable choices remain visible for review.':'All selected source references are available.');notice();
+    container.dispatchEvent(new CustomEvent('source-selection-replaced',{bubbles:true,detail:{method:selectedMethod,complete_desk:true}}));
+  }
+  async function reopenDesk(file) {
+    if(!file)return;
+    if(file.size>DESK_FILE_BYTES)throw new Error('Open a complete working desk of at most 64 MiB; keep the original larger file.');
+    if(busy||hasUploads()||loading||!catalog)throw new Error('Wait for the current original source intake before reopening this desk.');
+    const expected=workspace,version=generation,opening=++openingRevision,before=canonical(stateDocument());
+    error='';message='Reading complete working desk…';notice();
+    const bytes=await file.arrayBuffer(),raw=new TextDecoder('utf-8',{fatal:true}).decode(bytes);
+    const digest=await crypto.subtle.digest('SHA-256',bytes),sha256=Array.from(new Uint8Array(digest),x=>x.toString(16).padStart(2,'0')).join('');
+    if(!container||workspace!==expected||generation!==version||openingRevision!==opening)return;
+    if(canonical(stateDocument())!==before)throw new Error('The complete desk changed while this file was opening. Select the file again to retain those edits.');
+    const next=prepareDeskImport(fullDesk(),JSON.parse(raw),{id:crypto.randomUUID(),at:new Date().toISOString(),filename:file.name,sha256,bytes:bytes.byteLength});
+    acceptDesk(next,'Complete working desk reopened');
+  }
+  function rememberDesk(reason) {
+    const file=fullDesk();const next=[...deskHistory,{id:crypto.randomUUID(),at:new Date().toISOString(),reason,state:file.state,source_descriptions:file.source_descriptions}];
+    createDeskFile({namespace:settings.namespace,workspaceKey:workspace,actions:file.actions,state:file.state,sourceDescriptions:file.source_descriptions,deskHistory:next,importHistory:deskImportHistory});
+    retainState(stateDocument({desk_history:next}));deskHistory=next;
+  }
+  function numericChoice(field,raw) {
+    const label=field.label||field.name;
+    if(!raw.trim()){if(field.required)throw new Error('Enter '+label+'.');return '';}
+    if(!/^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$/.test(raw.trim()))throw new Error('Finish the numeric value for '+label+'.');
+    const value=Number(raw);
+    if(!Number.isFinite(value)||((field.type==='integer'||field.integer)&&!Number.isInteger(value)))throw new Error('Enter a finite '+((field.type==='integer'||field.integer)?'whole number':'number')+' for '+label+'.');
+    if((field.min!=null&&value<Number(field.min))||(field.max!=null&&value>Number(field.max)))throw new Error('The value for '+label+' is outside the installed method limits.');
+    return value;
+  }
+  function retainNumeric(node,field) {
+    const value=draft();value.numeric_text||={};value.numeric_text[field.name]={text:node.value};
+    try{value.options[field.name]=numericChoice(field,node.value);}catch{/* The exact unfinished text remains the working choice. */}
+    node.setCustomValidity('');save();
+  }
+
   function renderWorking() {
     const target=container?.querySelector('[data-sp-working]');if(!target)return;
     const opened=target.querySelector('details')?.open===true;
-    target.innerHTML='<details'+(opened?' open':'')+'><summary>Working inputs and original upload history</summary>'+
+    let summary=null;try{summary=reconcileDesk();sourceDescriptions=summary.source_descriptions;}catch(problem){error=problem.message;}
+    const whole='<h3>Complete preparation desk</h3><p>Keep every method draft, the combined input set, original requests, upload receipts and prior whole-desk choices together. Original source bytes stay in the Workspace archive.</p>'+
+      '<div class="sp-actions">'+textButton('download-desk','Download complete working desk')+
+      '<label class="sp-upload">Reopen complete working desk<input type="file" accept=".json,application/json" data-sp-desk-file></label></div>'+
+      '<p data-sp-desk-summary>'+Object.keys(drafts).length+' method drafts · '+(mergeDraft.prepared.length+mergeDraft.collections.length+mergeDraft.registered.length)+' combined choices · '+requests.length+' current original requests</p>'+
+      (summary?.missing.length?'<h4>Retained unavailable choices</h4><ul>'+summary.missing.map(row=>'<li>'+escapeHTML(row.title)+' · '+escapeHTML(row.status)+' <code>'+escapeHTML(typeof row.id==='string'?row.id:canonical(row.id))+'</code></li>').join('')+'</ul>':'')+
+      (deskHistory.length?'<h4>Previous complete desks</h4><ol>'+deskHistory.map((row,index)=>'<li>'+escapeHTML(row.reason)+' · '+escapeHTML(stamp(row.at))+' '+
+      textButton('restore-desk','Reopen whole choice','data-sp-index="'+index+'"')+' '+
+      textButton('download-desk-history','Download full historical desk','data-sp-index="'+index+'"')+'</li>').join('')+'</ol>':'');
+
+    target.innerHTML='<details'+(opened?' open':'')+'><summary>Working inputs and original upload history</summary>'+whole+
       '<p>Download the complete current draft and its previous choices. Uploaded originals remain on this operator even when you choose a different source.</p>'+
       '<div class="sp-actions">'+textButton('download-working','Download working inputs')+
       '<label class="sp-upload">Reopen working inputs<input type="file" accept=".json,application/json" data-sp-working-file></label></div>'+
@@ -230,7 +322,7 @@ export function createSourceWorkbench(host, configuration = {}) {
           (row.result?.id?textButton('select-upload','Select retained original','data-sp-upload-id="'+escapeHTML(row.id)+'"'):'')+
           textButton('download-upload','Download receipt','data-sp-upload-id="'+escapeHTML(row.id)+'"')+'</td></tr>').join('')+'</tbody></table></div>':'')+'</details>';
     const blocked=busy||hasUploads();
-    for(const node of target.querySelectorAll('[data-sp-action="restore-working"],[data-sp-action="select-upload"],[data-sp-working-file]'))node.disabled=blocked;
+    for(const node of target.querySelectorAll('[data-sp-action="restore-working"],[data-sp-action="select-upload"],[data-sp-working-file],[data-sp-desk-file],[data-sp-action="restore-desk"]'))node.disabled=blocked;
   }
   function saveUploadReceipt(row) {
     const key=settings.storageKey+':'+row.workspace;
@@ -298,7 +390,7 @@ export function createSourceWorkbench(host, configuration = {}) {
       mergeDraft.prepared = [...new Set([...mergeDraft.prepared, id])];
       if (collectionId) mergeDraft.collections = mergeDraft.collections.filter(value => value !== collectionId);
     }
-    mergeDraft.open = true;
+    mergeDraft.open = true;editRevision++;
     save(); renderForm(); closeResult();
     const target = container?.querySelector('[data-sp-merge-area]');
     target?.scrollIntoView({block:'start', behavior:'smooth'});
@@ -374,8 +466,9 @@ export function createSourceWorkbench(host, configuration = {}) {
         control = '<textarea' + attr + (field.required ? ' required' : '') + ' rows="3">' + escapeHTML(value ?? '') + '</textarea>';
       } else {
         const numeric = ['number','integer','float'].includes(field.type);
-        control = '<input' + attr + ' type="' + (numeric ? 'number' : 'text') + '" value="' + escapeHTML(value ?? '') + '"' +
-          (numeric ? ' step="' + escapeHTML(field.step ?? (field.type === 'integer' ? 1 : 'any')) + '"' : '') +
+        const shown=numeric&&draft().numeric_text?.[field.name]?draft().numeric_text[field.name].text:value;
+        control = '<input' + attr + ' type="text" value="' + escapeHTML(shown ?? '') + '"' +
+          (numeric ? ' inputmode="decimal" data-sp-numeric="true"' : '') +
           (field.min != null ? ' min="' + escapeHTML(field.min) + '"' : '') + (field.max != null ? ' max="' + escapeHTML(field.max) + '"' : '') +
           (field.required ? ' required' : '') + (field.placeholder ? ' placeholder="' + escapeHTML(field.placeholder) + '"' : '') + '>';
       }
@@ -395,8 +488,9 @@ export function createSourceWorkbench(host, configuration = {}) {
     notice();
   }
   function methodForm() {
-    const method = selected(), value = draft();
-    if (!method) return '<p class="sp-empty">No source preparation methods were returned by this operator.</p>';
+    const method = selected();
+    if (!method) return '<p class="sp-empty">'+(selectedMethod?'The retained method '+escapeHTML(selectedMethod)+' is unavailable on this operator. Its complete draft remains in the working desk. Choose an installed method to prepare.':'No source preparation methods were returned by this operator.')+'</p>';
+    const value = draft();
     return '<form data-sp-form><fieldset' + (busy ? ' disabled' : '') + '><legend>' + escapeHTML(method.title) + '</legend>' +
       '<p class="sp-description">' + escapeHTML(method.description || '') + '</p>' +
       '<div class="sp-form-grid"><div class="sp-field sp-wide"><label for="sp-title">Prepared source title</label>' +
@@ -419,6 +513,10 @@ export function createSourceWorkbench(host, configuration = {}) {
       .map(row => ({...row, title:taskName(row)}));
     const collections = list(state?.data?.sources);
     const registered = list(state?.registered_sources);
+    const missing=[...mergeDraft.prepared.filter(id=>!prepared.some(row=>row.id===id)).map(id=>({kind:'prepared',id})),
+      ...mergeDraft.collections.filter(id=>!collections.some(row=>row.id===id)).map(id=>({kind:'collections',id})),
+      ...mergeDraft.registered.filter(id=>!registered.some(row=>row.id===id)).map(id=>({kind:'registered',id}))];
+    const missingHTML=missing.length?'<div class="sp-inline-error"><p>These original choices remain selected but are unavailable here. Reopen their original sources or explicitly remove them before combining.</p><ul>'+missing.map(row=>'<li>'+escapeHTML(row.kind)+' <code>'+escapeHTML(row.id)+'</code> '+textButton('remove-merge-missing','Remove this choice','data-sp-kind="'+row.kind+'" data-sp-id="'+escapeHTML(row.id)+'"')+'</li>').join('')+'</ul></div>':'';
     const items = prepared.map(task => selectionBox('prepared', task.id, task.title, 'Prepared ' + stamp(task.ended_at) + (task.restored ? ' · retained with this study' : ''), mergeDraft.prepared)).join('') +
       collections.map(row => selectionBox('collections', row.id, displayLabel(row), list(row.entries).length + ' original sources', mergeDraft.collections)).join('') +
       registered.map(row => selectionBox('registered', row.id, displayLabel(row), row.entries + ' registered original sources', mergeDraft.registered)).join('');
@@ -427,10 +525,10 @@ export function createSourceWorkbench(host, configuration = {}) {
       '<form data-sp-compose-form><fieldset' + (busy || hasUploads() ? ' disabled' : '') + '><legend>Combined source edition</legend>' +
       '<div class="sp-field"><label for="sp-compose-title">Source edition title</label><input id="sp-compose-title" data-sp-compose-title value="' +
       escapeHTML(mergeDraft.title) + '" placeholder="Upper Savannah selected model inputs"></div>' +
-      '<div class="sp-picks">' + (items || '<p class="sp-empty">Prepare or import a source to make it available here.</p>') + '</div>' +
+      missingHTML+'<div class="sp-picks">' + (items || '<p class="sp-empty">Prepare or import a source to make it available here.</p>') + '</div>' +
       '<label class="sp-checkbox"><input type="checkbox" data-sp-compose-import' + (mergeDraft.import_sources !== false ? ' checked' : '') +
       '> Import the combined edition into this study</label><div class="sp-actions"><button class="primary" type="submit"' +
-      (!items ? ' disabled' : '') + '>Combine selected sources</button>' + textButton('go-grids','Open model grids') + '</div></fieldset></form></details>';
+      (!items||missing.length ? ' disabled' : '') + '>Combine selected sources</button>' + textButton('go-grids','Open model grids') + '</div></fieldset></form></details>';
   }
   function renderForm() {
     if (!container) return;
@@ -660,10 +758,9 @@ export function createSourceWorkbench(host, configuration = {}) {
       const result = await read('catalog', {}, expected);
       if (expected !== workspace || version !== generation || !container) return;
       catalog = result;
-      if (!list(catalog.methods).some(method => method.id === selectedMethod)) selectedMethod = list(catalog.methods)[0]?.id || '';
-      const select = container.querySelector('[data-sp-method]');
-      if (select) select.innerHTML = list(catalog.methods).map(method => '<option value="' + escapeHTML(method.id) + '"' +
-        (method.id === selectedMethod ? ' selected' : '') + '>' + escapeHTML(method.title || method.id) + '</option>').join('');
+      if (!selectedMethod) selectedMethod = list(catalog.methods)[0]?.id || '';
+      if(selectedMethod)draft();
+      renderMethodChoices();
       renderForm(); renderTasks(); renderProgress();
       container.querySelector('[data-sp-loading]').hidden = true;
       if (force) message = 'Source catalogue refreshed from the current study and host.';
@@ -696,7 +793,8 @@ export function createSourceWorkbench(host, configuration = {}) {
   }
   function preparePayload(form) {
     if (!form.reportValidity()) return null;
-    const method = selected(), value = draft(), inputs = {}, options = {};
+    const method = selected();if(!method)throw new Error('Choose an installed preparation method; its original unavailable draft is retained.');
+    const value = draft(), inputs = {}, options = {};
     for (const field of list(method?.inputs)) {
       if (!activeFor(field)) continue;
       const chosen = value.inputs[field.name];
@@ -705,7 +803,8 @@ export function createSourceWorkbench(host, configuration = {}) {
     }
     for (const field of list(method?.options)) {
       if (!activeFor(field)) continue;
-      const chosen = value.options[field.name];
+      const chosen = ['number','integer','float'].includes(field.type)&&value.numeric_text?.[field.name]?
+        numericChoice(field,value.numeric_text[field.name].text):value.options[field.name];
       if (chosen !== '' && chosen != null) options[field.name] = chosen;
       else if (field.required) throw new Error('Enter ' + (field.label || field.name) + '.');
     }
@@ -809,7 +908,8 @@ export function createSourceWorkbench(host, configuration = {}) {
   }
   function change(event) {
     const node = event.target;
-    if(node.matches('[data-sp-method],[data-sp-input],[data-sp-option],[data-sp-import]'))editRevision++;
+    if(node.matches('[data-sp-method],[data-sp-input],[data-sp-option],[data-sp-import],[data-sp-compose-import],[data-sp-merge-kind]'))editRevision++;
+    if(node.matches('[data-sp-desk-file]')){const file=node.files?.[0];node.value='';reopenDesk(file).catch(setError);return;}
     if(node.matches('[data-sp-working-file]')){const file=node.files?.[0];node.value='';reopenWorking(file).catch(setError);return;}
     if (node.matches('[data-sp-operation-status]')) {operationView.status=node.value;operationView.offset=0;save();renderTasks();}
     else if (node.matches('[data-sp-method]')) {selectedMethod=node.value;error='';message='';renderForm();notice();}
@@ -817,10 +917,10 @@ export function createSourceWorkbench(host, configuration = {}) {
     else if (node.matches('[data-sp-option]')) {
       const field = list(selected()?.options).find(row=>row.name===node.dataset.spOption);
       let value = node.type === 'checkbox' ? node.checked : node.value;
-      if (value !== '' && ['number','integer','float'].includes(field?.type)) {
-        value = Number(value);
-        if (!Number.isFinite(value) || ((field.type === 'integer' || field.integer) && !Number.isInteger(value))) {setError('Enter a valid '+(field.label||field.name)+'.');return;}
+      if (['number','integer','float'].includes(field?.type)&&node.matches('[data-sp-numeric]')) {
+        retainNumeric(node,field);renderForm();return;
       }
+      if(value!==''&&['number','integer','float'].includes(field?.type))value=numericChoice(field,String(value));
       draft().options[node.dataset.spOption]=value;save();renderForm();
     } else if (node.matches('[data-sp-import]')) {draft().import_sources=node.checked;save();}
     else if (node.matches('[data-sp-compose-import]')) {mergeDraft.import_sources=node.checked;save();}
@@ -844,7 +944,8 @@ export function createSourceWorkbench(host, configuration = {}) {
     if(node.matches('[data-sp-title]'))editRevision++;
     if(node.matches('[data-sp-operation-search]')){operationView.query=node.value;operationView.offset=0;save();renderTasks();}
     else if(node.matches('[data-sp-title]')){draft().title=node.value;save();}
-    else if(node.matches('[data-sp-compose-title]')){mergeDraft.title=node.value;save();}
+    else if(node.matches('[data-sp-compose-title]')){editRevision++;mergeDraft.title=node.value;save();}
+    else if(node.matches('[data-sp-numeric]')){editRevision++;const field=list(selected()?.options).find(row=>row.name===node.dataset.spOption);if(field)retainNumeric(node,field);}
     else if(node.matches('textarea[data-sp-option],input[type="text"][data-sp-option]')){
       editRevision++;draft().options[node.dataset.spOption]=node.value;save();
     }
@@ -856,6 +957,19 @@ export function createSourceWorkbench(host, configuration = {}) {
     const action=button.dataset.spAction,id=button.dataset.spId;
     try {
       error='';notice();
+      if(action==='download-desk'){downloadWorking(fullDesk(),'source-working-desk.json');return;}
+      if(action==='restore-desk'||action==='download-desk-history'){
+        const row=deskHistory[Number(button.dataset.spIndex)];if(!row)throw new Error('Select a complete retained desk.');
+        if(action==='download-desk-history')downloadWorking({...fullDesk(),state:row.state,source_descriptions:row.source_descriptions},'source-working-desk-history.json');
+        else acceptDesk(restoreDeskHistory(fullDesk(),row.id,{operationId:crypto.randomUUID(),at:new Date().toISOString()}),'Previous complete desk reopened');
+        return;
+      }
+      if(action==='remove-merge-missing'){
+        if(busy||hasUploads())throw new Error('Wait for the original operation before changing its combined choices.');
+        const kind=button.dataset.spKind;if(!['prepared','collections','registered'].includes(kind))throw new Error('Choose an original combined input.');
+        rememberDesk('Before removing unavailable combined input '+id);
+        mergeDraft[kind]=mergeDraft[kind].filter(value=>value!==id);editRevision++;renderForm();return;
+      }
       if(action==='download-working'){downloadWorking(workingFile(),'source-working-inputs.json');return;}
       if(action==='restore-working'||action==='download-prior'){
         const row=inputHistory[Number(button.dataset.spIndex)];if(!row)throw new Error('Select a retained working choice.');
@@ -914,9 +1028,14 @@ export function createSourceWorkbench(host, configuration = {}) {
         await host.api('/api/task/'+action,{method:'POST',body:{id}});currentTask=id;save();await host.refresh({force:true});state=host.getState();renderTasks();return await fetchProgress();
       }
       if(action==='new-request'){
-        const method=selectedMethod;
-        requests=requests.filter(row=>{try{return JSON.parse(row.key).payload?.method!==method;}catch{return true;}});
-        save();message='The next preparation will have a new operation identity. Existing originals and tasks remain available.';notice();return;
+        const file=fullDesk(),method=selectedMethod;
+        const remaining=requests.filter(row=>{try{return JSON.parse(row.key).payload?.method!==method;}catch{return true;}});
+        const next=copy(file);
+        next.desk_history.push({id:crypto.randomUUID(),at:new Date().toISOString(),reason:'Before explicitly selecting a new preparation request',state:copy(file.state),source_descriptions:copy(file.source_descriptions)});
+        next.state.retired_requests=[...retiredRequests,...requests.filter(row=>!remaining.includes(row)&&!retiredRequests.some(prior=>prior.id===row.id))];
+        next.state.requests=remaining;
+        acceptDesk(next,'New preparation request selected');
+        message='The next preparation will have a new operation identity. Existing originals, retired requests and tasks remain available.';notice();return;
       }
       if(action==='browser-close'){container.querySelector('[data-sp-browser]')?.close();return;}
       if(action==='browser-up'&&browser){browser.path=browser.path.split('/').filter(Boolean).slice(0,-1).join('/');return await browse('');}
@@ -938,6 +1057,7 @@ export function createSourceWorkbench(host, configuration = {}) {
         if(!form.reportValidity())return;
         if(!mergeDraft.prepared.length&&!mergeDraft.collections.length&&!mergeDraft.registered.length)
           throw new Error('Choose at least one prepared input or source edition to combine.');
+        if(reconcileDesk().composition_missing.length)throw new Error('Reopen or explicitly remove unavailable original combined inputs before preparing this edition.');
         await submit(settings.composeAction,{title:mergeDraft.title.trim()||'Upper Savannah selected model inputs',
           prepared_task_ids:mergeDraft.prepared,source_collection_ids:mergeDraft.collections,registered_ids:mergeDraft.registered,
           import_sources:mergeDraft.import_sources!==false});
@@ -949,7 +1069,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     if(container===target&&workspace===key&&target.querySelector('[data-sp-desk]')){update(currentState);return;}
     suspend();container=target;state=currentState;workspace=key;generation++;catalog=null;progress=null;loading=false;tasksFingerprint='';sourcesFingerprint='';busy=false;error='';message='';
     operationView={query:'',status:'all',offset:0};operationCache=null;resultTask=null;resultDocument=null;resultBusy=false;
-    mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};inputHistory=[];uploadReceipts=[];editRevision=0;openingRevision++;storageRead();
+    mergeDraft={title:'',prepared:[],collections:[],registered:[],import_sources:true};inputHistory=[];uploadReceipts=[];deskHistory=[];deskImportHistory=[];sourceDescriptions=[];retiredRequests=[];editRevision=0;openingRevision++;storageRead();
     container.innerHTML='<div data-sp-desk class="sp-desk"><header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p>' +
       '<h1>' + escapeHTML(settings.title) + '</h1><p>' + escapeHTML(settings.description) + '</p></div><div class="page-actions">' +
       textButton('go-sources','Original sources')+textButton('reload','Refresh catalogue')+'</div></header>' +
@@ -972,7 +1092,7 @@ export function createSourceWorkbench(host, configuration = {}) {
     container.addEventListener('change',change,{signal:controls.signal});
     container.addEventListener('input',input,{signal:controls.signal});
     container.addEventListener('submit',onSubmit,{signal:controls.signal});
-    container.addEventListener('toggle',event=>{if(event.target.matches('[data-sp-merge]')){mergeDraft.open=event.target.open;save();}}, {capture:true,signal:controls.signal});
+    container.addEventListener('toggle',event=>{if(event.target.matches('[data-sp-merge]')){if(mergeDraft.open!==event.target.open)editRevision++;mergeDraft.open=event.target.open;save();}}, {capture:true,signal:controls.signal});
     renderTasks();renderWorking();loadCatalog().then(fetchProgress);
   }
   function update(currentState=host.getState()) {
