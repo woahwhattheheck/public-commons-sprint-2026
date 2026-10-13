@@ -133,8 +133,13 @@ export function attachConservation({
       collection_title: collection.title || collection.id,
     })));
   };
-  const runs = () => (getState?.()?.data?.runs || memory().overview?.available?.runs || [])
-    .filter(run => run.state === "complete");
+  const runs = () => {
+    const retained = new Map((memory().overview?.available?.runs || []).map(run => [run.id, run]));
+    return (getState?.()?.data?.runs || [...retained.values()])
+      .filter(run => run.state === "complete")
+      .map(run => ({ ...retained.get(run.id), ...run,
+        execution: retained.get(run.id)?.execution || run.execution }));
+  };
   const publishedMethod = () => memory().overview?.published_methods || {};
   const publishedCategories = () => publishedMethod().categories || [];
   const methodCategory = id => publishedCategories().find(category => category.id === id);
@@ -150,8 +155,12 @@ export function attachConservation({
   }
   function runQuantityLabel(run) {
     const models = runModels(run);
-    return [models.includes("ndr") ? "nitrogen + phosphorus" : "",
+    const quantities = [models.includes("ndr") ? "nitrogen + phosphorus" : "",
       models.includes("sdr") ? "sediment" : ""].filter(Boolean).join(" · ") || "No selected native outputs";
+    const versions = Object.entries(run?.execution?.model_versions || {}).map(([model, value]) =>
+      model.toUpperCase() + " " + (value.comparison_version || "version not recorded")).join(", ");
+    return quantities + (versions ? " · " + versions : "") +
+      (run?.execution?.supported === false ? " · Outside the quantity adapter" : "");
   }
   function scoreOutputs(draft = memory().draft) {
     const available = runs();
@@ -210,11 +219,20 @@ export function attachConservation({
       Array.isArray(source?.items) ? source.items : source && typeof source === "object" ?
         Object.values(source).filter(item => item && typeof item === "object" && item.action) : [];
     const experimentActions = new Set(["experiment.save", "experiment.run", "experiment.summarize"]);
-    return tasks.filter(task => String(task.action || "").startsWith("conservation.") ||
+    const operations = tasks.filter(task => String(task.action || "").startsWith("conservation.") ||
       experimentActions.has(task.action))
       .map(task => JSON.stringify([task.id, task.state || task.status,
         task.updated_at || null, task.progress || null]))
-      .sort().join("|");
+      .sort();
+    const nativeRuns = (state?.data?.runs || []).map(run => JSON.stringify([
+      run.id, run.state, run.selection?.invest_version || null,
+      run.runtime?.version || null, run.selection?.models || null,
+      ["ndr", "sdr"].map(model => {
+        const stage = run.stages?.[model];
+        return [model, stage?.completed_at || null, stage?.runtime?.version || null];
+      }),
+    ])).sort();
+    return JSON.stringify([operations, nativeRuns]);
   }
   async function refreshOverview(force = false) {
     const key = workspace(), ui = memory(key), requestedStamp = taskStamp(getState?.());
@@ -912,7 +930,10 @@ export function attachConservation({
           '<label class="cons-check"><input type="checkbox" data-alt-id="' + h(run.id) + '"' +
           (d.alternative_run_ids.includes(run.id) ? " checked" : "") + "> <span>" +
           h(run.title || run.selection?.title || run.id) + " · " + h(runQuantityLabel(run)) + " · " + h(run.id) + "</span></label>").join("") :
-          "<p>No additional completed runs are available.</p>") + "</div></fieldset>" :
+          "<p>No additional completed runs are available.</p>") + "</div>" +
+        nativeExecution({spec: d, native_execution: Object.fromEntries(availableRuns.filter(run =>
+          run.id === d.baseline_run_id || d.alternative_run_ids.includes(run.id))
+          .filter(run => run.execution).map(run => [run.id, run.execution]))}) + "</fieldset>" :
         '<fieldset><legend>Reporting area</legend><p class="cons-help">Area and overlap calculations use ' +
         "these retained boundaries. A reporting watershed becomes drinking-water context only when it has that documented role.</p>" +
         '<div class="cons-grid">' +
@@ -1367,6 +1388,49 @@ export function attachConservation({
       alternatives.map(id => "<th>Alternative " + h(id) + "</th>").join("") +
       "</tr></thead><tbody>" + rows + "</tbody></table></div>";
   }
+  function nativeExecution(study) {
+    const entries = Object.entries(study?.native_execution || {});
+    if (!entries.length) return "";
+    const spec = study.spec || {}, basis = {
+      completed_stage_runtime: "Recorded on the completed model stage",
+      observed_run_fallback: "Observed run runtime; stage version not recorded",
+      observed_runtime: "Observed run runtime",
+      requested_legacy: "Requested version retained by a legacy record",
+      unavailable: "No version recorded",
+    };
+    const version = value => h(value || "Not recorded");
+    return '<details class="cons-disclosure"><summary>Native execution versions</summary>' +
+      '<p class="cons-help">Each model keeps the execution version used to interpret its outputs. ' +
+      'A completed stage takes precedence over the observed run runtime; a requested-only legacy record is labelled explicitly.</p>' +
+      entries.map(([id, execution]) => {
+        const role = id === spec.baseline_run_id ? "Baseline" :
+          (spec.alternative_run_ids || []).includes(id) ? "Alternative" : "Retained run";
+        const models = Object.entries(execution.model_versions || {});
+        const support = execution.supported === true ? "Supported by this quantity adapter" :
+          execution.supported === false ? "Outside this quantity adapter's supported version" :
+          "Adapter compatibility not recorded";
+        const rows = models.map(([model, value]) => '<tr><th scope="row">' + h(model.toUpperCase()) +
+          "</th><td>" + version(value.comparison_version) + "</td><td>" +
+          h(basis[value.basis] || value.basis || "No version recorded") + "</td><td>" +
+          version(value.requested_version) + "</td><td>" + version(value.observed_run_version) +
+          "</td><td>" + h(value.stage_completed_at || "Not recorded") + "</td><td>" +
+          (value.reused_from ? '<details><summary>Original reused stage</summary><pre>' +
+            h(JSON.stringify(value.reused_from, null, 2)) + "</pre></details>" : "No reuse recorded") +
+          "</td></tr>").join("");
+        return '<section aria-label="' + h(role + " native execution") + '"><div class="cons-section-title"><h4>' +
+          h(role) + " · " + h(id) + '</h4><button type="button" data-action="item" data-kind="runs" data-id="' +
+          h(id) + '">Open original run</button></div><p>' +
+          "Quantity adapter " + version(execution.unit_contract_version) + " · " + h(support) +
+          '</p><div class="cons-table-wrap"><table class="cons-table"><caption>Retained execution source for each selected model</caption>' +
+          "<thead><tr><th>Model</th><th>Version used for quantities</th><th>Recorded basis</th>" +
+          "<th>Requested version</th><th>Observed run version</th><th>Stage completed</th><th>Stage source</th></tr></thead>" +
+          "<tbody>" + (rows || '<tr><td colspan="7">Per-model execution was not recorded.</td></tr>') +
+          "</tbody></table></div>" +
+          (execution.runtime_history?.length ? '<details><summary>Original run runtime history</summary><pre>' +
+            h(JSON.stringify(execution.runtime_history, null, 2)) + "</pre></details>" : "") + "</section>";
+      }).join("") + "</details>";
+  }
+
   function studyLineage(study) {
     const spec = study?.spec || {};
     return '<details class="cons-disclosure"><summary>Sources and saved choices</summary><dl class="cons-definitions">' +
@@ -1895,7 +1959,7 @@ export function attachConservation({
           "Native model quantities: pollutant units, valid coverage and alternative differences remain visible for each planning unit.") +
         "</p>" + (study.error ? '<div class="cons-notice cons-error" role="alert">' +
           h(typeof study.error === "string" ? study.error : study.error.message || JSON.stringify(study.error)) +
-          "</div>" : "") + studyLineage(study) +
+          "</div>" : "") + studyLineage(study) + nativeExecution(study) +
         (ui.plan ? portfolioView(ui.plan) : "") +
         (ui.form === "portfolio" ? portfolioForm() : "") +
         (ui.form === "optimization" ? optimizationForm() : "") +
@@ -1977,6 +2041,7 @@ export function attachConservation({
       const value = run.selection || {};
       return value.grid_id === d.grid_id && value.profile_id === d.profile_id &&
         value.invest_version === data.invest_version && original.has(value.scenario_id) &&
+        run.execution?.supported === true &&
         runModels(run).join(",") === scope.models.join(",");
     });
   }

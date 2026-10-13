@@ -99,8 +99,9 @@ class Conservation:
                     for row in existing.get("profiles", []) if isinstance(row, dict)
                 ],
                 "runs": [
-                    {key: run[key] for key in ("id", "title", "state", "selection", "model")
-                     if key in run}
+                    {**{key: run[key] for key in ("id", "title", "state", "selection", "model")
+                        if key in run},
+                     "execution": model._native_execution(run, require_supported=False)}
                     for run in existing.get("runs", []) if isinstance(run, dict)
                 ],
             }
