@@ -5,7 +5,7 @@
     "source_commit": "5ee552982cfa2ffdd254032358d64c81064151ce",
     "source_root": "opportunities/upstate_forever_2026",
     "operation_id": "ECO13-MONITORING-CHEMISTRY-STUDY-DD6B-20261013",
-    "monitoring_field_study_commit": "6568e594e91ffba3f3b3202f06831660524ba635"
+    "monitoring_field_study_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
   },
   "files": [
     {
@@ -96,7 +96,7 @@
   "source_updates": [
     {
       "reason": "Completed original field study and explicit native selection retention; previous original source, studies, engines and receiving remain intact.",
-      "source_commit": "6568e594e91ffba3f3b3202f06831660524ba635"
+      "source_commit": "e230bbfe1e2ad71110de96e01ff26ebb6232d52e"
     }
   ]
 }
