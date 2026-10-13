@@ -13,7 +13,7 @@ import io
 import json
 from pathlib import Path
 
-from .common import atomic_bytes, atomic_json, digest, file_digest
+from .common import atomic_bytes, atomic_json, canonical, digest, file_digest
 
 STUDY_ID = "upper-savannah-assessment-2026-87"
 TITLE = "Upper Savannah assessment — 87 monitoring stations"
@@ -211,15 +211,84 @@ def prepare(workspace, manifests=(), assessment_csv=None):
     return result
 
 
+
+def operate(workspace, manifests=(), assessment_csv=None, receiving_workspace=None):
+    """Prepare, build and optionally reopen the original-data station study."""
+    from . import station_geography
+    result = prepare(workspace, manifests, assessment_csv)
+    result["workspace"] = {"root": str(workspace.root), "project_id": workspace.project["id"]}
+    if not result["study"]["ready"]:
+        return result
+    edition = station_geography.build(workspace, result["study"]["selection"])
+    edition = station_geography.inspect(workspace, edition["id"], verify=True, include_result=True)
+    archives = [item for item in edition["files"] if Path(item["path"]).name == "station-geography.zip"]
+    if len(archives) != 1:
+        raise ValueError("The saved station study has no unique original geography archive")
+    from .common import verify_file
+    archive_path = verify_file(workspace.root, archives[0])
+    result["edition"] = {key: edition[key] for key in ("id", "title", "build_id", "summary", "files")}
+    result["archive"] = {**archives[0], "absolute_path": str(archive_path)}
+    if receiving_workspace is not None:
+        if receiving_workspace.root == workspace.root:
+            raise ValueError("Choose a second Workspace directory for portable receiving")
+        reopened = station_geography.receive(receiving_workspace, archive_path)
+        reopened = station_geography.inspect(receiving_workspace, reopened["id"], verify=True, include_result=True)
+        def source_identity(reference):
+            reference = reference or {}
+            return {key: reference.get(key) for key in
+                    ("source_id", "source_sha256", "native_feature_id", "source_feature_index")}
+        def membership_identity(row):
+            return {"watershed_id": row["watershed_id"], "relation": row["relation"],
+                    "source": source_identity(row.get("source_ref"))}
+        def station_identity(row):
+            return {"station_id": row["station_id"], "status": row["status"],
+                    "coordinates": row["coordinates"], "watershed_status": row["watershed_status"],
+                    "observation_count": row["observation_count"],
+                    "selected_source": source_identity(row.get("selected_source_ref")),
+                    "memberships": sorted((membership_identity(item) for item in row["watersheds"]), key=canonical)}
+        original_rows = sorted((station_identity(row) for row in edition["result"]["stations"]), key=canonical)
+        received_rows = sorted((station_identity(row) for row in reopened["result"]["stations"]), key=canonical)
+        if original_rows != received_rows or edition["summary"] != reopened["summary"]:
+            raise ValueError("The reopened study differs in its original station identities or geographic memberships")
+        result["received"] = {
+            "workspace": {"root": str(receiving_workspace.root), "project_id": receiving_workspace.project["id"]},
+            "edition": {key: reopened[key] for key in ("id", "title", "build_id", "summary", "files")},
+            "original_station_memberships_preserved": True,
+        }
+    return result
+
+
 def main(argv=None):
     from .workspace import Workspace
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True)
+    parser.add_argument("--create-workspace", action="store_true",
+                        help="Create the original source-study Workspace if it does not yet exist")
+    parser.add_argument("--build", action="store_true",
+                        help="Build and verify the complete native station geography edition after preparation")
+    parser.add_argument("--receive-workspace",
+                        help="Reopen the completed portable archive in this second Workspace; implies --build")
+    parser.add_argument("--create-receiving-workspace", action="store_true",
+                        help="Create the selected second Workspace if it does not yet exist")
     parser.add_argument("--source-manifest", action="append", default=[],
                         help="Existing original sources.json; repeat for monitoring, WQP and domain sources")
     parser.add_argument("--assessment-csv", help="The retained original 101-row assessment inventory")
     args = parser.parse_args(argv)
-    result = prepare(Workspace(args.workspace), args.source_manifest, args.assessment_csv)
+    if args.create_receiving_workspace and not args.receive_workspace:
+        parser.error("--create-receiving-workspace requires --receive-workspace")
+    if args.receive_workspace and Path(args.workspace).resolve() == Path(args.receive_workspace).resolve():
+        parser.error("--receive-workspace must select a second Workspace directory")
+    workspace = Workspace(args.workspace, create=args.create_workspace,
+                          title="Upper Savannah original assessment geography")
+    receiving_workspace = (
+        Workspace(args.receive_workspace, create=args.create_receiving_workspace,
+                  title="Upper Savannah received original assessment geography")
+        if args.receive_workspace else None
+    )
+    if args.build or receiving_workspace is not None:
+        result = operate(workspace, args.source_manifest, args.assessment_csv, receiving_workspace)
+    else:
+        result = prepare(workspace, args.source_manifest, args.assessment_csv)
     print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
     return 0 if result["study"]["ready"] else 2
 

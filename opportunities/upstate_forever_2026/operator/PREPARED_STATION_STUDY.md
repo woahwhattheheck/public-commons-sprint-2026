@@ -68,3 +68,24 @@ Open **Watershed station coverage** to inspect every retained polygon, including
 Counts describe the selected saved study. Zero means no selected study station lies in that polygon. A boundary or overlap station appears in every matching watershed; adding watershed station counts can therefore count a station more than once. Original assessment rows and observation rows remain separate. These geographic inventory counts do not estimate pollutant loads or monitoring effort. Source-specific polygon identities are retained even when multiple sources use the same watershed identifier.
 
 The watershed filter, coverage-table search and page are retained for the selected Workspace during the browser session. Complete edition exports and editable portable receiving retain the unchanged scientific results and original source packages.
+
+## Complete the native study and portable reopen in one command
+
+The original source study can run in its own actual Workspace. It needs the retained source packages, the complete application and its GIS dependencies. It can be created before a model programme finishes.
+
+From the current application directory, run:
+
+    python -m model.station_study \
+      --workspace STUDY_WORKSPACE --create-workspace \
+      --source-manifest MONITORING/sources.json \
+      --source-manifest WQP_SUPPLEMENT/sources.json \
+      --source-manifest ORIGINAL_DOMAIN/sources.json \
+      --assessment-csv WQP_SUPPLEMENT/assessment_listed_causes_2026_draft_original.csv \
+      --build \
+      --receive-workspace RECEIVING_WORKSPACE --create-receiving-workspace
+
+Choose distinct actual directories for STUDY_WORKSPACE and RECEIVING_WORKSPACE. Existing valid Workspaces are reused; the creation flags create only a missing Workspace manifest. The same retained source hashes resolve the original study. The native build saves its complete exports and original-source ZIP, then the existing receiving implementation imports that ZIP and rebuilds the editable selection in the second Workspace.
+
+The JSON result includes both real project identities, edition IDs, summaries, all saved export paths and hashes, and the original ZIP's absolute path. Portable receiving compares the original station IDs, location statuses, coordinates, selected source identities, complete watershed memberships, observation counts and full summary. Source collection IDs may change naturally when originals are imported into another Workspace; their original source IDs, hashes and feature identities are preserved.
+
+Repeat the same command and paths to reuse retained imports, completed build and receiving state. A missing required original source returns the prepared-study input list with exit2. Successful complete execution returns exit0 with both editions. Open those Workspaces in the existing operator to inspect the station map, original assessment rows, watershed coverage and editable source selection.
