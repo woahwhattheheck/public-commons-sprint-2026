@@ -431,6 +431,10 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
     customer = bind_case(ws, receipt, output, source=customer_case)
     if customer is not None:
         value["customer_review"] = customer
+    from source_tools.simulated_fieldwork_recording import bind_campaign
+    fieldwork = bind_campaign(ws, receipt, output)
+    if fieldwork is not None:
+        value["fieldwork_receiving"] = fieldwork
     # Use the maintained validator, preserving its current input contract.
     sys.path.insert(0, str(APP / "operator"))
     from rehearsal_receiving import validate
@@ -444,6 +448,13 @@ def _bind(receipt_path, output, *, workspace=None, browser=None, operation_id=OP
     atomic_bytes(teaching / "TEACHING_GUIDE.md", guide.read_bytes(), immutable=True)
     atomic_json(teaching / "selected-case.json", case, immutable=True)
     atomic_bytes(teaching / "selected-case.md", teaching_markdown(case).encode("utf-8"), immutable=True)
+    from source_tools.simulated_headwaters_narration import build_narration, narration_markdown
+    narration = build_narration(case, {"path": "uploads/simulated-headwaters/selected-case.json",
+        "bytes": (teaching / "selected-case.json").stat().st_size,
+        "sha256": file_digest(teaching / "selected-case.json")},
+        programme_id=receipt.get("programme_id"), fieldwork=fieldwork, customer=customer)
+    atomic_json(teaching / "narration-script.json", narration, immutable=True)
+    atomic_bytes(teaching / "narration-script.md", narration_markdown(narration).encode("utf-8"), immutable=True)
     return {"input": str(output / "input.json"), "project_id": ws.project["id"],
             "selection": selected, "receipt_sha256": receipt_sha256,
             "guide": str(teaching / "TEACHING_GUIDE.md"),
