@@ -19,10 +19,11 @@ function originalBytes(row){
 }
 function bindArchiveSource({archiveView,memberRoot,source,identify}={}){
  relative(memberRoot,true);need(typeof identify==='function','Use the original byte identifier');
- need(archiveView?.schema==='commons.zip-archive.v1'&&Array.isArray(archiveView.entries),'Use the original complete ZIP view');
+ need(['commons.zip-archive.v1','commons.tar-archive.v1'].includes(archiveView?.schema)&&Array.isArray(archiveView.entries),'Use the original complete ZIP view');
  need(source?.schema==='commons.application-source-closure/v1'&&Array.isArray(source.files)&&Array.isArray(source.directories),'Use the original complete mixed-language source packet');
  const files=new Map(),directories=new Set(['.']);
  for(const entry of archiveView.entries){
+  if(entry.path==='.'&&entry.kind==='directory')continue;
   relative(entry.path);
   need(!files.has(entry.path),'Duplicate archive member');
   const parts=entry.path.split('/');for(let n=1;n<parts.length;n++)directories.add(parts.slice(0,n).join('/'));
