@@ -84,6 +84,94 @@
           "bytes": 2170687
         }
       ]
+    },
+    {
+      "id": "mapped-batch-identity-d76c",
+      "sha256": "69d6888711aa4b3aa8602a3f457548e4dabec57e52cf9125c1c791c9d9fb35c3",
+      "optimize_kwargs": {
+        "batch_size": 8,
+        "corpus_starts": true,
+        "coordinate_map": "identity"
+      },
+      "companions": [
+        {
+          "module": "l2d_coordmap",
+          "path": "coordinate-map-110/l2d_coordmap.py",
+          "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+        },
+        {
+          "module": "elite_archive",
+          "path": "batch-portfolio-d76c/elite_archive.py",
+          "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+        },
+        {
+          "module": "warmstart",
+          "path": "batch-portfolio-d76c/warmstart.py",
+          "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+        },
+        {
+          "module": "mapped_geometry",
+          "path": "mapped-batch-d76c/mapped_geometry.py",
+          "sha256": "caea2b803e0063d0969d72f5acf10f7483678ef6164ab074306817ae0c783f3a"
+        },
+        {
+          "module": "mapped_update",
+          "path": "mapped-batch-d76c/mapped_update.py",
+          "sha256": "4e2bcba37a68d6e512df2d80830e475829ab763600022ccf0a5511dada8e9c4c"
+        }
+      ],
+      "assets": [
+        {
+          "name": "warmstart_bank.npz",
+          "path": "batch-portfolio-d76c/warmstart_bank.npz",
+          "bytes": 2170687,
+          "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+        }
+      ]
+    },
+    {
+      "id": "mapped-batch-property-v1-d76c",
+      "sha256": "69d6888711aa4b3aa8602a3f457548e4dabec57e52cf9125c1c791c9d9fb35c3",
+      "optimize_kwargs": {
+        "batch_size": 8,
+        "corpus_starts": true,
+        "coordinate_map": "l2d_property_v1"
+      },
+      "companions": [
+        {
+          "module": "l2d_coordmap",
+          "path": "coordinate-map-110/l2d_coordmap.py",
+          "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+        },
+        {
+          "module": "elite_archive",
+          "path": "batch-portfolio-d76c/elite_archive.py",
+          "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+        },
+        {
+          "module": "warmstart",
+          "path": "batch-portfolio-d76c/warmstart.py",
+          "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+        },
+        {
+          "module": "mapped_geometry",
+          "path": "mapped-batch-d76c/mapped_geometry.py",
+          "sha256": "caea2b803e0063d0969d72f5acf10f7483678ef6164ab074306817ae0c783f3a"
+        },
+        {
+          "module": "mapped_update",
+          "path": "mapped-batch-d76c/mapped_update.py",
+          "sha256": "4e2bcba37a68d6e512df2d80830e475829ab763600022ccf0a5511dada8e9c4c"
+        }
+      ],
+      "assets": [
+        {
+          "name": "warmstart_bank.npz",
+          "path": "batch-portfolio-d76c/warmstart_bank.npz",
+          "bytes": 2170687,
+          "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+        }
+      ]
     }
   ],
   "common_objective": {
@@ -229,6 +317,32 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Twenty original CPU Objective cells using the same eight-lane candidate with native scalar dispatch. Retained as a separate runtime condition from the GPU campaign."
+    },
+    {
+      "id": "mapped-batch-public",
+      "baseline": "mapped-batch-identity-d76c",
+      "candidates": [
+        "mapped-batch-identity-d76c",
+        "mapped-batch-property-v1-d76c"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Twenty original GPU Objective cells comparing the same eight-lane public-corpus optimizer in identity versus ROOT110 property coordinates. Initial physical random/donor designs and archive distance are preserved; gradients come from original Objective mapping autodiff. Separate unmeasured additive phase; existing accepted phases stay at their original source revisions."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
@@ -249,6 +363,7 @@
     "handoff": "Original raw report/context/console/attempt/completion and matched comparison in a complete output archive.",
     "coordinate_map_cells": 6,
     "batch_corpus_gpu_cells": 40,
-    "batch_corpus_cpu_cells": 20
+    "batch_corpus_cpu_cells": 20,
+    "mapped_batch_gpu_cells": 20
   }
 }

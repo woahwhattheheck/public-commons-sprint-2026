@@ -1,0 +1,108 @@
+{
+  "schema": "tjlabs.l2d.mapped-batch-source/v1",
+  "based_on": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "commit": "446fabb1fd7445e9ef3ab338eaeac71ca3f3ed3f"
+  },
+  "native_state": "not_run",
+  "source_claim": {
+    "channel": "C0C1F274SGH",
+    "parent": "1791736325.457109",
+    "message": "1791918327.887269"
+  },
+  "original_sources": [
+    {
+      "path": "batch-portfolio-d76c/submission.py",
+      "bytes": 21276,
+      "sha256": "ed2b99f854f09af59fa62f0f777a438bd7cc8b765bf5d8cab87294cc69be2278"
+    },
+    {
+      "path": "batch-portfolio-d76c/batched_update.py",
+      "bytes": 1138,
+      "sha256": "a3c81644f5775d1bdc7ee2d83d03ec2a8b3afa7a63be150d7fb786041bdbe148"
+    },
+    {
+      "path": "coordinate-map-110/l2d_coordmap.py",
+      "bytes": 11827,
+      "sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031"
+    },
+    {
+      "path": "batch-portfolio-d76c/elite_archive.py",
+      "bytes": 4697,
+      "sha256": "cd8e43ed2227e9107d2398d9cd3353b286d371b7ad1fc2c663b0cf352ba44953"
+    },
+    {
+      "path": "batch-portfolio-d76c/warmstart.py",
+      "bytes": 11647,
+      "sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204"
+    },
+    {
+      "path": "batch-portfolio-d76c/requirements.txt",
+      "bytes": 39,
+      "sha256": "189ce1f45d8b650463612e8cdad59c719f8f9f3bf7c418c79a18290229efff80"
+    },
+    {
+      "path": "runner/invocation.py",
+      "bytes": 13255,
+      "sha256": "d567f5b43902893b80d419bcd27bbeb88028627dba6dcab3c1f72344fa765594"
+    },
+    {
+      "path": "run_phase.py",
+      "bytes": 22176,
+      "sha256": "bdf7658fc4883271ee5cf5abdde0b84d70b3d2715e039c61b1fb56a4ec8edd56"
+    },
+    {
+      "path": "release_selected.py",
+      "bytes": 19522,
+      "sha256": "3987f4f856e94b664130cdb3c0217a7873e42c7e4c4ee67ffe09da2c666dce78"
+    },
+    {
+      "path": "SOURCES.json",
+      "bytes": 16600,
+      "sha256": "b881c1f8f3c3b42f390bb5fc8df71ee00b30e18bdd48574c76ec6b8f453aaa72"
+    },
+    {
+      "path": "RUN_PLAN.json",
+      "bytes": 8075,
+      "sha256": "0395383c6b07798440704dc2b4449eff9fb5f3e2d728b46e5d742e6262d7fc1e"
+    },
+    {
+      "path": "PACKAGE-MANIFEST.json",
+      "bytes": 7149,
+      "sha256": "dd4253ae437d2ac9385d544f6ad98bd72972f28385c793b25f8814190f03a728"
+    }
+  ],
+  "asset": {
+    "name": "warmstart_bank.npz",
+    "path": "batch-portfolio-d76c/warmstart_bank.npz",
+    "bytes": 2170687,
+    "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
+  },
+  "fresh_objective_authority": {
+    "original_runner": {
+      "path": "runner/run_public_uifo.py",
+      "gitBlob": "a16a2d62f71c61fcbdfb229d52f47baf9b95b547",
+      "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+    },
+    "official_rules": {
+      "repository": "artificial-scientist-lab/Learn2Design-2026",
+      "path": "docs/submission.md",
+      "gitBlob": "41becac02d7e868e67469567210f9326ce79bf40",
+      "section": "Evaluation procedure step3"
+    }
+  },
+  "policy": {
+    "path": "AGENTS.md",
+    "gitBlob": "96d3752dc5277b2015178a03d9c124fdf9568d5a"
+  },
+  "source_syntax": {
+    "parser": "unmodified original Skulpt Python3 CST",
+    "checked_sources": [
+      "submission.py",
+      "mapped_geometry.py",
+      "mapped_update.py"
+    ],
+    "native_execution": false,
+    "cpython_validation": false
+  }
+}
