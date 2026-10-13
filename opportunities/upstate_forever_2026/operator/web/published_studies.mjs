@@ -286,7 +286,8 @@ export function createPublishedStudiesDesk(host) {
         ["site_id","Station"],["date","Date"],["local_time","Local time"],["source_timezone","Source zone"],
         ["project_id","Source project"],["activity_type","Activity type"],["parameter_original","Original parameter"],["sample_fraction","Fraction"],["method_id","Method"],["result_value_type","Result type"],["value","Value"],["unit","Unit"],
         ["detection_condition","Detection"],["detection_limit","Limit"],["detection_limit_unit","Limit unit"],
-        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"]
+        ["depth","Depth"],["depth_unit","Depth unit"],["activity_id","Activity identifier"],
+        ["result_comment","Original result comment"],["activity_comment","Original activity comment"],["laboratory_comment","Original laboratory comment"]
       ]);
       const cohort = context.cohort_reconciliation;
       if (cohort) {
@@ -316,7 +317,8 @@ export function createPublishedStudiesDesk(host) {
         ["project_id","Project"],["activity_type","Activity type"],["parameter_original","Original characteristic"],["sample_fraction","Fraction"],
         ["value","Value"],["unit","Unit"],["detection_condition","Detection"],["detection_limit","Limit"],
         ["detection_limit_unit","Limit unit"],["detection_limit_type","Limit type"],["censor_direction","Censor direction"],["depth","Depth"],["depth_unit","Depth unit"],
-        ["method_authority","Method authority"],["method_id","Method"],["result_value_type","Result type"],["cohort_selection","Cohort selection"],["activity_id","Activity identifier"]
+        ["method_authority","Method authority"],["method_id","Method"],["result_value_type","Result type"],["cohort_selection","Cohort selection"],["activity_id","Activity identifier"],
+        ["result_comment","Original result comment"],["activity_comment","Original activity comment"],["laboratory_comment","Original laboratory comment"]
       ]);
       const empty = arr(dated.summary?.empty_source_stations).filter(id => selection.site_ids.includes(id));
       if (empty.length) output += '<p class="ps-help">The exact organization/station/year query returned a header-only original response for ' + esc(empty.join(", ")) + '. Its original response is retained with the source collection.</p>';
