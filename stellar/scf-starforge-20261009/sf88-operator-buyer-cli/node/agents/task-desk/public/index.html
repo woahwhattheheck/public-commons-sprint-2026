@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Inbox Task Desk</title>
+  <link rel="stylesheet" href="/assets/style.css">
+  <script type="module" src="/assets/app.mjs"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to task workspace</a>
+  <div class="desk">
+    <aside id="task-sidebar" class="sidebar" aria-label="Saved tasks">
+      <div class="sidebar-heading">
+        <a class="wordmark" href="#home">Inbox<span>Task desk</span></a>
+        <button id="sidebar-close" class="icon-button mobile-only" type="button" aria-label="Close task navigation">×</button>
+      </div>
+      <button id="new-task-button" class="button primary new-task-button" type="button"><span aria-hidden="true">+</span> New task</button>
+      <label class="search-label" for="task-search">Find a saved task</label>
+      <input id="task-search" class="search-input" type="search" placeholder="Search tasks" autocomplete="off">
+      <div class="sidebar-section-heading"><h2>Saved tasks</h2><span id="task-count" class="count">0</span></div>
+      <nav id="task-list" class="task-list" aria-label="Task list"><p class="sidebar-note">Loading saved tasks…</p></nav>
+      <div id="task-list-issues" class="sidebar-issues" hidden></div>
+      <div class="sidebar-bottom">
+        <span id="connection-status" class="connection-state" role="status">Connecting…</span>
+        <button id="reconnect-button" class="text-button" type="button">Reconnect</button>
+      </div>
+    </aside>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <div class="workspace">
+      <header class="topbar">
+        <div class="topbar-start">
+          <button id="sidebar-toggle" class="icon-button mobile-only" type="button" aria-label="Open saved tasks" aria-controls="task-sidebar" aria-expanded="false">☰</button>
+          <span class="topbar-title">Inbox Task Desk</span>
+        </div>
+        <div class="topbar-actions">
+          <span id="last-refreshed" class="muted small"></span>
+          <button id="refresh-all-button" class="button small-button" type="button">Refresh</button>
+        </div>
+      </header>
+      <div id="global-notice" class="global-notice" role="alert" hidden></div>
+      <main id="main-content" class="main" tabindex="-1">
+        <section class="empty-state">
+          <p class="eyebrow">TASK WORKSPACE</p>
+          <h1>Opening your task desk</h1>
+          <p>Loading saved tasks and the original inbox.</p>
+          <div class="loading-line" aria-hidden="true"></div>
+        </section>
+      </main>
+      <footer class="workspace-footer">Saved tasks · Original inbox requests · Complete response packets</footer>
+    </div>
+  </div>
+  <dialog id="job-picker" class="picker-dialog" aria-labelledby="job-picker-title">
+    <div class="dialog-heading">
+      <div><p class="eyebrow">ORIGINAL INBOX</p><h2 id="job-picker-title">Choose requests</h2></div>
+      <button id="job-picker-close" class="icon-button" type="button" aria-label="Close request picker">×</button>
+    </div>
+    <p class="muted">Select existing requests for this task. Each selected request keeps its original operation and receives a stable role.</p>
+    <label class="search-label" for="job-search">Find a request</label>
+    <input id="job-search" class="search-input" type="search" autocomplete="off" placeholder="Search original request content">
+    <div id="job-picker-list" class="job-picker-list"></div>
+    <div class="dialog-footer"><span id="job-picker-count" class="muted small">0 selected</span><div class="button-row"><button id="job-picker-refresh" class="button" type="button">Refresh inbox</button><button id="job-picker-add" class="button primary" type="button">Add selected requests</button></div></div>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><div class="noscript">JavaScript is required to operate this task desk. Enable it, then reload this page.</div></noscript>
+</body>
+</html>

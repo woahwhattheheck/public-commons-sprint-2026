@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Customer delivery · Request Collections</title><link rel="stylesheet" href="/customer-delivery/style.css"></head>
+<body>
+<header><p>STELLAR FORGE / REQUEST COLLECTIONS</p><h1>Customer delivery</h1><p>Complete saved responses, original observations and selected application source.</p><nav><a id="collections-link" href="/">Collections</a><a href="/customer-delivery/guide">Operator guide</a></nav></header>
+<main>
+<section id="login-panel"><h2>Open this workspace</h2><form id="login-form"><label>Private workspace token<input id="token" type="password" autocomplete="off" required></label><button>Open</button></form></section>
+<p id="status" role="status"></p>
+<section id="recovery" hidden><h2>Retained operation</h2><p id="pending-description"></p><button id="retry">Continue exact retained operation</button><button id="export-request">Save retained request</button><button id="archive-request">Archive browser request</button><button id="read-storage" hidden>Retry retained request read</button><label id="resume-file-label" hidden>Reselect the original package<input type="file" id="resume-file" accept=".ndjson"></label></section>
+<div id="workspace" hidden>
+<nav class="tabs"><button data-tab="prepare" id="prepare-tab">Prepare delivery</button><button data-tab="deliveries">Named deliveries</button><button data-tab="receive">Receive package</button></nav>
+<section data-panel="prepare"><h2>Select original results</h2><form id="prepare-form">
+<label>Result origin<select id="origin-kind"><option value="collection">Existing Collection</option><option value="inbox-task">Complete received InboxTask</option></select></label>
+<div id="task-origin" hidden><label>Original packet directory<input id="task-packet"></label><label>Expected original task SHA-256<input id="task-sha" pattern="[a-f0-9]{64}" minlength="64" maxlength="64"></label><button id="load-task" type="button">Open and verify original task</button><p id="task-description"></p></div>
+<div class="grid"><label id="collection-origin">Collection<select id="collection" required></select></label><label>Delivery ID<input id="delivery-id" maxlength="100" pattern="[A-Za-z0-9._-]+" required></label></div>
+<label>Customer title<input id="title" maxlength="160" required></label><label>Customer note<textarea id="note" maxlength="10000" rows="3"></textarea></label>
+<fieldset><legend>Original requests</legend><div id="intents"></div></fieldset>
+<details open><summary>Complete application source</summary><p>The source root must be the executing application tree, separate from the private Inbox and workspace. Generate the source manifest with the delivery CLI. Every selected source file is included.</p><label>Absolute source root<input id="source-root" required></label><label>Absolute source manifest<input id="source-manifest" required></label></details>
+<label>Per-response verification limit in bytes<input id="verify-limit" type="number" min="0" max="1073741824" value="268435456" required></label>
+<label class="check"><input id="allow-incomplete" type="checkbox">Allow a clearly marked incomplete delivery when selected responses cannot be verified</label>
+<button id="review-selection">Review selection</button></form>
+<section id="preview" hidden><h3>Reviewed selection</h3><div id="preview-summary"></div><button id="prepare-package">Prepare complete package</button></section>
+</section>
+<section data-panel="deliveries" hidden><h2>Named deliveries</h2><button id="refresh">Refresh original observations</button><div id="delivery-list"></div></section>
+<section data-panel="receive" hidden><h2>Received customer packages</h2><p>Your saved receipts stay in this workspace. Select a package to verify and reopen its original responses, review and complete source.</p><button id="refresh-received">Refresh received packages</button><div id="received-list"></div><h3>Receive another complete package</h3><p>Enter the package SHA-256 from its sender. Receiving verifies every included response, review and source file before reporting completion. It does not start purchases or import an operator Inbox.</p>
+<form id="receive-form"><label>Original .ndjson file<input type="file" id="package-file" accept=".ndjson" required></label><label>Expected SHA-256<input id="package-sha" pattern="[a-f0-9]{64}" minlength="64" maxlength="64" required></label><button>Verify and receive</button></form>
+<details><summary>Open a specific package by SHA-256</summary><form id="open-received"><label>Reopen received package by SHA-256<input id="received-sha" pattern="[a-f0-9]{64}" required></label><button>Reopen</button></form></details>
+<div id="received-view"></div></section>
+</div>
+</main><script type="module" src="/customer-delivery/app.mjs"></script>
+</body></html>
