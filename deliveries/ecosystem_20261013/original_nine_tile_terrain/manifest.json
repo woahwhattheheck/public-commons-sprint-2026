@@ -1,0 +1,160 @@
+{
+  "schema": "commons.exact-source-delivery/v1",
+  "operation": "ECSA-UPPER-SAVANNAH-TERRAIN-20261013",
+  "original_request": "1791911330.745859",
+  "source_delivery": "1791918657.669789",
+  "source_canvas": "F0C9T3HHGL8",
+  "driver_git_blob": "34995a266c8b613cc5cea96d247a79d3da3a7075",
+  "native_execution": "not_observed_at_delivery",
+  "original_asset_count": 27,
+  "original_tiff_bytes": 519255250,
+  "embedded_members": [
+    {
+      "path": "source/terrain/20261013/inventory.json",
+      "bytes": 27887,
+      "sha256": "f7214603f36a69e0d997d2eeac8514f3706130ca169a37cb86a3d4d8f63de68f"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w082/index.html",
+      "bytes": 7710,
+      "sha256": "938a5e26dadb40d2755dc0f8d18050d896f72f7780b65de39813c1c5e3bc724d"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w082/USGS_1_n34w082.xml",
+      "bytes": 13296,
+      "sha256": "7785fcdef1ca5a21c5466e7dddc1c0939e2f1ab06c2fdca5ab255b0a20e67ac8"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w083/index.html",
+      "bytes": 7710,
+      "sha256": "64380ac32ee2feff91a4265cc97dfa098806a93c6d99f2ae2aa18a2542c463d9"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w083/USGS_1_n34w083.xml",
+      "bytes": 12343,
+      "sha256": "9142dbd446d7fa7c0848e76e810ee9612c44a7a97ce0b6487605b74b6d2448d7"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w084/index.html",
+      "bytes": 7710,
+      "sha256": "5fe053405a85437739a153bb798d24ff3817298471ff44fa61957b9ad85f5db9"
+    },
+    {
+      "path": "source/terrain/20261013/original/n34w084/USGS_1_n34w084.xml",
+      "bytes": 12345,
+      "sha256": "13f569268dc3ec1069a46c9d5843dfc564ad4ceceeda04d0dfe11e9d3acfcef0"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w082/index.html",
+      "bytes": 7710,
+      "sha256": "71838d4713b661a30849e65d208b61e5c70e1e4fb7dcbe8cfef7f201acaf6900"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w082/USGS_1_n35w082.xml",
+      "bytes": 11668,
+      "sha256": "2d58a12342b9da57a2c8a06f9acb72b5af3c797c93d66b4c8b276ea033a2568f"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w083/index.html",
+      "bytes": 7824,
+      "sha256": "04f47df4477c19ed5f0b30eb01ece47c9f33fc0a2418e19bda529051c2044381"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w083/USGS_1_n35w083.xml",
+      "bytes": 12345,
+      "sha256": "87a851ec711fb95a01ae389a4324e0260b974ad11c77a4c5649fa9875e50c670"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w084/index.html",
+      "bytes": 7824,
+      "sha256": "83e02510663be9a56a65d040b95135811b3b9d45a0769d0906b9f48065ef5abb"
+    },
+    {
+      "path": "source/terrain/20261013/original/n35w084/USGS_1_n35w084.xml",
+      "bytes": 12345,
+      "sha256": "ed1e16c3f0b3c359b082c0c265ad4f114f179ef2fe6505816ae292e1b859fb6e"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w082/index.html",
+      "bytes": 7710,
+      "sha256": "e5a1e8a22e65f0ed4fcb023f1de3bc52ee83935ce123c478931ee184eb7c3b69"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w082/USGS_1_n36w082.xml",
+      "bytes": 11667,
+      "sha256": "4635a2ec86c5e5b3d119d0a00adc96b60a49bbc4e38fcec0aebb07b40e48843d"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w083/index.html",
+      "bytes": 7710,
+      "sha256": "bcb90fa5d75f3cc25782dd56e4ab025bf558dacb6d0ac4e78a994bb5d3696375"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w083/USGS_1_n36w083.xml",
+      "bytes": 14512,
+      "sha256": "5e6c4ce9751145c613e27ab70dc068efd5c945d64513aa2a3e472fb8f8f3b817"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w084/index.html",
+      "bytes": 7710,
+      "sha256": "23f9000c1e041702012da8a810d032b93a172a84c63bd8bc01e4a4610036f0f3"
+    },
+    {
+      "path": "source/terrain/20261013/original/n36w084/USGS_1_n36w084.xml",
+      "bytes": 13297,
+      "sha256": "f4f30de9b0f2bc46a0fc27abbb122aea11e09b672bcfbf83ddd0e2630dfb1199"
+    },
+    {
+      "path": "source_tools/__init__.py",
+      "bytes": 75,
+      "sha256": "43ee3878863afcf33b2b0cf8e37ce86ae1096592548303011af93a30338e7dce"
+    },
+    {
+      "path": "source_tools/terrain_io.py",
+      "bytes": 18550,
+      "sha256": "c6c2536dc187c76fbb45324cca872ea58ae028c5cf5a53f27e8ca0af61a60b02"
+    },
+    {
+      "path": "source_tools/terrain_catalog.py",
+      "bytes": 20025,
+      "sha256": "37d6302074cc4b50ea56f77f519ec71dc18caa32ed6cd73796fe874adaa7a2db"
+    },
+    {
+      "path": "source/terrain/20261013/TERRAIN_RECEIVING.md",
+      "bytes": 5608,
+      "sha256": "9821bfaac21a04128158821634b0fb59e5fb37be6c66a3a6ae5c472529b98e0c"
+    },
+    {
+      "path": "ADOPT_ORIGINALS.md",
+      "bytes": 5068,
+      "sha256": "ab869e46bc72df898be8a3059f55a19f2b1e0951899a75d7fe0bca08b5fdb45a"
+    }
+  ],
+  "files": [
+    {
+      "path": "receive_original_nine_tiles.py",
+      "bytes": 59260,
+      "sha256": "c38a31aed84e148dbc812bcf609d7eb1fd26d89b929ed47377a0297566e084a6"
+    },
+    {
+      "path": "RECEIVE_COMMAND.sh",
+      "bytes": 54256,
+      "sha256": "404c91d906bf38fb6c424b48aef3b7207f022193b57a4d7916215c9262b39778"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 7844,
+      "sha256": "e728a4f43551cf369548497d8891cfa114f0b9f54354f204e7aab8bfce08ccc8"
+    },
+    {
+      "path": "CURRENT_OWNER_DIRECTION.md",
+      "bytes": 6093,
+      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4019,
+      "sha256": "901da6f1ff1206f57c414cb964f3d034cad9b2ce5a9e2e627ebfbedc4a536e90"
+    }
+  ]
+}
