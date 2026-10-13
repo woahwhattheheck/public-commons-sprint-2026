@@ -2,7 +2,7 @@
 import { defineMerchantProvider,MERCHANT_PROVIDER_SCHEMA } from '../provider-contract.mjs';
 import { flowableWorkspaceTools } from '../catalog/flowable-workspace.mjs';
 export default defineMerchantProvider({
-  schema:MERCHANT_PROVIDER_SCHEMA,id:'flowable-workspaces',family:'flowableWorkspaces',title:'Flowable process and decision operations',
+  schema:MERCHANT_PROVIDER_SCHEMA,id:'flowable-workspaces',family:'flowableWorkspaces',title:'Flowable process, case, decision and commissioning operations',
   order:450,catalogOrder:450,configKey:'flowableWorkspaces',summary:true,dependencies:[],
   concurrentTools:['merchant_flowable_cancel_request','merchant_flowable_export_file_release'],shutdown:'provider',maxRequestBytes:128*1024*1024,
   configuration:{input:'flowableWorkspaceConnection',privateExports:true,
@@ -18,6 +18,11 @@ export default defineMerchantProvider({
     'A decision deployment retains one original DMN resource; use the native evaluation body decisionKey, tenantId, parentDeploymentId, typed inputVariables and disableHistory as supplied. '+
     'Read the captured native definition and its current selection before evaluating; the engine resolves its actual decision version. '+
     'Retain complete native results and historic execution audit detail with the same operation and source handover. '+
+    'Use the original CMMN REST connection for case deployment, selected case and plan-item actions, human work and history. '+
+    'Receive a complete commissioning programme with its original source bytes and ordered native steps. '+
+    'Read current programme progress; prepare a ready step, inspect its returned original operation review and dispatch through that operation. '+
+    'Recover a saved preparation through its original programme command and reconcile dispatched native work through its existing record. '+
+    'Record the commissioning review against the complete current programme basis; full workspace handover retains every source, attempt and review. '+
     'Prepare each exact native request, read its saved review, and dispatch its record ID, expectedRevision and planSha256 using a stable requestId. '+
     'A migration uses the original target definition and activityMappings document with Flowable native validation. '+
     'Recover an interrupted reply by reading its saved operation and reconciling native current/history state. '+
