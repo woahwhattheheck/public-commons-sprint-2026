@@ -27,8 +27,9 @@ ACTIONS = frozenset({
     "implementation.records.append", "implementation.source.attach",
     "implementation.source.import", "implementation.selection.import",
     "implementation.observations.import", "implementation.lab.import",
+    "implementation.lab.dispatch",
 })
-READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview"})
+READS = frozenset({"list", "detail", "history", "schedule", "summary", "catalog", "selections", "observations-preview", "lab-inspect", "lab-preview", "dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile"})
 WRITE_ROUTES = {
     "create": "implementation.plan.create",
     "import": "implementation.plan.import",
@@ -40,6 +41,7 @@ WRITE_ROUTES = {
     "selection-import": "implementation.selection.import",
     "observations-import": "implementation.observations.import",
     "lab-import": "implementation.lab.import",
+    "dispatch": "implementation.lab.dispatch",
 }
 
 
@@ -212,7 +214,8 @@ class ImplementationOperator:
                 "files": edition["files"], "_downloads": report["_downloads"],
             })
         return dict(
-            workspace_key=workspace, plan=plan, summary=summarize_plan(plan, as_of),
+            workspace_key=workspace, plan=plan, document_digest=document_digest(plan),
+            summary=summarize_plan(plan, as_of),
             history=store.history(plan_id), _downloads=downloads, reports=reports,
         )
 
@@ -229,6 +232,8 @@ class ImplementationOperator:
             return self.list(workspace)
         if operation == "selections":
             return self.selections(workspace)
+        if operation in ("dispatch-preview", "dispatches", "dispatch-detail", "dispatch-reconcile"):
+            return self._dispatch(workspace, payload, operation=operation)
         if operation in ("lab-inspect", "lab-preview"):
             return self._lab(workspace, payload, operation=operation)
         if operation == "observations-preview":
@@ -440,6 +445,70 @@ class ImplementationOperator:
             source_link=result["source_link"], file_ref=result["file_ref"],
         )
 
+
+    def _dispatch_result(self, workspace, plan_id, dispatch_id):
+        from model.implementation_lab_dispatch import dispatch_files
+        result, files = dispatch_files(self.operator.ws(workspace), plan_id, dispatch_id)
+        downloads = [self._ticket(workspace, path, entry["path"], entry)
+                     for entry, path in files]
+        return dict(result, workspace_key=workspace, _downloads=downloads)
+
+    def _dispatch(self, workspace, value, *, operation, actor=""):
+        from model.implementation_lab_dispatch import (
+            preview_dispatch, prepare_dispatch, list_dispatches, reconcile_dispatch,
+        )
+        if not isinstance(value, dict):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_INPUT",
+                             "Supply the original saved plan and explicit laboratory request.")
+        if any(key in value for key in ("path", "directory", "document", "source_document", "csv_path")):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_INPUT",
+                             "Choose original saved records and source IDs.")
+        if value.get("workspace_key") not in (None, workspace):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_WORKSPACE",
+                             "Reopen the request in its original workspace.")
+        ws = self.operator.ws(workspace)
+        plan_id = self._id(value.get("plan_id", value.get("id")))
+        if operation == "dispatches":
+            self.store(workspace).get(plan_id)
+            return dict(list_dispatches(ws, plan_id), workspace_key=workspace)
+        dispatch_id = value.get("dispatch_id")
+        if operation == "dispatch-detail":
+            return self._dispatch_result(workspace, plan_id, dispatch_id)
+        revision = self._integer(value.get("revision"), "revision")
+        document = self.store(workspace).get(plan_id, revision)
+        checksum = document_digest(document)
+        supplied = value.get("document_digest")
+        if supplied is not None and supplied != checksum:
+            raise self.Fault("IMPLEMENTATION_DISPATCH_BINDING",
+                             "The original saved plan differs from the reviewed revision.", 409)
+        if operation == "dispatch-reconcile":
+            result = reconcile_dispatch(ws, document, dispatch_id)
+            return dict(result, workspace_key=workspace, plan_id=plan_id,
+                        revision=revision, document_digest=checksum)
+        selection = value.get("selection")
+        if operation == "dispatch-preview":
+            result = preview_dispatch(ws, document, selection)
+            return dict(result, workspace_key=workspace, plan_id=plan_id,
+                        revision=revision, document_digest=checksum)
+        if operation != "dispatch":
+            raise self.Fault("IMPLEMENTATION_DISPATCH_ACTION",
+                             "Choose a supported original laboratory request operation.")
+        operation_id = value.get("dispatch_operation_id")
+        if (supplied != checksum or not isinstance(operation_id, str)
+                or not re.fullmatch(r"[0-9a-f]{64}", operation_id)):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_BINDING",
+                             "Review the exact original samples and analysis request before preparing.", 409)
+        result = prepare_dispatch(ws, document, selection,
+                                  expected_operation_id=operation_id, actor=actor)
+        if (result.get("schema") != "upstate.implementation-lab-dispatch/v1"
+                or result.get("operation_id") != operation_id
+                or result.get("dispatch_id") != operation_id
+                or result.get("plan_id") != plan_id or result.get("revision") != revision
+                or result.get("document_digest") != checksum):
+            raise self.Fault("IMPLEMENTATION_DISPATCH_RESULT",
+                             "The retained request differs from the reviewed original operation.", 409)
+        return dict(self._dispatch_result(workspace, plan_id, operation_id),
+                    status=result["status"])
 
     def _lab(self, workspace, value, *, operation, actor=""):
         """Receive original CSV bytes through the host's verified upload ticket."""
@@ -691,7 +760,7 @@ class ImplementationOperator:
             document = None
             plan_id = self._id(value.get("plan_id", value.get("id")))
         if (action not in ("implementation.plan.report", "implementation.observations.import",
-                           "implementation.lab.import")
+                           "implementation.lab.import", "implementation.lab.dispatch")
                 and (not task.get("attempts") or len(task["attempts"]) > 1)):
             replay = self._replay(store, plan_id, actor)
             if replay is not None:
@@ -730,6 +799,8 @@ class ImplementationOperator:
                 return self._source_import(store, task, plan_id, expected, actor)
             if action == "implementation.plan.report":
                 return self._report(store, task, plan_id)
+            if action == "implementation.lab.dispatch":
+                return self._dispatch(workspace, value, operation="dispatch", actor=actor)
             if action == "implementation.lab.import":
                 return self._lab(workspace, value, operation="lab-import", actor=actor)
             if action == "implementation.observations.import":
@@ -748,7 +819,11 @@ class ImplementationOperator:
         workspace = task["workspace"]
         if task.get("state") == "complete":
             result = task.get("result", {})
-            if task["action"] == "implementation.plan.report":
+            if task["action"] == "implementation.lab.dispatch":
+                refreshed = self._dispatch_result(workspace, result["plan_id"], result["dispatch_id"])
+                task["result"] = dict(refreshed, status=result.get("status", refreshed["status"]))
+                task["_downloads"] = refreshed["_downloads"]
+            elif task["action"] == "implementation.plan.report":
                 directory = (self.store(workspace).base / self._id(result["plan_id"]) /
                              "reports" / result["report_id"]
                              if result.get("report_id") else Path(result["directory"]))
