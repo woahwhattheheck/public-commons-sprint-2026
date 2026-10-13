@@ -12,6 +12,7 @@ from ..model import (require, QgisReceivingError, descriptor, member, file_diges
     retain_bytes, retain_copy, json_bytes, value_sha, sha_bytes, utc_now, HASH, REQUEST)
 from .intake import ParcelIntake, original_records, exact_bytes, KEY, ASSESSMENTS
 from .state import parcel_state, empty_state
+from .formats import compare_formats, rebind_review
 
 INDEX_SCHEMA = "starforge.parcel-index.v1"
 REVIEW_INDEX_SCHEMA = "starforge.parcel-review-index.v1"
@@ -371,12 +372,17 @@ class ParcelWorkspace:
 
     def compare(self, left_id, right_id):
         left, right = self.edition(left_id), self.edition(right_id)
-        old = {row["key"]: row["factsSha256"] for row in self.index(left)["rows"]}
-        new = {row["key"]: row["factsSha256"] for row in self.index(right)["rows"]}
+        left_index, right_index = self.index(left), self.index(right)
+        old = {row["key"]: row["factsSha256"] for row in left_index["rows"]}
+        new = {row["key"]: row["factsSha256"] for row in right_index["rows"]}
+        changed = sorted(key for key in old.keys() & new.keys() if old[key] != new[key])
+        equivalents = compare_formats(self, left, right, left_index, right_index, changed)
         result = {"leftEditionId": left_id, "rightEditionId": right_id,
                   "added": sorted(set(new) - set(old)), "removed": sorted(set(old) - set(new)),
-                  "changed": sorted(key for key in old.keys() & new.keys() if old[key] != new[key]),
-                  "unchanged": sorted(key for key in old.keys() & new.keys() if old[key] == new[key])}
+                  "changed": [key for key in changed if key not in equivalents],
+                  "unchanged": sorted({key for key in old.keys() & new.keys() if old[key] == new[key]} | set(equivalents))}
+        if equivalents:
+            result["sourceFormatEquivalence"] = [equivalents[key] for key in sorted(equivalents)]
         return {**result, "comparisonSha256": value_sha(result)}
 
     def review_successor(self, definition, *, revision, request_id, actor):
@@ -395,12 +401,16 @@ class ParcelWorkspace:
         left, right = self.edition(definition["leftEditionId"]), self.edition(definition["rightEditionId"])
         old, new = self.review_index(left), self.review_index(right)
         carry = []
+        equivalents = {item["key"]: item for item in comparison.get("sourceFormatEquivalence", [])}
+        right_index = self.index(right) if equivalents else None
         if definition["unchanged"] == "carry-reviewed":
             for key in comparison["unchanged"]:
                 if key not in old or key in new: continue
                 original = self.decision(left, key, reviews=old)
-                decision = {k: copy.deepcopy(value) for k, value in original.items()
-                            if k not in ("sha256", "requestId", "reviewedAt", "actor")}
+                decision = (rebind_review(original, self.row(right, key, index=right_index), equivalents[key])
+                            if key in equivalents else
+                            {k: copy.deepcopy(value) for k, value in original.items()
+                             if k not in ("sha256", "requestId", "reviewedAt", "actor")})
                 decision.update(editionId=right["id"], previousDecisionSha256=None,
                     carriedFrom={"editionId": left["id"], "decisionSha256": original["sha256"]},
                     reason=definition["note"].strip())
@@ -409,7 +419,8 @@ class ParcelWorkspace:
         result = {"id": "successor-" + value_sha({"requestId": request_id, "definition": definition}),
             "leftEditionId": left["id"], "rightEditionId": right["id"], "definition": copy.deepcopy(definition),
             "counts": {key: len(comparison[key]) for key in ("added", "removed", "changed", "unchanged")},
-            "carriedReviews": len(carry), "preservedTargetReviews": len(new), "at": utc_now(), "actor": actor,
+            "carriedReviews": len(carry), "preservedTargetReviews": len(new),
+            "sourceFormatEquivalentKeys": sorted(equivalents), "at": utc_now(), "actor": actor,
             "files": retained["files"] if retained else []}
         def update(state):
             data = state["parcels"]
