@@ -16,6 +16,9 @@ import re
 import tempfile
 
 OWNED = frozenset({
+    "model/conservation_decision_geography.py",
+    "CONSERVATION_DECISION_METHODS.md",
+    "source_tools/receive_conservation_priorities.py",
     "model/conservation_report_maps.py",
     "model/CONSERVATION_REPORT_MAPS.md",
     "integration/conservation_report_map_composition.json",
@@ -111,6 +114,9 @@ OWNED = frozenset({
 })
 SCHEMA = "upstate.conservation-addon/v1"
 KNOWN_PRIOR = {
+    "model/conservation_report_maps.py": [
+        "f1d494b72926a93762812c35478971a2e73ddf4484434be0e8b4a6f789b40158"
+    ],
     "model/conservation.py": [
         "d407c94dd3df29ef7de6e5d8396f3a048619df0529f88dfb4e1fb4176ef72c12",
         "60b7d500a585f685886404ac23785416c6fafb0a733550169258a90413ce3464",
@@ -151,6 +157,7 @@ KNOWN_PRIOR = {
         "5e9c5259ec989f3ee0bbe7c3a324e398e37ec6acd6bb1985b6c5f7e2b7629481"
     ],
     "operator/web/conservation.mjs": [
+        "939a9a7b882c04d2b2715b6c0eedcd4bef33ab6a0c5bdb52c4e2db57ea333e49",
         "7857010fbb286a33bde354715d067ee649304f51ce86b4c642a1bcd34f400c65",
         "ec645237ca3d8321a07e42479ce2af32c960c8b3c28113b11ac23547e16be808",
         "1ca5e8e1d45767f96c1814d2384150f4c49594c4ddae070451a230956bcc6e75",
@@ -182,6 +189,7 @@ KNOWN_PRIOR = {
         "7478f563ff1ee1a2626b06df63e62a59c25277a91ad28d217fba7f4fe0ab7949"
     ],
     "operator/install_conservation.py": [
+        "77c515d812cd3a1aac24681881760611dd78dccd8cac0458ff947a4cc86b33e4",
         "920c83ab79a998750b34a6fa49f014575b873f1b41d655baaa66d0db0dbc8aff",
         "c9aaa958816139e151fd99cc194deac931186783563738119e7b4ae69a413696",
         "3df8ad132ad6f9046b26f151ff82c29aa7faffdbbf9d1bedb5d5262cadac4e6b",
@@ -283,6 +291,7 @@ KNOWN_PRIOR = {
         "d11fc0238a4637af7432df34761d43bd3dd4f6abedcc72f81700dca6bf6b0da8"
     ],
     "model/conservation_optimization.py": [
+        "ebcdbe97e05c32a670e0b6474d07db37638e546c959ff215b238de10c103a148",
         "60d91c12df8abe5db11aeff9c9473ae68e20e8c20322c95c3e03266c3ccba85c",
         "46c0c69edca2c9705ae00086f534b773540337bf04b3b96a1f888253ec8758f3",
         "0e44f1d6678294ee65e76c8f538b6a2d7a37e5cf95f3187067e47e023a4635b2",
@@ -300,6 +309,7 @@ KNOWN_PRIOR = {
         "5cf6d37ed965d78f3d4a63ad6901812af959e0afe45448e7309b8c4257a0fe72"
     ],
     "model/CONSERVATION_OPTIMIZATION.md": [
+        "0e480f5e995e9b8a9e96b5c40d641342092f303dc686eb506793d6cc25ac9c67",
         "2a1f19d4310ec23436d154e5c0f8c6960e784becef69503d43744a2f5fae2236",
         "71de30fc9350b19e518752b432e71293507356ec8c20040e688eb41945113e4d",
         "be3c82f588ece2da730f1404038eeb3295de5f1cb13c204c51e9c7e05b35ea2b"
@@ -487,6 +497,7 @@ KNOWN_PRIOR = {
         "bd4996f78c9e21ea8093499a7f7ff9adc9622ffce9bdb49b22f4121199a8b6f2"
     ],
     "model/conservation_report_source.py": [
+        "1b45682222a4626d602fd2a2f0cc1c399790f4b1ac00d9d1d2214c0f67a42321",
         "b9cb922025f3843a3d26e4592249842c6df221f678db276fd0e083b3b4402538",
         "72182c02d1d91e710139026c24d1ce5af1ab3961174426a7790c2ebd81bfc482"
     ],
@@ -501,6 +512,7 @@ KNOWN_PRIOR = {
         "a653d0b858b46d2ff1f69c0628acf80c4681c2a4cde351932bb6f984a678d1c4"
     ],
     "integration/component_fragments/conservation-scientific-report-source.json": [
+        "ee8b9fc6a4f5254ec39e35ab421f6f3807ed6e55c9d22c2d02d6b779e01da1ab",
         "b701d372ba30d3f8372a58cddfba33e11434f29be891970e367a3fe9baee9c99"
     ]
 }
@@ -1030,6 +1042,14 @@ def read_packet(path):
             "model/CONSERVATION_REPORT_MAPS.md",
             "integration/conservation_report_map_composition.json",
         })
+    geography_requested = any(
+        isinstance(node, ast.ImportFrom) and node.level == 1 and node.module is None
+        and any(alias.name == "conservation_decision_geography" for alias in node.names)
+        for name in ("model/conservation_optimization.py", "model/conservation_report_maps.py")
+        for node in ast.walk(ast.parse(files.get(name, ""))))
+    if geography_requested:
+        needed.update({"model/conservation_decision_geography.py",
+                       "model/conservation_report_maps.py", "CONSERVATION_DECISION_METHODS.md"})
     if needed - set(files):
         raise ValueError("The complete backend, CLI and operator source must travel together")
     return value

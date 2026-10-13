@@ -409,3 +409,134 @@ The existing save API also accepts the completed original preview through the op
 Select **Combined physical and source-context criteria** in the same Conservation optimizer. The typed editor combines original physical, geographic, published-point and numeric source-attribute criteria, preserves their units and support, and compares explicitly retained native alternatives at fixed decision weights. The saved analysis retains per-unit weighted contributions, case-specific quantities and selection/rank changes; the existing portfolio, GeoPackage and full project exports remain the receiving path.
 
 See [Conservation decision methods](../CONSERVATION_DECISION_METHODS.md) for the request contract, exact score and normalization, source/coverage rules, interpretation of case sensitivity, and the complete operate/export/reopen workflow.
+
+
+## Editable decision geometry and case membership maps
+
+The same **Export complete decision packet** now includes
+`optimization/geography/decision-geography.gpkg`. Open its
+`decision_units` and `decision_reporting` layers in a GIS. They contain the
+complete original candidate inventory, including excluded candidates, in the
+original projected metre CRS. The first keeps whole-unit geometry; the second
+keeps each original reporting footprint. Empty retained footprints stay null
+geometry. No coordinate is inferred, simplified or reprojected.
+
+Use **unit_id** as the join key. GeoPackage's internal feature ID is only a row
+identifier. `decision_score`, `decision_rank`, `selected`, `eligible` and
+`source_eligible` describe the retained selected analysis. An excluded or
+unavailable rank/score remains null; an actual zero remains zero. Exclusion
+reasons and original source identity are retained as JSON fields. The original
+`geodata.gpkg`, its original study scores/attributes and all saved union
+quantities remain unchanged at the packet root.
+
+The stable `preference_*` and `case_*` columns contain the actual count of
+compared profiles/cases, selection count, eligibility count and observed rank
+range. These columns are null when that comparison was disabled; an unrequested
+comparison is not presented as a one-of-one stability result. Counts include
+the selected case/profile and refer only to explicitly retained comparisons.
+They do not estimate scientific probabilities.
+
+Companion tables use stable columns rather than inventing GIS field names from
+user-defined criterion labels:
+
+| File under optimization/geography | Contents |
+| --- | --- |
+| criteria.csv | Selected criterion IDs, labels, source kinds, units/bases, direction, weights, fixed scales and original run IDs |
+| criterion-values.csv | One original unit × declared case × criterion; raw value/unit, support, coverage, normalized value and weighted contribution |
+| case-candidates.csv | One original unit × declared case; actual selected, eligible, rank, score and exclusions |
+| preference-profiles.csv | Original named profiles, complete weights, selected IDs and actual solver outcome |
+| decision-geography.json | Source/analysis/implementation identity, original CRS, fields, full member byte hashes and authoritative saved union summary |
+| README.md | GIS opening, exact joins and interpretation |
+
+Filter a case and criterion before joining the long criterion table to a layer.
+Source references are JSON Pointers into the same `optimization/analysis.json`.
+CSV preserves original IDs as text for GIS joins; import source strings as data,
+not spreadsheet formulas. JSON and GeoPackage preserve the complete lossless
+identity. Mixed quantities keep separate units; the weighted decision score is
+not a pollutant mass or a new union benefit.
+
+The actual generated GeoPackage is reopened with Fiona before its manifest is
+published. Both layer inventories, every output property, original CRS and exact
+retained vertices are compared to the original source and analysis. File
+descriptors are checked again when assembling the existing decision ZIP. A
+different helper implementation has a different export selection identity;
+previous ZIPs are not overwritten or silently relabeled.
+
+### Categorical native-case geography
+
+When the saved analysis has enabled comparison of at least two distinct retained
+native cases, the existing Conservation report gains one additional map.
+Light fill shows the reporting-footprint union of units selected in **any**
+case; the dark outline shows units selected in **every** case. Its caption
+retains the exact case names, original-unit counts and union areas, and the
+source binding carries original run mappings and the analysis descriptor.
+
+Membership is evaluated using original unit IDs before geometric union.
+The every-case layer therefore is not an invented pixelwise intersection of
+overlapping portfolios. If no original unit is selected in every case, that
+outline is absent and the caption says so. This uses the original renderer's
+two categorical roles, not a quantitative score scale. Existing selected-land,
+whole-unit, reporting-footprint and context maps remain intact. Source-context
+decisions without native alternatives do not acquire a native-case map.
+
+### Complete producing and receiving path
+
+Use the same selected original workspace, completed preview and saved plan.
+Export the complete decision packet; reopen it independently and open both
+decision GeoPackage layers. Inspect a selected and excluded original ID, a true
+zero where present, and a supported/unsupported criterion. Join one case and
+criterion by unit_id and compare the displayed values with the retained
+analysis and original candidate source. Preserve the original geographic and
+union totals when inspecting overlaps.
+
+Open the actual outgoing report/PDF, all original selected/context maps, and the
+native-case membership frame when the selected study genuinely has native
+alternatives. Operate the exact desktop and 390-pixel interfaces, download the
+actual ZIP, and open its GIS, CSV, JSON and guide attachments. The producing
+owner must personally look at the rendered figures and controls. Capture the
+actual runtime result and viewed artifacts in the same receiving operation;
+source inspection does not replace this consumer workflow.
+
+The ordinary full-application receiver includes all declared source members.
+The Conservation installer owns the new helper and requires it when incoming
+optimization/map source imports it. The existing scientific-report component
+fragment also names the helper and method guide so selected source assemblies
+retain this dependency.
+
+
+## Receive and render an existing completed decision
+
+The maintained application includes source_tools/receive_conservation_priorities.py.
+Run it with the existing native Python environment from the application root:
+
+~~~sh
+python source_tools/receive_conservation_priorities.py \
+  --workspace /ABSOLUTE/EXISTING/WORKSPACE \
+  --source-plan ORIGINAL_COMPLETED_PLAN_ID \
+  --output /ABSOLUTE/NEW/RECEIVING_DIRECTORY
+~~~
+
+The original source-water study can use its actually bound source-water overlap
+and reporting area, with equal explicit weights and separate named preferences.
+The receiver preserves the original plan's constraints. --max-count declares a
+new analyst cap; --include-unprotected adds that criterion only when its original
+protected-lands source is bound. For other decisions, --selection names a complete
+authored JSON request using the same retained study and its actual alternative IDs.
+It cannot be mixed with those convenience overrides.
+
+The course freezes the source selection and installed implementations, previews
+once, saves the exact retained preview, independently reopens the original
+Workspace, creates the complete decision ZIP with editable geography, prepares
+the mapped Scientific Reports source, and runs the existing Scientific Reports
+renderer for PDF, HTML and companions. Its scientific-report subdirectory contains
+the actual rendered output. result.json names every completed source and output.
+Re-running the identical command resumes the retained preview and render; use a
+new receiving directory when the source, authored choice or implementation changes.
+The course verifies the original plan and candidate study remain intact.
+
+On the actual producing host, operate the original Conservation editor, change
+and restore criteria, reopen the saved decision, and inspect the outgoing report,
+map, CSV and both GIS layers. Open PDF and HTML at desktop and narrow widths.
+The native receipt records file production; visual_review remains pending until
+the producing peer has looked at those actual outputs. Preserve that peer's
+completed course and full project archive when delivering the new decision.
