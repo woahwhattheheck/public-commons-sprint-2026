@@ -26,22 +26,23 @@ export function referenceErrorSummary(analysis){
   const source=analysis?.external_reference;
   if(!source)return '';
   const matches=source.matches??[];
+  const used=new Set((analysis.source_records??[]).map(row=>row.record_id));
   const rows=matches.map(row=>{
     const original=row.f7_record??{},method=row.published_final_method??original.final_method;
     const start=row.water_quality_start??original.temporal_basis?.water_quality_start;
     const end=row.water_quality_end_inclusive??original.temporal_basis?.water_quality_end;
     return '<tr>'+[
-      row.catchment_name||row.comid,row.parameter,row.station_id,
+      used.has(row.p9_record_id)?'Used in saved evaluation':'Source context',row.catchment_name||row.comid,row.parameter,row.station_id,
       row.p9_value_exact,row.f7_value_exact,row.f7_standard_error_exact,row.comparison_unit,
       method,start&&end?start+' to '+end:'—',
     ].map(value=>'<td>'+esc(value??'—')+'</td>').join('')+'</tr>';
   });
   return '<section class="section"><header class="section-header"><div><h2>Published annual source edition</h2>'+
     '<p>The original P9 calibration and the related F7 annual estimates retain their separate identities. Source-error intervals are centered on the exact F7 estimates.</p>'+
-    '</div></header><div class="section-body"><p>Six selected Beale values are published long-term means. Stevens Creek phosphorus uses the published detrended Fluxmaster estimate. The original station sampling periods remain visible below.</p>'+
+    '</div></header><div class="section-body"><p>Six selected Beale values are published long-term means. Stevens Creek phosphorus uses the published detrended Fluxmaster estimate. The table retains all seven source matches and identifies which records belong to this saved evaluation.</p>'+
     (source.observation_id?'<div class="page-actions"><button type="button" class="small" data-action="calibration-inspect-observation-edition" data-id="'+esc(source.observation_id)+'">Open annual source observations</button></div>':'')+
     '<p>At zero source-error multiplier, the result evaluates the F7 reference point. The original objective reproduction remains available in Candidate scores. Model predictions, original profile selection and training/validation groups stay attached to the saved calibration.</p></div>'+
-    (rows.length?table(['Catchment','Parameter','Station','P9 annual value','F7 annual value','Published SE','Unit','Final method','Water-quality dates'],rows):'')+
+    (rows.length?table(['Evaluation use','Catchment','Parameter','Station','P9 annual value','F7 annual value','Published SE','Unit','Final method','Water-quality dates'],rows):'')+
     '<details class="technical"><summary>Original source binding and record correspondence</summary><pre class="json-view">'+
     esc(JSON.stringify(source,null,2))+'</pre></details></section>';
 }

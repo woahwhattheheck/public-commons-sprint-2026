@@ -947,6 +947,8 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
     rank_reversal_possible:'A challenger can outperform the original selection',
     tie_possible:'A tie is possible within the source ranges',
     nominal_tie:'Original scores are tied',
+    source_center_tie:'Scores are tied at the published F7 estimates',
+    source_center_already_tied_or_reversed:'Tie or reversal at the published F7 estimates',
     equivalent_predictions:'Identical predictions over the objective',
     incomplete_uncertainty:'Published source errors are incomplete',
     single_candidate:'One eligible candidate',

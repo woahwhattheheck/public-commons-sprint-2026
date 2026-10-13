@@ -18,7 +18,28 @@ import re
 import sys
 import tempfile
 
-FILES = ("model/calibration_native_study_transfer.py",
+FILES = ("source_tools/annual_reference_sensitivity.py",
+         "model/calibration_reference_errors.py",
+         "model/CALIBRATION_REFERENCE_ERRORS.md",
+         "operator/web/calibration_reference_errors.mjs",
+         "source_tools/annual_reference_bridge.py",
+         "source_tools/usgs_annual.py",
+         "source/usgs-southeast-sparrow-2012/candidate-course.json",
+         "source/usgs-annual-2012/upper-savannah/original-target-records.json",
+         "source/usgs-annual-2012/upper-savannah/F7DN436B-original-metadata.xml",
+         "source/usgs-annual-2012/upper-savannah/REFERENCE_EDITION.md",
+         "source_tools/prepare_f7_tributaries.py",
+         "source/usgs-annual-2012/upper-savannah/preparation-selection.json",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments.json",
+         "source/usgs-annual-2012/upper-savannah/PREPARE_F7.md",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments/comid-6269342.json",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments/basin-comid-6269342.json",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments/comid-11730084.json",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments/basin-comid-11730084.json",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments/comid-6280111.json",
+         "source/usgs-annual-2012/upper-savannah/retained-catchments/basin-comid-6280111.json",
+         "integration/component_fragments/calibration-annual-reference.json",
+         "model/calibration_native_study_transfer.py",
          "model/calibration_study_receiving.py",
          "model/study_receiving.py",
          "operator/study_receiving.py",
@@ -161,7 +182,7 @@ DEPENDENCIES = ("model/experiments.py",
                 "operator/web/assessment_received_studies.mjs",
                 "operator/web/geographic_received_studies.mjs",
                 "operator/web/extensions/study_transfer.css",
-                "source_tools/usgs_annual.py",
+                "model/verified_files.py",
                 "operator/extension_registry.py", "operator/web/extension_host.mjs",
                 "install_extensions.py", "model/observed_context.py", "model/native_versions.py",
                 "model/model_selection.py", "model/observations.py",
@@ -386,6 +407,19 @@ PREDECESSORS.setdefault("operator/web/climate_management.css", set()).add("9e7a0
 PREDECESSORS.setdefault("operator/CLIMATE_MANAGEMENT.md", set()).add("1ec7000a1de9260ac10bfdbf00cbab0cf5a4422c087673e75684497f09f0b60a")
 PREDECESSORS.setdefault("model/climate_forcing.py", set()).add("e8ccf301380f015033ada767429845768bde28cd5d17c8cf9ef5a04da49012c5")
 PREDECESSORS.setdefault("model/study_transfer.py", set()).add("91144e24fdc1441531c3a0e1e8e2adf2fac2782ee60fc320dc91d48bb4ffbe52")
+
+
+# Exact retained predecessors for the complete annual-reference source edition.
+PREDECESSORS.setdefault("model/calibration_uncertainty.py", set()).add("5c6aeddd276c88b350f76617f3b1d52c6bb061787569417f0f2ac15ef4cda201")
+PREDECESSORS.setdefault("operator/calibration.py", set()).add("59e4187b8fa23f09a2772a160ffd2cba87759b685a954f01cce6a7f18b3fbe53")
+PREDECESSORS.setdefault("model/calibration_study_transfer.py", set()).add("75b48106f10c6d1220f59bf9ae61850cfeea23451f9372be4bf912ae772b59ea")
+PREDECESSORS.setdefault("model/calibration_native_study_transfer.py", set()).add("b330b5b62e1a61aba63e6657e2d165c65ebc9775984e1043c55c364a2a4e5468")
+PREDECESSORS.setdefault("model/calibration_review.py", set()).add("7391808607b6bce77beeb3f4efb8e31dce464a1b5095ec6dc5d61b5807a6733e")
+PREDECESSORS.setdefault("model/calibration_maps.py", set()).add("9c0dfeb2db3c7f1ad58cfe542d62e6d489d3186b3a4d576eba5b9bf5c2edf09a")
+PREDECESSORS.setdefault("operator/web/calibration.mjs", set()).add("c5770fb145f950cb2d18b0a8a3793ca362420e73b5e50ded218fbebc69879f94")
+PREDECESSORS.setdefault("operator/extensions/calibration.json", set()).add("d7ce3b1e2df313ed746095368607e63de8f32013733ca67993f3d247889c4a12")
+PREDECESSORS.setdefault("operator/install_calibration.py", set()).add("9f51de00bc992b1edd82424ea8fb89f7a6e42883e568fc3790dc61b97003717a")
+PREDECESSORS.setdefault("source_tools/usgs_annual.py", set()).add("105f52bd386d8c2417a3e106a8175c82a29b61ef00441cf1273b0569d88306d7")
 
 
 def _hash(data):

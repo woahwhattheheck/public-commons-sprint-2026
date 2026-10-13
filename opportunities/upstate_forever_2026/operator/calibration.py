@@ -333,6 +333,10 @@ def _uncertainty_rows(record, name):
 
 
 def _uncertainty_html(record, title):
+    external_html = ""
+    if record.get("external_reference"):
+        from model.calibration_reference_errors import html_section
+        external_html = html_section(record["external_reference"])
     coverage = record.get("coverage", {})
     sensitivity = record.get("selection_sensitivity", {})
     sections = []
@@ -366,7 +370,7 @@ def _uncertainty_html(record, title):
             '<a href="uncertainty.json">Complete sensitivity JSON</a> · '
             '<a href="calibration.json">Original nominal calibration</a> · '
             '<a href="selection.json">Original selection</a> · <a href="manifest.json">File inventory</a></p></header>'
-            + ''.join(sections) + '<section><h2>Scientific interpretation</h2>' + notes
+            + external_html + ''.join(sections) + '<section><h2>Scientific interpretation</h2>' + notes
             + '<h3>Source coverage and nominal reproduction</h3><pre>'
             + html.escape(json.dumps({"coverage": coverage, "nominal_reproduction": record.get("nominal_reproduction"),
                                      "selected_validation": record.get("selected_validation"),
@@ -577,7 +581,8 @@ class CalibrationOperations:
         if task["action"] == "calibration.uncertainty":
             report_id = self._id(payload, "report_id")
             result = uncertainty_science.analyze(ws, report_id,
-                                                standard_errors=payload.get("standard_errors", 1.0))
+                                                standard_errors=payload.get("standard_errors", 1.0),
+                                                reference_observation_id=payload.get("reference_observation_id") or None)
             return {"report_id": report_id, "plan_id": result["plan_id"],
                     "uncertainty_id": result["id"], "state": result["state"],
                     "selection_sensitivity": result["selection_sensitivity"]}
@@ -739,6 +744,15 @@ class CalibrationOperations:
             title = report["title"] + " — observation sensitivity"
             atomic_bytes(directory / "index.html", _uncertainty_html(analysis, title).encode("utf-8"), immutable=True)
             names = [*retained, "index.html", *(name + ".csv" for name in UNCERTAINTY_TABLES)]
+            if analysis.get("external_reference"):
+                from model.calibration_reference_errors import archive_members, reading_bodies
+                binding = analysis["external_reference"]
+                for name, data in reading_bodies(binding).items():
+                    atomic_bytes(directory / name, data, immutable=True)
+                    names.append(name)
+                for name, source in archive_members(ws, binding).items():
+                    review_science._copy(directory, source, name, describe_file(ws.root, source))
+                    names.append(name)
             files = {name: describe_file(directory, directory / name) for name in names}
             manifest = {"schema": "upstate.calibration-uncertainty-export/v1",
                         "workspace_id": ws.project["id"], "uncertainty_id": analysis_id,

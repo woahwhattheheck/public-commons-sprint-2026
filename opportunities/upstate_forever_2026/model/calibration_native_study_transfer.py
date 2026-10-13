@@ -96,7 +96,7 @@ def _ancestry(closure, plan, report):
     return plans, reports
 
 
-def _sources(closure, plans):
+def _sources(closure, plans, supplements):
     members = {}
 
     def retain(item):
@@ -122,6 +122,18 @@ def _sources(closure, plans):
         for item in [collection["original_manifest"], entry["body"], *entry.get("companions", [])]:
             path = item.get("object", item.get("path"))
             retain(_member(closure, path, item.get("view_path", item.get("filename", "Original catchment source")), item))
+    for selected in supplements:
+        if selected["kind"] != "calibration-uncertainties":
+            continue
+        value = _raw(closure, selected["kind"], selected["id"])
+        binding = value.get("external_reference")
+        if binding:
+            # The existing dependency visitor validates the typed relationship
+            # and original source collection. Keep its members individually
+            # downloadable in the received Calibration Study as well.
+            dependencies._uncertainty(closure, value, "Original external reference errors")
+            for item in binding["source_members"]:
+                retain(_member(closure, item["path"], item["label"], item))
     return list(members.values())
 
 
@@ -280,7 +292,7 @@ def _binding(closure, kind, key, captured=None):
         "plan_id": plan["id"], "report_id": report["id"] if report else None,
         "captured_state": (captured["captured_state"] if captured is not None else
                            current_state),
-        "records": records, "source_members": _sources(closure, plans),
+        "records": records, "source_members": _sources(closure, plans, supplements),
         "exports": exports, "supplements": supplements,
     }
     if captured is not None:

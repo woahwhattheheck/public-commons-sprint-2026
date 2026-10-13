@@ -85,10 +85,12 @@ def _csv_cell(value):
 
 def _csv(rows):
     out = io.StringIO(newline="")
-    writer = csv.DictWriter(out, fieldnames=FIELDS, lineterminator="\n", extrasaction="raise")
+    extra = tuple(sorted({key for row in rows for key in row} - set(FIELDS)))
+    fields = FIELDS + extra
+    writer = csv.DictWriter(out, fieldnames=fields, lineterminator="\n", extrasaction="raise")
     writer.writeheader()
     for row in rows:
-        writer.writerow({key: _csv_cell(row.get(key)) for key in FIELDS})
+        writer.writerow({key: _csv_cell(row.get(key)) for key in fields})
     return out.getvalue().encode("utf-8")
 
 
@@ -258,6 +260,20 @@ def _rows(report, plan, observed, detail, geometry, selected_runs, catchment_con
                     "source_uncertainty": _json(unit["reference_uncertainty"]),
                     "native_support_issues": _json(native.get("issues", []) if native else ["Original comparison has no retained prediction row"]),
                 }
+                if detail and detail.get("external_reference"):
+                    external = {item["p9_record_id"]: item for item in detail["external_reference"]["matches"]}
+                    matched = [external[key] for key in unit["observation_record_ids"]]
+                    row.update({
+                        "reference_center": band["reference_center"],
+                        "reference_center_basis": "exact_f7_estimate",
+                        "reference_record_ids": _json([item["f7_record_id"] for item in matched]),
+                        "reference_methods": _json([item["published_final_method"] for item in matched]),
+                        "reference_source_uncertainty": _json([item["f7_record"]["uncertainty"] for item in matched]),
+                        "reference_source_windows": _json([{
+                            key: item[key] for key in ("f7_record_id", "period_start", "period_end_exclusive",
+                                                       "water_quality_start", "water_quality_end_inclusive")
+                        } for item in matched]),
+                    })
                 yield_row = yields.get((candidate["run_id"], unit["id"]), {})
                 for name in YIELD_FIELDS:
                     value = yield_row.get(name)
@@ -334,7 +350,7 @@ def _atlas_svg(group, rows, geometry, context, cap, page, pages):
             "Observed " + _display(row["observed_annual_mass"]) + " · predicted " + _display(row["predicted_annual_mass"]),
             "Native " + _display(row["native_annual_mass"]) + " · external " + _display(row["delivered_external_annual_mass"]),
             "Residual " + _display(row["residual"]) + " " + row["units"],
-            "Source range " + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"]),
+            ("F7 source range " if row.get("reference_center_basis") else "Source range ") + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"]),
             "Whole area " + _display(row.get("catchment_area_ha")) + " ha; yield " + str(row.get("yield_units") or "unavailable"),
             "Yield ref " + _display(row.get("reference_annual_yield")) + " / prediction " + _display(row.get("predicted_annual_yield")),
             "Map span " + _display((bounds[2]-bounds[0])/1000) + " × " + _display((bounds[3]-bounds[1])/1000) + " km · original projected grid",
@@ -400,7 +416,7 @@ def _pdf_atlas(path, group, geometry, context, cap):
                             "Observed " + _display(row["observed_annual_mass"]) + " · predicted " + _display(row["predicted_annual_mass"])
                             + "\nResidual " + _display(row["residual"]) + " " + row["units"]
                             + "\nNative " + _display(row["native_annual_mass"]) + " · external " + _display(row["delivered_external_annual_mass"])
-                            + "\nSource range " + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"])
+                            + ("\nF7 source range " if row.get("reference_center_basis") else "\nSource range ") + _display(row["reference_lower"]) + " to " + _display(row["reference_upper"])
                             + "\nArea " + _display(row.get("catchment_area_ha")) + " ha; yield " + str(row.get("yield_units") or "unavailable")
                             + "\nYield ref " + _display(row.get("reference_annual_yield")) + " / prediction " + _display(row.get("predicted_annual_yield")),
                             fontsize=7)
@@ -419,8 +435,11 @@ def _pdf_atlas(path, group, geometry, context, cap):
         pending.unlink(missing_ok=True)
 
 
-def _page_html(layers, interpretation):
+def _page_html(layers, interpretation, external_reference=None):
     sections = []
+    if external_reference:
+        from .calibration_reference_errors import html_section
+        sections.append(html_section(external_reference))
     for layer in layers:
         pages = "".join('<figure><img src="' + _text(item["path"]) + '" alt="' +
                         _text(layer["title"] + " complete original catchments") + '"/></figure>'
@@ -432,7 +451,9 @@ def _page_html(layers, interpretation):
     return ('<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Original catchment calibration maps</title>'
             '<style>body{font:15px system-ui,sans-serif;color:#202020;background:white;max-width:1100px;margin:auto;padding:32px}'
             'p{line-height:1.55}a{color:#202020}img{width:100%;height:auto}figure{margin:24px 0}'
-            'section{border-top:1px solid #aaa;padding-top:20px}@media print{body{padding:0}figure{break-after:page}h1,p{orphans:3}}</style>'
+            'section{border-top:1px solid #aaa;padding-top:20px}'
+            + ('.scroll{overflow:auto}table{border-collapse:collapse}th,td{padding:8px;text-align:left;border-bottom:1px solid #ddd}' if external_reference else '')
+            + '@media print{body{padding:0}figure{break-after:page}h1,p{orphans:3}}</style>'
             '</head><body><h1>Original catchment calibration maps</h1><p>' + _text(interpretation) +
             '</p><p>Separate pollutant units are retained. The complete source bindings, original periods and native coverage are in '
             '<a href="provenance.json">provenance.json</a>. Whole-polygon area, per-hectare annual yields and the original grouping relations are retained in <a href="catchment-interpretation.json">catchment-interpretation.json</a> and every numeric table. Yield normalization preserves source analytical and temporal distinctions.</p>' + "".join(sections) + "</body></html>").encode("utf-8")
@@ -470,6 +491,8 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids
             "source_error_interpretation": detail["interpretation"] if detail else None,
             "interpretation": MEANING, "absolute_residual_display_caps": caps,
         }
+        if detail and detail.get("external_reference"):
+            provenance["external_reference"] = detail["external_reference"]
         atomic_json(directory / "provenance.json", provenance, immutable=True)
         originals = {
             "original-calibration.json": workspace.root / "calibrations" / (report["id"] + ".json"),
@@ -481,6 +504,10 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids
             originals["original-source-uncertainty.json"] = workspace.root / "calibration-uncertainties" / (detail["id"] + ".json")
         for name, path in originals.items():
             atomic_bytes(directory / name, path.read_bytes(), immutable=True)
+        external_files = {}
+        if detail and detail.get("external_reference"):
+            from .calibration_reference_errors import copy_package
+            external_files = copy_package(workspace, detail["external_reference"], directory)
         layers, entries = [], []
         for group in groups:
             key = digest({"run_id": group["run_id"], "parameter": group["parameter"]})
@@ -539,9 +566,10 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids
                 "calibration": {"id": report["id"], "plan_id": plan["id"], "run_id": group["run_id"],
                                 "profile_id": group["profile_id"], "uncertainty_id": selection["uncertainty_id"]},
             })
-        atomic_bytes(directory / "index.html", _page_html(layers, MEANING), immutable=True)
+        atomic_bytes(directory / "index.html", _page_html(layers, MEANING, detail.get("external_reference") if detail else None), immutable=True)
         context_names = ["selection.json", "provenance.json", "index.html",
                          "catchment-interpretation.json", *originals]
+        context_names.extend(external_files)
         context_names.extend(layer["geojson"]["path"] for layer in layers)
         context_names.extend(layer["csv"]["path"] for layer in layers)
         context_names.extend(layer["pdf"]["path"] for layer in layers)
@@ -573,6 +601,8 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, candidate_run_ids
             layer["view"] = {"crs": context["atlas_crs_name"], "bounds": context["atlas_bounds"]}
         files = [describe_file(directory, path) for path in sorted(directory.iterdir())
                  if path.is_file() and not path.name.startswith(".") and path.name != "result.json"]
+        included_paths = {item["path"] for item in files}
+        files.extend(item for name, item in external_files.items() if name not in included_paths)
         result = workspace._save(RESULT_KIND, {
             "version": VERSION, "workspace_id": workspace.project["id"], "state": "complete",
             "title": report["title"] + " · original catchment residuals",

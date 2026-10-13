@@ -205,6 +205,16 @@ def _uncertainty(closure, value, reason):
     for field in ("plan_id", "selected_run_id", "selected_profile_id", "objective", "normalization"):
         _same(value[field], report[field], "Calibration uncertainty " + field)
     _same(value["source_stamp"], _source_stamp(report, plan, observed), "Calibration source-error basis")
+    if value.get("external_reference"):
+        from . import calibration_reference_errors as reference_errors
+        binding = reference_errors.verify(closure.workspace, report, plan, observed,
+                                          value["external_reference"])
+        reference = record(closure, "observations", binding["observation_id"], reason)
+        closure._body(reference["original"])
+        _entry(closure, binding, reason)
+        for member in binding["source_members"]:
+            closure.add_file(member["path"], member)
+
 
 
 def _maps(closure, value, reason):

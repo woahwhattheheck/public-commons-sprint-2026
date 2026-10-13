@@ -383,6 +383,9 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
         _link("tables/candidate-envelope.csv", "Complete retained candidate envelope") + " · " +
         _link("tables/group-stability.csv", "Full group stability rows") + "</p>"))
     if detail:
+        if detail.get("external_reference"):
+            from .calibration_reference_errors import html_section
+            sections.append(html_section(detail["external_reference"]))
         coverage = detail["coverage"]
         sections.append(_section("uncertainty", "Published source-error sensitivity",
             "<p><strong>" + _escape(SENSITIVITY.get(detail["selection_sensitivity"]["state"],
@@ -394,7 +397,7 @@ def _html(selection, report, plan, observed, detail, atlas, tables, directory, f
             ".</p><p>The gap is challenger loss minus original selected loss. Positive values favor the original "
             "selection. Weights, normalization and predictions stay fixed. These are marginal source ranges, "
             "not reversal probabilities or a replacement ranking.</p>" +
-            _table(PAIR_FIELDS, detail["pairwise"]) +
+            _table(PAIR_FIELDS + (("reference_center_gap",) if detail.get("external_reference") else ()), detail["pairwise"]) +
             "<p>A missing first-tie value is explained by its retained first_tie_state. Exact cancellation or a "
             "zero multiplier may resolve a comparison even when a source standard error is absent.</p>"
             "<details><summary>Complete scientific interpretation and coverage</summary><pre>" +
@@ -465,7 +468,8 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
         raise ValueError("Enter a review title of 1–300 characters")
     if not isinstance(notes, str) or len(notes) > 20000:
         raise ValueError("Review notes must contain at most 20,000 characters")
-    selection = {"version": VERSION, "presentation_edition": PRESENTATION_EDITION,
+    selection = {"version": VERSION, "presentation_edition": (PRESENTATION_EDITION + "-external-reference-v1"
+                                             if detail and detail.get("external_reference") else PRESENTATION_EDITION),
                  "workspace_id": workspace.project["id"],
                  "calibration_id": report["id"], "plan_id": plan["id"],
                  "uncertainty_id": detail["id"] if detail else None, "map_id": atlas["id"] if atlas else None,
@@ -515,7 +519,11 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
         add_record("catchment-interpretation.json", catchment_context)
         tables = _tables(report, plan, observed.get("metadata"), catchment_context)
         if detail:
-            tables["source-error-pairs"] = (PAIR_FIELDS, detail["pairwise"])
+            pair_fields = PAIR_FIELDS + (("reference_center_gap",) if detail.get("external_reference") else ())
+            tables["source-error-pairs"] = (pair_fields, detail["pairwise"])
+            if detail.get("external_reference"):
+                from .calibration_reference_errors import copy_package
+                files.update(copy_package(workspace, detail["external_reference"], directory))
             for name in ("source_records", "reference_units", "selected_validation", "candidate_scores"):
                 rows = detail.get(name, [])
                 fields = tuple(sorted({key for row in rows for key in row}))

@@ -97,7 +97,7 @@ def _retained(workspace, calibration_id):
     return report, plan, observed
 
 
-def _source_row(row, units, multiplier):
+def _source_row(row, units, multiplier, external=None):
     if not row.get("admitted"):
         raise ValueError("A reference unit contains an unadmitted observation")
     parameter = row["parameter"]
@@ -131,14 +131,25 @@ def _source_row(row, units, multiplier):
             except ValueError as error:
                 issues.append(str(error))
                 se = None
+    center = annual
+    center_offset = 0.0
+    if external is not None:
+        if external["comparison_unit"] != units:
+            raise ValueError("The external reference uses different native comparison units")
+        center = _number(external["f7_value_exact"], "F7 source center", minimum=0)
+        center_offset = _number(external["difference_exact"], "Exact source center offset")
+        se = _number(external["f7_standard_error_exact"], "F7 published standard error", positive=True)
+        original_se = external["f7_record"]["uncertainty"]["value"]
+        source_se_unit = external["f7_record"]["uncertainty"]["unit"]
+        issues = []
     lower = upper = None
     if multiplier == 0:
-        lower = upper = annual
+        lower = upper = center
     elif se is not None:
         spread = _number(multiplier * se, "Standard-error sensitivity spread", minimum=0)
-        lower = max(0.0, annual - spread)
-        upper = _number(annual + spread, "Upper source sensitivity endpoint", minimum=0)
-    return {
+        lower = max(0.0, center - spread)
+        upper = _number(center + spread, "Upper source sensitivity endpoint", minimum=0)
+    result = {
         "record_id": row["id"], "station_id": row.get("station_id"),
         "catchment_id": row["catchment_id"], "parameter": parameter,
         "unit": row["unit"], "original_value": row["value"],
@@ -150,9 +161,31 @@ def _source_row(row, units, multiplier):
         "issues": issues, "method": row.get("method"),
         "source_records": row.get("source_records"), "uncertainty": uncertainty,
     }
+    if external is not None:
+        spread = _number(multiplier * se, "F7 standard-error spread", minimum=0)
+        result.update({
+            "reference_record_id": external["f7_record_id"],
+            "reference_center": center, "reference_center_exact": external["f7_value_exact"],
+            "reference_center_offset": center_offset,
+            "reference_center_offset_exact": external["difference_exact"],
+            "lower_reference_offset": max(-annual, center_offset - spread),
+            "upper_reference_offset": _number(center_offset + spread, "F7 upper source offset"),
+            "reference_standard_error_exact": external["f7_standard_error_exact"],
+            "reference_method": external["published_final_method"],
+            "reference_uncertainty": external["f7_record"]["uncertainty"],
+            "reference_source_records": external["f7_record"],
+            "water_quality_start": external["water_quality_start"],
+            "water_quality_end_inclusive": external["water_quality_end_inclusive"],
+            "reference_base_year": external["reference_base_year"],
+            "detrended_to_reference_year": external["detrended_to_reference_year"],
+            "source_relationship": "related_reference_editions",
+        })
+    return result
 
 
-def _references(plan, observed, multiplier):
+def _references(plan, observed, multiplier, external_reference=None):
+    external = ({row["p9_record_id"]: row for row in external_reference["matches"]}
+                if external_reference else {})
     rows = {}
     for row in observed["rows"]:
         if row["id"] in rows:
@@ -195,7 +228,7 @@ def _references(plan, observed, multiplier):
                   "Original uncertainty")
             _same(row.get("source_records"), unit["source_records"][index], "Original source row")
             if record_id not in sources:
-                sources[record_id] = _source_row(row, unit["units"], multiplier)
+                sources[record_id] = _source_row(row, unit["units"], multiplier, external.get(record_id))
             elif sources[record_id]["comparison_units"] != unit["units"]:
                 raise ValueError("A shared source record has inconsistent comparison units")
             unit_links.append({"record_id": record_id, "weight": weight / denominator})
@@ -221,6 +254,13 @@ def _references(plan, observed, multiplier):
             "temporal_weighting": unit["temporal_weighting"], "periods": periods,
             "objective_weight": 0.0,
         })
+        if external_reference:
+            references[-1].update(
+                reference_center=_sum((sources[item["record_id"]]["reference_center"] * item["weight"]
+                                       for item in unit_links), "F7 temporal center"),
+                reference_center_offset=_sum((sources[item["record_id"]]["reference_center_offset"] * item["weight"]
+                                              for item in unit_links), "F7 temporal center offset"),
+                reference_center_basis="exact_f7_estimate")
         links[unit_id] = unit_links
     return sources, references, links
 
@@ -301,6 +341,19 @@ def _predictions(report, references):
             "absolute_difference": abs(reproduced - original),
             "numerical_tolerance": tolerance, "state": "reproduced",
         })
+    if any("reference_center" in row for row in references):
+        for score in scores:
+            values = by_run[score["run_id"]]
+            terms = []
+            for reference in training:
+                prediction = _number(values[reference["unit_id"]]["predicted_annual_mass"],
+                                     "Native compared annual load", minimum=0)
+                residual = (prediction - reference["observed_annual_mass"]
+                            - reference["reference_center_offset"])
+                terms.append(_number(reference["objective_weight"] * residual * residual,
+                                     "F7-center normalized squared error", minimum=0))
+            score["reference_center_objective_score"] = _sum(terms, "F7-center objective")
+            score["reference_center_basis"] = "exact_f7_estimate"
     return by_run, scores
 
 
@@ -308,8 +361,12 @@ def _first_tie(nominal, coefficients, sources):
     """First zero of monotone lower gap; every source uses the same multiplier."""
     missing = [key for key, value in coefficients.items()
                if value != 0 and sources[key]["standard_error"] is None]
-    if nominal <= 0:
-        return 0.0, "nominal_tie"
+    external = any("reference_center" in sources[key] for key in coefficients)
+    center_gap = _sum([nominal, *(
+        value * sources[key].get("reference_center_offset", 0.0)
+        for key, value in coefficients.items())], "Source-center pairwise gap") if external else nominal
+    if center_gap <= 0:
+        return 0.0, ("source_center_already_tied_or_reversed" if external else "nominal_tie")
     if missing:
         return None, "incomplete_uncertainty"
     # Positive coefficients lower their source load and eventually saturate at
@@ -321,14 +378,14 @@ def _first_tie(nominal, coefficients, sources):
             continue
         rate = _number(abs(coefficient) * se, "First-tie sensitivity slope", minimum=0)
         if coefficient > 0:
-            breakpoint = sources[key]["annual_mass"] / se
+            breakpoint = sources[key].get("reference_center", sources[key]["annual_mass"]) / se
             if math.isfinite(breakpoint):
                 events[breakpoint].append(key)
             # A source already at zero contributes no initial lower-bound slope.
             if breakpoint == 0:
                 continue
         rates[key] = rate
-    previous, remaining = 0.0, nominal
+    previous, remaining = 0.0, center_gap
     for breakpoint in sorted(events):
         if breakpoint == 0:
             continue
@@ -392,8 +449,14 @@ def _pair(candidate, selected, predictions, training, links, sources, scores, mu
         elif lower is not None and upper is not None:
             min_value, max_value = (lower, upper) if coefficient > 0 else (upper, lower)
             min_endpoint, max_endpoint = ("lower", "upper") if coefficient > 0 else ("upper", "lower")
-            low_change = _number(coefficient * (min_value - source["annual_mass"]), "Minimum gap change")
-            high_change = _number(coefficient * (max_value - source["annual_mass"]), "Maximum gap change")
+            if "reference_center" in source:
+                min_offset, max_offset = ((source["lower_reference_offset"], source["upper_reference_offset"])
+                                          if coefficient > 0 else
+                                          (source["upper_reference_offset"], source["lower_reference_offset"]))
+            else:
+                min_offset, max_offset = min_value - source["annual_mass"], max_value - source["annual_mass"]
+            low_change = _number(coefficient * min_offset, "Minimum gap change")
+            high_change = _number(coefficient * max_offset, "Maximum gap change")
         if low_change is not None:
             lower_changes.append(low_change)
             upper_changes.append(high_change)
@@ -407,6 +470,10 @@ def _pair(candidate, selected, predictions, training, links, sources, scores, mu
     complete = not missing or multiplier == 0
     minimum = _sum([nominal, *lower_changes], "Minimum pairwise gap") if complete else None
     maximum = _sum([nominal, *upper_changes], "Maximum pairwise gap") if complete else None
+    external = any("reference_center" in sources[key] for key in combined)
+    reference_center_gap = _sum([nominal, *(
+        coefficient * sources[key].get("reference_center_offset", 0.0)
+        for key, coefficient in combined.items())], "Source-center gap") if external else nominal
     if not complete:
         state = "incomplete_uncertainty"
     elif equal_predictions:
@@ -415,12 +482,12 @@ def _pair(candidate, selected, predictions, training, links, sources, scores, mu
         state = "selected_strictly_preferred"
     elif minimum < -tolerance:
         state = "rank_reversal_possible"
-    elif multiplier == 0 and abs(nominal) <= tolerance:
-        state = "nominal_tie"
+    elif multiplier == 0 and abs(reference_center_gap) <= tolerance:
+        state = "source_center_tie" if external else "nominal_tie"
     else:
         state = "tie_possible"
     first_tie, first_tie_state = _first_tie(nominal, combined, sources)
-    return {
+    result = {
         "run_id": candidate["run_id"], "profile_id": candidate["profile_id"],
         "title": candidate.get("title"), "rank": candidate["rank"],
         "selected_models": candidate.get("selected_models"),
@@ -436,6 +503,15 @@ def _pair(candidate, selected, predictions, training, links, sources, scores, mu
         "first_tie_standard_errors": first_tie, "first_tie_state": first_tie_state,
         "source_attribution": attribution,
     }
+    if external:
+        result["reference_center_gap"] = reference_center_gap
+        result["reference_center_basis"] = "exact_f7_estimate"
+        for row in attribution:
+            source = sources[row["record_id"]]
+            row.update(reference_record_id=source["reference_record_id"],
+                       reference_center=source["reference_center"],
+                       reference_center_offset_exact=source["reference_center_offset_exact"])
+    return result
 
 
 def _selected_validation(selected_predictions, references):
@@ -457,6 +533,9 @@ def _selected_validation(selected_predictions, references):
             if reference["lower_reference"] is not None:
                 item.update(minimum_residual=predicted - reference["upper_reference"],
                             maximum_residual=predicted - reference["lower_reference"])
+        if "reference_center" in reference:
+            item["reference_center"] = reference["reference_center"]
+            item["reference_center_basis"] = "exact_f7_estimate"
         result.append(item)
     return result
 
@@ -475,11 +554,16 @@ def _source_stamp(report, plan, observed):
     }
 
 
-def analyze(workspace, calibration_id, *, standard_errors=1.0):
+def analyze(workspace, calibration_id, *, standard_errors=1.0, reference_observation_id=None):
     """Save exact source-SE sensitivity of an original completed calibration."""
     multiplier = _number(standard_errors, "Published standard-error multiplier", minimum=0)
     report, plan, observed = _retained(workspace, calibration_id)
-    sources, references, links = _references(plan, observed, multiplier)
+    external_reference = None
+    if reference_observation_id is not None:
+        from . import calibration_reference_errors as reference_errors
+        external_reference = reference_errors.resolve(
+            workspace, report, plan, observed, reference_observation_id)
+    sources, references, links = _references(plan, observed, multiplier, external_reference)
     training = _objective_weights(plan, references)
     predictions, candidate_scores = _predictions(report, references)
     ranked = report["ranked_candidates"]
@@ -514,7 +598,7 @@ def analyze(workspace, calibration_id, *, standard_errors=1.0):
         "validation_record_ids": sorted({key for row in validation for key in row["source_record_ids"]}),
         "coefficient_cancellation": "Missing source errors affect a pair only when its summed source coefficient is nonzero.",
     }
-    return workspace._save(RESULT_KIND, {
+    payload = {
         "version": VERSION, "calibration_id": report["id"], "plan_id": plan["id"],
         "workspace_id": workspace.project["id"], "title": report.get("title"),
         "state": "partial_uncertainty" if missing else "complete", "standard_errors": multiplier,
@@ -550,7 +634,15 @@ def analyze(workspace, calibration_id, *, standard_errors=1.0):
             "source_estimator": observed["metadata"].get("source_uri"),
             "derivation": "model/CALIBRATION_UNCERTAINTY.md",
         },
-    })
+    }
+    if external_reference is not None:
+        payload["external_reference"] = external_reference
+        payload["interpretation"] = reference_errors.INTERPRETATION + " " + INTERPRETATION.replace(
+            "The declared region changes each original annual-load estimate by at most "
+            "the selected multiple of its published standard error, clipped to "
+            "nonnegative loads. ", "")
+        payload["references"]["external_source_estimator"] = external_reference["source_uri"]
+    return workspace._save(RESULT_KIND, payload)
 
 
 def inspect(workspace, analysis_id):
@@ -566,6 +658,9 @@ def inspect(workspace, analysis_id):
             raise ValueError("The supplement differs from its original calibration selection")
     _same(result["objective"], report["objective"], "Retained uncertainty objective")
     _same(result["normalization"], report["normalization"], "Retained uncertainty scales")
+    if result.get("external_reference") is not None:
+        from . import calibration_reference_errors as reference_errors
+        reference_errors.verify(workspace, report, plan, observed, result["external_reference"])
     return result
 
 
@@ -576,12 +671,14 @@ def main(argv=None):
     run = commands.add_parser("analyze")
     run.add_argument("calibration_id")
     run.add_argument("--standard-errors", type=float, default=1.0)
+    run.add_argument("--reference-observation-id", help="Actual imported F7 observation edition; preserve the original P9 fit")
     show = commands.add_parser("inspect")
     show.add_argument("analysis_id")
     args = parser.parse_args(argv)
     from .workspace import Workspace
     workspace = Workspace(args.workspace)
-    result = (analyze(workspace, args.calibration_id, standard_errors=args.standard_errors)
+    result = (analyze(workspace, args.calibration_id, standard_errors=args.standard_errors,
+                      reference_observation_id=args.reference_observation_id)
               if args.action == "analyze" else inspect(workspace, args.analysis_id))
     print(json.dumps(result, indent=2, sort_keys=True, allow_nan=False))
 
