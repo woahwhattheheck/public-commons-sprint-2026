@@ -6,7 +6,7 @@ const id = { type: 'string', pattern: '^[a-f0-9]{24}$' };
 const sha = { type: 'string', pattern: '^[a-f0-9]{64}$' };
 const uuid = { type: 'string', pattern: '^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$' };
 const revision = { type: 'integer', minimum: 1 };
-const kind = { enum: ['connection','capture','cohort','commissioning','rollout','delivery','receiving'] };
+const kind = { enum: ['connection','capture','cohort','commissioning','gatewayCommissioning','rollout','delivery','receiving'] };
 const reference = { type: 'object', properties: { sha256: sha, bytes: { type: 'integer', minimum: 0 },
   mediaType: text(200) }, required: ['sha256','bytes'], additionalProperties: false };
 const paging = { offset: { type: 'integer', minimum: 0 }, limit: { type: 'integer', minimum: 1, maximum: 500 } };
@@ -69,6 +69,25 @@ export const TYK_WORKSPACE_ACTIONS = Object.freeze({
       files:{type:'array',items:{type:'object',properties:{name:text(1000),mediaType:text(200),contentBase64:text(32*1024*1024),note:text(20000)},
         required:['name','mediaType','contentBase64'],additionalProperties:false}}},
     ['id','expectedRevision','stepId','contextSha256','reviewer','note']),
+
+  createGatewayCommissioning: action('Save two-Gateway cohort', 'Retain complete original API sources, distinct staging/production Gateways and explicit native operations in one durable course.', true,
+    {stagingConnectionId:id,productionConnectionId:id,label:text(300),customer:text(300),operator:text(300),
+      entries:{type:'array',minItems:1,items:{type:'object',properties:{key:text(80),label:text(300),selection,productionOperation:{enum:['create','update']}},required:['key','selection','productionOperation'],additionalProperties:false}},
+      checkNames:{type:'array',items:text(200),minItems:1,uniqueItems:true},
+      reload:{type:'object',properties:{scope:{enum:['node','group']},block:{type:'boolean'}},required:['scope'],additionalProperties:false},
+      workshare:{type:'object',properties:{name:text(1000),mediaType:text(200),contentBase64:text(32*1024*1024),note:text(20000)},required:['name','mediaType','contentBase64'],additionalProperties:false}},
+    ['stagingConnectionId','productionConnectionId','label','entries','checkNames']),
+  readGatewayCommissioning: action('Read two-Gateway course', 'Read every source, original native request, active capture, review context and complete operating-plan history.',false,{id,revision},['id']),
+  prepareGatewayCommissioningStep: action('Prepare Gateway course request', 'Prepare one original API write or explicit reload with source-bound review and uncertain-request recovery.',true,
+    {id,expectedRevision:revision,stepId:text(100),acknowledgeUncertain:{type:'boolean'}},['id','expectedRevision','stepId']),
+  refreshGatewayCommissioning: action('Capture active Gateway cohort', 'Reconcile the original API requests and capture the complete active portfolio after the explicit reload.',true,
+    {id,expectedRevision:revision,phase:{enum:['staging','production']}},['id','expectedRevision','phase']),
+  recordGatewayCommissioningReview: action('Record Gateway operational acceptance', 'Retain every selected API/check outcome and full supporting files against the exact active source context.',true,
+    {id,expectedRevision:revision,phase:{enum:['staging','production']},contextSha256:sha,reviewer:text(300),note:text(20000),
+      transformations:{type:'array',items:{type:'object',properties:{key:text(80),apiId:text(1000),submittedSha256:sha,observedSha256:sha,decision:{enum:['accepted','changes-requested']},note:text(20000)},required:['key','apiId','submittedSha256','observedSha256','decision','note'],additionalProperties:false}},
+      checks:{type:'array',items:{type:'object',properties:{apiId:text(1000),name:text(200),outcome:{enum:['passed','failed']},note:text(20000)},required:['apiId','name','outcome','note'],additionalProperties:false}},
+      files:{type:'array',items:{type:'object',properties:{name:text(1000),mediaType:text(200),contentBase64:text(32*1024*1024),note:text(20000)},required:['name','mediaType','contentBase64'],additionalProperties:false}}},
+    ['id','expectedRevision','phase','contextSha256','reviewer','note','checks']),
   prepareRollout: action('Prepare native request', 'Read the target preimage and retain the exact native request for review.', true,
     { connectionId:id,cohortId:id,cohortRevision:revision,label:text(300),note:text(20000),selection,
       sourceDefinition:{type:'object',properties:{captureId:id,revision,apiId:text(1000),sha256:sha},

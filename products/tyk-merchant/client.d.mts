@@ -1,6 +1,6 @@
 /** Complete installed client of the original Tyk workspace, its immutable records and native deliveries. */
 export type Json = null | boolean | number | string | Json[] | { [key: string]: Json };
-export type RecordKind = 'connection' | 'capture' | 'cohort' | 'commissioning' | 'rollout' | 'delivery' | 'receiving';
+export type RecordKind = 'connection' | 'capture' | 'cohort' | 'commissioning' | 'gatewayCommissioning' | 'rollout' | 'delivery' | 'receiving';
 export type TykState = 'IN_PROGRESS' | 'COMPLETE' | 'SAVED' | 'CAPTURING' | 'CAPTURED' | 'PREPARING' | 'PREPARED' | 'DISPATCHED' | 'READBACK'
   | 'CONFIRMED' | 'ACCEPTED' | 'PARTIAL' | 'UNCHANGED' | 'DIVERGED' | 'ABSENT' | 'UNKNOWN' | 'STALE'
   | 'PREPARE_FAILED' | 'INTERRUPTED' | 'EXPORTED' | 'INSPECTED' | 'ADOPTING' | 'ADOPTED';
@@ -183,6 +183,74 @@ export interface CommissioningView {
   plan: { schema: 'stellar-forge.operating-plan.v1'; id: string; revisions: unknown[]; [key: string]: unknown };
 }
 
+
+/** A complete source-bound course on two distinct Gateway targets. */
+export interface GatewaySourceEntry {
+  key: string; label?: string; selection: DefinitionSelection; productionOperation: 'create' | 'update';
+}
+export interface CreateGatewayCommissioningInput extends RequestIdentity {
+  stagingConnectionId: string; productionConnectionId: string; label: string; customer?: string; operator?: string;
+  entries: GatewaySourceEntry[]; checkNames: string[];
+  reload?: { scope: 'node'; block?: boolean } | { scope: 'group' };
+  workshare?: CommissioningSupportingFile;
+}
+export type GatewayPhase = 'staging' | 'production';
+export type GatewayNativeStep = `stage:${string}` | `production:${string}` | 'stage-reload' | 'production-reload';
+export type GatewayCourseStep = GatewayNativeStep | 'stage-capture' | 'stage-review' | 'production-capture' | 'production-review';
+export interface PrepareGatewayCommissioningStepInput extends RequestIdentity {
+  id: string; expectedRevision: number; stepId: GatewayNativeStep; acknowledgeUncertain?: boolean;
+}
+export interface RefreshGatewayCommissioningInput extends RequestIdentity {
+  id: string; expectedRevision: number; phase: GatewayPhase;
+}
+export interface GatewayTransformationReview {
+  key: string; apiId: string; submittedSha256: string; observedSha256: string;
+  decision: 'accepted' | 'changes-requested'; note: string;
+}
+export interface RecordGatewayCommissioningReviewInput extends RequestIdentity {
+  id: string; expectedRevision: number; phase: GatewayPhase; contextSha256: string;
+  reviewer: string; note: string; checks: CommissioningCheck[];
+  transformations?: GatewayTransformationReview[]; files?: CommissioningSupportingFile[];
+}
+export interface GatewayTarget {
+  id: string; connection: TykConnection & { kind: 'gateway' }; configurationSha256: string;
+}
+export interface GatewayObservation {
+  phase: GatewayPhase; capture: RecordReference;
+  apis: { key: string; label: string; apiId: string; kind: 'classic' | 'oas'; sha256: string;
+    bytes?: number; definitionRef: SourceReference | null; summary?: Record<string, unknown>;
+    rolloutId: string; planSha256: string; submittedSha256: string; transformationRequired: boolean;
+    confirmation: 'CURRENT_NATIVE_CONFIGURATION_MATCH' | 'NATIVE_IMPORT_RECEIPT_AND_ACTIVE_SOURCE'; nativeAcknowledged?: boolean }[];
+}
+export interface GatewayCommissioningValue {
+  schema: 'stellar-forge.tyk-gateway-commissioning.v1'; label: string; customer: string; operator: string;
+  connectionId: string; targets: Record<GatewayPhase, GatewayTarget>;
+  entries: (GatewaySourceEntry & { sourceSha256: string; sourceBytes: number })[]; checkNames: string[];
+  source: SourceReference; manuscript: SourceReference;
+  reload: { scope: 'node' | 'group'; block?: boolean };
+  workshare: { source: CommissioningWorkshare['source']; sourceSha256: string;
+    targets: Record<GatewayPhase, GatewayTarget>; cohortSource: SourceReference; checkNames: string[] } | null;
+  bindings: Partial<Record<GatewayNativeStep, RecordReference>>; captures: Partial<Record<GatewayPhase, RecordReference>>;
+  reviews: Partial<Record<GatewayPhase, { reviewer: string; note: string; checks: CommissioningCheck[];
+    transformations: GatewayTransformationReview[]; accepted: boolean; contextSha256: string;
+    context: Record<string, unknown>; recordedAt: string }>>;
+  supportingFiles: Partial<Record<GatewayPhase, CommissioningWorkshare['source'][]>>;
+  pending: Record<string, unknown> | null; state: 'IN_PROGRESS' | 'COMPLETE';
+  summary: { apis: number; steps: number; completed: number; checks: number };
+}
+export interface GatewayCommissioningView {
+  record: TykRecord<GatewayCommissioningValue>;
+  progress: { schema: 'stellar-forge.tyk-gateway-commissioning.v1'; state: 'IN_PROGRESS' | 'COMPLETE';
+    next: GatewayCourseStep | null; summary: GatewayCommissioningValue['summary'];
+    steps: { id: GatewayCourseStep; phase: GatewayPhase; key?: string; title: string; type: 'native' | 'capture' | 'review';
+      ready: boolean; complete: boolean; status: 'planned' | 'in-progress' | 'completed'; record: RecordReference | null;
+      nativeState: TykState | null; uncertainWrites: string[] }[] };
+  rollouts: Record<string, TykRecord<RolloutValue>>;
+  observations: Record<GatewayPhase, GatewayObservation | null>; captures: Partial<Record<GatewayPhase, TykRecord>>;
+  reviewContexts: Partial<Record<GatewayPhase, { context: Record<string, unknown>; sha256: string }>>;
+  source: Record<string, unknown>; workshare: GatewayCommissioningValue['workshare']; plan: CommissioningView['plan'];
+}
+
 export type MigrationSelection = {
   operation: 'migrate';
   apiIds: string[];
@@ -291,6 +359,11 @@ export interface ReceivingValue {
   [key: string]: unknown;
 }
 export interface ActionInputs {
+  createGatewayCommissioning: CreateGatewayCommissioningInput;
+  readGatewayCommissioning: { id: string; revision?: number };
+  prepareGatewayCommissioningStep: PrepareGatewayCommissioningStepInput;
+  refreshGatewayCommissioning: RefreshGatewayCommissioningInput;
+  recordGatewayCommissioningReview: RecordGatewayCommissioningReviewInput;
   view: Record<string, never>;
   listRecords: ListRecordsInput;
   getRecord: GetRecordInput;
@@ -315,6 +388,11 @@ export interface ActionInputs {
   adoptDelivery: AdoptDeliveryInput;
 }
 export interface ActionResults {
+  createGatewayCommissioning: TykRecord<GatewayCommissioningValue>;
+  readGatewayCommissioning: GatewayCommissioningView;
+  prepareGatewayCommissioningStep: TykRecord<GatewayCommissioningValue>;
+  refreshGatewayCommissioning: TykRecord<GatewayCommissioningValue>;
+  recordGatewayCommissioningReview: TykRecord<GatewayCommissioningValue>;
   view: WorkspaceView;
   listRecords: RecordPage;
   getRecord: TykRecord;
@@ -406,6 +484,11 @@ export class TykProductClient {
   capture(input: CaptureInput): Promise<TykRecord>;
   importCapture(input: ImportCaptureInput): Promise<TykRecord>;
   createCohort(input: CreateCohortInput): Promise<TykRecord>;
+  createGatewayCommissioning(input: CreateGatewayCommissioningInput): Promise<TykRecord<GatewayCommissioningValue>>;
+  readGatewayCommissioning(input: { id: string; revision?: number }): Promise<GatewayCommissioningView>;
+  prepareGatewayCommissioningStep(input: PrepareGatewayCommissioningStepInput): Promise<TykRecord<GatewayCommissioningValue>>;
+  refreshGatewayCommissioning(input: RefreshGatewayCommissioningInput): Promise<TykRecord<GatewayCommissioningValue>>;
+  recordGatewayCommissioningReview(input: RecordGatewayCommissioningReviewInput): Promise<TykRecord<GatewayCommissioningValue>>;
   createCommissioning(input: CreateCommissioningInput): Promise<TykRecord<CommissioningValue>>;
   readCommissioning(input: ActionInputs['readCommissioning']): Promise<CommissioningView>;
   prepareCommissioningStep(input: PrepareCommissioningStepInput): Promise<TykRecord<CommissioningValue>>;

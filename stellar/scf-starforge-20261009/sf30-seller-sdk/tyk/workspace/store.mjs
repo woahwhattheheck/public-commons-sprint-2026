@@ -8,7 +8,7 @@ import {
 } from '../../../distribution/runtime-workspace/storage.mjs';
 
 export const SCHEMA = 'stellar-forge.tyk-workspace.v1';
-export const KINDS = Object.freeze(['connection', 'capture', 'cohort', 'commissioning', 'rollout', 'delivery', 'receiving']);
+export const KINDS = Object.freeze(['connection', 'capture', 'cohort', 'commissioning', 'gatewayCommissioning', 'rollout', 'delivery', 'receiving']);
 export const MAX_JSON_BYTES = 64 * 1024 * 1024;
 export const MAX_BLOB_BYTES = 512 * 1024 * 1024;
 export const textHash = value => digest(JSON.stringify(canonical(value)));

@@ -5,6 +5,9 @@ export const TYK_AGENT_METHODS=Object.freeze({
   merchant_tyk_definition:'readDefinition',merchant_tyk_source:'readSource',merchant_tyk_adapt_definition:'adaptDefinition',merchant_tyk_review:'readReview',
   merchant_tyk_save_target:'saveConnection',merchant_tyk_capture:'capture',merchant_tyk_import_capture:'importCapture',
   merchant_tyk_save_cohort:'createCohort',merchant_tyk_prepare:'prepareRollout',merchant_tyk_dispatch:'dispatchRollout',
+  merchant_tyk_create_gateway_commissioning:'createGatewayCommissioning',merchant_tyk_gateway_commissioning:'readGatewayCommissioning',
+  merchant_tyk_prepare_gateway_commissioning_step:'prepareGatewayCommissioningStep',
+  merchant_tyk_refresh_gateway_commissioning:'refreshGatewayCommissioning',merchant_tyk_record_gateway_commissioning_review:'recordGatewayCommissioningReview',
   merchant_tyk_create_commissioning:'createCommissioning',merchant_tyk_commissioning:'readCommissioning',
   merchant_tyk_prepare_commissioning_step:'prepareCommissioningStep',
   merchant_tyk_record_commissioning_review:'recordCommissioningReview',
@@ -22,7 +25,7 @@ export function tykWorkspaceTools(tool){
     return tool(name,action.description,{...workspace,...action.inputSchema.properties},
       ['workspace',...action.inputSchema.required],
       {readOnly:!action.write,destructive:method==='dispatchRollout',idempotent:true,
-        openWorld:['capture','prepareRollout','dispatchRollout','reconcileRollout','prepareCommissioningStep','refreshCommissioning'].includes(method)});
+        openWorld:['capture','prepareRollout','dispatchRollout','reconcileRollout','prepareCommissioningStep','refreshCommissioning','prepareGatewayCommissioningStep','refreshGatewayCommissioning'].includes(method)});
   });
   return [
     tool('merchant_tyk_workspaces','List original host-declared Tyk workspaces and handover files.',{},[],{readOnly:true,openWorld:false}),
