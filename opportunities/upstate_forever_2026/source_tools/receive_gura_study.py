@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 from pathlib import Path
 import sys
 import traceback
@@ -50,6 +51,10 @@ def main(argv=None):
     application = args.application.resolve(strict=True)
     sys.path.insert(0, str(application))
     sys.path.insert(0, str(application / "source_tools"))
+    # Preserve the original receiver resource defaults when reusing completed runs.
+    for key in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS"):
+        os.environ.setdefault(key, "1")
+    os.environ.setdefault("GDAL_CACHEMAX", "64")
     import receive_gura_reference as receiver
     import receive_gura_planning as planning
     from model.client_economics import inspect_edition

@@ -87,7 +87,10 @@ def render_handoff(package_index, audit):
         status_class = 'passed'
     disposition = package_index.get('disposition', 'PACKAGE_STATUS_UNAVAILABLE')
     disposition_class = 'failed' if disposition == 'PACKAGED_FOR_REMEDIATION' else 'pending'
+    if disposition == 'PACKAGED_NATIVE_STUDY':
+        disposition_class = 'passed'
     disposition_detail = {
+        'PACKAGED_NATIVE_STUDY': 'The complete original study contains its native maps, scientific report, source context and portable working project.',
         'PACKAGED_HUMAN_REVIEW_REQUIRED': (
             'The captured original study is ready for scientific interpretation and map review.' if native_study
             else 'The captured package still needs qualified-prime human review.'),
