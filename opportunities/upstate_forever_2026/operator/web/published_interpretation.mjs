@@ -23,12 +23,32 @@ const taskList = state => {
   const value=state?.tasks;
   return Array.isArray(value)?value:Array.isArray(value?.items)?value.items:Object.values(value||{}).filter(v=>v&&typeof v==="object"&&v.id);
 };
+const LABELS = {sourceIds:"Source documents",requiredConfirmations:"Required site and source confirmations",windowDays:"Window length in calendar days",minSamples:"Required samples",sourceMinSamples:"Minimum samples stated by the source",minSamplesBasis:"Sampling requirement and its source",minSpacingHours:"Minimum spacing in hours",allowedExcursionFraction:"Permitted excursion fraction",seasonMonths:"Selected season months",pairedMetricId:"Paired comparison",descriptiveFractionAllowed:"Descriptive fraction available",assessmentRequiresPairedSupport:"Paired sampling support required",sourceSeparatelyPrescribesMinimum:"Source states a separate sample minimum",requireMonthlyCompositeConfirmation:"Monthly composite confirmation required",requireExactlyOneSelectedRepresentativePerMonth:"Exactly one reviewed representative per required month",criterion:"Criterion unit",methodReviewRequired:"Analytical method review required",noAutomaticCfuMpnConversion:"CFU and MPN remain separate",waterType:"Water type",designatedUses:"Designated uses",spatialQualifier:"Site applicability",source_quantity:"Original scientific quantity"};
+const fieldLabel = key => LABELS[key] || words(String(key).replace(/([a-z0-9])([A-Z])/g,"$1 $2"));
+const readable = value => {
+  if(value===null||value===undefined||value==="")return '<span class="pmi-muted">Not specified</span>';
+  if(typeof value==="boolean")return value?"Yes":"No";
+  if(Array.isArray(value))return value.length?'<ul>'+value.map(v=>'<li>'+readable(v)+'</li>').join("")+'</ul>':'<span class="pmi-muted">None specified</span>';
+  if(typeof value==="object")return '<dl class="pmi-definition">'+Object.entries(value).map(([k,v])=>'<dt>'+esc(fieldLabel(k))+'</dt><dd>'+readable(v)+'</dd>').join("")+'</dl>';
+  return esc(value);
+};
+const metricName = value => ({geometric_mean:"Geometric mean",exceedance_fraction:"Excursion fraction",single_sample:"Individual measurement",seasonal_arithmetic_mean:"Seasonal arithmetic mean",ten_day_assessment_periods:"Ten-day assessment periods"}[value]||words(value));
+const windowCriterion = metric => metric.aggregation==="exceedance_fraction"?
+  '<strong>Measurement threshold</strong><br>Above '+esc(metric.measurement_threshold)+' '+esc(metric.criterion_unit)+
+  '<br><strong>Permitted fraction</strong><br>'+esc(metric.threshold)+' of selected canonical routine records':
+  esc(metric.measurement_threshold??metric.threshold)+' '+esc(metric.criterion_unit)+(metric.status==="NOT_ASSESSED"?'<br>Contextual rule; see its source definition':"");
+const windowBounds = metric => metric.status==="NOT_ASSESSED"?"Not assessed":
+  metric.lower===null&&metric.upper===null?"Bounds undetermined":
+  metric.lower===null?'Upper bound '+esc(metric.upper):
+  metric.upper===null?'Lower bound '+esc(metric.lower):
+  metric.lower===metric.upper?esc(metric.lower):esc(metric.lower)+" to "+esc(metric.upper);
+
 const PAGE=60, PREFIX="published-study.interpretation.";
 
 /** Monitoring interpretation in the existing Published studies lifecycle and task queue. */
 export function createPublishedInterpretation(host, course) {
   let node=null, events=null, workspace=null, key="", complete=null, catalog=null;
-  let draft=null, preview=null, opened=null, selectedSaved="", sourceLinks=[], catalogSources=[], result=null;
+  let draft=null, preview=null, opened=null, selectedSaved="", sourceLinks=[], catalogSources=[], result=null, resultKind="", resultProfile=null;
   let generation=0, edit=0, busy=false, message="", error=false, loadSerial=0, pendingIntent=null;
   let rowPage=0, windowPage=0, rowFilter="selected", windowFilter="", detailId="", lastTask="";
   let receiveChoice=null;
@@ -74,7 +94,7 @@ export function createPublishedInterpretation(host, course) {
     return [...new Set([...values,...arr(draft?.selection?.[field])].filter(v=>v!==null&&v!==undefined&&v!==""))].sort();
   }
   function edited() {
-    ++edit;preview=null;rowPage=0;windowPage=0;remember();buttons();
+    ++edit;preview=null;rowPage=0;windowPage=0;remember();buttons();renderResultHeading();
     notify(opened?"Working changes are separate from the saved version. Preview to calculate them.":"Preview the selected original observations.");
   }
   function readForm() {
@@ -112,12 +132,12 @@ export function createPublishedInterpretation(host, course) {
     return '<h4>'+esc(p.label)+'</h4><p>'+esc(p.authority?.jurisdiction)+' · '+esc(p.authority?.edition)+'</p>'+
       '<p>'+esc(arr(p.authority?.locators).join("; "))+'</p><p>'+esc(p.applicabilityNote||p.applicability?.spatialQualifier||"")+'</p>'+
       table(["Metric","Magnitude","Original criterion unit","Window and sampling"],arr(p.metrics).map(m=>[
-        esc(words(m.aggregation)),esc(m.threshold),esc(p.units?.criterion),
+        esc(metricName(m.aggregation)),esc(m.threshold)+(m.aggregation==="exceedance_fraction"?"<br>Permitted fraction: "+esc(m.allowedExcursionFraction):""),esc(p.units?.criterion),
         esc([m.windowDays?m.windowDays+" calendar days":null,m.minSamples?m.minSamples+" samples":null,
           m.minSpacingHours?m.minSpacingHours+" hours apart":null,m.assessment==="contextual"?"Contextual frequency rule":null,
           m.requireExactlyOneSelectedRepresentativePerMonth?"One reviewed composite in every required month":null].filter(Boolean).join("; "))]))+
       '<details><summary>Source documents and interpretation limits</summary><ul>'+sourceHTML+'</ul><ul>'+lines(p.limitations)+'</ul>'+
-      '<pre>'+esc(JSON.stringify({applicability:p.applicability,units:p.units,metrics:p.metrics,method:p.method},null,2))+'</pre></details>';
+      readable({applicability:p.applicability,units:p.units,metrics:p.metrics,method:p.method,frequency:p.frequency,contextualRules:p.contextualRules})+'</details>';
   }
   function renderForm() {
     const target=find("[data-pmi-editor]");if(!target)return;
@@ -171,21 +191,26 @@ export function createPublishedInterpretation(host, course) {
       const url=safeURL(s.url);return url?'<li><a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">'+esc(s.title)+'</a></li>':"<li>"+esc(s.title)+"</li>";
     }).join("");
   }
+  function renderResultHeading() {
+    const heading=find("[data-pmi-result-heading]"),note=find("[data-pmi-result-note]");
+    if(heading)heading.textContent=resultKind==="preview"?(preview?"Working preview":"Previous working preview"):"Saved comparison";
+    if(note)note.textContent=resultKind==="preview"&&!preview?"This result retains the earlier selection. Preview the working changes to calculate a new result.":"";
+  }
   function renderResult() {
     const target=find("[data-pmi-result]");if(!target)return;
     if(!result){target.innerHTML='<p class="pmi-empty">Preview a comparison to inspect the original records and complete sampling windows.</p>';return;}
-    const sum=result.summary||{},shownProfile=preview?.profile||opened?.content?.profile;
-    target.innerHTML='<header class="pmi-result-head"><h3>'+(preview?"Working preview":"Saved comparison")+'</h3><p>'+esc(statusLabel(result.applicability_state))+'</p></header>'+
+    const sum=result.summary||{},shownProfile=resultProfile;
+    target.innerHTML='<header class="pmi-result-head"><h3 data-pmi-result-heading></h3><p>'+esc(statusLabel(result.applicability_state))+'</p></header><p data-pmi-result-note class="pmi-notice"></p>'+
       '<p>'+esc(result.interpretation)+'</p>'+(shownProfile?'<details><summary>Source edition used for this result</summary>'+profileHTML(shownProfile,sourceLinks)+'</details>':'')+'<dl class="pmi-counts">'+Object.entries(sum).map(([k,v])=>'<div><dt>'+esc(words(k))+'</dt><dd>'+esc(v)+'</dd></div>').join("")+'</dl>'+
       (arr(result.warnings).length?'<div class="pmi-notice"><h4>Sampling and applicability support</h4><ul>'+lines(result.warnings.map(words))+'</ul></div>':"")+
       '<p>'+esc(result.censoring)+'</p><p>'+esc(result.window_convention)+'</p>'+
-      '<details><summary>Contextual frequency rules</summary><pre>'+esc(JSON.stringify(result.contextual_rules||{},null,2))+'</pre></details>'+
+      '<details><summary>Contextual frequency rules</summary>'+readable(result.contextual_rules||{})+'</details>'+
       '<h4>Analytical windows</h4><label>Series<select data-pmi-window-filter><option value="">All series</option>'+
       options(arr(result.series).map(s=>({id:s.id,label:s.site_id+" · "+s.parameter+" · "+s.method+" · "+s.unit})),[windowFilter])+'</select></label>'+
       '<div data-pmi-windows></div><h4>Original observation decisions</h4>'+
       '<label>Rows<select data-pmi-row-filter>'+options([{id:"selected",label:"Selected original records"},{id:"all",label:"All original records"},{id:"above",label:"Above selected threshold"},{id:"uncertain",label:"Indeterminate comparisons"},{id:"excluded",label:"Excluded from supported calculation"}],[rowFilter])+'</select></label>'+
       '<div data-pmi-rows></div><div data-pmi-detail></div>';
-    renderTables();
+    renderResultHeading();renderTables();
   }
   function pages(kind,page,total) {
     const count=Math.max(1,Math.ceil(total/PAGE));
@@ -209,12 +234,12 @@ export function createPublishedInterpretation(host, course) {
     const wt=find("[data-pmi-windows]");
     if(wt)wt.innerHTML=windows.length?pages("windows",windowPage,windows.length)+table(["Series","Window / metric","Selected / supported","Result bounds / measured unit","Criterion","Outcome and support"],windows.slice(windowPage*PAGE,(windowPage+1)*PAGE).map(({series:s,metric:m})=>[
       esc(s.site_id)+"<br>"+esc(s.method)+"<br>"+esc(s.parameter),
-      esc(m.window_start||"")+" — "+esc(m.window_end||"")+"<br>"+esc(words(m.aggregation)),
-      esc(m.n)+" / "+esc(m.supported_n),
-      esc(m.lower??"unbounded")+" to "+esc(m.upper??"unbounded")+"<br>"+esc(m.unit),
-      esc(m.threshold)+" "+esc(m.criterion_unit),
+      esc(m.window_start||"")+" — "+esc(m.window_end||"")+"<br>"+esc(metricName(m.aggregation)),
+      esc(m.n)+" / "+esc(m.supported_n??"Not assessed"),
+      windowBounds(m)+"<br>"+esc(m.unit),
+      windowCriterion(m),
       esc(statusLabel(m.status))+"<br>"+esc(arr(m.reason_codes).map(words).join("; "))+
-      '<details><summary>Original window records</summary><p>'+esc(m.numeric_basis||"")+'</p><pre>'+esc(JSON.stringify({record_ids:m.record_ids,unassigned_record_ids:m.unassigned_record_ids,numeric_comparison:m.numeric_comparison},null,2))+'</pre></details>'
+      '<details><summary>Original window records and numerical support</summary><p>'+esc(m.numeric_basis||"")+'</p>'+readable({record_ids:m.record_ids,unassigned_record_ids:m.unassigned_record_ids,numeric_comparison:statusLabel(m.numeric_comparison),contextual_rule:m.rule})+'</details>'
     ])):'<p class="pmi-empty">No analytical windows are available for this source and profile selection.</p>';
     renderDetail();
   }
@@ -226,7 +251,7 @@ export function createPublishedInterpretation(host, course) {
       '<p>'+esc(row.source_file)+" · CSV row "+esc(row.source_csv_row)+'</p>'+
       '<p>Laboratory comment: '+esc(row.laboratory_comment||"(blank)")+'</p>'+
       '<dl>'+Object.entries(row.raw_cells||{}).map(([k,v])=>'<dt>'+esc(k)+'</dt><dd>'+esc(v===""?"(blank)":v)+'</dd>').join("")+'</dl>'+
-      '<details><summary>Retained analytical decisions and recovered support</summary><pre>'+esc(JSON.stringify(row,null,2))+'</pre></details></section>';
+      '<details><summary>Retained analytical decisions and recovered support</summary>'+readable({decision:statusLabel(row.status),reasons:arr(row.reason_codes).map(words),comparisons:row.comparisons,canonical_record_id:row.canonical_record_id,canonical_original_records:row.canonical_original_records,recovered_original_support:row.recovered_original_support,source_support_mismatches:row.source_support_mismatches})+'</details></section>';
   }
   async function refreshCatalog() {
     if(!node||!complete)return;
@@ -234,7 +259,7 @@ export function createPublishedInterpretation(host, course) {
     try {
       const value=await course.api("/api/published-studies/interpretation-catalog",{study_id:complete.record.study_id,version_id:complete.record.version_id});
       if(!active(g,k,w)||serial!==loadSerial)return;
-      catalog=value;catalogSources=arr(value.sources);if(!opened&&!preview)sourceLinks=catalogSources;
+      catalog=value;catalogSources=arr(value.sources);if(!result)sourceLinks=catalogSources;
       if(!draft.profile_id){draft.profile_id=arr(value.profiles).find(p=>p.id==="sc-ecoli-ambient-126-349")?.id||arr(value.profiles)[0]?.id||"";remember();}
       renderSaved();if(firstLoad||(revision===edit&&!node.contains(document.activeElement)))renderForm();
       if(receiveChoice&&!isBusy()&&receiveChoice.workspace===workspace&&receiveChoice.study_id===complete.record.study_id&&receiveChoice.version_id===complete.record.version_id){
@@ -250,7 +275,7 @@ export function createPublishedInterpretation(host, course) {
     try {
       const value=await course.api("/api/published-studies/interpretation-preview",request);
       if(!active(g,k,w)||revision!==edit)return;
-      preview=value;result=value.result;sourceLinks=arr(value.sources);rowPage=windowPage=0;windowFilter="";detailId="";
+      preview=value;result=value.result;resultKind="preview";resultProfile=copy(value.profile);sourceLinks=arr(value.sources);rowPage=windowPage=0;windowFilter="";detailId="";
       renderResult();notify("Preview calculated from the selected original study and source profile.");
     } catch(e){if(active(g,k,w)&&revision===edit)notify(e?.message||String(e),true);}
     finally{if(active(g,k,w)){busy=false;buttons();}}
@@ -265,7 +290,7 @@ export function createPublishedInterpretation(host, course) {
       if(!body||body.binding.study_id!==complete.record.study_id||body.binding.version_id!==complete.record.version_id)throw Error("Select this comparison's original retained study edition.");
       opened=value.interpretation;selectedSaved=id;draft={...copy(body.request),title:body.title,parent_id:id};
       delete draft.study_id;delete draft.version_id;
-      sourceLinks=arr(value.sources);result=body.result;preview=null;++edit;rowPage=windowPage=0;windowFilter="";detailId="";remember();
+      sourceLinks=arr(value.sources);result=body.result;resultKind="saved";resultProfile=copy(body.profile);preview=null;++edit;rowPage=windowPage=0;windowFilter="";detailId="";remember();
       renderForm();renderSaved();renderResult();notify("Opened the exact saved comparison and its retained sources.");
     }catch(e){if(active(g,k,w)&&revision===edit)notify(e?.message||String(e),true);}
     finally{if(active(g,k,w)){busy=false;buttons();}}
@@ -297,7 +322,7 @@ export function createPublishedInterpretation(host, course) {
     const intent=pendingIntent;
     if(value&&intent?.action===action&&intent.workspace===workspace&&intent.key===key&&intent.edit===edit){
       opened=value;selectedSaved=value.id;
-      if(action===PREFIX+"save"){draft.parent_id=value.id;preview=null;result=value.content.result;remember();renderResult();}
+      if(action===PREFIX+"save"){draft.parent_id=value.id;preview=null;result=value.content.result;resultKind="saved";resultProfile=copy(value.content.profile);remember();renderResult();}
     }
     pendingIntent=null;
     notify(action===PREFIX+"export"?"Complete report, original observations, window results and editable source ZIP are available in the task.":"The saved comparison is available.");
@@ -331,7 +356,7 @@ export function createPublishedInterpretation(host, course) {
     else if(action==="refresh")refreshCatalog();
     else if(action==="close-detail"){detailId="";renderDetail();}
     else if(action==="export"&&opened)queue(PREFIX+"export",{interpretation_id:opened.id});
-    else if(action==="new"){draft=initial();draft.profile_id=arr(catalog?.profiles)[0]?.id||"";opened=preview=result=null;selectedSaved="";edited();renderForm();renderSaved();renderResult();}
+    else if(action==="new"){draft=initial();draft.profile_id=arr(catalog?.profiles)[0]?.id||"";opened=preview=result=null;resultKind="";resultProfile=null;selectedSaved="";edited();renderForm();renderSaved();renderResult();}
     else if(action==="use-study-filters"){draft.selection=copy(ctx()?.selection||emptySelection());edited();renderForm();}
   }
   function submit(event) {
@@ -363,7 +388,7 @@ export function createPublishedInterpretation(host, course) {
     const value=ctx()||{},next=value.workspace||null,nextComplete=value.complete||null,nextKey=identity(nextComplete);
     if(workspace!==next||key!==nextKey){
       remember();++generation;++loadSerial;workspace=next;key=nextKey;complete=nextComplete;
-      busy=false;catalog=null;preview=null;opened=null;result=null;sourceLinks=[];catalogSources=[];selectedSaved="";pendingIntent=null;detailId="";
+      busy=false;catalog=null;preview=null;opened=null;result=null;resultKind="";resultProfile=null;sourceLinks=[];catalogSources=[];selectedSaved="";pendingIntent=null;detailId="";
       rowPage=windowPage=0;rowFilter="selected";windowFilter="";++edit;
       if(key)restore();else draft=null;
       frame();if(key)refreshCatalog();
