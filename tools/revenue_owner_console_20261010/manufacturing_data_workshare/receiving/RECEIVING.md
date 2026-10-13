@@ -100,6 +100,8 @@ This is focused internal product validation, not permission to build a verificat
 
 For new video or media narration, use available high-quality generative voice/TTS and appropriate generative media capabilities, with natural professional delivery rather than a robotic default voice. Actually play, listen and watch the final attachment; inspect pronunciation, clarity, pacing, timing and audio alignment. A text script review does not substitute. This gives no paid-service purchase or real-person voice-cloning authorization.
 
+Every message to a warm lead requires Bryce’s approval for that exact proposed text and its attachments before sending. Earlier approval for a thread does not approve a later message. A favorable human reply moves subsequent messages to that individual approval rule; internal preparation continues in the original customer case.
+
 Pass this instruction into delegated and resumed work. Preserve existing owner controls, original operations, customer contact ownership, source/credential boundaries, no private GitHub publication, no GitHub Actions, no llama.cpp, stopped-work cutoffs and current contact holds. This instruction creates no watchers, hooks, restarts, approval queue or new publication authority.
 
 Return full original screenshot files and the actual outputs to the existing private customer case. The producing peers must open and view the returned images and delivered files, then repair the first concrete visual or functional issue in this same source edition. Keep the complete working records and original operation intact.
