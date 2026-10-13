@@ -1,11 +1,13 @@
 {
   "schema": "upstate.monitoring-application-files/v1",
   "edition": "monitoring-editable-native-fieldwork-20261013",
-  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies.",
+  "description": "Maintained Monitoring design, observed context, selected editable-study transfer, streamed original campaign packages and native campaign-to-Implementation receiving. Report-source, Study transfer and original Implementation receiving remain installed dependencies. Saved budget comparisons reopen the original frontier plans and retain exact observed-context selections, source reports and complete Workspace receiving.",
   "files": [
     "docs/MONITORING_EXPORT_STREAMING.md",
     "docs/MONITORING_FIELDWORK_RETURN.md",
+    "integration/component_fragments/monitoring-budget-comparison.json",
     "model/MONITORING.md",
+    "model/MONITORING_BUDGET_COMPARISON.md",
     "model/MONITORING_FIELDWORK.md",
     "model/MONITORING_OBSERVED_CONTEXT.md",
     "model/MONITORING_STUDY_TRANSFER.md",
@@ -15,6 +17,7 @@
     "model/monitoring_common.py",
     "model/monitoring_design.py",
     "model/monitoring_field_return.py",
+    "model/monitoring_frontier_comparison.py",
     "model/monitoring_implementation.py",
     "model/monitoring_network.py",
     "model/monitoring_observed_context.py",
@@ -24,12 +27,15 @@
     "model/monitoring_workspace.py",
     "model/requirements-monitoring.txt",
     "operator/MONITORING_API.md",
+    "operator/MONITORING_BUDGET_CHOICES.md",
     "operator/extensions/monitoring.json",
     "operator/monitoring.py",
     "operator/monitoring_native.py",
     "operator/monitoring_receiving.py",
     "operator/static/monitoring.js",
     "operator/web/monitoring-component.mjs",
+    "operator/web/monitoring-frontiers.css",
+    "operator/web/monitoring-frontiers.mjs",
     "operator/web/monitoring-observed.mjs",
     "operator/web/monitoring-study-transfer.mjs",
     "operator/web/monitoring.css",
@@ -76,6 +82,11 @@
     "campaign_native_receiving_merge": "eab342a70b92d65a5f7d94439a54e28df67b739c",
     "streaming_campaign_packet_merge": "0a8c98157554f5e684629ba1b31454666f08cd3d",
     "field_return_merge": "1c008cb2785175dfd654ec60b9874b758fcb557a",
-    "streaming_export_merge": "4a1f317a98218baca9df009fd3454dd69af91a48"
+    "streaming_export_merge": "4a1f317a98218baca9df009fd3454dd69af91a48",
+    "saved_budget_comparison": {
+      "pull_request": 3521,
+      "source_commit": "a92980a492604e6cb7684d13c84afdbbdbefb1d9",
+      "component": "integration/component_fragments/monitoring-budget-comparison.json"
+    }
   }
 }

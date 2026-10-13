@@ -4,8 +4,8 @@ import inspect
 from .monitoring_common import ContractError
 from .monitoring_workspace import MonitoringWorkspace
 
-READS = {"context.catalog", "context.list", "context.get", "context.preview", "campaign.fieldwork.preview-return", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
-WRITES = {"context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "campaign.fieldwork.return", "export"}
+READS = {"comparison.preview", "comparison.get", "comparison.list", "context.catalog", "context.list", "context.get", "context.preview", "campaign.fieldwork.preview-return", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
+WRITES = {"comparison.prepare", "comparison.export", "context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "campaign.fieldwork", "campaign.fieldwork.return", "export"}
 
 def invoke(workspace, action, params, *, export_root=None):
     if not isinstance(params, dict): raise ContractError("Monitoring parameters must be a JSON object")
@@ -21,6 +21,21 @@ def invoke(workspace, action, params, *, export_root=None):
         try: inspect.signature(receive).bind(service, **params)
         except TypeError as exc: raise ContractError(str(exc)) from exc
         return receive(service, **params)
+    if action.startswith("comparison."):
+        from . import monitoring_frontier_comparison as comparison
+        functions = {"comparison.preview": comparison.preview,
+                     "comparison.get": comparison.inspect,
+                     "comparison.list": comparison.list_saved,
+                     "comparison.prepare": comparison.prepare,
+                     "comparison.export": comparison.export_comparison}
+        if action not in functions:
+            raise ContractError("Unknown monitoring budget comparison action")
+        options = dict(params)
+        if action == "comparison.export": options["export_root"] = export_root
+        function = functions[action]
+        try: inspect.signature(function).bind(workspace, **options)
+        except TypeError as exc: raise ContractError(str(exc)) from exc
+        return function(workspace, **options)
     if action.startswith("context."):
         from . import monitoring_observed_context as observed
         functions = {"context.catalog": observed.catalog, "context.list": observed.list_saved,
