@@ -1056,6 +1056,59 @@ def _write_summary(directory, subjects, geometries, crs, baseline_id, scope):
     }
 
 
+class _AnalysisCheckpoints:
+    """Amortize growing aggregate records; geometry summaries remain immediate."""
+
+    MIN_SUBJECT_BATCH = 32
+    MAX_INTERVAL_SECONDS = 5.0
+
+    def __init__(self, path, state):
+        self.path = path
+        self.state = state
+        self.next_subject = self.MIN_SUBJECT_BATCH
+        self.last_write = time.monotonic()
+        self.writes = 0
+        self.write_seconds = 0.0
+        self.write_bytes = 0
+        self.geometry = {
+            "computed": 0, "restored": 0, "reused_in_memory": 0,
+            "summary_read_seconds": 0.0, "summary_write_seconds": 0.0,
+        }
+
+    def write(self, reason, completed=0):
+        started = time.monotonic()
+        # Timing/bytes describe completed prior writes. The current write cannot
+        # record its own duration without a second full manifest serialization.
+        self.state["execution"] = {
+            "aggregate_checkpoints": {
+                "writes_including_this": self.writes + 1,
+                "prior_write_seconds": self.write_seconds,
+                "prior_write_bytes": self.write_bytes,
+                "reason": reason,
+                "completed_subjects": completed,
+                "minimum_subject_batch": self.MIN_SUBJECT_BATCH,
+                "maximum_interval_seconds": self.MAX_INTERVAL_SECONDS,
+                "batch_policy": "completed + max(32, ceil(completed / 2))",
+                "interval_scope": "checked after each completed subject",
+            },
+            "geometry_checkpoints": dict(self.geometry),
+        }
+        result = _finish_record(self.path, self.state)
+        self.writes += 1
+        self.write_seconds += time.monotonic() - started
+        self.write_bytes += self.path.stat().st_size
+        self.last_write = time.monotonic()
+        self.next_subject = completed + max(
+            self.MIN_SUBJECT_BATCH, (completed + 1) // 2,
+        )
+        return result
+
+    def maybe_write(self, completed):
+        if (completed >= self.next_subject
+                or time.monotonic() - self.last_write >= self.MAX_INTERVAL_SECONDS):
+            self.write("subject_progress", completed)
+
+
 def analyze(workspace, selection, *, progress=None):
     """Build distinct water-specific priorities from original completed model runs.
 
@@ -1162,7 +1215,8 @@ def analyze(workspace, selection, *, progress=None):
         started = time.monotonic()
         state.update(state="building", resumed_at=now())
         state.pop("error", None)
-        _finish_record(state_path, state)
+        checkpoints = _AnalysisCheckpoints(state_path, state)
+        checkpoints.write("start")
         try:
             with ExitStack() as stack:
                 baseline_bands = _quantity_sources(workspace, baseline, grid, scope, stack, pollutants=pollutants)
@@ -1179,14 +1233,16 @@ def analyze(workspace, selection, *, progress=None):
                     if progress:
                         progress({"phase": "receiving_water_normalization", "analysis_id": key})
                     state["normalization"] = _normalization(baseline_bands, grid, domain, selection)
-                    _finish_record(state_path, state)
+                    checkpoints.write("normalization")
                 cache, subjects = {}, []
                 for position, (definition, geometry) in enumerate(zip(definitions, subject_geometries)):
                     geometry_id = digest({"crs": grid["crs"], "wkb": geometry.wkb_hex})
                     summary_path = directory / "geographies" / geometry_id / "summary.json"
                     if geometry_id in cache:
                         metrics = cache[geometry_id]
+                        checkpoints.geometry["reused_in_memory"] += 1
                     elif summary_path.exists():
+                        checkpoint_started = time.monotonic()
                         checkpoint = read_json(summary_path)
                         if checkpoint.get("analysis_id") != key or checkpoint.get("geometry_id") != geometry_id:
                             raise ValueError("The retained receiving-water geometry checkpoint changed")
@@ -1196,6 +1252,8 @@ def analyze(workspace, selection, *, progress=None):
                         for item in metrics["files"].values():
                             verify_file(directory, item)
                         cache[geometry_id] = metrics
+                        checkpoints.geometry["restored"] += 1
+                        checkpoints.geometry["summary_read_seconds"] += time.monotonic() - checkpoint_started
                     else:
                         if geometry.is_empty:
                             metrics = {
@@ -1216,7 +1274,10 @@ def analyze(workspace, selection, *, progress=None):
                         checkpoint = {
                             "analysis_id": key, "geometry_id": geometry_id, "metrics": metrics,
                         }
+                        checkpoint_started = time.monotonic()
                         _finish_record(summary_path, checkpoint)
+                        checkpoints.geometry["summary_write_seconds"] += time.monotonic() - checkpoint_started
+                        checkpoints.geometry["computed"] += 1
                         cache[geometry_id] = metrics
                     for name, item in metrics["files"].items():
                         state["files"][geometry_id + "_" + name] = item
@@ -1224,7 +1285,7 @@ def analyze(workspace, selection, *, progress=None):
                     state["subjects"] = subjects
                     state["completed_subjects"] = len(subjects)
                     state["total_subjects"] = len(definitions)
-                    _finish_record(state_path, state)
+                    checkpoints.maybe_write(len(subjects))
                     if progress:
                         progress({"phase": "receiving_water_subject", "analysis_id": key,
                                   "subject_id": definition["id"], "subject_kind": definition["kind"],
@@ -1246,12 +1307,12 @@ def analyze(workspace, selection, *, progress=None):
                     "relationship": "Each receptor retains its exact HUC-scale, published-area or geometric-context method",
                 },
             )
-            return _finish_record(state_path, state)
+            return checkpoints.write("complete", len(subjects))
         except BaseException as exc:
             state.update(state="failed", updated_at=now(),
                          elapsed_seconds_this_attempt=time.monotonic() - started,
                          error={"type": type(exc).__name__, "message": str(exc)})
-            _finish_record(state_path, state)
+            checkpoints.write("failed", len(state.get("subjects", [])))
             raise
 
 
