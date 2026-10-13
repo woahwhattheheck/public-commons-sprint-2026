@@ -1,232 +1,283 @@
 #!/usr/bin/env python3
-"""Install complete large-file Measurements into the original maintained application.
-
-Exact changed hunks are composed into existing files; unrelated code and original
-scientific modules are retained. The same command completes interrupted installs.
-"""
+"""Install the complete current Measurements source in its original host or CLI."""
 from __future__ import annotations
 import argparse
 import ast
+import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
-import sqlite3
+import stat
 import tempfile
 
-VERSION = '1.2.2'
-MANIFEST = 'MEASUREMENT_LARGE_FILES_SOURCE.json'
-ALIASES = {'workspace.js': 'measured_observations.mjs', 'workspace.css': 'measured_observations.css',
-           'extension.mjs': 'measured_observations_extension.mjs', 'collections.mjs': 'measured_collections.mjs',
-           'large_files.mjs': 'measured_large_files.mjs', 'chemistry.mjs': 'measured_chemistry.mjs'}
+VERSION = "1.2.6"
+MANIFEST = "MEASUREMENT_LARGE_FILES_SOURCE.json"
+COMBINED = "integration/measurements/INSTALLATION.json"
+LOCK = ".locks/extension-install.lock"
 
 
-def digest(data): return hashlib.sha256(data).hexdigest()
+def digest(data):
+    return hashlib.sha256(data).hexdigest()
 
 
 def member(root, name):
-    if not isinstance(name, str) or not name or '\\' in name or any(x in {'', '.', '..'} for x in name.split('/')):
-        raise ValueError('Expected a relative source member')
+    if (not isinstance(name, str) or not name or "\\" in name
+            or name.startswith("/") or any(x in {"", ".", ".."} for x in name.split("/"))):
+        raise ValueError("Expected an application-relative source member")
     target = root / name
     if not target.resolve().is_relative_to(root.resolve()):
-        raise ValueError('Source member escapes the application')
+        raise ValueError("Source member escapes the application: " + name)
     current = target
     while current != root:
-        if current.is_symlink(): raise ValueError('Installation crosses a symlink: ' + name)
+        if current.is_symlink():
+            raise ValueError("Installation crosses a symlink: " + name)
         current = current.parent
     return target
 
 
-def compose(text, operations, name):
-    if isinstance(operations, dict):
-        failures = []
-        for variant in operations['variants']:
-            try:
-                return compose(text, variant['operations'], name)
-            except ValueError as error:
-                failures.append(str(error))
-        raise ValueError('No original source edition matched for ' + name + ': ' + '; '.join(failures))
-    for operation in operations:
-        old, new = operation['old'], operation['new']
-        if new and text.count(new) == 1:
-            continue
-        if old:
-            if text.count(old) == 1:
-                text = text.replace(old, new, 1)
-            elif new and text.count(new) == 1:
-                continue
+def read(root, name, *, optional=False):
+    target = member(root, name)
+    if not target.exists() and optional:
+        return None
+    if not target.is_file():
+        raise ValueError("Complete source member is missing: " + name)
+    return target.read_bytes()
+
+
+def rows_of(value, label):
+    rows = value.get("files")
+    if not isinstance(rows, list):
+        raise ValueError("Expected complete source rows: " + label)
+    result = {}
+    for row in rows:
+        if (not isinstance(row, dict) or not isinstance(row.get("path"), str)
+                or row["path"] in result or not isinstance(row.get("bytes"), int)
+                or isinstance(row["bytes"], bool) or row["bytes"] < 0
+                or not isinstance(row.get("sha256"), str) or len(row["sha256"]) != 64
+                or any(c not in "0123456789abcdef" for c in row["sha256"])):
+            raise ValueError("Invalid or repeated complete source identity: " + label)
+        # Path validation is shared with the actual reader before any mutation.
+        result[row["path"]] = row
+    return result
+
+
+def select_sources(source):
+    raw = read(source, MANIFEST)
+    inventory = json.loads(raw)
+    if inventory.get("format") != "upper-savannah-measurements-large-file-source/v1":
+        raise ValueError("Select the original complete Measurements source inventory")
+    rows = rows_of(inventory, MANIFEST)
+    selection = inventory.get("standalone", {})
+    names = selection.get("files")
+    if (not isinstance(names, list) or not names or any(not isinstance(n, str) for n in names)
+            or len(set(names)) != len(names) or any(n not in rows for n in names)):
+        raise ValueError("Select a complete release with an explicit standalone source selection")
+    approved = {n: list(v) for n, v in selection.get("predecessors", {}).items()}
+    combined_raw = read(source, COMBINED, optional=True)
+    authority = {"path": MANIFEST, "sha256": digest(raw)}
+    if combined_raw is not None:
+        combined = json.loads(combined_raw)
+        if combined.get("schema") != "upstate.measurements-installation/v1":
+            raise ValueError("Unexpected cumulative Measurements source inventory")
+        current = rows_of(combined, COMBINED)
+        selected_manifest = current.get(MANIFEST)
+        if (selected_manifest is None or selected_manifest["bytes"] != len(raw)
+                or selected_manifest["sha256"] != digest(raw)):
+            raise ValueError("The cumulative source does not select this standalone inventory")
+        # The cumulative source is authoritative for current native/API/browser
+        # dependencies. Keep its later complete native modules and source tools.
+        for name, row in current.items():
+            if name.startswith(("measurement_workspace/", "source_tools/", "source_data/wqp_eight_20261013/")):
+                if name not in names:
+                    names.append(name)
+            if name in names:
+                rows[name] = {**rows.get(name, {}), **row}
+        instruction = combined.get("instruction", {})
+        if instruction.get("path") == "AGENTS.md" and "AGENTS.md" in names:
+            rows["AGENTS.md"] = {**rows["AGENTS.md"], **instruction}
+        for name, hashes in combined.get("predecessors", {}).items():
+            if name in names:
+                approved.setdefault(name, []).extend(hashes)
+        authority = {"path": COMBINED, "sha256": digest(combined_raw)}
+    if any(name in {MANIFEST, COMBINED, LOCK} for name in names):
+        raise ValueError("Source selection cannot include its own state or lock")
+    bodies = {}
+    for name in sorted(names):
+        row = rows[name]
+        body = read(source, name)
+        if len(body) != row["bytes"] or digest(body) != row["sha256"]:
+            raise ValueError("Complete selected source differs: " + name)
+        if name.endswith(".py"):
+            ast.parse(body.decode("utf-8"), filename=name)
+        elif name.endswith(".json"):
+            json.loads(body)
+        bodies[name] = body
+    for name, hashes in approved.items():
+        if not isinstance(hashes, list) or any(
+                not isinstance(h, str) or len(h) != 64 or any(c not in "0123456789abcdef" for c in h)
+                for h in hashes):
+            raise ValueError("Invalid retained predecessor identities: " + name)
+    return inventory, rows, bodies, approved, authority, raw
+
+
+def atomic(path, data):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".measurement-install-", delete=False) as stream:
+            pending = Path(stream.name)
+            if path.exists():
+                os.fchmod(stream.fileno(), stat.S_IMODE(path.stat().st_mode))
             else:
-                raise ValueError('A concurrently changed source needs this exact hunk joined: ' + name + ' / ' + old[:100])
-        elif new in text:
-            continue
-        else:
-            after, before = operation['after'], operation['before']
-            if after and text.count(after) == 1:
-                text = text.replace(after, new + after, 1)
-            elif before and text.count(before) == 1:
-                text = text.replace(before, before + new, 1)
-            else:
-                raise ValueError('Insertion context changed: ' + name)
-    return text
+                os.fchmod(stream.fileno(), 0o644)
+            stream.write(data)
+            stream.flush()
+            os.fsync(stream.fileno())
+        os.replace(pending, path)
+        parent_fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
 
 
 def install(application, source_root=None, *, standalone=False, dry_run=False):
-    root = Path(application).resolve(strict=True)
-    source = Path(source_root or Path(__file__).parent).resolve(strict=True)
-    # Complete scientific releases use the single current guarded component writer.
-    # The original standalone large-file installer remains available below.
-    combined = source / "integration/measurements/INSTALLATION.json"
-    if not standalone and combined.is_file():
+    root = Path(application).expanduser().resolve(strict=True)
+    source = Path(source_root or Path(__file__).parent).expanduser().resolve(strict=True)
+    if not standalone:
+        if read(source, COMBINED, optional=True) is None:
+            raise ValueError("Select the complete registered-host release, or --standalone for the original CLI")
         import importlib.util
-        implementation = source / "operator/install_measurements.py"
+        implementation = member(source, "operator/install_measurements.py")
         spec = importlib.util.spec_from_file_location("_upstate_complete_measurements_installer", implementation)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return module.install(root, source, check=dry_run)
-    if not standalone and not (root / 'operator/extension_registry.py').is_file():
-        raise ValueError('Select the original extension-registry application, or use --standalone for the original CLI')
-    inventory = json.loads((source / MANIFEST).read_text('utf-8'))
-    rows = {row['path']: row for row in inventory['files']}
-    bodies = {}
-    for name, row in rows.items():
-        body = member(source, name).read_bytes()
-        if len(body) != row['bytes'] or digest(body) != row['sha256']:
-            raise ValueError('Complete source inventory differs: ' + name)
-        bodies[name] = body
-    recipes = json.loads(bodies['measurement_workspace/large_file_patches.json'])
-    chosen = {n: b for n, b in bodies.items() if n.startswith('measurement_workspace/') or
-              n in {'operator/extensions/measured-observations.json', 'integration/component_fragments/measurement-large-files.json', 'MEASUREMENT_LARGE_FILES.md', 'install_measurement_large_files.py'}}
-    lockroot = member(root, '.locks'); lockroot.mkdir(exist_ok=True)
-    lock = sqlite3.connect(lockroot / 'measurement-large-files.sqlite', timeout=5)
-    lock.execute('BEGIN IMMEDIATE')
-    try:
-        previous_path = member(root, MANIFEST)
-        previous = json.loads(previous_path.read_text('utf-8')) if previous_path.is_file() else {}
-        predecessors = {row['path']: row['sha256'] for row in previous.get('files', [])}
-        before, prepared, preserved, reused = {}, {}, [], []
-        for name, body in chosen.items():
-            target = member(root, name)
-            if not target.exists(): prepared[name] = body; continue
-            old = target.read_bytes(); before[name] = old
-            if old == body: reused.append(name); continue
-            if name in recipes:
-                result = compose(old.decode('utf-8'), recipes[name], name).encode('utf-8')
-                if result == old: reused.append(name)
-                else: prepared[name] = result
-            elif digest(old) == predecessors.get(name) and rows[name]['role'] != 'native':
-                prepared[name] = body
-            elif rows[name]['role'] == 'native':
-                preserved.append(name)
-            else:
-                raise ValueError('Different existing extension file was retained: ' + name)
-        # Keep peer routes/capabilities, while registering this extension's own asset.
-        descriptor_name = 'operator/extensions/measured-observations.json'
-        descriptor_target = member(root, descriptor_name)
-        descriptor_body = prepared.get(descriptor_name)
-        if descriptor_body is None:
-            descriptor_body = descriptor_target.read_bytes() if descriptor_target.exists() else bodies[descriptor_name]
-        descriptor = json.loads(descriptor_body)
-        if descriptor.get('id') != 'measured-observations':
-            raise ValueError('Unexpected Measurements descriptor identity')
-        if 'measured_large_files.mjs' not in descriptor.setdefault('assets', []):
-            descriptor['assets'].append('measured_large_files.mjs')
-            prepared[descriptor_name] = (json.dumps(descriptor, indent=2) + '\n').encode()
-            reused = [name for name in reused if name != descriptor_name]
-            preserved = [name for name in preserved if name != descriptor_name]
-        # Mirror the composed existing UI, not a replacement of a peer's controller.
-        for filename, alias in ALIASES.items():
-            original = 'measurement_workspace/web/' + filename
-            destination = 'operator/web/' + alias
-            native = prepared.get(original)
-            if native is None: native = member(root, original).read_bytes() if member(root, original).exists() else bodies[original]
-            if filename == 'extension.mjs':
-                text = native.decode('utf-8')
-                for source_name, installed_name in {**ALIASES, 'chemistry.mjs': 'measured_chemistry.mjs'}.items():
-                    text = text.replace("from './" + source_name + "'", "from './" + installed_name + "'")
-                    text = text.replace('from "./' + source_name + '"', 'from "./' + installed_name + '"')
-                native = text.encode('utf-8')
-            target = member(root, destination)
-            if target.exists():
-                old = target.read_bytes(); before[destination] = old
-                if old == native: reused.append(destination); continue
-                if original in recipes:
-                    result = compose(old.decode('utf-8'), recipes[original], destination).encode('utf-8')
-                    if result != native:
-                        # Both native and alias may carry distinct peer additions.
-                        native = result
-                elif original in before and old == before[original]:
-                    pass
-                elif rows[original]['role'] == 'native':
-                    preserved.append(destination); continue
-                else: raise ValueError('Different browser extension source retained: ' + destination)
-            prepared[destination] = native
+    if source == root or source.is_relative_to(root):
+        raise ValueError("Stage the complete source outside the receiving application")
+    inventory, rows, bodies, approved, authority, manifest_raw = select_sources(source)
+    lockpath = member(root, LOCK)
+    lockpath.parent.mkdir(parents=True, exist_ok=True)
+    # The registered installer uses this same path and POSIX lease.
+    with lockpath.open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        previous_raw = read(root, MANIFEST, optional=True)
+        previous = json.loads(previous_raw) if previous_raw is not None else {}
+        if previous and previous.get("format") != inventory["format"]:
+            raise ValueError("Retain the independently authored target inventory")
+        previous_rows = rows_of(previous, "installed source") if previous else {}
+        before, prepared, reused = {}, {}, []
+        for name, selected in bodies.items():
+            old = read(root, name, optional=True)
+            before[name] = old
+            if old == selected:
+                reused.append(name)
+                continue
+            if name == "AGENTS.md" and old is not None:
+                # Preserve local application instructions while carrying the exact
+                # original owner-directed instruction block into this source.
+                selected = old if selected in old else old.rstrip() + b"\n\n" + selected
+                if selected == old:
+                    reused.append(name)
+                    continue
+                prepared[name] = selected
+                continue
+            allowed = set(approved.get(name, []))
+            if name in previous_rows:
+                allowed.add(previous_rows[name]["sha256"])
+            if old is not None and digest(old) not in allowed:
+                raise ValueError("Compose the independently changed standalone source: " + name)
+            prepared[name] = selected
         installed_rows = []
-        for name, row in rows.items():
-            body = prepared.get(name)
-            if body is None:
+        for name in sorted(bodies):
+            actual = prepared.get(name, before[name])
+            installed_rows.append({**rows[name], "bytes": len(actual), "sha256": digest(actual)})
+        installed_inventory = {
+            **inventory, "files": installed_rows,
+            "standalone": {**inventory["standalone"], "files": sorted(bodies)},
+            "selected_source_inventory": authority,
+            "selected_standalone_manifest_sha256": digest(manifest_raw),
+        }
+        manifest_body = (json.dumps(installed_inventory, indent=2) + "\n").encode("utf-8")
+        before[MANIFEST] = previous_raw
+        if previous_raw != manifest_body:
+            prepared[MANIFEST] = manifest_body
+        else:
+            reused.append(MANIFEST)
+        result = {
+            "format": "upper-savannah-measurement-large-install/v1", "version": VERSION,
+            "application": str(root), "standalone": True, "dry_run": dry_run,
+            "source_inventory": authority, "source_files": len(bodies),
+            "created": sorted(n for n in prepared if before[n] is None),
+            "upgraded": sorted(n for n in prepared if before[n] is not None),
+            "reused": sorted(reused), "preserved": [],
+            "changed_files": [{"path": n, "bytes": len(b), "sha256": digest(b)}
+                              for n, b in sorted(prepared.items())],
+        }
+        if dry_run or not prepared:
+            return result
+        saved = member(root, ".measurement-installations/" + digest(manifest_body) + "-standalone")
+        saved.mkdir(parents=True, exist_ok=True)
+        # Retain the first complete preimages before publishing any selected file.
+        for name, old in before.items():
+            if old is None:
+                continue
+            backup = member(saved, "before/" + name)
+            prior = read(saved, "before/" + name, optional=True)
+            if prior is None:
+                atomic(backup, old)
+            elif prior != old:
+                selected = prepared.get(name, bodies.get(name, manifest_body))
+                if old != selected:
+                    raise ValueError("Retained installation preimage differs: " + name)
+        for name, old in before.items():
+            if read(root, name, optional=True) != old:
+                raise ValueError("Source changed during installation: " + name)
+        committed = []
+        try:
+            # The installed inventory is the last published member. An interrupted
+            # retry admits identical postimages and exact retained predecessors.
+            for name in sorted(prepared, key=lambda n: (n == MANIFEST, n)):
                 target = member(root, name)
-                body = target.read_bytes() if target.exists() else bodies[name]
-            installed_rows.append({**row, 'sha256': digest(body), 'bytes': len(body)})
-        installed_inventory = {**inventory, 'files': installed_rows,
-                               'origin_manifest_sha256': inventory.get('origin_manifest_sha256', digest((source / MANIFEST).read_bytes()))}
-        manifest_body = (json.dumps(installed_inventory, indent=2) + '\n').encode()
-        if previous_path.exists():
-            before[MANIFEST] = previous_path.read_bytes()
-            if before[MANIFEST] == manifest_body: reused.append(MANIFEST)
-            else: prepared[MANIFEST] = manifest_body
-        else: prepared[MANIFEST] = manifest_body
-        for name, body in prepared.items():
-            if name.endswith('.py'): ast.parse(body.decode('utf-8'), filename=name)
-            elif name.endswith('.json'): json.loads(body)
-        created = sorted(n for n in prepared if n not in before)
-        upgraded = sorted(n for n in prepared if n in before)
-        result = {'format': 'upper-savannah-measurement-large-install/v1', 'version': VERSION,
-                  'application': str(root), 'dry_run': dry_run, 'created': created, 'upgraded': upgraded,
-                  'reused': sorted(set(reused)), 'preserved': sorted(set(preserved)),
-                  'changed_files': [{'path': n, 'bytes': len(b), 'sha256': digest(b)} for n, b in sorted(prepared.items())]}
-        if dry_run: return result
-        def order(name):
-            if name == MANIFEST: return 10
-            if name == 'operator/extensions/measured-observations.json': return 9
-            if name.startswith('operator/web/'): return 8
-            if name.endswith('/web/extension.mjs') or name.endswith('/extension.py'): return 7
-            if name.endswith('/engine/cli.mjs') or name.endswith('/engine/http.mjs'): return 6
-            if name.endswith('/engine/workspace.mjs'): return 5
-            return 1
-        changed = []
-        with tempfile.TemporaryDirectory(prefix='.measurement-large-install-', dir=root) as temporary:
-            stage = Path(temporary)
-            try:
-                for name, body in prepared.items():
-                    target = member(stage, name); target.parent.mkdir(parents=True, exist_ok=True)
-                    with target.open('xb') as stream:
-                        stream.write(body); stream.flush(); os.fsync(stream.fileno())
-                for name in sorted(prepared, key=lambda n: (order(n), n)):
-                    target = member(root, name); target.parent.mkdir(parents=True, exist_ok=True)
-                    if name in before:
-                        if target.read_bytes() != before[name]: raise ValueError('Source changed during installation: ' + name)
-                        os.replace(member(stage, name), target)
-                    else:
-                        os.link(member(stage, name), target)
-                    changed.append(name)
-            except Exception:
-                for name in reversed(changed):
+                if read(root, name, optional=True) != before[name]:
+                    raise ValueError("Source changed during installation: " + name)
+                committed.append(name)
+                atomic(target, prepared[name])
+            result["state"] = "installed"
+            atomic(member(saved, "installation.json"), (json.dumps(result, indent=2) + "\n").encode("utf-8"))
+            return result
+        except BaseException as failure:
+            conflicts = []
+            for name in reversed(committed):
+                try:
                     target = member(root, name)
-                    if target.exists() and target.read_bytes() == prepared[name]:
-                        if name in before:
-                            recovery = member(stage, name + '.rollback'); recovery.write_bytes(before[name]); os.replace(recovery, target)
-                        else: target.unlink()
-                raise
-        return result
-    finally:
-        lock.rollback(); lock.close()
+                    now = read(root, name, optional=True)
+                    if now == before[name]:
+                        continue
+                    if now != prepared[name]:
+                        conflicts.append(name)
+                        continue
+                    if before[name] is None:
+                        target.unlink()
+                    else:
+                        atomic(target, before[name])
+                except (OSError, ValueError):
+                    conflicts.append(name)
+            if conflicts:
+                raise RuntimeError("Preserved independently changed files during rollback: " + ", ".join(conflicts)) from failure
+            raise
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--application', required=True, type=Path)
-    parser.add_argument('--source-root', type=Path)
-    parser.add_argument('--standalone', action='store_true')
-    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument("--application", required=True, type=Path)
+    parser.add_argument("--source-root", type=Path)
+    parser.add_argument("--standalone", action="store_true")
+    parser.add_argument("--dry-run", action="store_true")
     options = parser.parse_args()
-    print(json.dumps(install(options.application, options.source_root, standalone=options.standalone, dry_run=options.dry_run), indent=2))
+    print(json.dumps(install(options.application, options.source_root,
+                             standalone=options.standalone, dry_run=options.dry_run), indent=2))
