@@ -265,6 +265,66 @@
       "bytes": 20896,
       "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
       "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/large-collection-receiving.mjs",
+      "bytes": 37594,
+      "sha256": "a70c35049cb0b2424eefbd2d81ab6fbba66bad349483ecedb3cef3ce5ff75e63",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/COLLECTION_RECEIVING.md",
+      "bytes": 14079,
+      "sha256": "9e62ebe1c3bb0311d24cd97f92da28329326b9846d7f2c1df70bef40d8cdf3b3",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/engine/reconciliation-receiving.mjs",
+      "bytes": 33299,
+      "sha256": "45f7091f13d45683362962c605f78c2fd5026201adb9a3eb30e06864d2ab5f04",
+      "role": "patch"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+      "bytes": 3640,
+      "sha256": "21022c3f3b46fb0bae6e341cde74880ec2e395528592f9168742f53af60b533e",
+      "role": "native"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+      "bytes": 4364,
+      "sha256": "cd9bece111d31aa68748507ae68ddfa0ac0a739f9d215f52149cde5d302d0605",
+      "role": "native"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+      "bytes": 17794,
+      "sha256": "d7322856d96cdd6898a5cef555e97529f99ec4d6dad7ab45d18f4d53f3b646e6",
+      "role": "native"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+      "bytes": 50756,
+      "sha256": "691f1020850d35deb2c06c4e765590e1df747824bf5ea70d955263ff4595d91f",
+      "role": "native"
+    },
+    {
+      "path": "source_data/wqp_eight_20261013/sources.json",
+      "bytes": 1533,
+      "sha256": "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a",
+      "role": "native"
+    },
+    {
+      "path": "measurement_workspace/engine/source_reconciliation.mjs",
+      "bytes": 18043,
+      "sha256": "3e1812e964df450f3cd357d8fa0b3ff4d770d7329ea1d93894a98abeb18eaad7",
+      "role": "addition"
+    },
+    {
+      "path": "measurement_workspace/web/source_reconciliation.mjs",
+      "bytes": 26138,
+      "sha256": "ea44cd53d2d07710dff71e92fa759a0d0ba4e319fd5440df3384c64ce78a2930",
+      "role": "addition"
     }
   ],
   "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7",
@@ -301,6 +361,15 @@
       "browser_guide": "MEASUREMENT_COLLECTION_WORKING.md",
       "behavior": "Original canonical collections receive retained large originals, preserve reviewed per-file progress, and publish through the same collection-bound streaming native archive.",
       "complete_installer": "operator/install_measurements.py"
+    },
+    "large_collection_receiving": {
+      "operation_id": "CEDAR-10212-ECO-COLLECTION-RECEIVING-20261013",
+      "original_claim": "1791921813.488809",
+      "source_base": "ffa1ace3923d4b22eb593aa22e9b00c0a0ef0e47",
+      "collection_product_merge": "513c2582b169655b674e23393a1d931d41bb3996",
+      "entry": "measurement_workspace/engine/reconciliation-receiving.mjs --chapter large-collections",
+      "guide": "measurement_workspace/COLLECTION_RECEIVING.md",
+      "behavior": "The same owned receiver retains complete original requests and automatic browser backups, resumes interrupted checkpoints, reuses exact completed sender outputs, downloads every declared edition member and independently receives the whole selected project."
     }
   }
 }
