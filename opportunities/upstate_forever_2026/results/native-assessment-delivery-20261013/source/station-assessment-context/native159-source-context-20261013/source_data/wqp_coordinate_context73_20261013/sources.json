@@ -1,0 +1,36 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "SCDES WQP published station coordinate context for73 assessment sites",
+  "captured_at": "2026-10-13",
+  "entries": [
+    {
+      "id": "scdes-wqp-coordinate-context73-20261013",
+      "title": "Independent WQP coordinate metadata for73 existing assessment locations",
+      "uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/",
+      "vintage": "Retrieved2026-10-13; publisher station coordinate metadata",
+      "kind": "vector",
+      "path": "wqp_coordinate_context.geojson",
+      "sha256": "2c9a06c77e9d55320c779af7edea68fd091c0c8458b85b0ec32de9d999cc687e",
+      "source_crs": "EPSG:4326",
+      "role": "MONITORING_LOCATION_CONTEXT",
+      "station_id_field": "MonitoringLocationName",
+      "native_id_field": "MonitoringLocationIdentifier",
+      "metadata": {
+        "purpose": "Additional source context alongside the primary159 native station identities",
+        "source_representation": "Numeric point copies of original WGS84 metadata with all original reported strings retained",
+        "station_count": 73,
+        "station_publisher_huc8_agreements": 73,
+        "assessment_publisher_huc8_difference_stations": [
+          "SV-809"
+        ],
+        "primary_locations": "Original705 +WQP8 +WQP2 retained for the prepared159 study"
+      },
+      "companions": [
+        {
+          "path": "wqp_station_pages.json",
+          "sha256": "059da5e2e898286b6249356c9ef4a1771516eccb6462a5fd0e1ae523dd1e8640"
+        }
+      ]
+    }
+  ]
+}

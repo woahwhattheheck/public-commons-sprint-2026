@@ -128,7 +128,8 @@ getState:()=>state,getWorkspace:()=>workspace,api,endpoint,toast,
 const sourceReports=attachSourceReports({
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,openItem,navigate,
  hasView:id=>extensions.hasView(id),openSourceImport:options=>sourceForm(options),
- showTask,refresh,openBackup:()=>backupForm()
+ showTask,refresh,openBackup:()=>backupForm(),
+ openStudy:selection=>extensions.openExtension('study-transfer','openForStudies',selection)
 });
 const deliveryReview=createDeliveryReview({esc,button,bytes,number,when,runTitle,mapFamilies,mapTitles,section,pageHeader,table,
  getState:()=>state,getWorkspace:()=>workspace,api,endpoint,detail,refresh,showTask,revise:deliveryForm,
