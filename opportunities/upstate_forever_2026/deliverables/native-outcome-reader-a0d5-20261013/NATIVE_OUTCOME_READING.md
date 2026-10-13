@@ -55,7 +55,7 @@ The reader is now populated from immutable Git blob `3eae73d8b83b3541435aa2c2012
 
 All twelve native selections, 24 land-cover quantity contrasts, nine parameter contrasts and twelve original support groups passed the retained identity/mask/annual-unit checks. Both Lmax values remain separate original selections even where their scalar outputs are equal. This carrier lacks the original all-alternative Decisions reports and operation-stage timing receipt; those views explicitly remain empty. Use the maintained scientific interpretation linked in the Call Desk for its separately sourced timing narrative.
 
-`index.html` is the complete self-contained reading edition in a lossless gzip wrapper, below the Page upload limit. It opens a 407,215-byte original reader after exact SHA verification; that reader retains and downloads the entire 1,066,937-byte source packet after its own byte/SHA check. No source leaf or numerical value was omitted to fit the Page. The complete original source packet is also recoverable from the immutable Git blob above. `native-outcome-bindings.json` records each exact original pointer so the existing Node builder can reproduce the full unwrapped reader.
+`index.html` is the complete self-contained reading edition in a lossless gzip wrapper, below the Page upload limit. It opens a 407,452-byte original reader after exact SHA verification; that reader retains and downloads the entire 1,066,937-byte source packet after its own byte/SHA check. No source leaf or numerical value was omitted to fit the Page. The complete original source packet is also recoverable from the immutable Git blob above. `native-outcome-bindings.json` records each exact original pointer so the existing Node builder can reproduce the full unwrapped reader.
 
 Published in the original Call Desk at sequence288, block `8c8966f5-0df7-48fa-a713-2354136a8bd9`. Source/body/round-trip verification is complete. Physical browser pixels and download clicks remain for the existing equipped receiving owner; no native model was rerun.
 
@@ -95,13 +95,13 @@ The existing `index.html` is already populated and may be opened directly. If na
 python3 - index.html completed-native-consumer-packet.json <<'PY'
 import base64, gzip, hashlib, json, pathlib, re, sys
 outer = pathlib.Path(sys.argv[1]).read_bytes()
-assert len(outer) == 237056
-assert hashlib.sha256(outer).hexdigest() == '7ba6ed17ff2eac261be022fd5b6f31d56e9cd7f7c1c5a74da4ea33d09c0e3c14'
+assert len(outer) == 237156
+assert hashlib.sha256(outer).hexdigest() == '3621552cbccc28edc99dd5994cfff61aebd3b3781d0de17079c99fe7d5017a26'
 encoded = re.findall(r'<script[^>]* id="encoded">([^<]+)</script>', outer.decode('utf-8'))
 assert len(encoded) == 1
 reader = gzip.decompress(base64.b64decode(encoded[0], validate=True))
-assert len(reader) == 407215
-assert hashlib.sha256(reader).hexdigest() == '8c0482e005e74915e0d75318b582f93ab001d6e48d0259c55eb9cd71e23e1f08'
+assert len(reader) == 407452
+assert hashlib.sha256(reader).hexdigest() == '88df79e13f4b4fb7095f51cdc8c78b71221710ce6473f25dee5019a1e46e35bf'
 records = re.findall(r'<script[^>]* id="packet-data"[^>]*>(.*?)</script>', reader.decode('utf-8'), re.S)
 assert len(records) == 1
 packed = json.loads(records[0])
@@ -119,3 +119,6 @@ Select the original four parameter members, all three land-cover scenarios and e
 ## Screen-share comparison layout
 
 The current land-cover and parameter comparison foregrounds scenario and quantity, baseline/reference, alternative/varied, annual change, percentage and units. The scenario and member labels wrap. Original support masks, cell counts and run/artifact descriptors remain complete under Inspect original and in the exact JSON exports. Opening an original record resets horizontal table position; closing it returns focus to its originating control without scrolling to the far-right edge. Current successor pixels and interactions must be observed in the same 4301 desktop/390px receiving course; the earlier version was personally operated by the original call-desk reviewer.
+
+
+The four reading controls use shrinkable grid tracks and full-width selects. They move to two columns below 900px and one column below 560px, so long retained option labels cannot widen the document. A horizontal scroll region remains available for scientific tables; it does not widen the page.

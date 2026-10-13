@@ -2,9 +2,9 @@
 
 ## Destination and source
 
-Join this complete package to the existing completed-native-results entry in the Call Desk and the original Eco application handover. Keep its seven source files byte-identical to the complete edition-4 source bank F0C8R4V2BEH; add the exact original consumer packet, reading data, manifest, START_HERE.md and current owner direction together. Preserve the pre-existing Call Desk reader block `8c8966f5-0df7-48fa-a713-2354136a8bd9`; place the usable standalone/ZIP links beside that original entry.
+Join this complete package to the existing completed-native-results entry in the Call Desk and the original Eco application handover. Keep its seven source files byte-identical to the complete edition-5 source bank F0C8R4V2BEH; add the exact original consumer packet, reading data, manifest, START_HERE.md and current owner direction together. Preserve the pre-existing Call Desk reader block `8c8966f5-0df7-48fa-a713-2354136a8bd9`; place the usable standalone/ZIP links beside that original entry.
 
-The selected packet is 1,066,937 UTF-8 bytes, SHA256 `75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572`. The edition-4 wrapped index is 237,056 bytes, SHA256 `7ba6ed17ff2eac261be022fd5b6f31d56e9cd7f7c1c5a74da4ea33d09c0e3c14`. All twelve native selections, 24 land-cover comparisons, nine parameter comparisons and twelve descriptive support groups are retained. This file is the simulated 1,296-hectare teaching case; keep the separately owned regional Upper Savannah records and model outputs distinct.
+The selected packet is 1,066,937 UTF-8 bytes, SHA256 `75d157b8540900cd97d42f35a1ca48de2f7dd33dc6153eecf7b27fb7eeaea572`. The edition-5 wrapped index is 237,156 bytes, SHA256 `3621552cbccc28edc99dd5994cfff61aebd3b3781d0de17079c99fe7d5017a26`. All twelve native selections, 24 land-cover comparisons, nine parameter comparisons and twelve descriptive support groups are retained. This file is the simulated 1,296-hectare teaching case; keep the separately owned regional Upper Savannah records and model outputs distinct.
 
 ## Existing receiving boundary
 
