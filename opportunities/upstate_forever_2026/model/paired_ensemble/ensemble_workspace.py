@@ -5,9 +5,11 @@ This service consumes its finished outputs and never launches another model.
 Copyright 2026 TokenJunkieLabs.
 """
 from __future__ import annotations
+from copy import deepcopy
 from pathlib import Path
 import json
 from ..common import MODEL_OUTPUTS, selected_models
+from ..native_versions import comparison_versions
 from .ensemble_rasters import analyze, UNITS
 from .ensemble_store import atomic, digest, identifier, now, read, verify
 
@@ -28,8 +30,8 @@ class EnsembleWorkspace:
             raise ValueError('Select distinct supported physical pollutant outputs')
         requested_models = {MODEL_OUTPUTS[pollutant][0] for pollutant in pollutants}
         members, seen_profiles, seen_pairs = [], set(), set()
-        expected_grid = baseline_scenario = alternative_scenario = version = None
-        profile_refs = []
+        expected_grid = baseline_scenario = alternative_scenario = None
+        profile_refs, original_runs = [], {}
         for row in pairs:
             if not isinstance(row, dict):
                 raise ValueError('Each pair must name its original run IDs')
@@ -51,13 +53,15 @@ class EnsembleWorkspace:
                 raise ValueError('Each effect requires the same original reporting/model grid')
             if before['id'] == after['id'] or a['scenario_id'] == b['scenario_id']:
                 raise ValueError('Select a distinct land-cover/management alternative and baseline')
-            current = (b['grid_id'], b['scenario_id'], a['scenario_id'], b['invest_version'])
-            if a['invest_version'] != b['invest_version']:
-                raise ValueError('Paired native model versions differ')
+            current = (b['grid_id'], b['scenario_id'], a['scenario_id'])
             if expected_grid is None:
-                expected_grid, baseline_scenario, alternative_scenario, version = current
-            elif current != (expected_grid, baseline_scenario, alternative_scenario, version):
-                raise ValueError('All members must test the same scenario contrast, grid and native model version')
+                expected_grid, baseline_scenario, alternative_scenario = current
+            elif current != (expected_grid, baseline_scenario, alternative_scenario):
+                raise ValueError('All members must test the same scenario contrast and grid')
+            for run in (before, after):
+                previous = original_runs.setdefault(run['id'], run)
+                if previous != run:
+                    raise ValueError('Original native run changed while selecting paired results')
             profile_id = b['profile_id']
             if profile_id in seen_profiles:
                 raise ValueError('Duplicate profile would implicitly overweight a tested member')
@@ -97,6 +101,17 @@ class EnsembleWorkspace:
         # Deterministic ordering makes repeated caller permutations equivalent.
         members.sort(key=lambda m: m['profile_id'])
         profile_refs.sort(key=lambda p: p['profile_id'])
+        models = tuple(name for name in ('ndr', 'sdr') if name in requested_models)
+        cohort = comparison_versions([original_runs[key] for key in sorted(original_runs)], models)
+        versions = set(cohort['versions'].values())
+        version = next(iter(versions)) if len(versions) == 1 else None
+        runtime_records = {key: {
+            'id': key, 'selection': deepcopy(run['selection']),
+            'runtime': deepcopy(run.get('runtime')),
+            'stages': {name: deepcopy({field: ((run.get('stages') or {}).get(name) or {}).get(field)
+                                     for field in ('runtime', 'completed_at', 'reused_from')})
+                       for name in models},
+        } for key, run in sorted(original_runs.items())}
         grid = self.workspace.get_grid(expected_grid)
         mask = verify(self.workspace.root / 'grids' / expected_grid, grid['files']['reporting_mask'])
         source = {'project_id': self.workspace.project['id'], 'grid_id': expected_grid,
@@ -104,11 +119,16 @@ class EnsembleWorkspace:
                   'baseline_scenario': self.workspace._get('scenarios', baseline_scenario),
                   'alternative_scenario': self.workspace._get('scenarios', alternative_scenario),
                   'invest_version': version, 'profiles': profile_refs}
+        # Uniform cohorts retain their historical scalar identity. Only genuinely
+        # mixed producing stages require an additional per-model identity field.
+        if len(versions) != 1:
+            source['native_versions'] = deepcopy(cohort['versions'])
         return {'schema': 'upstate.ensemble-input/v1',
                 'title': selection.get('title'), 'purpose': selection.get('purpose'),
                 'input_description': selection.get('input_description', 'Completed original InVEST profile-matched scenario runs'),
                 'input_kind': 'original Workspace native run artifacts',
                 'source_references': source, 'members': members, 'pollutants': pollutants,
+                'native_provenance': {'cohort': cohort, 'run_records': runtime_records},
                 'reporting_mask': str(mask), 'quantiles': selection.get('quantiles', [0.1, 0.5, 0.9]),
                 'support': selection.get('support', 'all_pairs'),
                 'planned_member_count': selection.get('planned_member_count', len(members)),
@@ -119,6 +139,7 @@ class EnsembleWorkspace:
         return {'members': len(spec['members']), 'pollutants': spec['pollutants'],
                 'support': spec['support'], 'source_references': spec['source_references'],
                 'quantiles': spec['quantiles'], 'planned_member_count': spec['planned_member_count'],
+                'native_version_provenance': spec['native_provenance']['cohort'],
                 'effect_direction': 'baseline minus alternative; positive = reduction'}
 
     def build(self, selection, *, on_progress=None):
@@ -155,7 +176,24 @@ class EnsembleWorkspace:
         if not result.get('reused'):
             retain_settings(result['id'])
         if result['state'] == 'complete':
-            reports = export_reports(result['directory'])
+            # Preserve physical analysis IDs and complete historical archives. The
+            # exact stage records are a separately hashed, immutable report input.
+            directory = self.root / result['id']
+            selected = read(directory / 'analysis.json')['selection']
+            provenance = {
+                'schema': 'upstate.ensemble-native-provenance/v1',
+                'ensemble_id': result['id'], 'selection_sha256': digest(selected),
+                'grid': selected['grid'], 'members': selected['members'],
+                'source_references_sha256': digest(selected['source_references']),
+                **spec['native_provenance'],
+            }
+            relative = 'native-provenance/' + digest(provenance) + '.json'
+            path = directory / relative
+            path.parent.mkdir(parents=True, exist_ok=True)
+            atomic(path, provenance, immutable=True)
+            from .ensemble_store import fingerprint
+            reports = export_reports(directory, native_provenance={
+                'path': relative, **fingerprint(path)})
             result['reports'] = reports
         atomic(control, {'id': result['id'], 'state': result['state'], 'updated_at': now()})
         return self.describe(result['id'])
