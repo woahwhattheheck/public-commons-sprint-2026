@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 // MIT. Full original request/response files through the configured Measurements owner.
 import {resolve} from 'node:path';
+import {measurementArtifact,copyMeasurementArtifact} from './scientific-files.mjs';
 import {createHash} from 'node:crypto';
 import {MeasurementTransfers,copyTransferFile,exportTransfer} from './transfers.mjs';
 import {readMeasurementConfiguration,validateMeasurementConfiguration,MeasurementClient,copyClientFile,regularFile,saveClientJSON,need,CONNECTIONS_SCHEMA,CONNECTION_SCHEMA} from './client.mjs';
@@ -13,6 +14,8 @@ const commands={
  status:['config','workspace','request-id','out'],
  'file-info':['config','workspace','request-id','part','attempt','out'],
  download:['config','workspace','request-id','part','attempt','out'],
+ 'artifact-info':['config','workspace','request-id','out'],
+ 'artifact-download':['config','workspace','request-id','out'],
  'transfer-inspect':['config','workspace','file','out'],
  'transfer-start':['config','workspace','input','sha256','transfer-id','out'],
  'transfer-run':['config','workspace','transfer-id','run-id','max-chunks','until-complete','out'],
@@ -68,6 +71,8 @@ async function main(){
     else if(command==='read'){need(args['request-id'],'Retain --request-id before the read so its exact first result can be recovered.');result=await client.read(args.workspace,{operation:args.operation,params:args.params?await jsonInput(args.params):{},requestId:args['request-id']});}
     else if(command==='execute'){need(args.retry===undefined||['true','false'].includes(args.retry),'Use --retry true only for supported exact native replay.');result=await client.execute(args.workspace,{input:args.input,expectedSha256:args.sha256,requestId:args['request-id'],retry:args.retry==='true'});}
     else if(command==='status')result=await client.status(args.workspace,args['request-id']);
+    else if(command==='artifact-info'){const {path,directory,...value}=await measurementArtifact(client,args.workspace,{requestId:args['request-id']});result=value;}
+    else if(command==='artifact-download'){result=await copyMeasurementArtifact(client,args.workspace,{requestId:args['request-id']},args.out);console.log(JSON.stringify(result));return;}
     else if(command==='file-info'){const {path,directory,...info}=await client.file(args.workspace,common);result=info;}
     else if(command==='download'){result=await copyClientFile(client,args.workspace,common,args.out);console.log(JSON.stringify(result));return;}
    }

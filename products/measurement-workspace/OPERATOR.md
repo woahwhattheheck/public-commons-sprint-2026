@@ -2,6 +2,10 @@
 
 The installed Measurements product connects the existing scientific workspace to Applications, the command line and the Merchant agent. They operate the same original records, intake editions, reviews, studies, reports and receiving functions. The native Node/SQLite service remains the scientific authority.
 
+## Configured scientific operations
+
+The installed client and Merchant provider expose the original observation-edition, sediment study/model-comparison, Chiques, intake-comparison and flow-comparison families. Follow [SCIENTIFIC_OPERATIONS.md](SCIENTIFIC_OPERATIONS.md) for exact native identities, source-bound previews, save/retirement recovery, full artifacts and independent receiving. `artifact-info` and `artifact-download` materialize the original declared file from a complete successful HTTP response; ordinary `download` always retains the full raw HTTP body.
+
 ## Open the selected workspace
 
 Use the existing Runtime build/install workflow to select the complete Measurements source, then the managed Applications entry to start and open its configured workspace. Keep the source manifest, managed configuration and connection receipt with that installation. The browser opens the original Measurements interface. Its native intake, reconciliation, flow studies, observed benchmarks, source handback and large-file controls remain available.
@@ -147,11 +151,11 @@ A successful whole-workspace receive may replace the initially empty destination
 
 ## Complete large original files
 
-The configured client now retains and transfers full original source files and every member of a native edition through the existing chunked APIs. Use [LARGE_FILE_TRANSFERS.md](LARGE_FILE_TRANSFERS.md) for host-declared `files` aliases, bounded upload/download, exact-run recovery, reviewed native commit, complete `project.zip` receiving and explicit same-directory rebind after the managed instance changes. The original eight tools below remain available; the transfer guide documents eight additive tools. `FILES_COMPLETE` means complete transport, while scientific acceptance and actual recipient operation remain separate recorded outcomes.
+The configured client now retains and transfers full original source files and every member of a native edition through the existing chunked APIs. Use [LARGE_FILE_TRANSFERS.md](LARGE_FILE_TRANSFERS.md) for host-declared `files` aliases, bounded upload/download, exact-run recovery, reviewed native commit, complete `project.zip` receiving and explicit same-directory rebind after the managed instance changes. The original eight tools below remain available; the transfer guide documents eight additive tools; the scientific guide documents two artifact tools. `FILES_COMPLETE` means complete transport, while scientific acceptance and actual recipient operation remain separate recorded outcomes.
 
 ## Merchant agent tools
 
-The configured Merchant operator exposes eight tools:
+The configured Merchant operator retains these eight base tools. The transfer course adds eight, and the scientific course adds two artifact tools (eighteen total):
 
 - `merchant_measurement_workspaces`: inspect configured workspace aliases and available operations.
 - `merchant_measurement_input_inspect`: inspect the complete configured input and obtain its digest.
