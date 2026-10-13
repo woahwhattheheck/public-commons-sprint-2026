@@ -29,6 +29,11 @@ class AnnualReferences:
         self.operator, self.Fault = operator, fault
         self.sources = SourcePreparation(operator, fault, source_roots)
 
+    def _team_administrator(self):
+        team = getattr(self.operator, "team", None)
+        context = team.current() if team else None
+        return not context or context["principal"]["administrator"]
+
     def _fail(self, message, status=422):
         raise self.Fault("ANNUAL_REFERENCE", message, status)
 
@@ -136,13 +141,16 @@ class AnnualReferences:
                                     "available": key == "f7dn436b" or
                                         (APPLICATION / "source_tools/sparrow_reference.py").is_file()}
                                    for key, value in SOURCE_EDITIONS.items()],
-                "source_roots": [{"id": key, "label": str(path)}
-                                 for key, path in self.sources.roots.items()],
+                "source_roots": ([{"id": key, "label": str(path)}
+                                  for key, path in self.sources.roots.items()]
+                                 if self._team_administrator() else []),
                 "uploads": [
                     {"id": row["id"], "filename": row["filename"], "bytes": row["bytes"]}
                     for path in sorted((self.operator.root / "uploads").glob("*.json"))
                     for row in [read_json(path)]
                     if row.get("bytes") in (781822, 519872)
+                    and (getattr(self.operator, "team", None) is None
+                         or self.operator.team.can_resource("upload", row["id"]))
                 ],
                 "operations": [self._summary(row) for row in self._all(workspace)],
                 "dictionary_available": DICTIONARY.is_file(),
