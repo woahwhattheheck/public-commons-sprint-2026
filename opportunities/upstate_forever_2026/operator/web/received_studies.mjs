@@ -1,6 +1,7 @@
 import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';
 import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
 import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
+import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
@@ -94,6 +95,7 @@ export function attachReceivedStudies(host) {
     }
     html+=receivedGaugeHTML(value,!!disabled);
     html+=receivedNativeEnsembleHTML(value,!!disabled);
+    html+=receivedComparabilityHTML(value,!!disabled);
     html+=receivedObservedLandcoverHTML(value,!!disabled);
     return html+'</section>';
   }
@@ -126,6 +128,14 @@ export function attachReceivedStudies(host) {
       if(!value||value.id!==selected||value.workspace_key!==ws)
         throw Error('Reopen the original received Study.');
       return await openReceivedObservedLandcover(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action?.startsWith('cohort-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedComparability(host,value,target,{
         workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
       });
     }

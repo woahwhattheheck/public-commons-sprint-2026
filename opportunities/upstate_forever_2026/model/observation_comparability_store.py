@@ -220,6 +220,18 @@ def build(workspace, value):
             _require(len(generated_inputs) == len(generated["original_inputs"])
                      and generated_inputs == identity["binding"]["originals"],
                      "The generated source changed an original publisher response or companion edition")
+            # Bind the native editor edition in its source manifest before any
+            # complete ZIP/build/import publication. Existing saved editions keep
+            # their original manifest and source collection unchanged.
+            manifest_path = output / "model-sources.json"
+            manifest = read_json(manifest_path)
+            _require(manifest.get("schema") == "upstate.sources/v1"
+                     and len(manifest.get("entries", [])) == 1,
+                     "Retain the original single-source comparison manifest")
+            manifest["entries"][0].setdefault("metadata", {})["native_comparability"] = {
+                "schema": "upstate.observation-comparability-origin/v1",
+                "project_id": workspace.project["id"], "selection_id": key}
+            atomic_json(manifest_path, manifest)
             # Retain complete source and operating instructions with the original outputs.
             shutil.copyfile(__file__, output / "producer" / "observation_comparability_store.py")
             guide = Path(calculation.__file__).with_name("OBSERVATION_COMPARABILITY.md")
