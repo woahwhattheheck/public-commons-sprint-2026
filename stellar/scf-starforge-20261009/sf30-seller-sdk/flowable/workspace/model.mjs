@@ -4,7 +4,10 @@ import {normalizeFlowableConnection,planFlowableRequest,createFlowableTransport,
   executeFlowableRequest,captureFlowablePortfolio,readFlowableRequestState,reconcileFlowableRequest} from '../native.mjs';
 import {FLOWABLE_DMN_COLLECTIONS as DECISION_COLLECTIONS,planFlowableDmnRequest,createFlowableDmnTransport,
   executeFlowableDmnRequest,captureFlowableDmnPortfolio,readFlowableDmnRequestState,reconcileFlowableDmnRequest} from '../dmn-native.mjs';
-import {FLOWABLE_OPERATION_KINDS} from './actions.mjs';
+import {FLOWABLE_CMMN_COLLECTIONS as CASE_COLLECTIONS,FLOWABLE_CMMN_ACTION_GROUPS as CASE_ACTIONS,
+  planFlowableCmmnRequest,createFlowableCmmnTransport,executeFlowableCmmnRequest,captureFlowableCmmnPortfolio,
+  readFlowableCmmnRequestState,reconcileFlowableCmmnRequest} from '../cmmn-native.mjs';
+import {FLOWABLE_OPERATION_KINDS,flowableCaseInstanceId} from './actions.mjs';
 import {buildFlowableReview} from './review.mjs';
 import {openFlowableStore,SCHEMA,KINDS,textHash,field,recordId,requestId,idFor} from './store.mjs';
 import {need,digest,now} from '../../../distribution/runtime-workspace/storage.mjs';
@@ -17,13 +20,21 @@ const PROCESS_NATIVE=Object.freeze({plan:planFlowableRequest,transport:createFlo
   capture:captureFlowablePortfolio,read:readFlowableRequestState,reconcile:reconcileFlowableRequest});
 const DECISION_NATIVE=Object.freeze({plan:planFlowableDmnRequest,transport:createFlowableDmnTransport,execute:executeFlowableDmnRequest,
   capture:captureFlowableDmnPortfolio,read:readFlowableDmnRequestState,reconcile:reconcileFlowableDmnRequest});
-const adapterFor=kind=>DECISION_KINDS.has(kind)?DECISION_NATIVE:PROCESS_NATIVE;
+const CASE_KINDS=new Set(['casePortfolio',...Object.keys(CASE_ACTIONS)]);
+const CASE_NATIVE=Object.freeze({plan:planFlowableCmmnRequest,transport:createFlowableCmmnTransport,
+  execute:executeFlowableCmmnRequest,capture:captureFlowableCmmnPortfolio,
+  read:readFlowableCmmnRequestState,reconcile:reconcileFlowableCmmnRequest});
+const adapterFor=kind=>CASE_KINDS.has(kind)?CASE_NATIVE:DECISION_KINDS.has(kind)?DECISION_NATIVE:PROCESS_NATIVE;
 const COLLECTIONS=['deployments','definitions','processes','tasks','historicProcesses',
   'historicTasks','historicActivities','historicVariables'];
+const collectionsFor=kind=>kind==='casePortfolio'?CASE_COLLECTIONS:kind==='decisionPortfolio'?DECISION_COLLECTIONS:COLLECTIONS;
+const portfolioMethods={portfolio:'capturePortfolio',decisionPortfolio:'captureDecisionPortfolio',casePortfolio:'captureCasePortfolio'};
+const portfolioLabels={portfolio:'Engine portfolio',decisionPortfolio:'Decision portfolio',casePortfolio:'Case portfolio'};
 const READABLE=new Set(['view','listRecords','getRecord','readPortfolio','readDefinition','readSource',
-  'readReview','readDecisionPortfolio','readDecisionDefinition','readDecisionExecution','deliveryFile','sourceFile']);
+  'readReview','readDecisionPortfolio','readDecisionDefinition','readDecisionExecution',
+  'readCasePortfolio','readCaseDefinition','readCaseInstance','deliveryFile','sourceFile']);
 const EXPECTED_ACTIONS={release:['deploy'],process:['start'],task:['claim','complete','delegate','resolve'],migration:['migrate'],
-  decisionRelease:['deploy'],decisionEvaluation:['evaluate']};
+  decisionRelease:['deploy'],decisionEvaluation:['evaluate'],...CASE_ACTIONS};
 const recordRef=record=>({kind:record.kind,id:record.id,revision:record.revision,sha256:record.sha256});
 function errorInfo(error){
   return{code:typeof error?.code==='string'&&/^[A-Z][A-Z0-9_]{0,120}$/.test(error.code)?error.code:'FLOWABLE_OPERATION_FAILED',
@@ -65,6 +76,11 @@ function nativeIdentity(state){
 }
 function operationIdentity(kind,state){
   const native=nativeIdentity(state);
+  if(CASE_KINDS.has(kind)){
+    for(const key of CASE_COLLECTIONS)if(!Object.hasOwn(native,key))
+      native[key]=(state[key]??[]).map(canonical).sort((a,b)=>JSON.stringify(a).localeCompare(JSON.stringify(b)));
+    return native;
+  }
   if(!DECISION_KINDS.has(kind))return native;
   // The selected definition and its resources own evaluation semantics. Concurrent evaluations
   // may add history without changing that selection; retain them in the original state, not its preimage.
@@ -72,8 +88,10 @@ function operationIdentity(kind,state){
     definitions:native.definitions,deployments:native.deployments,
     resources:native.resources.filter(resource=>resource.kind==='dmn-definition-resource')};
 }
-const summaryOf=state=>Object.fromEntries(['definitions','deployments','processes','historicProcesses','tasks',
-  'historicTasks','activities','historicActivities','historicExecutions','resources'].map(key=>[key,(state?.[key]??[]).length]));
+const SUMMARY_COLLECTIONS=['definitions','deployments','processes','historicProcesses','tasks',
+  'historicTasks','activities','historicActivities','historicExecutions','resources'];
+const summaryOf=state=>Object.fromEntries([...new Set([...SUMMARY_COLLECTIONS,
+  ...CASE_COLLECTIONS.filter(key=>Array.isArray(state?.[key]))])].map(key=>[key,(state?.[key]??[]).length]));
 
 export async function openFlowableWorkspace({directory,connections=[],environment=process.env,fetch=globalThis.fetch,
   signal,timeoutMs=120000,maximumResponseBytes=64*1024*1024}={}){
@@ -168,7 +186,9 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       counts:Object.fromEntries(KINDS.map(kind=>[kind,heads.filter(item=>item.kind===kind).length])),closing,
       capabilities:{engine:'Flowable REST',deployments:'original-bpmn-or-archive',humanTasks:['claim','complete','delegate','resolve'],
         migration:'native-process-instance-validation',history:'original-engine',delivery:'complete-source-and-history',
-        decisions:{engine:'Flowable DMN REST',releases:'original-dmn-resource',evaluation:'native-decision-key-selection',history:'native-execution-audit'}}};
+        decisions:{engine:'Flowable DMN REST',releases:'original-dmn-resource',evaluation:'native-decision-key-selection',history:'native-execution-audit'},
+        cases:{engine:'Flowable CMMN REST',releases:'original-cmmn-resource',operations:CASE_ACTIONS,
+          collections:CASE_COLLECTIONS,history:'native-case-and-plan-item-history'}}};
   }
   async function listRecords(input={}){
     const result=await store.list(input);return{...result,items:result.items.map(visible)};
@@ -181,7 +201,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       if(record.value.validation)output.validation=await responseSummary(record.value.validation);
       if(record.value.response)output.response=await responseSummary(record.value.response);
     }
-    if(['portfolio','decisionPortfolio'].includes(record.kind)&&record.value.inventory){
+    if(Object.hasOwn(portfolioMethods,record.kind)&&record.value.inventory){
       const inventory=await store.getJSON(record.value.inventory);
       output.portfolio={startedAt:inventory.startedAt,completedAt:inventory.completedAt,
         collections:Object.fromEntries(Object.entries(inventory.collections??{}).map(([key,value])=>[key,
@@ -202,7 +222,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
     return{record,inventory:await store.getJSON(record.value.inventory)};
   }
   async function readCapturedPortfolio(kind,input){
-    const collections=kind==='decisionPortfolio'?DECISION_COLLECTIONS:COLLECTIONS;
+    const collections=collectionsFor(kind);
     need(collections.includes(input.collection),'FLOWABLE_COLLECTION_INVALID');
     const{record,inventory}=await portfolioRecord(input.id,input.revision,kind);
     const collection=inventory.collections[input.collection],selected=page(input);
@@ -214,6 +234,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   }
   const readPortfolio=input=>readCapturedPortfolio('portfolio',input);
   const readDecisionPortfolio=input=>readCapturedPortfolio('decisionPortfolio',input);
+  const readCasePortfolio=input=>readCapturedPortfolio('casePortfolio',input);
   async function readCapturedDefinition(kind,input){
     const{record,inventory}=await portfolioRecord(input.portfolioId,input.revision,kind);
     const definition=inventory.collections.definitions.items.find(item=>item.id===input.definitionId);
@@ -229,6 +250,30 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   }
   const readDefinition=input=>readCapturedDefinition('portfolio',input);
   const readDecisionDefinition=input=>readCapturedDefinition('decisionPortfolio',input);
+  const readCaseDefinition=input=>readCapturedDefinition('casePortfolio',input);
+  async function readCaseInstance(input){
+    const{record,inventory}=await portfolioRecord(input.portfolioId,input.revision,'casePortfolio');
+    const id=field(input.caseInstanceId,2000),caseInstance=inventory.collections.cases?.items?.find(item=>item.id===id)??null,
+      historicCase=inventory.collections.historicCases?.items?.find(item=>item.id===id)??null;
+    need(caseInstance||historicCase,'FLOWABLE_CASE_NOT_IN_PORTFOLIO',undefined,404);
+    const related={};
+    for(const key of CASE_COLLECTIONS){
+      if(['deployments','definitions','cases','historicCases'].includes(key))continue;
+      related[key]=(inventory.collections[key]?.items??[]).filter(item=>flowableCaseInstanceId(item)===id);
+    }
+    const definitionIds=[...new Set([caseInstance?.caseDefinitionId,historicCase?.caseDefinitionId].filter(Boolean))];
+    const definitions=inventory.collections.definitions.items.filter(item=>definitionIds.includes(item.id));
+    const resources=[];
+    for(const definition of definitions){
+      const original=await readCapturedDefinition('casePortfolio',{portfolioId:record.id,revision:record.revision,definitionId:definition.id});
+      for(const resource of original.resources)if(!resources.some(item=>item.deploymentId===resource.deploymentId&&item.filename===resource.filename))resources.push(resource);
+    }
+    for(const item of inventory.resources??[]){
+      if(item.kind==='cmmn-variable-data'&&item.caseInstanceId===id)
+        resources.push(await hydrateResource(item));
+    }
+    return{portfolio:recordRef(record),caseInstance,historicCase,definitions,related,resources};
+  }
   async function readDecisionExecution(input){
     const{record,inventory}=await portfolioRecord(input.portfolioId,input.revision,'decisionPortfolio');
     const execution=inventory.collections.historicExecutions.items.find(item=>item.id===input.executionId);
@@ -261,8 +306,8 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       state:'SAVED'},{id,expectedRevision:input.expectedRevision??0});
   }
   async function captureNativePortfolio(kind,input,operationSignal){
-    const decision=kind==='decisionPortfolio',method=decision?'captureDecisionPortfolio':'capturePortfolio';
-    const native=adapterFor(kind),collections=decision?DECISION_COLLECTIONS:COLLECTIONS;
+    const method=portfolioMethods[kind];
+    const native=adapterFor(kind),collections=collectionsFor(kind);
     const{prior}=await replay(input,method,true);
     if(prior&&!['CAPTURING','INTERRUPTED'].includes(prior.value.phase))return prior;
     let record=prior,connection;
@@ -272,7 +317,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
         captureInput:prior.value.captureInput??await store.putJSON(retainedInput(input)),failure:null,resumedAt:now()});
     }else{
       const selected=await lookupConnection(input.connectionId);connection=selected.connection;
-      record=await initial(kind,input,method,{label:field(input.label??(decision?'Decision portfolio':'Engine portfolio'),300,true),
+      record=await initial(kind,input,method,{label:field(input.label??portfolioLabels[kind],300,true),
         connectionId:selected.record.id,configurationSha256:selected.record.value.configurationSha256,connection,
         captureInput:await store.putJSON(retainedInput(input)),phase:'CAPTURING',state:'CAPTURING',startedAt:now()});
     }
@@ -289,6 +334,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
   }
   const capturePortfolio=(input,operationSignal)=>captureNativePortfolio('portfolio',input,operationSignal);
   const captureDecisionPortfolio=(input,operationSignal)=>captureNativePortfolio('decisionPortfolio',input,operationSignal);
+  const captureCasePortfolio=(input,operationSignal)=>captureNativePortfolio('casePortfolio',input,operationSignal);
   async function prepareOperation(kind,input,operationSignal){
     const method='prepare'+kind[0].toUpperCase()+kind.slice(1),{prior}=await replay(input,method,true);
     const native=adapterFor(kind);let record=prior,connection,selection,plan;
@@ -362,7 +408,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       const current=await native.read(client,plan,await sinks(record.id));
       if(textHash(operationIdentity(kind,current))!==record.value.preimageSha256){
         return store.revise(record,{...record.value,phase:'STALE',state:'STALE',preflight:await store.putJSON(current),
-          failure:{code:'FLOWABLE_PREIMAGE_CHANGED',message:'The selected native definition, process, task or decision changed after preparation. Prepare a new review of its current state.',at:now()}});
+          failure:{code:'FLOWABLE_PREIMAGE_CHANGED',message:'The selected native definition, process, case, work item, task or decision changed after preparation. Prepare a new review of its current state.',at:now()}});
       }
       // Migration validation is native and current at dispatch, using the original complete document.
       if(kind==='migration'){
@@ -449,7 +495,8 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
       mediaType:input.reference.mediaType??'application/octet-stream',filename:'flowable-source-'+input.reference.sha256+'.source'};
   }
   const methods={view,listRecords,getRecord,readPortfolio,readDefinition,readDecisionPortfolio,readDecisionDefinition,
-    readSource,readReview,readDecisionExecution,saveConnection,capturePortfolio,captureDecisionPortfolio,
+    readCasePortfolio,readCaseDefinition,readCaseInstance,
+    readSource,readReview,readDecisionExecution,saveConnection,capturePortfolio,captureDecisionPortfolio,captureCasePortfolio,
     reconcileOperation,exportWorkspace,inspectDelivery,adoptDelivery,deliveryFile,sourceFile};
   for(const kind of OPERATION_KINDS){
     const name=kind[0].toUpperCase()+kind.slice(1);
@@ -473,7 +520,7 @@ export async function openFlowableWorkspace({directory,connections=[],environmen
         expectedRevision:received.value.adoptExpectedRevision,manifestSha256:received.value.manifestSha256});
     }
     for(const head of await store.heads()){
-      if(!['portfolio','decisionPortfolio',...OPERATION_KINDS].includes(head.kind))continue;
+      if(![...Object.keys(portfolioMethods),...OPERATION_KINDS].includes(head.kind))continue;
       const record=await store.get(head.kind,head.id);
       if(['CAPTURING','PREPARING'].includes(record.value.phase))await retainFailure(record,
         {code:'FLOWABLE_PROCESS_INTERRUPTED',message:'The prior process stopped during native source capture. Its retained originals are available.'},'INTERRUPTED');
