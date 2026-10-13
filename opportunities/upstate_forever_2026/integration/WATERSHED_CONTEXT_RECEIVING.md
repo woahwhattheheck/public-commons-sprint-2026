@@ -217,3 +217,77 @@ The observed-evidence fragment declares the root `landcover_observation_profiles
 The consumer fragment follows that direct source manifest. It does not require installation of the raster/WBD producer components to consume the already-completed profile edition. Full current application exports retain their original producer components through their own declarations.
 
 After installation, reopen the original operator with the current application, confirm Regional Watersheds extension version 1.7.0, and follow the populated visual/interactive inspection above. At a narrow viewport, operate the ordinary-sized evidence checkbox and expand both source-identity details; the complete source identifiers must wrap within the desk. Then run the same existing-workspace receiving course with `--include-observed-evidence`.
+
+## Original watershed map and portable geographic selections
+
+The Regional Watersheds desk uses the maintained Water Context map renderer with
+the original 217 profile polygons. All 273,049 original vertices remain in
+EPSG:3857. The map offers the seven source themes and every other numeric profile
+field, for 29 choices, with the source's own units and interpretation. Grayscale
+ranges stay fixed to the full source edition as the selection changes.
+
+Table filters initially select their matching watersheds. Clicking a polygon
+starts a picked selection and opens its original attributes; subsequent clicks
+add or remove polygons. **Use matching table watersheds** restores the table
+scope. **Fit selected and upstream** frames the selected polygons and their
+distinct contributing union. Selected boundaries are solid, additional upstream
+contributors are dashed, and the other original model watersheds remain visible.
+The union comes from the saved report's retained original network or its exactly
+bound completed connectivity edition.
+
+The map inclusion checkbox controls whether the current export retains its
+geography. **Export map selection** uses the same export operation as the other
+Regional Watersheds selections. The output includes complete selected polygons,
+the unique contributing polygons, the full original map, its original Esri
+geometry, profile CSV, field meanings and executable rebuild sources. The saved
+map context binds the actual map manifest, polygon and profile identities.
+Map-only exports retain the profile attributes embedded in the original map;
+the observed-evidence checkbox separately adds its full annual/station context.
+
+Reopening a saved export uses that export's retained map source even if the
+currently installed map edition has changed. Editing and re-exporting its picked
+scope uses the same retained edition. With both evidence and map included, the
+operator requires the same original profile and domain identities.
+
+### Source installation and transfer
+
+The existing installer includes the map helper and shared browser renderer. It
+reads the complete original
+`observations/watershed_profile_overlay_20261013/model-sources.json` edition
+through the same source-manifest resolver. Selected application assemblies
+declare this source through
+`integration/component_fragments/watershed-geographic-selection.json`.
+
+Exports retain the original directory structure beneath
+`watershed-map-sources/observations/`. The sibling
+`landcover_observation_profiles_20261013/profiles_core.mjs` parser is bound to
+the original overlay recipe so its existing rebuild command works after transfer:
+
+```sh
+node RETAINED_EXPORT/watershed-map-sources/observations/watershed_profile_overlay_20261013/rebuild.mjs \
+  --source-dir RETAINED_EXPORT/watershed-map-sources/observations/watershed_profile_overlay_20261013 \
+  --output NEW_OWNED_OUTPUT/watershed-profiles.geojson
+```
+
+The existing native receiving driver accepts `--include-original-map` alongside
+`--workspace` and `--include-observed-evidence`. It downloads the original map
+through the application's normal file ticket, exports the selected and unique
+contributing polygons, compares every complete feature against the original,
+transfers the same Workspace, and reopens the saved map from its retained source.
+
+### Inspect the actual populated map
+
+Open the original 217-watershed report in the running application. Inspect normal
+and narrow widths, the actual numeric selector, its values and units, and the
+visible selected/upstream legend. Change among a percentage, a signed net-change
+field and a local station-count field. Confirm that real zero and negative values
+remain distinguishable and that the scale remains stable when changing scope.
+Operate pan, zoom, fit, polygon click and keyboard selection; refresh the report
+and confirm that a picked selection survives an ordinary task refresh.
+
+Use the two ARJWS anchor HUCs `030601010703` and `030601010704` for a concrete
+scope inspection: two selected polygons and four distinct contributing polygons.
+The PRWD anchors `030601020502` and `030601020507` give two selected and 32
+distinct contributing polygons. Open the saved export and its original geometry
+downloads, then reopen the transferred Workspace and operate that same map.
+Inspect the exact outgoing brief HTML/PDF and source downloads before delivery.
