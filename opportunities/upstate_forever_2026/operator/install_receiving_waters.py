@@ -65,6 +65,17 @@ MONITORING_REQUIRED = (
     "operator/RECEIVING_WATER_MONITORING.md",
 )
 MONITORING_REPORT_REQUIRED = (
+    "model/monitoring_comparison_report.py",
+    "model/monitoring_frontier_comparison.py",
+    "model/monitoring_packet.py",
+    "model/monitoring_observed_context.py",
+    "model/MONITORING_BUDGET_COMPARISON.md",
+    "operator/MONITORING_COMPARISON_REPORT.md",
+    "operator/MONITORING_BUDGET_CHOICES.md",
+    "operator/web/monitoring-frontiers.mjs",
+    "operator/web/monitoring-frontiers.css",
+    "integration/component_fragments/monitoring-budget-comparison.json",
+    "integration/component_fragments/monitoring-comparison-report.json",
     "model/monitoring_report_source.py",
     "model/monitoring_report_cli.py",
     "model/MONITORING_REPORT_SOURCE.md",

@@ -1,4 +1,4 @@
-"""Retain a saved native monitoring design/campaign as an ordered report source.
+"""Retain saved native Monitoring plans, campaigns and budget comparisons as report sources.
 
 The original exporter owns the plan, calendar, station bindings and event history.
 This producer packages those saved decisions; it never solves or revises a plan.
@@ -30,18 +30,22 @@ def _selection(value):
     if not isinstance(value, dict):
         raise ValueError("Choose a saved monitoring design or campaign revision")
     value = copy.deepcopy(value)
-    if set(value) - {"title", "plan_id", "campaign_id", "expected_revision_id", "delivery_id"}:
+    if set(value) - {"title", "plan_id", "campaign_id", "comparison_id", "expected_revision_id", "delivery_id"}:
         raise ValueError("Unknown monitoring report selection")
-    if bool(value.get("plan_id")) == bool(value.get("campaign_id")):
-        raise ValueError("Choose exactly one plan_id or campaign_id")
-    if value.get("plan_id"):
+    if sum(bool(value.get(key)) for key in ("plan_id", "campaign_id", "comparison_id")) != 1:
+        raise ValueError("Choose exactly one plan_id, campaign_id or comparison_id")
+    if value.get("comparison_id"):
+        value["comparison_id"] = identifier(value["comparison_id"])
+        if value.get("expected_revision_id") is not None:
+            raise ValueError("A saved comparison does not take a campaign revision")
+    elif value.get("plan_id"):
         value["plan_id"] = identifier(value["plan_id"])
         if value.get("expected_revision_id") is not None:
             raise ValueError("A plan report does not take a campaign revision")
     else:
         value["campaign_id"] = identifier(value["campaign_id"])
         value["expected_revision_id"] = identifier(value.get("expected_revision_id"))
-    for key in ("plan_id", "campaign_id", "expected_revision_id"):
+    for key in ("plan_id", "campaign_id", "comparison_id", "expected_revision_id"):
         if value.get(key) is None:
             value.pop(key, None)
     if "title" in value:
@@ -498,6 +502,9 @@ def prepare(workspace, selection, *, progress=None):
             raise ValueError("Selected delivery has no original saved selection")
     identity = {"edition": EDITION, "workspace_id": workspace.project["id"],
                 "selection": selected, "producer_sha256": file_digest(Path(__file__))}
+    if selected.get("comparison_id"):
+        from . import monitoring_comparison_report
+        identity["comparison_producer_sha256"] = file_digest(Path(monitoring_comparison_report.__file__))
     key = digest(identity)
     directory = workspace.root / FOLDER / key
     def report(stage):
@@ -517,28 +524,45 @@ def prepare(workspace, selection, *, progress=None):
             atomic_json(intent_path, intent, immutable=True)
         prepared = directory / "prepared.json"
         if not prepared.exists():
-            report("capture-native-export")
-            context = _capture(workspace, directory, selected)
-            report("retain-original-source-history")
-            records = _history_sources(workspace, directory, context)
-            atomic_json(directory / "history-records.json", records, immutable=True)
-            bridges = _bridge_sources(workspace, directory, context, intent)
-            atomic_bytes(directory / "monitoring-map.svg", _map_svg(context["network"], context["plan"]), immutable=True)
-            title = selected.get("title") or (context["campaign"]["title"] if context["campaign"] else context["plan"]["title"])
+            if selected.get("comparison_id"):
+                from .monitoring_comparison_report import capture
+                captured = capture(workspace, directory, selected, intent, report)
+                title, summary, records = captured["title"], captured["summary"], captured["records"]
+                edition, kind = captured["edition"], captured["report_context_kind"]
+                sections, source_links = captured["sections"], captured["source_links"]
+            else:
+                report("capture-native-export")
+                context = _capture(workspace, directory, selected)
+                report("retain-original-source-history")
+                records = _history_sources(workspace, directory, context)
+                atomic_json(directory / "history-records.json", records, immutable=True)
+                bridges = _bridge_sources(workspace, directory, context, intent)
+                atomic_bytes(directory / "monitoring-map.svg", _map_svg(context["network"], context["plan"]), immutable=True)
+                title = selected.get("title") or (context["campaign"]["title"] if context["campaign"] else context["plan"]["title"])
+                plan, network, campaign = context["plan"], context["network"], context["campaign"]
+                summary = {"plan_id": plan["id"], "network_id": network["id"],
+                           "campaign_id": campaign["campaign_id"] if campaign else None,
+                           "revision_id": campaign["id"] if campaign else None, "status": plan["status"],
+                           "selected_catchments": len(plan["selected_ids"]), "catchments": len(network["nodes"]),
+                           "stations": len(network["stations"]), "visits": len(plan["calendar"]["visits"]),
+                           "events": len(context["events"]), "weight_basis": plan["weight_basis"],
+                           "coverage": plan["coverage"], "cost": plan["cost"],
+                           "receiving_water_bridge_ids": [b["id"] for b in bridges]}
+                edition, kind = EDITION, "monitoring-design-and-field-history"
+                sections = _sections(context, bridges)
+                source_links = ["native-monitoring-bundle.zip", "native/manifest.json",
+                                "native/plan.json", "native/network.json", "native/events.json",
+                                "native/calendar.csv", "native/catchments.geojson",
+                                "native/source-stations.geojson", "monitoring-map.svg",
+                                "history-records.json", "bridge-selection.json"]
             companions = [describe_file(directory, path) for path in sorted(directory.rglob("*"))
                           if path.is_file() and not path.name.startswith(".")
                           and not (path.parent == directory and path.name in
                                    {"intent.json", "prepared.json", "report.json", "sources.json", "report-source.json"})]
             from . import observed_context
-            recipe = {"schema": observed_context.SCHEMA, "title": title, "edition": EDITION,
-                      "report_context_kind": "monitoring-design-and-field-history",
-                      "project_id": workspace.project["id"], "inputs": companions,
-                      "sections": _sections(context, bridges), "figures": [],
-                      "source_links": ["native-monitoring-bundle.zip", "native/manifest.json",
-                                       "native/plan.json", "native/network.json", "native/events.json",
-                                       "native/calendar.csv", "native/catchments.geojson",
-                                       "native/source-stations.geojson", "monitoring-map.svg",
-                                       "history-records.json", "bridge-selection.json"]}
+            recipe = {"schema": observed_context.SCHEMA, "title": title, "edition": edition,
+                      "report_context_kind": kind, "project_id": workspace.project["id"],
+                      "inputs": companions, "sections": sections, "figures": [], "source_links": source_links}
             atomic_json(directory / "report-source.json", recipe, immutable=True)
             entry = {"id": SOURCE_ID, "kind": "document", "title": title,
                      "uri": "urn:upstate:monitoring-report:" + workspace.project["id"] + ":" + key,
@@ -548,15 +572,6 @@ def prepare(workspace, selection, *, progress=None):
                      "metadata": {"report_schema": observed_context.SCHEMA, "planning_weights_are_measurements": False}}
             atomic_json(directory / "sources.json", {"schema": "upstate.sources/v1", "title": title,
                         "captured_at": intent["created_at"], "entries": [entry]}, immutable=True)
-            plan, network, campaign = context["plan"], context["network"], context["campaign"]
-            summary = {"plan_id": plan["id"], "network_id": network["id"],
-                       "campaign_id": campaign["campaign_id"] if campaign else None,
-                       "revision_id": campaign["id"] if campaign else None, "status": plan["status"],
-                       "selected_catchments": len(plan["selected_ids"]), "catchments": len(network["nodes"]),
-                       "stations": len(network["stations"]), "visits": len(plan["calendar"]["visits"]),
-                       "events": len(context["events"]), "weight_basis": plan["weight_basis"],
-                       "coverage": plan["coverage"], "cost": plan["cost"],
-                       "receiving_water_bridge_ids": [b["id"] for b in bridges]}
             atomic_json(prepared, {"title": title, "summary": summary, "records": records}, immutable=True)
         ready = read_json(prepared)
         report("import-original-report-source")
@@ -587,17 +602,21 @@ def inspect(workspace, key, *, verify=True):
     if verify:
         for item in record["files"]:
             verify_file(workspace.root, item)
-        context = _bundle(directory / "native-monitoring-bundle.zip", record["selection"])
-        from .monitoring_workspace import MonitoringWorkspace
-        api = MonitoringWorkspace(workspace)
-        for item in read_json(directory / "history-records.json"):
-            value = api.get(item["kind"], item["id"])
-            if "path" in item and value != read_json(directory / item["path"]):
-                raise ValueError("Monitoring history source differs from its immutable original")
-        if api.get("plans", context["plan"]["id"]) != context["plan"]:
-            raise ValueError("Saved monitoring report plan changed")
-        if api.get("networks", context["network"]["id"]) != context["network"]:
-            raise ValueError("Saved monitoring report network changed")
+        if record["selection"].get("comparison_id"):
+            from .monitoring_comparison_report import verify as verify_comparison
+            verify_comparison(workspace, directory, record["selection"])
+        else:
+            context = _bundle(directory / "native-monitoring-bundle.zip", record["selection"])
+            from .monitoring_workspace import MonitoringWorkspace
+            api = MonitoringWorkspace(workspace)
+            for item in read_json(directory / "history-records.json"):
+                value = api.get(item["kind"], item["id"])
+                if "path" in item and value != read_json(directory / item["path"]):
+                    raise ValueError("Monitoring history source differs from its immutable original")
+            if api.get("plans", context["plan"]["id"]) != context["plan"]:
+                raise ValueError("Saved monitoring report plan changed")
+            if api.get("networks", context["network"]["id"]) != context["network"]:
+                raise ValueError("Saved monitoring report network changed")
         from . import observed_context
         observed_context.bind(workspace, {"observed_context_sources": [record["source"]]})
     return record
