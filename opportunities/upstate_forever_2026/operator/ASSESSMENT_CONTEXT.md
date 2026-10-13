@@ -449,3 +449,27 @@ Report context edition 1.1.0 uses these human-readable scientific sections. Prep
 In the existing populated receiving course, open both publisher and computed selections and inspect their actual HTML/PDF and filtered CSV. Read a differing original record such as the July 2026 RS-06190 record alongside its separate 2024 cause/use record. Confirm the compared-source caption and original watershed labels are readable at screenshare and narrow widths, inspect the actual rendered pixels, operate CSV/source downloads, and reopen the same scientific report and selected Study. Retain complete original source attachments and each independent receiving identity.
 
 Within each assessment report, edition and cause/use tables follow the saved inventory selection order. The native assessment-group dictionaries keep their original IDs and contents; presentation ordering follows their stable original row IDs. Ordered scientific studies from an existing delivery retain their separate requested reading order in the report composer.
+
+
+### Prepare a current report after an application upgrade
+
+Preparing a saved assessment or parcel context reads the current report edition
+from the operator before submitting its original queue action. That edition is
+part of the request identity. After a report formatter update, the same saved
+context can therefore produce the current report while earlier completed tasks,
+source editions and downloads remain available.
+
+The context's **Open scientific report** controls show the completed preparation
+for the current report edition and selected saved delivery. Open an earlier report
+explicitly from its original task to retain that report's source selection and
+title. Changing the source edition keeps the original contact details and exact
+ordered delivery sources.
+
+The catalogue returns `report_version`; new `assessment.context.report`
+payloads include that exact value. The provider rejects an explicitly different
+version before writing a report source, so a page loaded before an upgrade can
+reload its controls. Retained legacy tasks without this field remain readable
+and resumable. The result's existing `version` identifies its report source;
+station and assessment context IDs remain unchanged.
+
+The context desk shows the latest 15 assessment operations in the operator's original newest-first order. Earlier retained operations remain accessible through the complete Operations panel.
