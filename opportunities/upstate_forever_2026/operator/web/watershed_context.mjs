@@ -30,6 +30,65 @@ export function filterWatersheds(rows, filters = {}) {
   );
 }
 
+function watershedHucLink(huc12, domain) {
+  const key = String(huc12 ?? '');
+  return domain.has(key)
+    ? '<button type="button" data-wc-huc="' + esc(key) + '">' + esc(key) + '</button>'
+    : '<span>' + esc(key) + ' · outside model domain</span>';
+}
+
+export function watershedDownstreamHtml(row, domainHuc12s = []) {
+  const domain = new Set(domainHuc12s);
+  if (row.downstream_huc12) return watershedHucLink(row.downstream_huc12, domain);
+  const state = row.network?.downstream_state;
+  if (state === 'terminal') return 'Terminal outlet in the original network';
+  if (state === 'unknown') return 'Unknown in the original downstream record';
+  if (state === 'missing_native_record') return 'No original network row for this watershed';
+  return 'Original drainage network is not attached to this report';
+}
+
+export function watershedNetworkHtml(row, domainHuc12s = []) {
+  const network = row.network;
+  if (!network) return '';
+  const domain = new Set(domainHuc12s);
+  const hucList = values => list(values).map(key => watershedHucLink(key, domain)).join(' · ');
+  const upstream = list(network.known_upstream_domain_huc12s);
+  const path = list(network.downstream_huc12s);
+  const external = list(network.known_external_upstream_huc12s);
+  const pathStates = {
+    terminal: 'Terminal outlet',
+    unknown: 'Unknown downstream attribute',
+    missing_native_record: 'Original network row unavailable',
+    exits_supplied_network: 'Leaves the supplied original network',
+    cycle_in_source: 'Cycle in the original downstream records',
+  };
+  return '<section class="wc-coverage"><h3>Original drainage network</h3>' +
+    '<p class="wc-note">Known upstream totals count distinct connected model watersheds and exclude this watershed. Areas use the published watershed records.</p>' +
+    '<dl class="wc-facts"><div><dt>Known upstream model watersheds</dt><dd>' +
+    esc(number(network.known_upstream_domain_huc_count)) +
+    '</dd></div><div><dt>Upstream NRCS priority watersheds</dt><dd>' +
+    esc(number(network.known_upstream_priority_huc_count)) +
+    '</dd></div><div><dt>Known upstream area</dt><dd>' +
+    esc(number(network.known_upstream_area_acres, 2)) + ' acres' +
+    (network.known_upstream_area_huc_count === undefined ? '' :
+      ' / ' + esc(number(network.known_upstream_area_huc_count)) + ' area records') +
+    '</dd></div><div><dt>Upstream selected-class records</dt><dd>' +
+    esc(number(network.known_upstream_selected_classification_count)) +
+    '</dd></div><div><dt>Downstream path</dt><dd>' +
+    esc(pathStates[network.downstream_path_status] || human(network.downstream_path_status)) +
+    '</dd></div><div><dt>Original outgoing records</dt><dd>' +
+    (network.outgoing_records_complete_for_model_domain === true
+      ? 'All model watersheds have an original outgoing value'
+      : 'Some model watersheds have missing or unknown outgoing values') +
+    '</dd></div></dl>' +
+    (path.length ? '<details><summary>Original downstream path</summary><p>' + hucList(path) + '</p></details>' : '') +
+    (upstream.length ? '<details><summary>Known upstream model watersheds (' + esc(number(upstream.length)) +
+      ')</summary><p>' + hucList(upstream) + '</p></details>' : '') +
+    (external.length ? '<details><summary>Additional upstream records outside the model domain (' +
+      esc(number(external.length)) + ')</summary><p>' + hucList(external) + '</p></details>' : '') +
+    '</section>';
+}
+
 export function createWatershedContextDesk(host) {
   const document = host.document || globalThis.document;
   let root = null, listeners = null, epoch = 0, workspace = null;
@@ -290,9 +349,7 @@ export function createWatershedContextDesk(host) {
       '</dd></div><div><dt>Watershed area</dt><dd>' + esc(number(row.area_km2, 2)) + ' km² / ' + esc(number(row.area_acres, 1)) +
       ' acres</dd></div><div><dt>Model role</dt><dd>' + esc(human(row.role || 'model_domain')) +
       '</dd></div><div><dt>NRCS priority</dt><dd>' + esc(row.priority ? 'Priority in ' + list(row.priority_states).join(', ') : 'No priority flag in these source rows') +
-      '</dd></div><div><dt>Downstream watershed</dt><dd>' + (row.downstream_huc12 ?
-        '<button type="button" data-wc-huc="' + esc(row.downstream_huc12) + '">' + esc(row.downstream_huc12) + '</button>' :
-        'No original downstream attribute supplied') +
+      '</dd></div><div><dt>Downstream watershed</dt><dd>' + watershedDownstreamHtml(row, rows().map(item => item.huc12)) +
       '</dd></div><div><dt>Reach assignment</dt><dd>' + esc(human(row.classification_assignment || 'publisher_huc12_attribute')) +
       '</dd></div></dl>' +
       '<div class="wc-detail-grid"><section><h3>Priority reasons</h3>' +
@@ -305,6 +362,7 @@ export function createWatershedContextDesk(host) {
         '<div><dt>' + esc(key) + '</dt><dd>' + esc(number(count)) + '</dd></div>').join('') +
       '</dl><p class="wc-note">Jurisdiction: ' + esc(human(row.classification_scope)) + '. Source classes: ' +
       esc(list(row.selected_classes).join(', ') || 'No selected class records') + '.</p></section></div>' +
+      watershedNetworkHtml(row, rows().map(item => item.huc12)) +
       '<details><summary>Original NRCS state rows</summary><pre>' + esc(pretty(row.nrcs_state_rows || [])) + '</pre></details>' +
       '<details><summary>Original watershed and source references</summary><ul class="wc-source-references">' +
       sourceReferences(row.source_references) + '</ul><pre>' + esc(pretty(row)) + '</pre></details>';

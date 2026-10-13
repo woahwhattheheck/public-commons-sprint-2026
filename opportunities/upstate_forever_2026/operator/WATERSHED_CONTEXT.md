@@ -63,3 +63,9 @@ The source bridge verifies the complete domain membership response, the addition
 - watershed-context-exports/EXPORT_ID/selected-watersheds.json and selected-watersheds.csv: selected source rows.
 
 The standard portable application/workspace archive can carry these files with the rest of the original workspace.
+
+## Original drainage network in watershed details
+
+When the source edition contains the original HUC12/ToHUC records, the detail panel shows the downstream path and distinct known upstream model watersheds, their published area, NRCS priority count, and selected-class record count. Open an in-domain HUC12 to inspect that watershed. Destinations outside the model domain retain the original identifier as text, so they do not lead to an unavailable detail view. Terminal outlets, unknown downstream attributes, and missing source rows remain distinct.
+
+The upstream summary excludes the focal watershed and uses the original published HUC areas. Reopening a saved selection restores its membership. Following an upstream or downstream HUC outside that selection returns to the full parent report and opens that watershed. The JSON and CSV export paths continue to use the same source-bound model report.
