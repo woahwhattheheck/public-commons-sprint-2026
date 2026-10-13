@@ -987,7 +987,7 @@
     {
       "id": "sv833-observed-sv833-observation-timeline",
       "title": "SV-833 original concentration timeline",
-      "kind": "image",
+      "kind": "document",
       "role": "observed_water_quality_figure",
       "path": "observations/sv833_2021_2026/sv833-observation-timeline.svg",
       "bytes": 37328,
@@ -1034,7 +1034,8 @@
             "characteristic_group": "microbiological",
             "identity_field": "ResultIdentifier"
           }
-        ]
+        ],
+        "media_type": "image/svg+xml"
       },
       "companions": [
         {
@@ -1232,7 +1233,7 @@
     {
       "id": "sv833-observed-sv833-activity-associations",
       "title": "SV-833 same-activity association figures",
-      "kind": "image",
+      "kind": "document",
       "role": "observed_water_quality_figure",
       "path": "observations/sv833_2021_2026/sv833-activity-associations.svg",
       "bytes": 34988,
@@ -1279,7 +1280,8 @@
             "characteristic_group": "microbiological",
             "identity_field": "ResultIdentifier"
           }
-        ]
+        ],
+        "media_type": "image/svg+xml"
       },
       "companions": [
         {
