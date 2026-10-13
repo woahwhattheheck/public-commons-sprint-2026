@@ -59,6 +59,20 @@
       ]
     ],
     [
+      "/application-groups.mjs",
+      [
+        "application-groups.mjs",
+        "text/javascript; charset=utf-8"
+      ]
+    ],
+    [
+      "/application-groups.css",
+      [
+        "application-groups.css",
+        "text/css; charset=utf-8"
+      ]
+    ],
+    [
       "/application-drafts.mjs",
       [
         "application-drafts.mjs",

@@ -398,3 +398,9 @@ Use the Applications **Original input files** shelf to retain complete device or
 ## Search and reopen complete operation history
 
 The **Operations** desk now filters and pages retained work while preserving its original recovery controls. Open a selected operation for its full result, download the complete record, or continue through its existing workflow. Ordinary activity polling carries compact descriptors; views requiring historical result bodies retain them. See [Original operation history](OPERATION_HISTORY.md) for the browser journey, native/API paging, current observation semantics and the existing receiving continuation.
+
+## Saved Application launch groups
+
+Open **Launch groups** to save an ordered selection of existing Applications, review their complete original inputs and provider sources, and retain one run with stable per-member request IDs. Continue members through the original lifecycle, recover interrupted requests, review changed remaining members, accept an exact final outcome, and stop the current group. Earlier definitions, runs and complete original output remain available after reopening the workspace.
+
+The browser, authenticated API and installed CLI use the same records. See [APPLICATION_GROUPS.md](./APPLICATION_GROUPS.md) for the complete workflow, command requests, preserved output and current native receiving continuation.
