@@ -96,6 +96,8 @@ def prepare(workspace, prepared, scientific, delivery, *, reference_basis):
     comparison_path = workspace.root / "comparisons" / comparison_id / "comparison.json"
     comparison_descriptor = describe_file(workspace.root, comparison_path)
     comparison = read_json(verify_file(workspace.root, comparison_descriptor))
+    if comparison_id in comparisons and comparisons[comparison_id] != comparison:
+        raise ValueError("The retained joint comparison differs from its captured scientific source")
     if (comparison.get("baseline_run_id") != run_ids[0]
             or [row["run_id"] for row in comparison.get("alternatives", [])] != run_ids[1:]):
         raise ValueError("Preserve the original ordered baseline/restoration/control comparison")
