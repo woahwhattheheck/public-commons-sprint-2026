@@ -118,3 +118,8 @@ The complete browser and CLI now include original order/cost intake, exact desti
 ## Complete offline application source
 
 The maintained standalone builder embeds the full declared application, including Business Central/Dynaway source preparation and the Microsoft accounting contract. The existing browser and CLI handover retain it under application/ beside the unchanged original workspace and issuer/financial/work-order outputs. Start with [APPLICATION_DELIVERY.md](APPLICATION_DELIVERY.md); that guide covers source preparation, independent reopening, rebuild commands and the offered50,000-line scope with10,000-row review batches. Missing customer data and actual visual receiving remain explicit.
+
+
+## Reviewed source-to-target asset identities
+
+Use the existing **Asset identity crosswalk** desk for explicit one-to-one original asset and book correspondences, hierarchy checks and exact mapped financial comparisons. Original identifiers, amounts, journals and work-order allocation remain unchanged. [ASSET_CROSSWALK.md](ASSET_CROSSWALK.md) gives full browser/CLI, supersession, handover and original receiving instructions. The complete application and CLI export this companion and every source member.

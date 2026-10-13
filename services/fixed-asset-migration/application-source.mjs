@@ -8,6 +8,10 @@ export const APPLICATION_SOURCE_PATHS=Object.freeze([
   "services/fixed-asset-migration/README.md",
   "services/fixed-asset-migration/WORK_ORDER_OPERATING.md",
   "services/fixed-asset-migration/app.mjs",
+  "services/fixed-asset-migration/asset-crosswalk.mjs",
+  "services/fixed-asset-migration/asset-crosswalk-ui.mjs",
+  "services/fixed-asset-migration/asset-crosswalk-receiving.mjs",
+  "services/fixed-asset-migration/ASSET_CROSSWALK.md",
   "services/fixed-asset-migration/application-source-node.mjs",
   "services/fixed-asset-migration/application-source.mjs",
   "services/fixed-asset-migration/build-standalone.mjs",
@@ -84,7 +88,7 @@ export function createApplicationSource({sha256Utf8}){
  }
  function assertRuntime(bundle,boot){
   const checked=verify(bundle),by=new Map(checked.files.map(f=>[f.path,f.text]));
-  const bindings={engineSource:'engine.mjs',shaSource:'sha256.mjs',appSource:'app.mjs',issuerSource:'issuer-annex.mjs',issuerUISource:'issuer-ui.mjs',workOrderSource:'work-orders.mjs',workOrderUISource:'work-orders-ui.mjs',applicationSourceModule:'application-source.mjs',masterPreparationSource:'integrations/business-central/prepare-master.mjs',workOrderPreparationSource:'integrations/business-central/prepare-work-orders.mjs',sourcePreparationUISource:'integrations/business-central/source-preparation-ui.mjs'};
+  const bindings={engineSource:'engine.mjs',shaSource:'sha256.mjs',appSource:'app.mjs',issuerSource:'issuer-annex.mjs',issuerUISource:'issuer-ui.mjs',workOrderSource:'work-orders.mjs',workOrderUISource:'work-orders-ui.mjs',applicationSourceModule:'application-source.mjs',masterPreparationSource:'integrations/business-central/prepare-master.mjs',workOrderPreparationSource:'integrations/business-central/prepare-work-orders.mjs',sourcePreparationUISource:'integrations/business-central/source-preparation-ui.mjs',assetCrosswalkSource:'asset-crosswalk.mjs',assetCrosswalkUISource:'asset-crosswalk-ui.mjs'};
   for(const [key,path]of Object.entries(bindings))need(boot[key]===by.get('services/fixed-asset-migration/'+path),'The operating module differs from its retained source: '+path);
   return checked;
  }
