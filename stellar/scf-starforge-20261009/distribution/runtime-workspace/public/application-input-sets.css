@@ -1,0 +1,7 @@
+/* Existing industrial Runtime controls, with complete source names on narrow screens. */
+#application-input-sets{min-width:0;max-width:100%}
+#application-input-sets article,#application-input-sets label{min-width:0;max-width:100%}
+#application-input-sets h3,#application-input-sets h4,#application-input-sets p,#application-input-sets code{overflow-wrap:anywhere}
+#application-input-sets input[type=file]{display:block;max-width:100%;margin-top:5px}
+#application-input-sets button{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+#application-input-sets .actions{flex-wrap:wrap}
