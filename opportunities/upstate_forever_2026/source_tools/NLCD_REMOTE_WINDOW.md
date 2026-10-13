@@ -97,7 +97,7 @@ When the original acquisition owner has an immutable retained prefix with its co
 --prefix-sha256 ORIGINAL_PREFIX_SHA256
 ~~~
 
-The reader verifies the whole selected prefix once, watches its size/mtime during access, and obtains complete cache chunks directly from it. It retains each consumed chunk with the original prefix SHA and byte count, so the finished manifest has the actual original bytes it used. A partial final cache chunk is fetched as one exact original range. The input prefix remains under its existing capture owner; the adapter never truncates, moves or rewrites it.
+The reader verifies the whole selected prefix once, pins its device, inode, byte size, modification time and change time, and compares that identity before and after every range read. It obtains complete cache chunks directly from the unchanged prefix. It retains each consumed chunk with the original prefix SHA and byte count, so the finished manifest has the actual original bytes it used. A partial final cache chunk is fetched as one exact original range. The input prefix remains under its existing capture owner; the adapter never truncates, moves or rewrites it.
 
 Use the existing prefix-transfer or prefix-recovery helper to put those original bytes on a different accepting host. The reader does not infer a prefix SHA from the archive ETag or its byte count.
 
@@ -106,6 +106,8 @@ Use the existing prefix-transfer or prefix-recovery helper to put those original
 original/ranges/progress.json records the current stage, entity, retained bytes, new successful HTTP bytes, reused chunk bytes, prefix bytes, request count, elapsed time and the concrete last error. The CLI also emits each new range progress record to stderr. The Python prepare(..., progress=callback) interface passes these same dictionaries to its caller.
 
 Ranges are 256 KiB except the final entity chunk. Each body is atomically retained before its immutable companion receipt is published. A restart validates retained receipt identities and verifies each chunk hash when it is reused. A crash between a body and its receipt reconciles that body against the same exact provider range. Completed source entries reopen directly through the original manifest validator.
+
+Every reused cache chunk is checked against its recorded SHA256 on first access or whenever its full file identity changes. Before and after read identities must match, so file replacement or an edit during access is rejected before bytes enter GDAL. Freshly retained chunks receive the same digest and identity check. Unchanged verified chunks avoid repeated hashing.
 
 The range cache is serialized by its existing operation lock. A temporary loopback HTTP server adapts these exact cached bytes to GDAL's native /vsizip/{/vsicurl/...}/member interface. It is local to the preparation, accepts explicit single-range reads only, and shuts down with the operation. It creates no background model job and no additional operator queue.
 
