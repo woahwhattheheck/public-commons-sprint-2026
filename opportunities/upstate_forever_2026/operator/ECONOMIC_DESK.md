@@ -122,3 +122,19 @@ On the receiving host, open the actual operator workspace and exercise the journ
       --edition /path/to/actual-workspace/economic-editions/ACTUAL_ID
 
 This reuses the already installed browser and completed model outcomes. The receiver writes actual screenshots, PDF, exports and timed journey records under that edition's receiving directory.
+
+## One-command operator receiving
+
+Run operator/economic_receive.py directly from the complete application checkout after the original operator is running. The six-file feature installer keeps its existing scope. This additional receiving command uses the installed Playwright Python package, an existing Chromium/Chrome executable, and the delivered model/decision_receive.py.
+
+    /opt/pyvenv/bin/python -B operator/economic_receive.py \
+      --operator-url-file /path/to/original-operator-ready.json \
+      --output /path/to/operator-receiving
+
+The URL file accepts the original server's JSON receipt (operator_url or url) or its printed URL text, including the original token fragment. Alternatively put that already-issued URL in UPSTATE_OPERATOR_URL and omit --operator-url-file; --operator-url-env selects another existing variable. The command keeps authentication values out of its records and command line. --application selects the existing complete checkout if the script is invoked from another directory.
+
+Use --workspace-key, --report-id and --zone-id to choose particular retained results. Without them, the command uses the operator's primary workspace and an available comparison report with a compatible alternative and shared-support zone. Baseline-only reference totals remain separate from this scenario journey. Optional --selection accepts that zone's existing decision-selection/v1 JSON; every supplied cost carries its actual whole_scenario or reporting_zone scope. With no supplied selection, all costs remain unchecked and the command produces the original physical comparison. --run-id chooses the demonstrated alternative. --browser-executable points at an already-installed browser when needed.
+
+The command drives the original browser controls for report and zone selection, quantitative preview, saved inputs, reopening those inputs, and queued edition construction. It opens the authenticated embedded desk, chooses an actual modeled scenario, saves working HTML from that embedded desk, reopens it and produces its PDF. It then downloads the original complete package through the operator, checks its retained descriptors and members, and invokes the existing offline choose/filter/export/notes/save/reopen/print receiver.
+
+Each invocation creates a timestamped directory under --output. operator-journey.json retains the real task, source report, zone and edition identifiers, actual timings, browser messages and failures. The directory also contains screenshots, PDFs, saved HTML, the verified complete decision package, its full offline receiving run and the source of this command. economic-operator-receiving-package.zip carries that complete receiving result. Existing original queue tasks and native model outputs are reused; this command does not dispatch model runs or install browser dependencies. --task-timeout-seconds controls how long to watch the original queue; its task remains available in the operator if that watch expires.
