@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "measurement-collections",
-  "source_reference": "Recovered complete OBS12 native measured-data engine with source collections and independent editable study editions, 1.1.0. Complete retained large-source collection receiving and original streaming edition continuation. Shared large-file source paths are declared directly; original large-file→chemistry→collection dependencies remain acyclic.",
+  "source_reference": "Recovered complete OBS12 native measured-data engine with source collections and independent editable study editions, 1.1.0. Complete retained large-source collection receiving and original streaming edition continuation. Shared large-file source paths are declared directly; original large-file→chemistry→collection dependencies remain acyclic. The original owned receiving command includes a complete large-collections chapter over the unchanged public eight-station originals, with exact request recovery, full native edition downloads and independent complete-project receiving.",
   "components": {
     "measurement-collections": {
       "title": "Complete measured-observation source collections and editable study editions",
@@ -67,7 +67,17 @@
         "operator/web/measured_observations_extension.mjs",
         "operator/web/measured_returned_reviews.mjs",
         "operator/web/source_handback.css",
-        "operator/web/source_handback.mjs"
+        "operator/web/source_handback.mjs",
+        "measurement_workspace/COLLECTION_RECEIVING.md",
+        "measurement_workspace/engine/large-collection-receiving.mjs",
+        "measurement_workspace/engine/reconciliation-receiving.mjs",
+        "measurement_workspace/engine/source_reconciliation.mjs",
+        "measurement_workspace/web/source_reconciliation.mjs",
+        "source_data/wqp_eight_20261013/wqp_eight_native.csv",
+        "source_data/wqp_eight_20261013/wqp_eight_source_metadata.json",
+        "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
+        "source_data/wqp_eight_20261013/wqp_eight_station_page_extractions.json",
+        "source_data/wqp_eight_20261013/sources.json"
       ],
       "requires": [
         "core"
