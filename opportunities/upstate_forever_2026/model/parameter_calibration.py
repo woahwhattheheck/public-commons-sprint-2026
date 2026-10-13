@@ -4,7 +4,7 @@ from __future__ import annotations
 import argparse
 import json
 
-from .common import INVEST_VERSION, digest, identifier
+from .common import digest, identifier
 from . import calibration, parameter_studies
 
 SCHEMA = "upstate.parameter-study-calibration/v1"
@@ -19,8 +19,6 @@ def candidates(workspace, experiment_id, *, candidate_run_ids=None):
     issues = []
     if scenario.get("kind") != "baseline" or scenario.get("patches"):
         issues.append("This study changes land cover. Annual-load calibration uses the original unchanged baseline scenario.")
-    if baseline.get("invest_version") != INVEST_VERSION:
-        issues.append("Use completed runs from the retained InVEST " + INVEST_VERSION + " model edition.")
     by_run = {}
     for case in study["cases"]:
         row = by_run.setdefault(case["run_id"], {
@@ -40,12 +38,26 @@ def candidates(workspace, experiment_id, *, candidate_run_ids=None):
         if reasons:
             excluded.append({**row, "reasons": reasons})
             continue
-        # Reuse the calibration engine's own source/model/grid/baseline checks.
-        candidate = calibration._candidates(workspace, {"candidate_run_ids": [row["run_id"]]})[0]
-        eligible.append({**row, "title": candidate["title"],
-                         "selected_models": candidate["selected_models"],
-                         "available_parameters": candidate["available_parameters"],
-                         "model_period": candidate["model_period"]})
+        # The producing-stage engine owns native version and physical-output
+        # admission. Preserve each original request; it is not an execution label.
+        try:
+            candidate = calibration._candidates(workspace, {"candidate_run_ids": [row["run_id"]]})[0]
+        except (ValueError, KeyError, OSError) as error:
+            excluded.append({**row, "reasons": ["Original native candidate: " + str(error)]})
+            continue
+        native = {name: candidate[name] for name in (
+            "native_versions", "native_version_labels", "output_mass_basis",
+            "native_outputs", "execution_fingerprint", "execution_issues")
+                  if name in candidate}
+        retained = {**row, "title": candidate["title"],
+                    "selected_models": candidate["selected_models"],
+                    "available_parameters": candidate["available_parameters"],
+                    "model_period": candidate["model_period"],
+                    "run_selection": candidate["selection"], **native}
+        if candidate.get("execution_issues"):
+            excluded.append({**retained, "reasons": list(candidate["execution_issues"])})
+        else:
+            eligible.append(retained)
     available_ids = [row["run_id"] for row in eligible]
     if candidate_run_ids is None:
         chosen = available_ids
@@ -89,10 +101,14 @@ def candidates(workspace, experiment_id, *, candidate_run_ids=None):
         "case_count": len(study["cases"]), "unique_run_count": len(by_run),
         "selected_count": len(chosen), "common_parameters": common,
         "can_calibrate": bool(chosen and common), "handoff": handoff,
-        "method": ("Candidate eligibility uses the completed native run and the existing calibration engine. "
+        "method": ("Candidate eligibility uses the completed native run and the producing-stage calibration engine. "
+                   "Each original requested version remains separate from its retained execution provenance and "
+                   "physical output convention. A case with an unavailable or incompatible output remains visible "
+                   "with its own reason while compatible cases remain selectable. "
                    "The original grid, baseline land cover and selected model outputs remain fixed. "
-                   "The calibration desk selects original admitted annual observations, catchments, "
-                   "objective weights and calibration/validation groups."),
+                   "The calibration desk selects original admitted annual observations, catchments, objective weights "
+                   "and calibration/validation groups, and checks producing-version compatibility for the "
+                   "models used by those positive-weight objectives."),
     }
 
 

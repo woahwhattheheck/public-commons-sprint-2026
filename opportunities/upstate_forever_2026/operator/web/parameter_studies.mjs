@@ -57,6 +57,37 @@ function resultExecution(result) {
     '<p>The native-version CSV/JSON downloads below retain every run/model record and nested stage-reuse history.</p></details>';
 }
 
+function calibrationExecution(row) {
+  const runId = row.run_id || 'Retained candidate';
+  const versions = versionRows({[runId]: row.native_versions || {}},
+    {[runId]: row.native_version_labels || {}});
+  const mass = Object.entries(row.output_mass_basis || {}).map(([parameter, basis]) => {
+    const guide = typeof basis.source_guide === 'string' && /^https?:\/\//i.test(basis.source_guide) ?
+      '<a href="' + escapeHTML(basis.source_guide) + '" target="_blank" rel="noopener noreferrer">Source guide</a>' : '';
+    return '<tr><td>' + escapeHTML(label(parameter)) + '</td><td>' +
+      escapeHTML(String(basis.model || '').toUpperCase()) + '</td><td>' +
+      escapeHTML(basis.raster_units || 'Not recorded') + '</td><td>' +
+      escapeHTML(basis.annual_units || 'Not recorded') + '</td><td>' +
+      escapeHTML(basis.reduction || 'Not recorded') + '<small>' +
+      escapeHTML(basis.unit_basis || '') + '</small></td><td>' +
+      escapeHTML(basis.version_basis || 'Not recorded') +
+      (basis.legacy_requested_version === true ? '<small>Requested legacy version</small>' : '') +
+      (basis.version_supported === false ? '<small>Version is outside the retained unit contract</small>' : '') +
+      guide + '</td></tr>';
+  });
+  if (!versions.length && !mass.length && !row.execution_fingerprint) {
+    return '<p class="note">Execution details are unavailable for this retained candidate.</p>';
+  }
+  return '<details class="technical"><summary>Retained execution and quantity basis</summary>' +
+    (versions.length ? gridTable(['Original run', 'Model', 'Recorded version and source',
+      'Requested version', 'Stage completed', 'Reused origin'], versions) : '') +
+    (mass.length ? gridTable(['Quantity', 'Model', 'Native raster units', 'Annual quantity units',
+      'Reduction and unit basis', 'Version basis and source'], mass) : '') +
+    (row.execution_fingerprint ? '<p>Execution fingerprint <code style="overflow-wrap:anywhere">' +
+      escapeHTML(row.execution_fingerprint) + '</code></p>' : '') +
+    '<p class="note">These fields come from the retained calibration candidate. Objective weights and cross-candidate compatibility are reviewed in the calibration selection.</p></details>';
+}
+
 function aggregationProgress(item) {
   const value = item?.aggregation_progress || item?.aggregation;
   if (!value) return '';
@@ -462,18 +493,20 @@ export function attachParameterStudies(host) {
       escapeHTML(row.labels.join(', ')) + '</strong><small class="mono">' + escapeHTML(row.run_id) +
       '</small></td><td>' + escapeHTML(row.selected_models.map(value => value.toUpperCase()).join(' + ')) +
       '<small>' + escapeHTML(row.available_parameters.map(label).join(', ')) + '</small></td><td>' +
-      escapeHTML(row.title) + (row.is_reference ? '<small>Original study reference</small>' : '') + '</td></tr>');
+      escapeHTML(row.title) + (row.is_reference ? '<small>Original study reference</small>' : '') + '</td><td>' +
+      calibrationExecution(row) + '</td></tr>');
     const excludedRows = excluded.map(row => '<tr><td>' + escapeHTML(row.labels.join(', ')) +
       '<small class="mono">' + escapeHTML(row.run_id) + '</small></td><td>' + status(row.state) +
-      '</td><td>' + row.reasons.map(escapeHTML).join('<br>') + '</td></tr>');
+      '</td><td>' + row.reasons.map(escapeHTML).join('<br>') + '</td><td>' +
+      calibrationExecution(row) + '</td></tr>');
     const body = '<div class="parameter-study-calibration"><p>' + escapeHTML(packet.method) + '</p>' +
       (packet.issues?.length ? '<div class="notice">' + packet.issues.map(escapeHTML).join('<br>') + '</div>' : '') +
       '<p><strong>' + format(eligible.length) + '</strong> eligible native runs · ' + format(excluded.length) +
       ' remaining or excluded runs. Reused runs appear once, with every original case label.</p>' +
-      (rows.length ? gridTable(['Use', 'Original study cases', 'Native outputs', 'Parameter profile'], rows) :
+      (rows.length ? gridTable(['Use', 'Original study cases', 'Native outputs', 'Parameter profile', 'Execution and units'], rows) :
         '<p class="note">This study has no completed unchanged-baseline cases for annual-load calibration.</p>') +
       (excludedRows.length ? '<details class="technical"><summary>Remaining and excluded cases</summary>' +
-        gridTable(['Case', 'State', 'Reason'], excludedRows) + '</details>' : '') +
+        gridTable(['Case', 'State', 'Reason', 'Retained execution'], excludedRows) + '</details>' : '') +
       '<p class="note">Continue preserves your saved observation and catchment draft. The next form reviews objective weights, observed annual loads and the spatial validation split.</p></div>';
     host.openForm('Calibrate completed study cases', packet.title, body, 'Open calibration selection', async () => {
       if (workspace() !== originalWorkspace) throw new Error('Reopen this candidate selection in its original workspace.');
