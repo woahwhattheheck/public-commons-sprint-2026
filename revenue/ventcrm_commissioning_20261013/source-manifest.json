@@ -93,13 +93,13 @@
     },
     {
       "path": "package-viewer.mjs",
-      "bytes": 8713,
-      "sha256": "4064378e016b9b317fb7b44660e922c921ddf03c3d4b76a52dd84c26bb766944"
+      "bytes": 8866,
+      "sha256": "a7f2645b8e072a6c37b0e5d8396f665d47756734e42db855db6e890b45487c11"
     },
     {
       "path": "README.md",
-      "bytes": 11718,
-      "sha256": "e007d4806532be1ebcdb836da984e0e904acf826cba3d2a9fb2ce30e07cc1f70"
+      "bytes": 11825,
+      "sha256": "f7fb045ae99d6315692ab366d6d31760cc86c6abe91199305727992b6764d748"
     },
     {
       "path": "render.cjs",
