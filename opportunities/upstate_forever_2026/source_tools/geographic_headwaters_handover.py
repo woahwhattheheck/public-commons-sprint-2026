@@ -77,7 +77,7 @@ def _first_elapsed(state):
             for name, row in state.get("stages", {}).items()
             if row.get("state") == "complete" and row.get("first_completed_at")
             and name not in ("archive", "independent_restore", "resume_independent_restore",
-                             "independent_reopen", "handover")}
+                             "independent_reopen", "independent_cold_reopen", "handover")}
 
 
 def _render(data):
