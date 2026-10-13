@@ -394,6 +394,8 @@ export async function startRuntimeWorkspace({ directory, port = 8465, openApiSet
         return send(200, await model.applicationsTerminal(params(url, ['applicationId', 'operationId'])));
       if (req.method === 'GET' && url.pathname === '/api/managed/state')
         return send(200, await model.managedState(params(url, ['homeId'])));
+      if (req.method === 'GET' && url.pathname === '/api/managed/config-history')
+        return send(200, await model.managedConfigurationHistory(params(url, ['homeId', 'path', 'operationId', 'cursor', 'limit', 'selection'])));
       if (req.method === 'GET' && url.pathname === '/api/managed/config')
         return send(200, await model.managedConfig(params(url, ['homeId', 'path'])));
       need(req.method === 'POST' && req.headers.origin === origin, 'RUNTIME_WORKSPACE_ORIGIN_REQUIRED', undefined, 403);

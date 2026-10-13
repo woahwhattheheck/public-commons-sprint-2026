@@ -1,4 +1,5 @@
 // MIT. Managed release controls in the original runtime operator workspace.
+import { createManagedConfigurationDesk } from './managed-configuration.mjs';
 const $ = id => document.getElementById(id);
 const node = (tag, text, className) => { const value = document.createElement(tag); if (text !== undefined) value.textContent = text; if (className) value.className = className; return value; };
 const query = (path, values) => path + '?' + new URLSearchParams(Object.entries(values).filter(([, value]) => value !== undefined && value !== null));
@@ -17,7 +18,7 @@ function detail(label, value) {
   const item = node('details'); item.append(node('summary', label), node('pre', JSON.stringify(value, null, 2))); return item;
 }
 export function createManagedWorkspaceView({ api, getState, operation, refreshWorkspace, refreshOperation, openLog, switchView, message, error }) {
-  let current = null, homeId = null, workspaceId = null, review = null, config = null, loading = false, generation = 0, reviewRequest = null;
+  let current = null, homeId = null, workspaceId = null, review = null, loading = false, generation = 0, reviewRequest = null;
   const container = $('managed-workspace');
   container.innerHTML = '<div class="section-title"><div><p class="eyebrow">ORIGINAL SF46 INSTALLATION</p><h2>Managed releases</h2></div><span id="managed-phase" class="status">EMPTY</span></div>' +
     '<p class="muted">Adopt a READY runtime into its managed home, select the release for new launches, and keep configuration and merchant state in their original directories.</p>' +
@@ -28,22 +29,20 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
     '<div class="panel"><h3>Installed releases</h3><div id="managed-releases"></div><label>Release for inspection and native commands<select id="managed-release"></select></label><div class="actions"><button id="managed-activate" type="button">Activate selected release</button><button id="managed-rollback" type="button">Roll back to previous release</button></div><p class="note">Activation selects code for new launches. Existing native processes retain their original release and are controlled in the operation history.</p></div>' +
     '<div class="columns"><div class="panel"><h3>Inspect source and runtime</h3><label class="check"><input id="managed-load" type="checkbox">Import selected dependencies</label><button id="managed-inspect" type="button">Inspect selected release</button></div>' +
     '<div class="panel"><h3>Original dependency doctor</h3><label class="check"><input id="managed-native" type="checkbox">Require native payment runtime</label><label>Required optional features (one per line)<textarea id="managed-features" rows="2" spellcheck="false" placeholder="postgres"></textarea></label><button id="managed-doctor" type="button">Run original doctor</button></div></div>' +
-    '<div class="panel"><h3>Managed configuration</h3><p class="note">Open a retained file or a new filename inside the existing config directory. Saves compare the current digest and keep the exact UTF-8 contents. JSON files are parsed before saving.</p><div class="actions"><button id="managed-config-list" type="button">Refresh configuration files</button></div><label>Existing file<select id="managed-config-files"></select></label><form id="managed-config-open-form"><label>Relative filename<input id="managed-config-path" required autocomplete="off" placeholder="merchant/merchant.json"></label><button type="submit">Open configuration file</button></form><form id="managed-config-save-form" hidden><p id="managed-config-identity" class="note"></p><label>File contents<textarea id="managed-config-content" rows="12" spellcheck="false"></textarea></label><button type="submit">Save reviewed configuration</button></form>' +
+    '<div class="panel"><div id="managed-configuration-desk"></div>' +
     '<details><summary>Create an original merchant workspace</summary><p class="note">This launches the selected release’s original Starforge initializer inside the managed config directory.</p><form id="managed-init-form"><label>New workspace name<input id="managed-init-name" required pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,79}" maxlength="80" placeholder="merchant-01"></label><label>Original template<select id="managed-init-template"><option value="dataset">Dataset</option><option value="application">Application</option><option value="upstream">Upstream</option></select></label><button type="submit">Run original initializer</button></form></details></div>' +
     '<div class="panel"><h3>Run an original command</h3><label>Command in the selected release<select id="managed-command-select"></select></label><p id="managed-command-description" class="note"></p><form id="managed-run-form"><label>Exact argument array (JSON)<textarea id="managed-args" rows="4" spellcheck="false">["--help"]</textarea></label><p class="note">Each array item is one unchanged argument. Commands run in this managed home, using the selected release’s original launcher. Use absolute configuration paths for a host.</p><button type="submit">Run original command</button></form></div>' +
     '<div class="panel"><h3>Latest managed operation</h3><div id="managed-observation"></div></div><div class="panel"><h3>Retained processes and recovery</h3><div id="managed-jobs"></div></div></div>';
+  const configuration = createManagedConfigurationDesk({ element: $('managed-configuration-desk'), api, message, error });
   const selected = () => current?.selected;
   const prefKey = () => 'starforge-managed-' + workspaceId;
-  const draftKey = () => 'starforge-managed-config-' + workspaceId + '-' + homeId;
   function savePrefs() {
     if (workspaceId) try { localStorage.setItem(prefKey(), JSON.stringify({ homeId, releaseId: $('managed-release').value, reviewId: review?.id ?? null })); } catch {}
   }
-  function saveDraft() {
-    if (config) try { sessionStorage.setItem(draftKey(), JSON.stringify({ ...config, draftContent: $('managed-config-content').value })); } catch {}
-  }
   async function choose(id) {
-    generation++; homeId = id || null; review = null; config = null; current = null;
-    $('managed-adoption-review').hidden = true; $('managed-config-save-form').hidden = true;
+    generation++; homeId = id || null; review = null; current = null;
+    configuration.select({ workspaceId, homeId });
+    $('managed-adoption-review').hidden = true;
     savePrefs(); switchView('managed'); await refresh();
   }
   const release = () => selected()?.releases.find(value => value.id === $('managed-release').value) ?? null;
@@ -121,6 +120,7 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
   }
   function render() {
     const home = selected(), open = Boolean(home);
+    configuration.select({ workspaceId, homeId: home?.id ?? null });
     choices($('managed-home'), current.homes.map(value => ({ id: value.id, label: value.label + ' · ' + value.phase })), 'Open a managed home', homeId);
     $('managed-body').hidden = !open; $('managed-open-details').open = !current.homes.length;
     $('managed-phase').textContent = home?.phase ?? 'EMPTY';
@@ -172,20 +172,13 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
           detail('Original operation result', current.observation.result));
       } else observation.append(node('p', 'Inspect, adopt or run an original command to retain its result.', 'note'));
     }
-    if (!config) try {
-      const draft = JSON.parse(sessionStorage.getItem(draftKey()) ?? 'null');
-      if (draft?.homeId === home.id && typeof draft.draftContent === 'string') {
-        config = draft; $('managed-config-path').value = draft.path; $('managed-config-content').value = draft.draftContent;
-        $('managed-config-identity').textContent = draft.path + ' · reviewed SHA-256 ' + (draft.sha256 ?? 'new file') + ' · retained draft';
-        $('managed-config-save-form').hidden = false;
-      }
-    } catch {}
     renderJobs(); savePrefs();
   }
   async function refresh() {
     if (loading || !getState()) return;
     if (workspaceId !== getState().workspaceId) {
-      generation++; workspaceId = getState().workspaceId; homeId = null; config = null; review = null; current = null;
+      generation++; workspaceId = getState().workspaceId; homeId = null; review = null; current = null;
+      configuration.reset();
       try { homeId = JSON.parse(localStorage.getItem(prefKey()) ?? 'null')?.homeId ?? null; } catch {}
     }
     const requestedGeneration = generation, requestedWorkspace = workspaceId;
@@ -248,24 +241,6 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
   on('managed-inspect', 'click', () => submit({ ...releaseInput('managed-inspect'), load: $('managed-load').checked }));
   on('managed-doctor', 'click', () => submit({ ...releaseInput('managed-doctor'), requireNative: $('managed-native').checked,
     requiredFeatures: $('managed-features').value.split(/\s+/).filter(Boolean) }));
-  on('managed-config-list', 'click', async () => {
-    const result = await api(query('/api/managed/config', { homeId }));
-    choices($('managed-config-files'), result.files.map(value => ({ id: value.path, label: value.path + ' · ' + value.bytes + ' B' + (value.editable ? '' : ' · native editor') })), 'Choose a retained file');
-    message(result.files.length + ' retained configuration files in ' + result.directory + '.');
-  });
-  on('managed-config-files', 'change', () => { if ($('managed-config-files').value) $('managed-config-path').value = $('managed-config-files').value; });
-  on('managed-config-open-form', 'submit', async () => {
-    config = await api(query('/api/managed/config', { homeId, path: $('managed-config-path').value.trim() }));
-    $('managed-config-content').value = config.content;
-    $('managed-config-identity').textContent = config.path + ' · reviewed SHA-256 ' + (config.sha256 ?? 'new file');
-    $('managed-config-save-form').hidden = false; saveDraft();
-  });
-  on('managed-config-content', 'input', saveDraft);
-  on('managed-config-save-form', 'submit', async () => {
-    if (!config || config.homeId !== homeId) throw new Error('Open the configuration file first.');
-    await submit({ ...inputFor('managed-config-save'), path: config.path, expectedSha256: config.sha256, content: $('managed-config-content').value });
-    sessionStorage.removeItem(draftKey()); config = null; $('managed-config-save-form').hidden = true;
-  });
   on('managed-init-form', 'submit', () => {
     const chosen = release();
     if (!chosen?.commands.starforge) throw new Error('Choose a maintained release with its original Starforge command.');
@@ -279,5 +254,5 @@ export function createManagedWorkspaceView({ api, getState, operation, refreshWo
     let args; try { args = JSON.parse($('managed-args').value); } catch { throw new Error('Arguments must be a JSON array of strings.'); }
     return submit({ ...releaseInput('managed-run'), command: $('managed-command-select').value, args, expectedRevision: selected().revision });
   });
-  return { refresh, choose, reset() { generation++; current = null; workspaceId = null; homeId = null; review = null; config = null; } };
+  return { refresh, choose, reset() { generation++; current = null; workspaceId = null; homeId = null; review = null; configuration.reset(); } };
 }
