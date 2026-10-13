@@ -73,6 +73,19 @@ def _verify_capture(workspace, directory, diagnostic_id, report_sha256):
     report = read_json(verify_file(directory, report_member))
     if report.get("schema") != diagnostics.SCHEMA or report.get("id") != diagnostic_id:
         raise ValueError("Choose the original saved scientific report")
+    if capture.get("source_stamp") != report.get("source_stamp"):
+        raise ValueError("Retained report source stamp differs from its capture")
+    by_path = {row["path"]: row for row in members}
+    origin = PurePosixPath("experiment-diagnostics") / diagnostic_id
+    for key, item in report.get("artifacts", {}).items():
+        try:
+            relative = _relative(item["path"]).relative_to(origin)
+        except (KeyError, ValueError) as error:
+            raise ValueError("Original report export has a different diagnostic root") from error
+        copied = by_path.get((PurePosixPath("retained") / relative).as_posix())
+        if (copied is None or copied["sha256"] != item["sha256"]
+                or copied["bytes"] != item["bytes"]):
+            raise ValueError("Retained report capture lost an original export: " + key)
     return capture, report
 
 
@@ -157,8 +170,12 @@ def _sections(report, report_sha256):
     selection = report["selection"]
     profiles = {row["profile_id"]: row.get("title") or row["profile_id"] for row in report.get("profiles", [])}
     scenarios = report.get("scenario_titles", {})
+    group_ids = sorted({row.get("structural_group_id") for row in report.get("profiles", [])
+                        if row.get("structural_group_id")})
+    groups = {key: "Group " + str(index + 1) for index, key in enumerate(group_ids)}
     profile = lambda key: profiles.get(key, key or "Unavailable")
     scenario = lambda key: scenarios.get(key, key or "Unavailable")
+    group = lambda key: groups.get(key, key or "Unavailable")
     coverage = report.get("coverage", {})
     sections = [
         ["Scientific interpretation: selected revision", [
@@ -177,6 +194,23 @@ def _sections(report, report_sha256):
                 ["Completed / expected profiles", str(coverage.get("complete_profiles")) + " / " + str(coverage.get("expected_profiles"))],
                 ["Selected native models", coverage.get("selected_models")],
                 ["Missing / failed / unfinished runs", [coverage.get("missing_runs"), coverage.get("failed_runs"), coverage.get("unfinished_runs")]],
+            ]),
+        ]],
+        ["Original parameter profiles and structural groups", [
+            "The profile register identifies the actual model scopes, routing algorithms and periods. "
+            "Group labels below are local report labels; their exact original identifiers, parameter values "
+            "and biophysical table hashes remain in the retained report JSON.",
+            _table(["Profile", "Reference", "Group", "NDR routing", "SDR routing", "Model period", "Models"], [
+                [profile(row.get("profile_id")), row.get("is_reference"), group(row.get("structural_group_id")),
+                 (row.get("structural_factors") or {}).get("ndr_flow_dir_algorithm"),
+                 (row.get("structural_factors") or {}).get("sdr_flow_dir_algorithm"),
+                 (row.get("structural_factors") or {}).get("model_period"), row.get("models")]
+                for row in report.get("profiles", [])
+            ]),
+            _table(["Profile", "Parameter", "Retained value"], [
+                [profile(row.get("profile_id")), key, value]
+                for row in report.get("profiles", [])
+                for key, value in sorted(row.get("parameter_values", {}).items())
             ]),
         ]],
         ["Shared spatial support and annual mass", [
@@ -212,7 +246,7 @@ def _sections(report, report_sha256):
             "scopes remain explicit structural factors.",
             _table(["Metric / units", "Scenario", "Structural group", "Complete / expected", "Minimum", "Median", "Maximum", "Coverage"], [
                 [str(row.get("metric")) + " / " + str(row.get("units")), scenario(row.get("scenario_id")),
-                 row.get("structural_group_id"), str(row.get("delta_n_complete")) + " / " + str(row.get("delta_n_expected")),
+                 group(row.get("structural_group_id")), str(row.get("delta_n_complete")) + " / " + str(row.get("delta_n_expected")),
                  row.get("delta_minimum"), row.get("delta_median"), row.get("delta_maximum"), row.get("coverage_state")]
                 for row in report.get("scenario_summaries", [])
             ]),
@@ -223,7 +257,7 @@ def _sections(report, report_sha256):
             "a boundary tie fractionally. The recorded fraction is frequency within the selected design.",
             _table(["Metric", "Scenario", "Structural group", "Eligible / expected", "Rank min / median / max",
                     "Top-k", "Top-k design fraction", "Complete ranking"], [
-                [row.get("metric"), scenario(row.get("scenario_id")), row.get("structural_group_id"),
+                [row.get("metric"), scenario(row.get("scenario_id")), group(row.get("structural_group_id")),
                  str(row.get("rank_n_complete")) + " / " + str(row.get("rank_n_expected")),
                  [row.get("rank_minimum"), row.get("rank_median"), row.get("rank_maximum")],
                  row.get("top_k"), row.get("top_k_design_fraction"), row.get("ranking_complete")]
