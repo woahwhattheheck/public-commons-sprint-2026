@@ -52,6 +52,8 @@ Adopt the complete files together inside the maintained application:
 - operator/web/jobs.mjs
 - operator/web/jobs.css
 - operator/NATIVE_CALCULATION_OPERATOR.md
+- operator/server.py
+- integration/component_fragments/native-calculation-presentation.json
 
 The ordinary complete application inventory includes the helper. The original
 native supervisor, request bindings, worker, scientific engines and output files
