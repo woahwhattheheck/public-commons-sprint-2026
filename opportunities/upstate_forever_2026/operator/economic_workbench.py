@@ -347,6 +347,9 @@ class EconomicWorkbench:
         workspace = self.operator.ws(workspace_key)
         if operation == "catalog":
             return self._catalog(workspace_key)
+        if operation == "quantity-source":
+            from economic_quantity_source import quantity_source
+            return {"workspace_key": workspace_key, **quantity_source(self, workspace, payload)}
         if operation == "source":
             _, result = self._source(workspace, payload.get("report_id"))
             return {"workspace_key": workspace_key, **result}
