@@ -152,7 +152,8 @@ def execute_run(workspace, key, *, reuse_source_run_ids=None):
                         execution.phase("stage_reuse", model=name)
                         reused, rejected = recover(
                             workspace, key, name, selected, directory, args,
-                            source_run_ids=retained_sources, matcher=input_matcher)
+                            source_run_ids=retained_sources, matcher=input_matcher,
+                            progress=execution.reuse_progress)
                         if rejected:
                             state.setdefault("reuse_observations", {})[name] = rejected
                         if reused is not None:
