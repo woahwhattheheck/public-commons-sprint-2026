@@ -1,4 +1,5 @@
 /** Original saved-plan export and edited-design receiving in the native operator. */
+import {OriginalDesignEditor} from './conservation_design_editor.mjs';
 const esc = value => String(value ?? "").replace(/[&<>"']/g, c =>
   ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const roleLabels = {
@@ -24,6 +25,7 @@ class DesignBridge {
     this.key = "upstate.conservation-design/" + this.workspace;
     this.generation = 0; this.recordVersion = 0; this.gone = false; this.busy = false;
     this.overview = null; this.record = null; this.error = ""; this.notice = "";
+    this.editor = null;
     this.planId = ""; this.title = ""; this.role = "reporting_units";
     this.inputMode = "upload"; this.descriptor = ""; this.file = null; this.upload = null; this.pending = null;
     this.controller = new AbortController();
@@ -153,6 +155,15 @@ class DesignBridge {
   async act(button) {
     const action=button.dataset.designAction;
     if(action==="refresh"){await this.reload();return;}
+    if(action==="edit"){
+      if(this.record?.kind!=="preparation")throw Error("Open the original prepared project first.");
+      const editor=new OriginalDesignEditor(this.host,this.record,async()=>{
+        this.editor=null;this.notice="The original editor saved this project in the selected Workspace.";this.render();
+      });
+      this.editor=editor;this.render();
+      try{await editor.start();}catch(error){editor.detach();this.editor=null;this.render();throw error;}
+      return;
+    }
     if(action==="prepare") {
       if(!this.planId)throw Error("Choose a completed original portfolio.");
       await this.queue("conservation.design.prepare",{plan_id:this.planId,geometry_role:this.role,
@@ -211,6 +222,7 @@ class DesignBridge {
   }
   render() {
     if(this.gone)return;
+    if(this.editor){this.editor.render(this.root);return;}
     const data=this.overview||{plans:[],preparations:[],receivings:[]};
     const disabled=this.busy||!!this.pending?" disabled":"";
     const button=(action,label,extra="",blocked=false)=>'<button type="button" data-design-action="'+action+'" '+extra+(blocked?" disabled":"")+">"+esc(label)+"</button>";
@@ -224,7 +236,8 @@ class DesignBridge {
       [["Original plan",record.plan_id],["Design operation",record.id],["Geometry view",roleLabels[record.geometry_role]||record.geometry_role],
        ["Edited features",record.edited_feature_count],["Native scenario",record.scenario_id],["Prepared run",record.run_id]]
       .filter(([,v])=>v!==null&&v!==undefined).map(([k,v])=>"<dt>"+esc(k)+"</dt><dd>"+esc(v)+"</dd>").join("")+
-      "</dl>"+((record.scenario_id||record.run_id)?'<div class="cd-actions">'+
+      "</dl>"+(record.kind==="preparation"?'<div class="cd-actions">'+button("edit","Edit this original project")+"</div>":"")+
+      ((record.scenario_id||record.run_id)?'<div class="cd-actions">'+
       (record.scenario_id?'<button type="button" data-action="item" data-kind="scenarios" data-id="'+esc(record.scenario_id)+'">Open original scenario</button>':"")+
       (record.run_id?'<button type="button" data-action="item" data-kind="runs" data-id="'+esc(record.run_id)+'">Open prepared run</button>':"")+"</div>":"")+
       (record.model_domain_coverage?"<p>Model domain covers "+esc((100*record.model_domain_coverage.model_domain_covered_fraction).toFixed(3))+
@@ -243,8 +256,8 @@ class DesignBridge {
       options(data.plans.map(p=>[p.id,p.title||p.id]),this.planId)+'</select></label><label>Geometry view<select data-design-field="role"'+disabled+'>'+
       options(Object.entries(roleLabels),this.role)+'</select></label><label>Project title (optional)<input data-design-field="title" value="'+esc(this.title)+'"'+disabled+
       '></label><div class="cd-actions">'+button("prepare","Prepare original plan","",!!disabled||!this.planId)+'</div>'+
-      '<p>Download the complete editable project ZIP. In the existing Scenario Design editor, use Receive project, create an alternative, edit its polygons, and export the complete native handover from Land-cover scenario.</p>'+
-      '<p>Start the supplied editor from <code>scenario-design/</code> with <code>python server.py --workspace PATH_TO_DESIGN_WORKSPACE</code>.</p></section>'+
+      '<p>Choose Edit this original project in its prepared result. Create an alternative, edit its polygons, and export the complete native handover from Land-cover scenario. The original editor saves its project and revisions inside this Workspace.</p>'+
+      '<p>The complete editable ZIP also opens in the supplied standalone editor for portable work.</p></section>'+
       '<section class="cd-panel"><h2>Receive an edited native handover</h2><label>Input<select data-design-field="inputMode"'+disabled+'>'+
       options([["upload","Complete ZIP from this browser"],["descriptor","Retained Workspace file descriptor"]],this.inputMode)+'</select></label>'+
       (this.inputMode==="upload"?'<label>Native handover ZIP (up to '+esc(capacityLabel(uploadCapacity(this.host)))+')<input type="file" accept=".zip,application/zip" data-design-field="file"'+disabled+
@@ -253,7 +266,7 @@ class DesignBridge {
       '<div class="cd-actions">'+button("receive","Receive native design","",!!disabled)+'</div><p>The existing queue imports the original geometry and companion files, saves the original scenario, and prepares a run only when the handover requests one.</p></section></div>'+
       '<section class="cd-panel"><h2>Saved design operations</h2>'+history(data.preparations,"preparation")+history(data.receivings,"receiving")+"</section></section>";
   }
-  detach(){this.gone=true;this.controller.abort();this.generation++;}
+  detach(){this.gone=true;this.editor?.detach();this.editor=null;this.controller.abort();this.generation++;}
 }
 export function attachConservationDesign(host) {
   let active=null;

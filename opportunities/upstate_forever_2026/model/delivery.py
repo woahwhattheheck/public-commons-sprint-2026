@@ -12,6 +12,7 @@ from .common import (INVEST_SOURCE, INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_
 from . import atlas_browser, cartography, map_atlas, native_study, portable, rasters
 import tempfile
 from .report_release import bind_report, retain_report
+from .source_lineage import LINEAGE_VERSION
 from .delivery_archive import package_archive
 from . import receiving_water_delivery, scientific_report, observed_context
 from . import scenario_analysis_delivery as analysis_delivery
@@ -318,7 +319,9 @@ def build(workspace, selection):
                   "report_renderer": scientific_report.REPORT_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION,
                   "map_atlas": map_atlas.ATLAS_VERSION,
-                  "overlay_labels": OVERLAY_LABELS})
+                  "overlay_labels": OVERLAY_LABELS,
+                  **({"parcel_source_lineage": LINEAGE_VERSION}
+                     if selection.get("overlays", {}).get("parcels") else {})})
     directory = workspace.root / "deliveries" / key
     directory.mkdir(parents=True, exist_ok=True)
     state_path = directory / "delivery-state.json"

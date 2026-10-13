@@ -19,6 +19,7 @@ from .common import (
     finite, held, identifier, now, read_json, verify_file,
 )
 from . import rasters
+from .source_lineage import source_snapshot
 from . import conservation_reporting
 
 VERSION = 1
@@ -201,9 +202,7 @@ def _source(workspace, choice, *, kind="vector"):
     if entry["kind"] != kind:
         raise ValueError("Source " + choice["source_id"] + " must be " + kind)
     return path, {
-        "selection": choice, "id": entry["id"], "title": entry["title"], "uri": entry["uri"],
-        "vintage": entry["vintage"], "body": entry["body"], "scope": entry.get("scope"),
-        "layer": choice.get("layer") or entry.get("layer"), "id_field": choice.get("id_field") or entry.get("id_field"),
+        **source_snapshot(entry, choice),
         "reference": choice.get("reference"), "meaning": choice.get("meaning"),
         "relation": choice.get("relation", "Intersection with the selected retained source geometry"),
     }

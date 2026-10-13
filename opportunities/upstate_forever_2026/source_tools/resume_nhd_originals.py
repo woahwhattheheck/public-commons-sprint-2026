@@ -91,6 +91,36 @@ def bounds(envelope):
     return result
 
 
+
+def envelope_covered(target, scopes):
+    """Prove closed-envelope coverage from complete original subqueries.
+
+    Exact coordinate partitions preserve gaps of any positive width. No rounded
+    area comparison or numerical tolerance can turn a missing strip into coverage.
+    """
+    xmin, ymin, xmax, ymax = target
+    rectangles = []
+    for scope in scopes:
+        left, bottom = max(xmin, scope[0]), max(ymin, scope[1])
+        right, top = min(xmax, scope[2]), min(ymax, scope[3])
+        if left < right and bottom < top:
+            rectangles.append((left, bottom, right, top))
+    xs = sorted({xmin, xmax} | {x for rectangle in rectangles for x in (rectangle[0], rectangle[2])})
+    for left, right in zip(xs, xs[1:]):
+        intervals = sorted((rectangle[1], rectangle[3]) for rectangle in rectangles
+                           if rectangle[0] <= left and rectangle[2] >= right)
+        cursor = ymin
+        for bottom, top in intervals:
+            if bottom > cursor:
+                return False
+            cursor = max(cursor, top)
+            if cursor >= ymax:
+                break
+        if cursor < ymax:
+            return False
+    return True
+
+
 def relative(root, path):
     return Path(path).resolve().relative_to(root.resolve()).as_posix()
 
@@ -322,7 +352,7 @@ def resume(args):
     checkpoint()
     for index, tile in enumerate(grid):
         envelope = bounds(tile["envelope"])
-        if envelope in covered:
+        if envelope_covered(envelope, covered):
             continue
         tile_root = root / "query-tiles" / tile["id"]
         reader = OriginalSource(tile_root, args.timeout)

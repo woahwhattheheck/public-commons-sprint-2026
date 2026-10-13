@@ -2,6 +2,8 @@
 
 This component adds actual measured lake response, observed flows and routed discharge quantities to the current native scientific report. The application keeps its existing economics, land-cover scenario results and map atlas.
 
+Maintained by TokenJunkieLabs. Code follows the repository MIT license. Scientific interpretation: **Needs expert review**.
+
 ## Install in the current application
 
 Receive this source package into the maintained application directory containing model/workspace.py. Install the current report successor from https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP, which composes scientific_report.py and delivery.py from the merged current v6 source. Then run:
@@ -10,7 +12,7 @@ Receive this source package into the maintained application directory containing
 python -B source/observed-report-20261013/install.py --workspace /mnt/data/gis12/original-workspace
 ```
 
-The command compiles the two new modules, applies three unique delivery-form anchors, retains the previous app body, uses node --check where Node is available, and imports the source document through Workspace.import_sources. It prints the actual source_collection_id and source_id. The optional delivery selection is source_roles.OBSERVED_CONTEXT. The form lists this source by metadata.report_schema and explicitly clears the selection when its blank option is chosen.
+The command compiles the two new modules, applies three unique delivery-form anchors, retains the previous app body, uses node --check where Node is available, and imports the source document through Workspace.import_sources. The native import verifies every selected body and companion and reuses its content-addressed collection on an unchanged retry. It prints the actual source_collection_id and source_id. The optional delivery selection is source_roles.OBSERVED_CONTEXT. The form lists this source by metadata.report_schema and explicitly clears the selection when its blank option is chosen.
 
 The application-root observed_hydrology_context.sources.json registers observed_hydrology_context.report.json as the retained source document. Its canonical companions keep the original study under observations/eighteenmile_2023, regional hydrology under observations/observed_hydrology_20261013, and the interactive daily-flow explorer under observations/calibration_context_20261013. The recipe preserves the five original scientific sections and four figures and adds the regional source explorer. The retained source is bound before delivery identity. collect returns the same binding, source assets and native report sections. Current delivery includes those assets in the same portable project archive. The installer accepts --manifest for a separately retained source edition; the default resolves against --application, independent of the command's working directory.
 
@@ -49,6 +51,24 @@ python -B source/observed-report-20261013/render.py \
 ```
 
 The command sets selection.observed_context_binding from the original source before collect. It writes the immutable selection, report.pdf, scientific HTML/Markdown/data companions, all retained source assets and operation.json through the maintained report APIs. On a completed retry, the same source and contact selection must match the retained selection; use a distinct output directory for a changed edition. The actual registered source title is used consistently across report formats. The resulting report's source links open the interactive explorer and original canonical data after export because all relative member paths are preserved.
+
+### Original Eighteenmile study edition
+
+The separately retained [PR3046](https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/3046) edition uses `observations/eighteenmile_2023/report_context/model-sources.json` as its report-document manifest. Its companion `original-study-model-sources.json` preserves the original 17-entry study catalog; the recipe references that exact companion. To render this specific original study edition, select it explicitly:
+
+```sh
+python -B source/observed-report-20261013/render.py \
+  --app-root "$PWD" \
+  --workspace /mnt/data/gis12/original-workspace \
+  --manifest "$PWD/observations/eighteenmile_2023/report_context/model-sources.json" \
+  --output /mnt/data/gis12/observed-report-eighteenmile-20261013
+```
+
+The installer also accepts `--manifest observations/eighteenmile_2023/report_context/model-sources.json` to register that edition in the existing delivery picker.
+
+### Another native worker
+
+The renderer defaults to `observed_hydrology_context.sources.json` beneath `--app-root`, matching the installer's regional context. An explicit renderer `--manifest` path resolves from the current working directory. Add `--create-workspace` with the worker's own fresh `--workspace` and `--output` paths to run the same retained source on another Linux worker. Existing workspaces remain selected when this option is omitted. The output operation records the actual collection and source IDs, report section and figure counts, and file descriptors.
 
 Related maintained source:
 - Current scientific report successor: https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8JLRMKAP

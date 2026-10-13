@@ -12,6 +12,7 @@ import math
 import os
 from pathlib import Path
 import tempfile
+import time
 
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, read_json, verify_file)
@@ -189,7 +190,7 @@ def _commit_csv(pending, destination):
         os.replace(pending, destination)
 
 
-def build(workspace, selection):
+def build(workspace, selection, *, raster_cache_bytes=None):
     """Summarize original polygon features on a shared native valid-cell support."""
     import fiona
     import numpy as np
@@ -200,7 +201,15 @@ def build(workspace, selection):
     from shapely.geometry import mapping, shape
     from shapely.ops import transform
 
-    selection = _selection(selection)
+    from .raster_block_cache import DEFAULT_CACHE_BYTES, NativeBlockCache
+    requested = dict(selection) if isinstance(selection, dict) else selection
+    supplied = requested.pop("raster_cache_bytes", None) if isinstance(requested, dict) else None
+    if (raster_cache_bytes is not None and supplied is not None
+            and (type(raster_cache_bytes) is not type(supplied) or raster_cache_bytes != supplied)):
+        raise ValueError("Select one operational raster_cache_bytes budget")
+    budget = raster_cache_bytes if raster_cache_bytes is not None else supplied
+    read_cache = NativeBlockCache(DEFAULT_CACHE_BYTES if budget is None else budget)
+    selection = _selection(requested)
     inputs = _inputs(workspace, selection)
     directory = workspace.root / "planning-inventory-data" / inputs["selection_id"]
     directory.mkdir(parents=True, exist_ok=True)
@@ -221,8 +230,10 @@ def build(workspace, selection):
         pixel_counts = {"reporting_pixels": 0, "common_valid_pixels": 0}
         min_coverage, max_coverage = None, None
         pending = None
+        started = time.monotonic()
         try:
             with ExitStack() as stack:
+                stack.callback(read_cache.clear)
                 mask = stack.enter_context(rasterio.open(inputs["reporting_mask"]))
                 grid_crs = CRS.from_user_input(mask.crs)
                 if (not grid_crs.is_projected or not grid_crs.axis_info
@@ -328,7 +339,7 @@ def build(workspace, selection):
                         inside = geometry_mask([mapping(geometry)], out_shape=window_shape,
                             transform=window_transform(window, mask.transform),
                             all_touched=False, invert=True)
-                        reporting_values = mask.read(1, window=window, masked=True)
+                        reporting_values = read_cache.read(mask, window, label="reporting_mask")
                         inside &= (~np.ma.getmaskarray(reporting_values)
                                    & (np.ma.getdata(reporting_values) == 1))
                         reporting_pixels += int(inside.sum())
@@ -339,8 +350,8 @@ def build(workspace, selection):
                         for run in runs:
                             values[run["id"]] = {}
                             for pollutant in outputs:
-                                data = datasets[run["id"]][pollutant].read(
-                                    1, window=window, masked=True)
+                                data = read_cache.read(datasets[run["id"]][pollutant], window,
+                                                       label=run["id"] + "/" + pollutant)
                                 raw = np.ma.getdata(data).astype("float64")
                                 valid = ~np.ma.getmaskarray(data) & np.isfinite(raw)
                                 if np.any(raw[inside & valid] < 0):
@@ -428,6 +439,13 @@ def build(workspace, selection):
                 "files": {"csv": csv_description,
                           "inventory": describe_file(workspace.root, inventory_path)},
             })
+            atomic_json(directory / "read-processing.json", {
+                "schema": "upstate.planning-raster-reads/v1",
+                "inventory_id": record["id"], "selection_id": inputs["selection_id"],
+                "csv_sha256": csv_description["sha256"],
+                "elapsed_seconds": time.monotonic() - started,
+                "reads": read_cache.snapshot(),
+            })
             atomic_json(completed, {"id": record["id"]}, immutable=True)
             return record
         finally:
@@ -459,3 +477,21 @@ def inspect(workspace, inventory_id):
     if inputs["identity"] != inventory["native_inputs"] or inputs["selection_id"] != record["selection_id"]:
         raise ValueError("Original native run or polygon source identity changed")
     return record
+
+
+def read_processing(workspace, inventory_id):
+    """Read operational counters separately from immutable scientific identities."""
+    record = workspace._get(KIND, identifier(inventory_id))
+    if record.get("schema") != "upstate.planning-inventories/v1":
+        raise ValueError("Select an original native planning inventory")
+    path = (workspace.root / "planning-inventory-data" / identifier(record["selection_id"])
+            / "read-processing.json")
+    if not path.exists():
+        return {"status": "not-recorded", "inventory_id": record["id"]}
+    result = read_json(path)
+    if (result.get("schema") != "upstate.planning-raster-reads/v1"
+            or result.get("inventory_id") != record["id"]
+            or result.get("selection_id") != record["selection_id"]
+            or result.get("csv_sha256") != record["files"]["csv"]["sha256"]):
+        raise ValueError("Planning read counters belong to another retained inventory")
+    return result
