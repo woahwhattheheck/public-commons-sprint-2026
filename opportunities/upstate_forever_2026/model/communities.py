@@ -299,7 +299,40 @@ def select_groups(table, selection):
     return normalized, selected
 
 
-def _context(workspace, value):
+def _watershed_context(workspace, report_id, groups):
+    """Select plan HUCs from the existing completed regional report registry."""
+    if not isinstance(report_id, str) or not re.fullmatch(r"watershed-[0-9a-f]{20}", report_id):
+        raise ValueError("Choose a saved regional watershed report")
+    directory = workspace.root / "watershed-context" / report_id
+    record = read_json(directory / "operator-report.json")
+    if (record.get("schema") != "upstate.operator-watershed-context/v1"
+            or record.get("id") != report_id or record.get("state") != "complete"):
+        raise ValueError("Choose a completed original regional watershed report")
+    descriptor = record.get("files", {}).get("watershed-context.json")
+    if not isinstance(descriptor, dict) or descriptor.get("path") != "watershed-context.json":
+        raise ValueError("The regional registry needs its original report file")
+    path = verify_file(directory, descriptor)
+    report = read_json(path)
+    if report.get("schema") != "upstate.watershed-context/v1" or report.get("id") != report_id:
+        raise ValueError("The regional registry and original report identities differ")
+    huc12s = sorted({member["watershed_id"] for group in groups for member in group["memberships"]})
+    if not huc12s:
+        raise ValueError("Select Community watersheds before binding their regional context")
+    from .watershed_context import selected_watershed_export
+    selected = selected_watershed_export(report, huc12s)
+    return {
+        **selected, "report_id": report_id,
+        "title": record.get("title") or report.get("title") or "Regional watershed context",
+        "analysis_version": report.get("analysis_version"),
+        "report_file": {**descriptor, "path": path.relative_to(workspace.root).as_posix()},
+        "source_fingerprint": record.get("source_fingerprint"),
+        "source_edition_fingerprint": record.get("source_edition_fingerprint"),
+        "source_inputs": deepcopy(record.get("source_inputs", [])),
+        "network_status": report.get("network", {}).get("status"),
+    }
+
+
+def _context(workspace, value, groups=()):
     if not isinstance(value, dict):
         raise ValueError("Select original scientific context identifiers")
     value = deepcopy(value)
@@ -355,6 +388,9 @@ def _context(workspace, value):
             if comparison_id != expected:
                 raise ValueError("Original comparison selection changed")
             snapshots["comparisons"].append(comparison)
+    watershed_id = value.get("watershed_context_id") or None
+    if watershed_id:
+        snapshots["watershed_context"] = _watershed_context(workspace, watershed_id, groups)
     totals = []
     for run in snapshots["runs"]:
         for pollutant in PHYSICAL_NAMES:
@@ -374,6 +410,8 @@ def _context(workspace, value):
     result = {"source_collection_ids": collections, "grid_id": grid_id,
               "baseline_run_id": baseline_id, "scenario_run_ids": scenario_ids, "delivery_id": delivery_id,
               "snapshots": snapshots, "physical_totals": totals}
+    if watershed_id:
+        result["watershed_context_id"] = watershed_id
     result["snapshot_sha256"] = digest(snapshots)
     return result
 
@@ -595,7 +633,7 @@ def save_plan(workspace, selection):
             raise ValueError("A revision retains its original table; create a new plan for another source edition")
     else:
         previous = None
-    context = _context(workspace, selection.get("context", {}))
+    context = _context(workspace, selection.get("context", {}), groups)
     imported = (_intervention_import(selection["intervention_import"], table, previous)
                 if selection.get("intervention_import") is not None else None)
     supplied_interventions = selection.get(
@@ -645,6 +683,14 @@ def verify_plan_context(workspace, plan):
     snapshots = plan["context"]["snapshots"]
     if digest(snapshots) != plan["context"]["snapshot_sha256"]:
         raise ValueError("The saved scientific context changed")
+    regional = snapshots.get("watershed_context")
+    if regional:
+        original_regional = verify_file(workspace.root, regional["report_file"])
+        report = read_json(original_regional)
+        if (report.get("schema") != "upstate.watershed-context/v1"
+                or report.get("id") != regional["report_id"]
+                or plan["context"].get("watershed_context_id") != regional["report_id"]):
+            raise ValueError("The saved Community watershed context changed")
     for run in snapshots["runs"]:
         if run.get("state") == "complete":
             for artifact in run.get("artifacts", {}).values():

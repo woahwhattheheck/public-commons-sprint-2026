@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "4",
+  "version": "5",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -10,7 +10,8 @@
     "implementation_forms.mjs",
     "implementation.css",
     "implementation_workbench.html",
-    "implementation_lab.mjs"
+    "implementation_lab.mjs",
+    "implementation_results.mjs"
   ],
   "backend": {
     "module": "implementation_operator",

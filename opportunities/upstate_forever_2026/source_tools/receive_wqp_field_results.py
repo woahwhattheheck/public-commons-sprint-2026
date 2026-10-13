@@ -22,7 +22,7 @@ from model.implementation import ImplementationStore
 from model.implementation_schema import document_digest, validate_plan
 from model.implementation_lab_results import preview_lab_results, import_lab_results
 from model.implementation_observations import (
-    preview_observation_context, import_observation_context,
+    preview_observation_context, import_observation_context, EDITION as OBSERVATION_EDITION,
 )
 
 SOURCE_DIRECTORY = APPLICATION_ROOT / "observations/eighteenmile_2023/wqp_20261013"
@@ -30,8 +30,9 @@ CASE_DIRECTORY = SOURCE_DIRECTORY / "field-intake"
 
 
 def receive(workspace_path: Path, source_directory: Path, case_directory: Path,
-            *, actor: str = "") -> dict:
-    workspace = Workspace(workspace_path)
+            *, actor: str = "", create_workspace: bool = False,
+            workspace_title: str = "Eighteenmile original field observations") -> dict:
+    workspace = Workspace(workspace_path, create=create_workspace, title=workspace_title)
     store = ImplementationStore(workspace)
     seed_path = case_directory / "plan.json"
     mapping_path = case_directory / "mapping.json"
@@ -52,6 +53,7 @@ def receive(workspace_path: Path, source_directory: Path, case_directory: Path,
     identity = {
         "schema": "upstate.wqp-field-receiving/v1",
         "workspace_id": workspace.project["id"],
+        "observation_edition": OBSERVATION_EDITION,
         "plan_source_sha256": file_digest(seed_path),
         "mapping_sha256": file_digest(mapping_path),
         "coverage_sha256": file_digest(coverage_path),
@@ -151,14 +153,19 @@ def receive(workspace_path: Path, source_directory: Path, case_directory: Path,
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", required=True, type=Path,
-                        help="Existing original scientific Workspace")
+                        help="Original scientific Workspace directory")
+    parser.add_argument("--create-workspace", action="store_true",
+                        help="Explicitly create a dedicated native observed-data Workspace when absent")
+    parser.add_argument("--workspace-title", default="Eighteenmile original field observations",
+                        help="Title used only when creating the original Workspace")
     parser.add_argument("--source-directory", type=Path, default=SOURCE_DIRECTORY)
     parser.add_argument("--case-directory", type=Path, default=CASE_DIRECTORY)
     parser.add_argument("--actor", default="")
     options = parser.parse_args()
     result = receive(
         options.workspace, options.source_directory, options.case_directory,
-        actor=options.actor,
+        actor=options.actor, create_workspace=options.create_workspace,
+        workspace_title=options.workspace_title,
     )
     print(json.dumps(result, ensure_ascii=False, indent=2))
 

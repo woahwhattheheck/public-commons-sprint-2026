@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import stat
 import tempfile
+import time
 import zipfile
 
 from .common import describe_file, identifier, relative_file
@@ -75,7 +76,7 @@ def _identity(value):
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
-def write_archive(directory, destination, descriptors):
+def write_archive(directory, destination, descriptors, *, progress=None):
     """Stream exact retained members, including large GeoTIFFs, into one ZIP."""
     directory = Path(directory).resolve()
     destination = Path(destination)
@@ -86,6 +87,22 @@ def write_archive(directory, destination, descriptors):
         if name in members and members[name] != item:
             raise ValueError("Parameter archive repeats a member with different source bytes")
         members[name] = item
+    started, published = time.monotonic(), None
+    observation = {"schema": "upstate.parameter-archive-progress/v1",
+                   "phase": "preparing", "members_total": len(members),
+                   "members_completed": 0, "source_bytes_total": sum(
+                       item["bytes"] for item in members.values()),
+                   "source_bytes_processed": 0, "current_member": None,
+                   "current_member_bytes": 0}
+    def report(*, force=False, **changes):
+        nonlocal published
+        observation.update(changes)
+        instant = time.monotonic()
+        observation["elapsed_seconds"] = max(0.0, instant - started)
+        if progress and (force or published is None or instant - published >= 1.0):
+            progress(dict(observation))
+            published = instant
+    report(force=True)
     pending = None
     try:
         with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".parameter-",
@@ -94,6 +111,7 @@ def write_archive(directory, destination, descriptors):
         with zipfile.ZipFile(pending, "w", allowZip64=True) as archive:
             for name, item in sorted(members.items()):
                 original = relative_file(directory, name)
+                report(phase="streaming", current_member=name, current_member_bytes=0)
                 with original.open("rb") as source:
                     before = os.fstat(source.fileno())
                     if not stat.S_ISREG(before.st_mode):
@@ -108,9 +126,14 @@ def write_archive(directory, destination, descriptors):
                             output.write(block)
                             checksum.update(block)
                             size += len(block)
+                            observation["source_bytes_processed"] += len(block)
+                            report(current_member_bytes=size)
                     if (_identity(before) != _identity(os.fstat(source.fileno()))
                             or size != item["bytes"] or checksum.hexdigest() != item["sha256"]):
                         raise ValueError("Parameter archive source changed: " + name)
+                observation["members_completed"] += 1
+                report(current_member=None, current_member_bytes=0)
+        report(phase="publishing", current_member=None)
         with pending.open("rb") as original:
             os.fsync(original.fileno())
         os.replace(pending, destination)
@@ -120,6 +143,7 @@ def write_archive(directory, destination, descriptors):
             os.fsync(fd)
         finally:
             os.close(fd)
+        report(force=True, phase="complete", current_member=None)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
