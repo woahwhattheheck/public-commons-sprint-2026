@@ -4,12 +4,22 @@ import inspect
 from .monitoring_common import ContractError
 from .monitoring_workspace import MonitoringWorkspace
 
-READS = {"list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
-WRITES = {"network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "export"}
+READS = {"context.catalog", "context.list", "context.get", "context.preview", "list", "get", "frontier.progress", "campaign.get", "campaign.list", "campaign.history", "capabilities", "source.catalog"}
+WRITES = {"context.prepare", "context.export", "network.import", "design", "frontier", "campaign.create", "campaign.revise", "campaign.event", "export"}
 
 def invoke(workspace, action, params, *, export_root=None):
     if not isinstance(params, dict): raise ContractError("Monitoring parameters must be a JSON object")
     service = MonitoringWorkspace(workspace, export_root=export_root)
+    if action.startswith("context."):
+        from . import monitoring_observed_context as observed
+        functions = {"context.catalog": observed.catalog, "context.list": observed.list_saved,
+                     "context.get": observed.inspect, "context.preview": observed.preview,
+                     "context.prepare": observed.prepare, "context.export": observed.export_context}
+        if action not in functions:
+            raise ContractError("Unknown monitoring context action")
+        options = dict(params)
+        if action == "context.export": options["export_root"] = export_root
+        return functions[action](workspace, **options)
     commands = {
         "network.import": service.import_network, "list": service.list, "get": service.get,
         "design": service.design, "frontier": service.frontier, "frontier.progress": service.frontier_progress,
