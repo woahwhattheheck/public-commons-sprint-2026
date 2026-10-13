@@ -53,7 +53,7 @@ The API guide specifies the complete action envelopes. Save an action before app
 
 Open the exact maintained application at desktop and a 390-pixel phone width. Look at the actual rendered screens, including light and dark embedding contexts. Operate the full populated estimate and job, source matrices, empty/error states, project reopening, quote/job HTML and whole ZIP downloads. View the actual screenshots and repair unreadable labels, overflow, cramped controls or broken output in this same application.
 
-The supplied interface uses an explicit neutral root, readable light panels and controls, compact wrapping actions and scrollable matrices. Source-engine execution and file identities support the working flow; actual rendered inspection remains part of the original receiving operation.
+The supplied interface defines foreground colors on headings, labels, source-table cells, links and generated text as well as the neutral root. Inputs, placeholders and disabled controls have explicit light surfaces and readable text. Primary and current-page buttons retain white text on their dark surfaces in normal and hover states. This keeps a surrounding dark host theme from making descendants white on the application's light panels. Compact actions wrap and matrices scroll. Source-engine execution and file identities support the working flow; actual rendered inspection remains part of the original receiving operation.
 
 ## Stock after spoilage and rework
 
