@@ -1,0 +1,207 @@
+{
+  "schema": "stellar-forge.grant-product-registration.v1",
+  "id": "clickhouse-acceptance-workbench",
+  "heading": "## ClickHouse Acceptance Workbench: complete native table acceptance and customer receiving",
+  "sources": [
+    {
+      "id": "clickhouse-acceptance-workbench-source",
+      "label": "Complete original54-file ClickHouse acceptance source",
+      "repository": "woahwhattheheck/commons",
+      "kind": "tree",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623"
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-source-manifest",
+      "label": "Complete54-file original source inventory",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/SOURCE_MANIFEST.json",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 8732,
+          "sha256": "2c24a4ebcbccb085643efc2bc8b0f0ea1c204dac6237756b2c51c079295f41b3",
+          "git_blob": "9bc425ed34e2f7df667f00b7c7670b08b0ee7a19"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-operator",
+      "label": "Complete original native/operator/receiving guide",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/OPERATOR.md",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 18413,
+          "sha256": "2ce081d6cb0b557d17db234dba56fcf052a5cf784d8ccf4ea79bb575e29d4ef6",
+          "git_blob": "8a120a174f555a18835aff989a351db91c11b7a2"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-plan",
+      "label": "Native type/source-boundary/candidate/FINAL acceptance planner",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/commissioning/plan.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 14075,
+          "sha256": "22a0182ad8eab9f7c4175798337385f73ca88e9faacbbca33406141e427a4c4e",
+          "git_blob": "85bdf7f5126b3b712bed8f0a357d85a5bdff2ad1"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-worker",
+      "label": "Original ClickHouse HTTP/RowBinary/full native observation worker",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/commissioning/worker.py",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 24990,
+          "sha256": "210a407583318c433260cf714f810fcc2334fb4185a62d8d1e1a1ae60defc064",
+          "git_blob": "428f3bc315b25776b5c14230bc9eaf772cbd8078"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-runtime",
+      "label": "Accepted original native lifetime and worker selection",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/commissioning/runtime.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 3283,
+          "sha256": "d9352fda2d894231bf1ddf257f00ee00b1a97628f629903b245612598bf6b893",
+          "git_blob": "9bf84fea508762a387fac131f59789ba5766161e"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-workspace",
+      "label": "Original reviewed project/native/cutover/receiving actions",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/commissioning/workspace.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 15008,
+          "sha256": "2dde8dc3fed18ae07d23ab95862a4987d4341bfa254f15ce88b4e244461c4c12",
+          "git_blob": "dfbc0e5d316501f58e6872965c3c3bac1eb141da"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-merchant",
+      "label": "Original literal named-query source derivation",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/commissioning/merchant.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 2698,
+          "sha256": "394002368df5543d1c244e10f9fb39abac17f2bb9ed5b1eed9b018d44a29ee79",
+          "git_blob": "2bd63fd6f5f0e0efb9e2ecb849404fc7c1ea862c"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-comparison",
+      "label": "Complete original typed-cell and duplicate-multiplicity comparator",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/vendor/sling/migration/compare.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 24245,
+          "sha256": "a2a64dd331a79ba5c840a598c0a1d0b49494f1466d9e87eb96f677fc62014a10",
+          "git_blob": "f67a566bd02797beb9fa48f36b68a10851da64d8"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-portable",
+      "label": "Whole flat-v2 and original gzip-v1 reader",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/vendor/sling/core/archive.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 35011,
+          "sha256": "dd0c8b841c74d4c852315cbac57ba300e36df5640372745c13d99f23371c0659",
+          "git_blob": "02327b9d6afff063d069d084846949c70011d539"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-receiving",
+      "label": "Original whole native/browser/cold receiving programme",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/receiving/receive.mjs",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 47889,
+          "sha256": "d7092b2edd60e0b87df7ea125aa553c09e8dc6a41355be9237d19a85405b2e72",
+          "git_blob": "e1434f777b3a60d9c26c803b400a6054ac5c459c"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-upstream",
+      "label": "Complete original operated ClickHouse merchant source",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/upstream/CLICKHOUSE-SOURCE.json",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 212625,
+          "sha256": "8649fcaeea8ab4d6ad59f651c8e2c81fcc89d7f6c7dba86b05528501edc31c3a",
+          "git_blob": "73c9b537afab3f6978fa3b889f3ed812de19791a"
+        }
+      ]
+    },
+    {
+      "id": "clickhouse-acceptance-workbench-fixture",
+      "label": "Original existing three-row native fixture and operation lifetime",
+      "repository": "woahwhattheheck/commons",
+      "kind": "blob",
+      "path": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/reference/fixture.py",
+      "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+      "editions": [
+        {
+          "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+          "bytes": 18094,
+          "sha256": "26110720f1473e62eb8826f7843344a882423a33c98e97d10015c1530adfa785",
+          "git_blob": "e7180b939c8a596b2471f5fb537319c143feb590"
+        }
+      ]
+    }
+  ]
+}

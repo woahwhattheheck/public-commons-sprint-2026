@@ -1,0 +1,98 @@
+{
+  "schema": "altinity.acceptance-input.v1",
+  "title": "Original ClickHouse exact-value reference acceptance",
+  "source": {
+    "id": "original_clickhouse",
+    "endpointEnv": "ALTINITY_SOURCE_URL",
+    "userEnv": "ALTINITY_SOURCE_USER",
+    "passwordEnv": "ALTINITY_SOURCE_PASSWORD",
+    "allowLocal": true,
+    "databases": [
+      "starforge_example"
+    ],
+    "versions": [
+      "26.8.24.9"
+    ],
+    "mode": "read"
+  },
+  "target": {
+    "id": "candidate_clickhouse",
+    "endpointEnv": "ALTINITY_TARGET_URL",
+    "userEnv": "ALTINITY_TARGET_USER",
+    "passwordEnv": "ALTINITY_TARGET_PASSWORD",
+    "allowLocal": true,
+    "databases": [
+      "starforge_example"
+    ],
+    "versions": [
+      "26.8.24.9"
+    ],
+    "mode": "write"
+  },
+  "tables": [
+    {
+      "source": [
+        "starforge_example",
+        "transfers"
+      ],
+      "target": [
+        "starforge_example",
+        "commission_transfers_v1"
+      ],
+      "columns": [
+        {
+          "name": "record_id",
+          "type": "UInt64"
+        },
+        {
+          "name": "ledger",
+          "type": "UInt64"
+        },
+        {
+          "name": "account",
+          "type": "String"
+        },
+        {
+          "name": "amount",
+          "type": "Decimal(38, 7)"
+        },
+        {
+          "name": "memo",
+          "type": "Nullable(String)"
+        },
+        {
+          "name": "successful",
+          "type": "Bool"
+        },
+        {
+          "name": "observed_at",
+          "type": "DateTime64(6, 'UTC')"
+        }
+      ],
+      "primaryKey": [
+        "ledger",
+        "record_id"
+      ],
+      "orderBy": [
+        "ledger",
+        "record_id"
+      ],
+      "engine": "MergeTree",
+      "sourceFinal": false,
+      "final": false,
+      "phase": "baseline",
+      "maxRows": 1000,
+      "maxBytes": 16777216,
+      "sourceBoundary": "Original ce4fd5b79 seed.sql, three retained demonstration rows in the private original 26.8.24.9 fixture; no concurrent source writer."
+    }
+  ],
+  "sourceEvidence": [
+    {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "commit": "ce4fd5b79c7d098305a00567cf2c3cb983d4065d",
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/clickhouse/examples/seed.sql",
+      "gitBlob": "6f3174f20e9fd35cd078ffb36180369d28b5b7cb779"
+    }
+  ],
+  "notes": "Actual original demonstration source only. No customer data or blockchain settlement is claimed. Target database must be Atomic and the candidate name unused."
+}

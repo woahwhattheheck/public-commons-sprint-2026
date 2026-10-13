@@ -1,0 +1,464 @@
+{
+  "schema": "stellar-forge.clickhouse-acceptance-workbench-original-source.v1",
+  "repository": "woahwhattheheck/commons",
+  "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+  "prefix": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/",
+  "installedDirectory": "workbench",
+  "edition": "clickhouse-acceptance-20261013-owner-closure",
+  "origin": {
+    "repository": "woahwhattheheck/commons",
+    "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
+    "mergeCommit": "67ed8a126bf56c8dafa4202a672f441498a6b1a6",
+    "prefix": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/",
+    "sourcePage": "https://chatgpt.com/space/page_b922d9e0b4b88191a45bbd903ed6cc07",
+    "sourcePacket": {
+      "bytes": 840916,
+      "sha256": "2a11af1a2f106cf2f5e28d787e598da41c7b185d26ef3ec019dac70813515231"
+    }
+  },
+  "maintenance": [
+    {
+      "path": "commissioning/runtime.mjs",
+      "reason": "Use selected isolated Python for the unchanged native ClickHouse worker.",
+      "original": {
+        "path": "commissioning/runtime.mjs",
+        "bytes": 3283,
+        "sha256": "d9352fda2d894231bf1ddf257f00ee00b1a97628f629903b245612598bf6b893",
+        "gitBlob": "9bf84fea508762a387fac131f59789ba5766161e"
+      },
+      "selected": {
+        "path": "commissioning/runtime.mjs",
+        "bytes": 3293,
+        "sha256": "6472d2d30abcba650c62a6b975218f69225d8265d847cf3ab689967bcca6e73e",
+        "gitBlob": "d3bd711508dad30c433ec2aa48b400fa09213052"
+      },
+      "source": "https://chatgpt.com/space/page_442f9acffe6881919d66330e201f1ac5"
+    },
+    {
+      "path": "commissioning/server.mjs",
+      "reason": "Retain original listener/workspace closure stages and validate authentication configuration ownership before opening the writer.",
+      "original": {
+        "path": "commissioning/server.mjs",
+        "bytes": 10259,
+        "sha256": "fa210b61855119dab675ae45eddfc765e407888540af9a3762df14dc24181e5f",
+        "gitBlob": "cc0bdfc5d25a4351f7d756472e27967adeee67ef"
+      },
+      "selected": {
+        "path": "commissioning/server.mjs",
+        "bytes": 10736,
+        "sha256": "15f79da8ebdf6a021e189499ab8d69728639ff3940c58286269e211f848c961f",
+        "gitBlob": "aae81e8b4a1cfe1a190721b6acdda2d44d157e06"
+      },
+      "source": "https://chatgpt.com/space/page_442f9acffe6881919d66330e201f1ac5"
+    },
+    {
+      "path": "vendor/sling/core/workspace.mjs",
+      "reason": "Drain and close original archive/store/lease in retryable stages without cancelling accepted native jobs.",
+      "original": {
+        "path": "vendor/sling/core/workspace.mjs",
+        "bytes": 44290,
+        "sha256": "3682104562b09e52d1425cb2b63344a84a519cb409891af51ed86b5f386cbdbb",
+        "gitBlob": "5940c1000f4efdf2559be28ac1c50858d405630d"
+      },
+      "selected": {
+        "path": "vendor/sling/core/workspace.mjs",
+        "bytes": 44659,
+        "sha256": "daf02de919c3d30d5cca1249842ec83f50e646c769342b3f246f2685453c7db2",
+        "gitBlob": "392d822e43d4e60495c8659d5b11d9c13b5a4cc3"
+      },
+      "source": "https://chatgpt.com/space/page_442f9acffe6881919d66330e201f1ac5"
+    },
+    {
+      "path": "vendor/sling/native/runtime.mjs",
+      "reason": "Observe complete original Python output through actual child close, preserving errors and selected isolated interpreter.",
+      "original": {
+        "path": "vendor/sling/native/runtime.mjs",
+        "bytes": 12074,
+        "sha256": "68984e990a09c7b56b92c56deef27d7364fda16fc4c5f5a968969b0c6d45c741",
+        "gitBlob": "6af334ac698e18ec1248842ceba7cb67e54bf07e"
+      },
+      "selected": {
+        "path": "vendor/sling/native/runtime.mjs",
+        "bytes": 12306,
+        "sha256": "237b7930d88b866f3515d66c70d2720944580d5facfb41ce7f60e57169343769",
+        "gitBlob": "5ef51595ac1693bedb9b9a7c3022a5a80261c53e"
+      },
+      "source": "https://chatgpt.com/space/page_442f9acffe6881919d66330e201f1ac5"
+    },
+    {
+      "path": "receiving/receive.mjs",
+      "reason": "Keep each original cutover/consumer stage durable and retain the same owner through close recovery.",
+      "original": {
+        "path": "receiving/receive.mjs",
+        "bytes": 47889,
+        "sha256": "d7092b2edd60e0b87df7ea125aa553c09e8dc6a41355be9237d19a85405b2e72",
+        "gitBlob": "e1434f777b3a60d9c26c803b400a6054ac5c459c"
+      },
+      "selected": {
+        "path": "receiving/receive.mjs",
+        "bytes": 48971,
+        "sha256": "a2bd7a20fcdfdd180f660611c7b534fa42f2fac66e5a4d7aeff716a2f35d3694",
+        "gitBlob": "547683ee0f4bc0e06f8a118a382b271a526a95b5"
+      },
+      "source": "https://chatgpt.com/space/page_6c6e93c8a2348191a44bf047f2d50f7b"
+    },
+    {
+      "path": "OPERATOR.md",
+      "reason": "Carry the complete current owner rendered-product and attachment instruction in the actual HTTP operator guide.",
+      "original": {
+        "path": "OPERATOR.md",
+        "bytes": 18413,
+        "sha256": "2ce081d6cb0b557d17db234dba56fcf052a5cf784d8ccf4ea79bb575e29d4ef6",
+        "gitBlob": "8a120a174f555a18835aff989a351db91c11b7a2"
+      },
+      "selected": {
+        "path": "OPERATOR.md",
+        "bytes": 20460,
+        "sha256": "8d9195a9187d996d47ff6c20a16d9ae1770e99a0e0d88a2b8d111704738225d9",
+        "gitBlob": "f679be3d223bdac67365e0439f0b9b65a2e91f21"
+      }
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "reason": "Update the complete original53-member inventory for this explicitly selected maintained edition; keep its own file outside the self-hash.",
+      "original": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "2c24a4ebcbccb085643efc2bc8b0f0ea1c204dac6237756b2c51c079295f41b3",
+        "gitBlob": "9bc425ed34e2f7df667f00b7c7670b08b0ee7a19"
+      },
+      "selected": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb",
+        "gitBlob": "866c5d73b60673acf06f5e92509a2594ec571ba4"
+      }
+    }
+  ],
+  "files": [
+    {
+      "path": "commissioning/plan.mjs",
+      "bytes": 14075,
+      "sha256": "22a0182ad8eab9f7c4175798337385f73ca88e9faacbbca33406141e427a4c4e",
+      "gitBlob": "85bdf7f5126b3b712bed8f0a357d85a5bdff2ad1"
+    },
+    {
+      "path": "commissioning/worker.py",
+      "bytes": 24990,
+      "sha256": "210a407583318c433260cf714f810fcc2334fb4185a62d8d1e1a1ae60defc064",
+      "gitBlob": "428f3bc315b25776b5c14230bc9eaf772cbd8078"
+    },
+    {
+      "path": "commissioning/runtime.mjs",
+      "bytes": 3293,
+      "sha256": "6472d2d30abcba650c62a6b975218f69225d8265d847cf3ab689967bcca6e73e",
+      "gitBlob": "d3bd711508dad30c433ec2aa48b400fa09213052"
+    },
+    {
+      "path": "commissioning/workspace.mjs",
+      "bytes": 15008,
+      "sha256": "2dde8dc3fed18ae07d23ab95862a4987d4341bfa254f15ce88b4e244461c4c12",
+      "gitBlob": "dfbc0e5d316501f58e6872965c3c3bac1eb141da"
+    },
+    {
+      "path": "commissioning/server.mjs",
+      "bytes": 10736,
+      "sha256": "15f79da8ebdf6a021e189499ab8d69728639ff3940c58286269e211f848c961f",
+      "gitBlob": "aae81e8b4a1cfe1a190721b6acdda2d44d157e06"
+    },
+    {
+      "path": "cli.mjs",
+      "bytes": 9721,
+      "sha256": "e7b489e371c76cd17388acd9a5df556f121980f2b15d73f13de51c6f555d60ba",
+      "gitBlob": "c7cfc757575f8d0d0bbcd69396bad2c9e01e8c27"
+    },
+    {
+      "path": "web/sha256.mjs",
+      "bytes": 18439,
+      "sha256": "a6c62003f40d52c7401838cbf2473539fbb8414647d3aeec51159789b93241ff",
+      "gitBlob": "6756dbe9255e0bed0b9b5682ec5d3b6b25fee182"
+    },
+    {
+      "path": "web/style.css",
+      "bytes": 9600,
+      "sha256": "416d6d74a3c6e95c0a925de1dc34ef275026f8e986b32026c78729d6a5492189",
+      "gitBlob": "4c6e2cbe6830bc7ea36f957b92d4f78a09ec996d"
+    },
+    {
+      "path": "web/index.html",
+      "bytes": 3168,
+      "sha256": "9405c9ac87d67008e2c8ddd5252654fbfcc3eedafb95f5255175a81c811d64cb",
+      "gitBlob": "a41ad71c18a074af1a8fd31bac1afd7d1b62fa3e"
+    },
+    {
+      "path": "web/app.mjs",
+      "bytes": 41586,
+      "sha256": "20a779a78a5d9f096e702289a53dd770fa758d02f51d19bf0c6c22ea823361ef",
+      "gitBlob": "f6d7389be87da9e2d647b8c56baaad0850d395a1"
+    },
+    {
+      "path": "reference/acceptance-input.example.json",
+      "bytes": 1827,
+      "sha256": "854e1d1866e41e66f2bd3a6c3959b5ec56b725b6d3f1f5d85fc33dc6d233b15e",
+      "gitBlob": "15a2e9413de2aefac35f831718f81d5f141bac9f"
+    },
+    {
+      "path": "vendor/sling/core/common.mjs",
+      "bytes": 6541,
+      "sha256": "62690403096ca5f1b74713b4db70e1fbfb88771a9998ff7866e000f7bece1c8f",
+      "gitBlob": "f81d6f77800322a670526081830803ef50bc6a12"
+    },
+    {
+      "path": "vendor/sling/core/objects.mjs",
+      "bytes": 12481,
+      "sha256": "20f1fedfd33a6539a05142b10c89c7a80e575de5028c4f2253cc170ae39d4692",
+      "gitBlob": "27237227a70806a1ac4f73fd8c936f21aa2a502e"
+    },
+    {
+      "path": "vendor/sling/core/uploads.mjs",
+      "bytes": 5682,
+      "sha256": "96f2293f35a6ba41c95bdf85f2b4dd27cff9aa360acf711aeb2aa182e319f8ad",
+      "gitBlob": "ffe08f57742de1ce024d7220130e23e0e53e2bcb"
+    },
+    {
+      "path": "vendor/sling/vendor/stellar-expert/LICENSE",
+      "bytes": 1091,
+      "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+      "gitBlob": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+    },
+    {
+      "path": "vendor/sling/vendor/stellar-expert/store.mjs",
+      "bytes": 9506,
+      "sha256": "fe12c5dbd3fddfe91b82b6898358375a1d90d3984ad921dfb718d85f71addd38",
+      "gitBlob": "f1362ac98774ca0970768bc770fc11e9923dde08"
+    },
+    {
+      "path": "vendor/sling/vendor/stellar-expert/provider.mjs",
+      "bytes": 10426,
+      "sha256": "109bc181030e9b795cb34a1b7c29d636a78c959f9f47c43735ecba60be613cfc",
+      "gitBlob": "60b8804e32cc45ce44ccb295f8f086e703bc9406"
+    },
+    {
+      "path": "vendor/sling/vendor/stellar-expert/exact-json.mjs",
+      "bytes": 2861,
+      "sha256": "bb5ab738808440267bf2a086f9a0e3f1fb2ed4b531b27fbafdfe1ae3372d1b26",
+      "gitBlob": "f24ed2620ee2460c780e6efea22c738edffbff75"
+    },
+    {
+      "path": "vendor/sling/vendor/stellar-expert/schema.mjs",
+      "bytes": 5972,
+      "sha256": "d34b64253374f9d2f3b74975b458758797ae7c9e5acdf5e23c1226c8d6d7dcef",
+      "gitBlob": "7538d26e74fa21fa4b1b388b6d80bb18dde0928c"
+    },
+    {
+      "path": "vendor/sling/vendor/stellar-expert/SOURCE.json",
+      "bytes": 1760,
+      "sha256": "73ae9bb25ed2096019a78a00999670ebc418401a262b458cf30bf32a72181549",
+      "gitBlob": "3e2912ed5bd74da6ee0ff1063b582ba7dfc4156b"
+    },
+    {
+      "path": "vendor/sling/core/REUSE.json",
+      "bytes": 881,
+      "sha256": "f6d98314fab01df1df181efd004075c447708a062519bea9d7d01a7d4c6bc319",
+      "gitBlob": "4f71e427927335cf30b0dd933e9e1080c3e43b97"
+    },
+    {
+      "path": "vendor/sling/core/store.mjs",
+      "bytes": 9943,
+      "sha256": "9f9ace46e501b184dd476d8e15f7443e7d80686e6e4d9e67dc3931335a1ef125",
+      "gitBlob": "119e746b14ee2c0de665fe6130b85e7f043b2737"
+    },
+    {
+      "path": "vendor/sling/core/auth.mjs",
+      "bytes": 2348,
+      "sha256": "c8c2b170621c8245d14b951373d87d4358554b4b56847fd8b3029099097e41eb",
+      "gitBlob": "48c1d884dfcfaf565c490d92310354f26dc74b20"
+    },
+    {
+      "path": "vendor/sling/core/workspace.mjs",
+      "bytes": 44659,
+      "sha256": "daf02de919c3d30d5cca1249842ec83f50e646c769342b3f246f2685453c7db2",
+      "gitBlob": "392d822e43d4e60495c8659d5b11d9c13b5a4cc3"
+    },
+    {
+      "path": "vendor/sling/migration/common.mjs",
+      "bytes": 4732,
+      "sha256": "6e614bdc3ec439c3646ebf85d72dd61db919d6103564b96e8e1f1cb4950bc69a",
+      "gitBlob": "242022dcd3e42e09a8a60912fb4c3f04412e12c5"
+    },
+    {
+      "path": "vendor/sling/migration/intake.mjs",
+      "bytes": 12429,
+      "sha256": "4d9c2bcd2444dc49f51125dfcc88ab0010946c05654bf1043984520935d448bc",
+      "gitBlob": "34978c4e1ae0f9f49ddae7b4cd791c5aac9e3eca"
+    },
+    {
+      "path": "vendor/sling/migration/plan.mjs",
+      "bytes": 19478,
+      "sha256": "b5a65b992553b98bc884b2b77ebc415f23ea3096481d99ee26cbf29df2f0bbe7",
+      "gitBlob": "3200c3624647a006e2a77e5099b45b023f2b8efa"
+    },
+    {
+      "path": "vendor/sling/migration/compare.mjs",
+      "bytes": 24245,
+      "sha256": "a2a64dd331a79ba5c840a598c0a1d0b49494f1466d9e87eb96f677fc62014a10",
+      "gitBlob": "f67a566bd02797beb9fa48f36b68a10851da64d8"
+    },
+    {
+      "path": "vendor/sling/migration/downstream.mjs",
+      "bytes": 17136,
+      "sha256": "67519c755b0992943d64a7022cf410672e94a717aa1e98435ebb898ddf1c7e0b",
+      "gitBlob": "b93087bce522ed76c6b001d5cfaceda93faac600"
+    },
+    {
+      "path": "vendor/sling/migration/index.mjs",
+      "bytes": 437,
+      "sha256": "9dd45681547260e1a0611cf18dffd6f08a051221b4346a0c8bb9f780c6e96051",
+      "gitBlob": "26d650f21e556ed79a042f3bb014c7b37a6e2bb1"
+    },
+    {
+      "path": "vendor/sling/migration/cli.mjs",
+      "bytes": 9478,
+      "sha256": "598e9a351a072a2e602ff7b797edd26baa0177291582fbf3af8030342789b6bf",
+      "gitBlob": "3bb083b9f645eb3e69e09cc43bc4829aff639ce0"
+    },
+    {
+      "path": "vendor/sling/core/archive.mjs",
+      "bytes": 35011,
+      "sha256": "dd0c8b841c74d4c852315cbac57ba300e36df5640372745c13d99f23371c0659",
+      "gitBlob": "02327b9d6afff063d069d084846949c70011d539"
+    },
+    {
+      "path": "vendor/sling/migration/SOURCE_REFERENCES.json",
+      "bytes": 5069,
+      "sha256": "2b5d837de9e7fe3f69bfba97af58668db3538aeba2840c99217fbd9db34b5bcd",
+      "gitBlob": "7217a9f29de49e577a019543fa4473fe4cffc00f"
+    },
+    {
+      "path": "vendor/sling/migration/OPERATING.md",
+      "bytes": 16770,
+      "sha256": "04c8b77e7c9b857dd7929ebc83ec43a84f2e87d6397c64a55ab0ab091ba3bce8",
+      "gitBlob": "f6b14e1cb3b90f63469627fc3ead86fbdb289b62"
+    },
+    {
+      "path": "vendor/sling/native/runtime.mjs",
+      "bytes": 12306,
+      "sha256": "237b7930d88b866f3515d66c70d2720944580d5facfb41ce7f60e57169343769",
+      "gitBlob": "5ef51595ac1693bedb9b9a7c3022a5a80261c53e"
+    },
+    {
+      "path": "vendor/sling/LICENSE",
+      "bytes": 1243,
+      "sha256": "88a3bcd40f4d6977052537e76db47ea5334d4dbf95e86794e1d628181cb67eec",
+      "gitBlob": "857c06a5eac94348279d74b7d0313d51e01a97b9"
+    },
+    {
+      "path": "upstream/CLICKHOUSE-SOURCE.json",
+      "bytes": 212625,
+      "sha256": "8649fcaeea8ab4d6ad59f651c8e2c81fcc89d7f6c7dba86b05528501edc31c3a",
+      "gitBlob": "73c9b537afab3f6978fa3b889f3ed812de19791a"
+    },
+    {
+      "path": "vendor/sling/SOURCE.json",
+      "bytes": 480,
+      "sha256": "6aee625678e9ad7d51c7019359e15d2e7c1ec8758c94c2454b072b77b7ac2b17",
+      "gitBlob": "fcd8a9edb0d313e68583bbcdc74b12eeac8d8282"
+    },
+    {
+      "path": "package.json",
+      "bytes": 210,
+      "sha256": "5c3d64a29603aafb8719ea532243598b166d97dafa791e913d71e6b24a3a35d6",
+      "gitBlob": "e4a1e0b8f1f759a994899c9bc71132c64a1d8f21"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 1243,
+      "sha256": "88a3bcd40f4d6977052537e76db47ea5334d4dbf95e86794e1d628181cb67eec",
+      "gitBlob": "857c06a5eac94348279d74b7d0313d51e01a97b9"
+    },
+    {
+      "path": "reference/original-acceptance.json",
+      "bytes": 2496,
+      "sha256": "3e332f40fce5340a1451838603d58aec6ee1d6d27f77004992e939470dbdf6bd",
+      "gitBlob": "bfc44231c826b45bebc427de1a66c2428fc9af55"
+    },
+    {
+      "path": "commissioning/merchant.mjs",
+      "bytes": 2698,
+      "sha256": "394002368df5543d1c244e10f9fb39abac17f2bb9ed5b1eed9b018d44a29ee79",
+      "gitBlob": "2bd63fd6f5f0e0efb9e2ecb849404fc7c1ea862c"
+    },
+    {
+      "path": "receiving/browser.mjs",
+      "bytes": 50483,
+      "sha256": "ffdbdbe1042cb50eae4ca36ca909e27700c137682e091d1651c14cefcd7e5a81",
+      "gitBlob": "38cb76d117df2878ff4b89d94b13a3ab6f918042"
+    },
+    {
+      "path": "receiving/receive.mjs",
+      "bytes": 48971,
+      "sha256": "a2bd7a20fcdfdd180f660611c7b534fa42f2fac66e5a4d7aeff716a2f35d3694",
+      "gitBlob": "547683ee0f4bc0e06f8a118a382b271a526a95b5"
+    },
+    {
+      "path": "reference/fixture.py",
+      "bytes": 18094,
+      "sha256": "26110720f1473e62eb8826f7843344a882423a33c98e97d10015c1530adfa785",
+      "gitBlob": "e7180b939c8a596b2471f5fb537319c143feb590"
+    },
+    {
+      "path": "reference/seed.sql",
+      "bytes": 779,
+      "sha256": "443b0c3b4add59aa60a5d97b296e3721f5192562b9684399da9f7b155074661e",
+      "gitBlob": "6f3174f20e9fd35cd078ffb36180369d28b5b7cb"
+    },
+    {
+      "path": "reference/fixture-input.json",
+      "bytes": 3414,
+      "sha256": "a8ee6423cea59a944c9d63aa7500f7b7db7691e4e8cb68e0981534d04aebf133",
+      "gitBlob": "d87f800d4b8baff0a6771f9c1437367cf31fab57"
+    },
+    {
+      "path": "reference/FIXTURE.md",
+      "bytes": 10557,
+      "sha256": "5675b7cef1d49fb4b741ab5c87b57db9051b806792f68c2454df4040dccb990c",
+      "gitBlob": "fa50565966aeb0a464419f6e436181c2be1ce19c"
+    },
+    {
+      "path": "reference/merchant-source.json",
+      "bytes": 1340,
+      "sha256": "fd9f32a8d39dfb93630a4213fb5a85fb73689f3f23390c98a5cd30ceb0158556",
+      "gitBlob": "21de528eb42632a5936aa59f39e2a7356599db75"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4550,
+      "sha256": "0f60bc68c02f71f736c612628e106c8dcb2a0b8a9436286c2530efbcfe950702",
+      "gitBlob": "8d73126a5dc1d29bcf2fff9e946e2c2846a311b7"
+    },
+    {
+      "path": "WORKSHARE.md",
+      "bytes": 6263,
+      "sha256": "02a17021f7e85d27ffe03f476c45b97c0532776c35a145714940e488649336ff",
+      "gitBlob": "48ba4a2c37f7d70601b900ae1b40687887d397ae"
+    },
+    {
+      "path": "OPERATOR.md",
+      "bytes": 20460,
+      "sha256": "8d9195a9187d996d47ff6c20a16d9ae1770e99a0e0d88a2b8d111704738225d9",
+      "gitBlob": "f679be3d223bdac67365e0439f0b9b65a2e91f21"
+    },
+    {
+      "path": "SOURCE_REFERENCES.json",
+      "bytes": 2162,
+      "sha256": "1b182dab865744ff93ab618d368e0d52b04c1461af766b1f30c12357e9a57c2c",
+      "gitBlob": "6a2882133ffbb173ec74b7f04863f19945d09070"
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "bytes": 8732,
+      "sha256": "7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb",
+      "gitBlob": "866c5d73b60673acf06f5e92509a2594ec571ba4"
+    }
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "clickhouse-acceptance-workbench",
+  "title": "ClickHouse Acceptance Workbench customer commissioning",
+  "task": {
+    "name": "Commission complete ClickHouse transfer, exact business acceptance and independently received customer operation",
+    "purpose": "Give a data owner a repeatable, attributable path from an approved existing ClickHouse source to separate candidate tables, complete native parity, an explicit consumer declaration and a portable independently reviewed edition.",
+    "request": "Receive the existing Workshare and current Installation packet. Select the actual customer source period, one to five complete source/target table mappings, accountable database/data/consumer owners and receiving operator. Retain source authority and all original configuration, version/account/database/environment references, native columns, null/type meanings, primary and sorting keys, ReplacingMergeTree version/FINAL choices and source-boundary evidence. Verify the full installed original application, selected standard-library Python and source/worker receipt. Open that same application through managed Applications with private original operator/viewer authentication. Retain the complete acceptance JSON and compile its native plan; review all issues before any write. Run the original transfer into separate commission_ candidate tables and keep each native attempt, SQL/HTTP response, UUID/schema observation, full RowBinary transfer and complete typed exports. Resolve uncertain native effects through the existing explicit decision mechanism. Run a fresh original verify of the existing pair and compare every selected typed cell, null, key and duplicate multiplicity. Apply cutover only for the latest ready verify; read the complete retained consumer rows, restore the exact prior binding and deliberately select the final accepted declaration. Derive the existing named-query merchant source only through reviewed literal edits; retain the complete original/derived source and change record, then hand native review/activation back to that original merchant owner. Operate the same project through the customer agent with exact request replay and full artifact reads. Close native jobs, export a complete named edition, independently receive its full editable source/native/history, reopen fresh/same/older/forward editions and cold CLI/browser state. Record actual Installation outcomes from those operations.",
+    "completeOutput": "A complete customer acceptance installation and one useful accepted data edition: original input and approved native plan; complete transfer/verify attempts, responses, typed population and comparison; exact consumer/rollback binding; optional original merchant-source adaptation; installed operator/agent workflow; complete independent source/runtime/project receiving.",
+    "repeatTrigger": "A distinct approved source period, useful schema/table mapping change, or later customer acceptance edition creates a linked task. Retries, upload chunks, browser reloads, different formats, repeated downloads and pages of the same population remain the same customer task.",
+    "pricedUnit": "One agreed complete baseline migration/acceptance or recurring verified customer edition, within the original Installation merchant unit and approved integer atomic amount/count/budget/spending selection. Preserve separate Workshare terms for database operations, hosting, query changes and ongoing support."
+  },
+  "source": {
+    "reference": "Use the current Workshare, Installation packet, complete altinity.acceptance-input.v1 source, actual approved ClickHouse accounts/databases/versions, source-period boundary and original acquisition references. Retain filenames, media types, complete SHA/byte identities and project/source/plan/job IDs.",
+    "mode": "The original ClickHouse HTTP adapter selects existing host environment names for endpoint, user and password. It creates separate reviewed candidate tables using native SQL/RowBinary and retains complete typed exports. The application does not require or install another database server; the existing reference selects ClickHouse 26.8.24.9 under its original native owner.",
+    "population": "One to five full table pairs with every agreed business column and row. Each table declares its full-export cap, up to one million rows and 512 MiB; over-cap input is rejected rather than sampled. Complete upload capacity is 2 GiB, structured source/request JSON 32 MiB. Larger legitimate work requires a separately agreed complete partitioned population and retained joins.",
+    "meaning": "Keep exact native scalar types, null masks, arbitrary-precision integer/decimal text, binary bytes, floating-point encodings, timestamp/timezone selection and duplicate multiplicity. Preserve logical keys, native ORDER BY, version and FINAL semantics. Unsupported nested types or delete/tombstone projection remain explicit commissioned issues. Separate native reads do not create a cross-table transaction: the data owner supplies a real quiesced/snapshot boundary.",
+    "changePolicy": "Keep source and plan editions, stable actor/request/revision IDs and all original native attempts. Transfer and verify are separate operations. Native CREATE/INSERT uncertainty is resolved through original effect evidence and explicit retry/adopt/abandon choices. A received project retains suspended native bindings and does not silently resume a remote write."
+  },
+  "receiving": {
+    "application": "TJLabs ClickHouse Acceptance Workbench under products/clickhouse-acceptance-workbench/workbench, preserving the complete 54-file original Altinity migration acceptance application from Commons 67ed8a126bf56c8dafa4202a672f441498a6b1a6 and explicit maintained source corrections. Commands clickhouse-acceptance-workbench, -prepare, -managed and -receive. Select the exact prepared applicationDirectory, own runtimeReadyFile, absolute Python and private original actor/auth/connection files.",
+    "acceptanceRule": "All selected source/configuration/authority are retained and the current plan is explicitly reviewed. Actual original transfer and fresh verify finish with every native file and full comparison. Every required type/schema/key/null/value/multiplicity condition passes; actual source stability and target UUID/schema are verified. Current cutover selects the latest ready verify and exact prior consumer binding is recoverable. Full original typed rows are reviewed as retained exports, not represented as live queries. The customer browser and agent use the same immutable project/history. Whole source/runtime/project packages independently receive and cold reopen. Only actual results enter Installation acceptance.",
+    "changeAndWithdraw": "Use original reviewed revision/actions and reasons for plan, candidate and consumer changes. Applications Stop closes the observer/listener and its handles; accepted detached native jobs remain under their original kernel lifetime. job.cancel requests actual cancellation; observe the original outcome before handoff. Rollback restores a retained consumer declaration and does not downgrade the server, drop tables or reconfigure external clients. Commercial changes use the existing Installation change/return process.",
+    "recovery": "Retain complete actor-bound create/action input before dispatch. Read the Merchant request journal and replay exactly the same request ID, expected revision and payload after any uncertain HTTP result, including post-commit launch/materialization errors. Resume original upload offsets. Preserve uncertain SQL effects and original native decisions. Reopen exact received project/source/history with private receiving-host credentials and selected Python; no additional native attempt is authorized by receiving alone.",
+    "maintenance": "Name customer data owner, database operator, acceptance engineer, consumer owner and independent receiver in the existing case. Deliver complete editable code, licenses, original native result/source identities, complete project history and opening guide. Keep tokens/passwords and local credential files outside exported project data. Preserve the F8256 company/sender and existing ClickHouse merchant owner; TJLabs product registration implies no Altinity endorsement."
+  },
+  "steps": [
+    {
+      "title": "Receive the existing Workshare and source-period authority",
+      "result": "Preserve commercial phases, assignments, approved payment selections and accountable owners. List the exact selected table population, source period, boundaries and receiving decision."
+    },
+    {
+      "title": "Prepare and independently receive the complete application",
+      "result": "Verify all 54 selected original source leaves and explicit maintenance. Prepare primary/receiving application copies and own source/worker/Python runtime receipts; retain the complete portable tar.gz. Do not copy a source-host runtime-ready path into another host."
+    },
+    {
+      "title": "Retain the whole acceptance configuration",
+      "result": "Upload complete original input with SHA and byte counts, resume only its committed ranges, and inspect every source/target database/version/account/environment-reference declaration and table."
+    },
+    {
+      "title": "Compile and review native semantics",
+      "result": "Keep the complete native plan and comparison projection. Resolve unsupported scalar types, keys, ORDER BY/version/FINAL choices, delete projections and real source-boundary conditions before approving the exact plan."
+    },
+    {
+      "title": "Transfer into separate candidate tables",
+      "result": "Prepare/start the original transfer job. Retain stable table UUID selection, actual SQL/HTTP receipts, RowBinary source and complete typed source/target exports. Reconcile uncertain effects through the original saved decision before continuing."
+    },
+    {
+      "title": "Verify the existing pair and compare the complete population",
+      "result": "Run a fresh original verify. Compare every selected native type/schema/key/null/value and duplicate multiplicity and check source stability and exact candidate identity. Keep all rows and errors in full output files."
+    },
+    {
+      "title": "Select and roll back the consumer declaration",
+      "result": "Use the current latest ready verify comparison with an explicit reason. Read every retained typed row for each stream; restore the exact previous table-binding JSON, then choose the final accepted declaration. External consumer adoption stays explicit."
+    },
+    {
+      "title": "Join the original read-service workflow when commissioned",
+      "result": "Retain the complete existing stellar-forge.clickhouse-source.v1 source. Apply only literal reviewed SQL edits with exact occurrence counts, keeping native parameter/limit semantics. Deliver derived source and full change record to the original merchant native review and activation owner."
+    },
+    {
+      "title": "Operate the same customer project through its agent",
+      "result": "Connect declared operator/viewer aliases to the original listener. Exercise exact request replay, source connections, complete upload and full native/report/archive byte reads with current actor checks. Preserve private credential custody."
+    },
+    {
+      "title": "Receive the complete customer edition independently",
+      "result": "Close original jobs, seal named NDJSONv2 archives and reopen fresh/forward/same/older editions plus selected original gzipv1. Retain complete original source, every native file and history; inspect the exact desktop/narrow product, downloads and cold CLI/browser reopen."
+    },
+    {
+      "title": "Record actual Installation outcomes and recurring work",
+      "result": "Use existing Workshare-derived Installation case preview/save and Operations export/receiving. Record real output/native/acceptance IDs and the next distinct useful customer task; no invented purchases or operated result."
+    }
+  ],
+  "inputs": [
+    "Current whole Workshare/Installation packet, approved terms/assignments, actual merchant/buyer and funded deliverable selections.",
+    "Complete original acceptance JSON with one to five table pairs, exact native columns/types/keys/sort/version/FINAL and source-period boundary.",
+    "Approved existing ClickHouse source/target servers, exact allowed versions/accounts/databases and private environment references; no literal password in source.",
+    "Full selected54-file source and license inventory, maintained source postimages and own Python/source/worker runtime receipt.",
+    "Actual native transfer and verify jobs/attempts, full SQL/HTTP/RowBinary/typed export files and explicit uncertainty decisions.",
+    "Complete comparison, source-stability and target UUID/schema proof, consumer binding/rollback reasons and all retained row pages.",
+    "Original named-query merchant source and reviewed literal edit instructions only if this separate adoption is commissioned.",
+    "Full named packages, actual independent source/runtime/project receiving and viewed desktop/narrow screenshots plus opened downloads.",
+    "Actual integer atomic prices/counts/budgets, recipient/asset/network and spending authority selected in the original Installation process."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/OPERATOR.md",
+      "blob": "f679be3d223bdac67365e0439f0b9b65a2e91f21"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/commissioning/plan.mjs",
+      "blob": "85bdf7f5126b3b712bed8f0a357d85a5bdff2ad1"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/commissioning/worker.py",
+      "blob": "428f3bc315b25776b5c14230bc9eaf772cbd8078"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/commissioning/runtime.mjs",
+      "blob": "d3bd711508dad30c433ec2aa48b400fa09213052"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/commissioning/workspace.mjs",
+      "blob": "dfbc0e5d316501f58e6872965c3c3bac1eb141da"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/commissioning/merchant.mjs",
+      "blob": "2bd63fd6f5f0e0efb9e2ecb849404fc7c1ea862c"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/vendor/sling/migration/compare.mjs",
+      "blob": "f67a566bd02797beb9fa48f36b68a10851da64d8"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/vendor/sling/core/archive.mjs",
+      "blob": "02327b9d6afff063d069d084846949c70011d539"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/receiving/receive.mjs",
+      "blob": "547683ee0f4bc0e06f8a118a382b271a526a95b5"
+    },
+    {
+      "path": "products/clickhouse-acceptance-workbench/workbench/reference/fixture.py",
+      "blob": "e7180b939c8a596b2471f5fb537319c143feb590"
+    }
+  ]
+}
