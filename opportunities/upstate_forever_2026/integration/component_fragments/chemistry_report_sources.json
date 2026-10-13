@@ -1,6 +1,6 @@
 {
   "schema": "upstate.application-component-fragment/v1",
-  "id": "chemistry-report-sources",
+  "id": "chemistry_report_sources",
   "source_reference": "Original saved Chemistry scientific report through the maintained ordered Scientific Reports composer",
   "extend_components": {
     "chemistry": {
