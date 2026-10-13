@@ -227,13 +227,18 @@ def main():
                 flush("independent-workspace-receiving")
                 destination = output / "received"
                 if destination.exists():
-                    captured = portable.inspect_archive(archive, verify=False)
-                    for name, item in captured["members"].items():
-                        verify_file(destination, {**item, "path": name})
-                    receiving = {"workspace": str(destination / "workspace"),
-                                 "application": str(destination / "application"),
-                                 "directory": str(destination), "archive_sha256": backup["sha256"],
-                                 "identity": "MATCH", "reopened_existing_receiving": True}
+                    resume_restore = getattr(portable, "resume_restore", None)
+                    if callable(resume_restore):
+                        receiving = resume_restore(archive, destination,
+                                                   expected_archive_sha256=backup["sha256"])
+                    else:
+                        captured = portable.inspect_archive(archive, verify=False)
+                        for name, item in captured["members"].items():
+                            verify_file(destination, {**item, "path": name})
+                        receiving = {"workspace": str(destination / "workspace"),
+                                     "application": str(destination / "application"),
+                                     "directory": str(destination), "archive_sha256": backup["sha256"],
+                                     "identity": "MATCH", "reopened_existing_receiving": True}
                 else:
                     receiving = portable.restore(archive, destination)
                 reopened = Workspace(receiving["workspace"], create=False)

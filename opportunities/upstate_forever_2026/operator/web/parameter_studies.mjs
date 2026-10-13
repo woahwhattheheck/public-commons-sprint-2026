@@ -154,10 +154,10 @@ export function parseParameterStudyValues(text) {
 export function attachParameterStudies(host) {
   const caseConsole = attachParameterCaseConsole(host);
   let root = null, controller = null, selected = null, currentWorkspace = null, pendingOpen = null;
-  let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0};
+  let study = null, results = null, resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0};
   let caseFilter = '', caseOffset = 0, draftCatalog = null, draftRoot = null;
   let catalogSequence = 0, previewSequence = 0, resultSequence = 0, confirmedSelection = null;
-  let formSequence = 0, activeForm = null, draftSession = null;
+  let formSequence = 0, activeForm = null, draftSession = null, resultController = null;
   const state = () => host.getState();
   const data = () => state()?.data || {};
   const workspace = () => state()?.workspace_key;
@@ -231,7 +231,7 @@ export function attachParameterStudies(host) {
       activeForm?.current();
       currentWorkspace = workspace(); selected = null; study = null; results = null;
       if (pendingOpen?.workspace !== currentWorkspace) pendingOpen = null;
-      resultFilters = {area_id: '', pollutant: '', offset: 0}; caseFilter = ''; caseOffset = 0;
+      resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0}; caseFilter = ''; caseOffset = 0;
     }
     const studies = data()['parameter-studies'] || [];
     if (pendingOpen?.workspace === workspace() && studies.some(row => row.id === pendingOpen.id)) {
@@ -260,6 +260,7 @@ export function attachParameterStudies(host) {
 
   function detach() {
     if (controller) controller.abort();
+    resultController?.abort(); resultController = null; resultSequence++;
     controller = null; root = null;
   }
 
@@ -268,7 +269,7 @@ export function attachParameterStudies(host) {
     root.addEventListener('change', event => {
       if (event.target.matches('[data-parameter-study-result-filter]')) {
         resultFilters[event.target.dataset.parameterStudyResultFilter] = event.target.value;
-        resultFilters.offset = 0; refreshResults().catch(showError);
+        resultFilters.offset = 0; resultFilters.range_offset = 0; refreshResults().catch(showError);
       }
     }, {signal: controller.signal});
     root.addEventListener('input', event => {
@@ -318,7 +319,7 @@ export function attachParameterStudies(host) {
       '<div data-parameter-study-error></div></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Native cases</h2><p>Each case uses the baseline grid and land-cover scenario with its selected parameter profile.</p></div><label class="parameter-study-filter">Find a case<input data-parameter-study-case-filter type="search" value="' + escapeHTML(caseFilter) + '" placeholder="Case, parameter, or run ID"></label></header><div data-parameter-study-cases></div></section>' +
       '<section class="section"><header class="section-header"><div><h2>Results and downloads</h2><p>Signed changes are study case minus baseline, using the paired valid cells for each selected area.</p></div></header><div class="section-body"><div data-parameter-study-results></div>' +
-      host.fileList(item._downloads || []) + '</div></section>';
+      '<div data-parameter-study-downloads>' + host.fileList(item._downloads || []) + '</div></div></section>';
     renderCases();
     if (item.artifacts?.results) await refreshResults();
     else detail.querySelector('[data-parameter-study-results]').innerHTML = '<p class="note">Run the study to produce the comparison matrix, selected-case ranges, and downloadable report. Completed native cases can be summarized at any time.</p>';
@@ -358,12 +359,46 @@ export function attachParameterStudies(host) {
   async function refreshResults() {
     if (!root || !selected || !study?.artifacts?.results) return;
     const thisRoot = root, id = selected, selectedWorkspace = workspace(), sequence = ++resultSequence;
-    const values = {id, offset: resultFilters.offset, limit: 100};
+    resultController?.abort();
+    const reading = new AbortController(); resultController = reading;
+    const values = {id, offset: resultFilters.offset, limit: 100,
+      range_offset: resultFilters.range_offset || 0, range_limit: 100};
+    if (results?.experiment_id === id) values.expected_artifact_sha256 = results.artifact_sha256;
     if (resultFilters.area_id) values.area_id = resultFilters.area_id;
     if (resultFilters.pollutant) values.pollutant = resultFilters.pollutant;
-    const result = await host.api(requested('/api/parameter-studies/results', values), {signal: controller?.signal});
-    if (thisRoot !== root || id !== selected || selectedWorkspace !== workspace() || sequence !== resultSequence) return;
+    const current = () => thisRoot === root && id === selected && selectedWorkspace === workspace() &&
+      sequence === resultSequence && !reading.signal.aborted;
+    let result;
+    try {
+      result = await host.api(requested('/api/parameter-studies/results', values), {signal: reading.signal});
+    } catch (error) {
+      if (current()) throw error;
+      return;
+    }
+    if (!current()) return;
+    if (study?.artifacts?.results?.sha256 !== result.artifact_sha256) {
+      const downloads = root.querySelector('[data-parameter-study-downloads]');
+      if (downloads) downloads.innerHTML = '<p class="note">Refreshing downloads for this saved result edition…</p>';
+      let retained;
+      try {
+        retained = await host.api(requested('/api/item', {kind: 'parameter-studies', id}), {signal: reading.signal});
+      } catch (error) {
+        if (current()) throw error;
+        return;
+      }
+      if (!current()) return;
+      if (retained?.artifacts?.results?.sha256 !== result.artifact_sha256) {
+        // The source advanced again during this item read. Resolve its current
+        // original edition before exposing either rows or download tickets.
+        return refreshResults();
+      }
+      study = retained;
+      if (downloads) downloads.innerHTML = host.fileList(retained._downloads || []);
+    }
     results = result; resultFilters.offset = result.offset;
+    resultFilters.range_offset = result.range_offset || 0;
+    resultFilters.area_id = result.area_id ?? resultFilters.area_id;
+    resultFilters.pollutant = result.pollutant ?? resultFilters.pollutant;
     const panel = root.querySelector('[data-parameter-study-results]'); if (!panel) return;
     const controls = '<div class="filters"><label>Reporting area<select data-parameter-study-result-filter="area_id">' + option('', 'All reporting areas', !resultFilters.area_id) +
       result.areas.map(area => option(area.id, area.name, resultFilters.area_id === area.id)).join('') + '</select></label><label>Pollutant<select data-parameter-study-result-filter="pollutant">' +
@@ -380,18 +415,30 @@ export function attachParameterStudies(host) {
        ['Case full mass', row.case_full_mass], ['Parameter', row.parameter], ['Baseline parameter', row.baseline_parameter],
        ['Case parameter', row.case_parameter], ['Response per parameter unit', row.response_per_parameter_unit], ['Elasticity', row.elasticity]]
         .map(([name, value]) => '<dt>' + name + '</dt><dd>' + format(value) + '</dd>').join('') + '</dl></details></td></tr>');
-    panel.innerHTML = '<p class="note">' + escapeHTML(modelNames({models: result.models})) + ' · ' + escapeHTML(result.comparison_basis) + '</p>' +
+    panel.innerHTML = (result.edition_changed ? '<div class="notice">A newer saved scientific summary is available. Result and range pages now start from that original edition.</div>' : '') +
+      '<p class="note">' + escapeHTML(modelNames({models: result.models})) + ' · ' + escapeHTML(result.comparison_basis) + '</p>' +
       (result.mass_basis ? '<p class="note">' + escapeHTML(result.mass_basis) + '</p>' : '') + resultExecution(result) + controls +
       (rows.length ? gridTable(['Case and reporting area', 'Baseline mass', 'Case mass', 'Change', 'Valid-cell coverage'], rows) : '<p class="note">No completed rows match these filters.</p>') +
       '<div class="parameter-study-pager"><span>' + (rows.length ? format(result.offset + 1) + '–' + format(result.offset + rows.length) : '0') + ' of ' +
       format(result.filtered_rows) + ' result rows</span>' + button('results-prev', 'Previous', result.offset ? '' : 'disabled') +
-      button('results-next', 'Next', result.offset + rows.length < result.filtered_rows ? '' : 'disabled') + '</div>' +
+      button('results-next', 'Next', result.offset + rows.length < result.filtered_rows ? '' : 'disabled') +
+      (result.filtered_rows > 100 ? '<label>Go to result row<input data-parameter-study-result-row type="number" min="1" max="' +
+        escapeHTML(result.filtered_rows) + '" step="1" value="' + escapeHTML(result.offset + 1) + '"></label>' +
+        button('results-go', 'Go to row') : '') + '</div>' +
       (result.ranges.length ? '<details class="technical"><summary>Ranges across selected completed cases</summary><p class="note">' +
         escapeHTML(result.range_basis) + '</p>' + gridTable(['Area', 'Pollutant', 'Minimum mass', 'Maximum mass', 'Comparable cases'],
         result.ranges.map(row => '<tr><td>' + escapeHTML(row.area) + '</td><td>' + escapeHTML(label(row.pollutant)) +
           '<small>' + escapeHTML(row.units) + '</small></td><td class="number-cell">' + format(row.minimum_mass) +
           '</td><td class="number-cell">' + format(row.maximum_mass) + '</td><td>' + format(row.cases) +
-          (row.support_changed_cases ? '<small>' + format(row.support_changed_cases) + ' changed-coverage cases</small>' : '') + '</td></tr>')) + '</details>' : '');
+          (row.support_changed_cases ? '<small>' + format(row.support_changed_cases) + ' changed-coverage cases</small>' : '') + '</td></tr>')) +
+        '<div class="parameter-study-pager"><span>' + format((result.range_offset || 0) + 1) + '–' +
+        format((result.range_offset || 0) + result.ranges.length) + ' of ' +
+        format(result.filtered_ranges ?? result.ranges.length) + ' original ranges</span>' +
+        button('ranges-prev', 'Previous ranges', result.range_offset ? '' : 'disabled') +
+        button('ranges-next', 'Next ranges', (result.range_offset || 0) + result.ranges.length <
+          (result.filtered_ranges ?? result.ranges.length) ? '' : 'disabled') + '</div></details>' : '') +
+      '<p class="note">Result source <code style="overflow-wrap:anywhere">' + escapeHTML(result.artifact_sha256) +
+      '</code>. Full JSON, CSV and report downloads retain every original case, reporting area and range.</p>';
   }
 
   function axisEditor(axis = {}) {
@@ -624,7 +671,7 @@ export function attachParameterStudies(host) {
     if (action === 'open') {
       currentWorkspace = workspace(); study = null; results = null;
       selected = id; pendingOpen = {workspace: currentWorkspace, id};
-      resultFilters = {area_id: '', pollutant: '', offset: 0}; caseFilter = ''; caseOffset = 0;
+      resultFilters = {area_id: '', pollutant: '', offset: 0, range_offset: 0}; caseFilter = ''; caseOffset = 0;
       document.querySelector('#detail-dialog')?.close();
       host.navigate('parameter-studies');
       if (pendingOpen) await host.refreshState();
@@ -650,6 +697,17 @@ export function attachParameterStudies(host) {
     if (action === 'results-prev' || action === 'results-next') {
       resultFilters.offset = Math.max(0, resultFilters.offset + (action === 'results-prev' ? -100 : 100)); return refreshResults();
     }
+    if (action === 'ranges-prev' || action === 'ranges-next') {
+      resultFilters.range_offset = Math.max(0, (resultFilters.range_offset || 0) +
+        (action === 'ranges-prev' ? -100 : 100)); return refreshResults();
+    }
+    if (action === 'results-go') {
+      const value = Number(root?.querySelector('[data-parameter-study-result-row]')?.value);
+      if (!Number.isSafeInteger(value) || value < 1 || value > (results?.filtered_rows || 0)) {
+        throw new Error('Choose a result row within this original filtered table.');
+      }
+      resultFilters.offset = Math.floor((value - 1) / 100) * 100; return refreshResults();
+    }
   }
 
 
@@ -664,7 +722,7 @@ export function attachParameterStudies(host) {
     }
     currentWorkspace=selectedWorkspace;selected=id;study=null;results=null;
     pendingOpen={workspace:selectedWorkspace,id};
-    resultFilters={area_id:'',pollutant:'',offset:0};caseFilter='';caseOffset=0;
+    resultFilters={area_id:'',pollutant:'',offset:0,range_offset:0};caseFilter='';caseOffset=0;
     await host.navigate('parameter-studies');
     if(workspace()!==selectedWorkspace)throw new Error('Reopen the retained study in its selected workspace.');
     if(pendingOpen)await host.refreshState();

@@ -4,7 +4,7 @@ import { explainFailure } from '../../stellar/scf-starforge-20261009/sf33-failur
 export const MCP_VERSION='2025-11-25';
 // Explicitly configured complete native portfolios include a JSON-RPC envelope.
 // Original small-workspace defaults remain unchanged.
-export const MAX_MCP_REQUEST_BYTES=65*1024*1024;
+export const MAX_MCP_REQUEST_BYTES=129*1024*1024;
 export const MAX_MCP_REPLY_BYTES=128*1024*1024;
 const plain=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 

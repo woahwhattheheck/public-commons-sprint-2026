@@ -14,6 +14,7 @@ from . import study_transfer
 from . import scientific_report_study_transfer as reports
 from . import implementation_report_transfer as fieldwork
 from .portable_implementation import report_edition
+from . import gauge_study_receiving
 
 HEX = re.compile(r"[0-9a-f]{64}")
 SCHEMA = "upstate.study-receiving-view/v1"
@@ -47,6 +48,7 @@ def _summary(value):
         "editable_plan_count": len({row["native_plan"]["plan_id"] for row in fields
                                    if row.get("native_plan") is not None}),
         "selection": deepcopy(identity["selection"]),
+        **gauge_study_receiving.summary(identity),
     }
 
 
@@ -138,6 +140,7 @@ def detail(workspace, key):
                     "members": members,
                 })
         result["field_sources"].append(row)
+    gauge_study_receiving.augment(closure, retained, result)
     # Validate the resolved file identities again after constructing this read.
     # The existing ticket service verifies actual member bytes when downloaded.
     closure.assert_unchanged()

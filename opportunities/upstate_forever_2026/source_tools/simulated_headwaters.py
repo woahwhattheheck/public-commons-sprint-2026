@@ -15,6 +15,7 @@ import math
 import os
 from pathlib import Path
 import shutil
+import socket
 import sys
 import tempfile
 import time
@@ -242,6 +243,17 @@ def write_inputs(output, recipe_path):
 
 
 def operate(args):
+    # Name the actual issuing process before application/GIS imports or source
+    # preparation, so a receiving worker can join the real host and execution.
+    args.execution = {
+        "hostname": socket.gethostname(), "pid": os.getpid(), "parent_pid": os.getppid(),
+        "python": sys.executable, "python_version": sys.version.split()[0],
+        "application": str(APP), "driver_sha256": sha256(Path(__file__)),
+        "workspace": str(args.workspace.resolve()), "output": str(args.output.resolve()),
+        "mode": "prepare" if args.prepare_only else "field" if args.field_only else "complete",
+        "issued_at": utc_now(),
+    }
+    event("demo_process_started", operation=OPERATION, **args.execution)
     from model.common import held
     output = args.output.resolve()
     workspace = args.workspace.resolve()
@@ -327,7 +339,7 @@ def operate_locked(args, output):
         return result
 
     ws = Workspace(workspace_path, create=True, title=recipe["title"])
-    save(project_id=ws.project["id"])
+    save(project_id=ws.project["id"], execution=args.execution)
     imported = phase("import_sources", lambda: ws.import_sources(output / "inputs" / "sources.json"))
     collection = imported["id"]
     ids = source["source_ids"]

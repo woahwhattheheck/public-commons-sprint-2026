@@ -1,0 +1,137 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "observation-comparability",
+  "title": "Comparable observation periods",
+  "version": "1.0.0",
+  "order": 59,
+  "assets": [
+    "observation_comparability.mjs",
+    "observation_comparability.css"
+  ],
+  "backend": {
+    "module": "observation_comparability_operator",
+    "actions": [
+      "observation.comparability.save"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/observation-comparability/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/observation-comparability/inputs",
+        "operation": "inputs",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/observation-comparability/edition",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "observation-comparability-selections",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "observation_comparability_selections",
+      "handler": "overview",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.observation_comparability_store",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/observation_comparability.mjs",
+    "factory": "attachObservationComparability",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "openScientificReport",
+      "openForm",
+      "submitAction",
+      "openDesk"
+    ],
+    "styles": [
+      "/web/observation_comparability.css"
+    ],
+    "view": {
+      "id": "observation-comparability",
+      "title": "Comparable observation periods",
+      "after": "observed-landcover"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "task_actions": "taskActions",
+    "action_prefixes": [
+      "observation-comparability-"
+    ],
+    "dispatch": "dispatch"
+  }
+}

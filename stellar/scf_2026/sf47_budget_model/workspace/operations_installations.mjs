@@ -1,4 +1,5 @@
 // Complete customer installations in the original SF47 operating case.
+import { workflowBoundCheck, workflowReportView, workflowIntakePanel } from './operations_installation_workflows.mjs';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const copy=value=>structuredClone(value);
 const title=value=>String(value??'').toLowerCase().replaceAll('_',' ').replace(/^./,c=>c.toUpperCase());
@@ -31,7 +32,7 @@ function assign(object,path,value){
   current[bits.at(-1)]=value;
 }
 
-export function mountInstallations({container,current,api,saveApi,session,mutationId,recordingActor,onCase}){
+export function mountInstallations({container,current,api,saveApi,session,mutationId,recordingActor,onCase,onSources}){
   const root=document.createElement('section');root.className='installation-desk';
   root.setAttribute('aria-label','Customer installations');container.replaceChildren(root);
   if(!document.querySelector('link[data-installation-style]')){
@@ -43,14 +44,14 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
     let stored;
     try{stored=JSON.parse(sessionStorage.getItem(storageKey)||'null');}catch{}
     if(stored?.schema==='sf47.installation-editor.v1'&&stored.caseId===caseId){
-      for(const key of ['drafts','draftKey','selected','mode','pending','accepted','notice'])if(Object.hasOwn(stored,key))session[key]=stored[key];
+      for(const key of ['drafts','draftKey','selected','mode','pending','accepted','notice','workflowIntake'])if(Object.hasOwn(stored,key))session[key]=stored[key];
     }
     session.initialized=true;
   }
   for(const [key,value] of Object.entries({drafts:{},draftKey:null,selected:null,mode:'saved',pending:null,accepted:null,
-    inflight:null,notice:'',error:'',filter:''}))if(!Object.hasOwn(session,key))session[key]=value;
+    inflight:null,notice:'',error:'',filter:'',workflowIntake:{open:false,sourceId:'',target:'new',cycleIds:[]}}))if(!Object.hasOwn(session,key))session[key]=value;
   let active=true,hostBusy=false,busy=false,generation=0,caseValue=current,selectedRow=null,historyRows=[],nextBefore=null;
-  let preview=null,previewDraft=null,loading=false;
+  let preview=null,previewDraft=null,loading=false,workflowInventory=null;
   const $=selector=>root.querySelector(selector),available=()=>active&&root.isConnected;
   const draft=()=>session.draftKey?session.drafts[session.draftKey]:null;
   const editable=()=>caseValue.program.state==='OPEN'&&!hostBusy;
@@ -61,7 +62,7 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
   const deployments=roles=>caseValue.records.deployments.filter(row=>roles.includes(row.role)).map(row=>[row.id,row.name+' · '+row.operator]);
   function persist(){
     const body={schema:'sf47.installation-editor.v1',caseId};
-    for(const key of ['drafts','draftKey','selected','mode','pending','accepted','notice'])body[key]=session[key];
+    for(const key of ['drafts','draftKey','selected','mode','pending','accepted','notice','workflowIntake'])body[key]=session[key];
     try{sessionStorage.setItem(storageKey,JSON.stringify(body));}
     catch{session.storageNotice='The browser could not retain another local draft copy. Download the complete draft before closing this browser.';}
   }
@@ -103,6 +104,7 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
   function draftFields(value){
     const d=value.document,f=(label,path,options={})=>field(label,path,path.split('.').reduce((v,key)=>v[key],d),options);
     const sources=(label,path)=>f(label,path,{choices:sourceOptions(),multiple:true,wide:true});
+    const boundCheck=check=>workflowBoundCheck(d,check);
     let html=group('Installation and original commissioning',
       f('Installation name','name',{required:true,wide:true,max:300})+
       f('Operating stage','stage',{choices:choices('PLANNED','COMMISSIONING','OPERATING','HANDED_OVER','RETIRED')})+
@@ -170,7 +172,7 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
         f('Original work records','checks.'+index+'.workIds',{choices:recordOptions('work'),multiple:true,wide:true})+
         f('Original purchase observations','checks.'+index+'.purchaseIds',{choices:recordOptions('purchases'),multiple:true,wide:true})+
         f('Original delivery outcomes','checks.'+index+'.outcomeIds',{choices:recordOptions('outcomes'),multiple:true,wide:true})+
-        '</div>'+button('Remove acceptance step','remove-check','data-index="'+index+'"',!editable())+'</details>').join('')+
+        '</div>'+button('Remove acceptance step','remove-check','data-index="'+index+'"',!editable()||boundCheck(check))+'</details>').join('')+
       button('Add acceptance step','add-check','',!editable()||d.checks.length>=100)+'</fieldset>';
     return html;
   }
@@ -182,6 +184,7 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
       '</strong></div><div><span>Selected source files</span><strong>'+report.sourceFiles+
       '</strong></div><div><span>Entered task amount</span><strong>'+esc(report.pricedTaskAtomic??'Unentered')+'</strong><small>Original atomic units</small></div></div>'+
       (report.findings.length?table(['Field or step','Current decision or observation'],report.findings.map(row=>[esc(row.field),esc(row.message)])):note('All entered configuration decisions and required acceptance steps are complete.'))+
+      workflowReportView(value)+
       '<h4>Original work and funded packages</h4>'+
       table(['Funding basis','Work package','Recorded hours','Accepted hours'],report.work.map(row=>[esc(row.fundingBasis),esc(row.costId||'Unassigned'),esc(row.recordedHours),esc(row.acceptedHours)]))+
       table(['Package','Tranche','Original planned hours','Original planned USD'],report.packages.map(row=>[esc(row.id),esc(row.tranche),esc(row.estimated_hours),esc(row.amount_usd)]))+
@@ -228,9 +231,10 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
     const visible=list().filter(row=>(row.name+' '+row.stage+' '+row.id).toLowerCase().includes(session.filter.toLowerCase()));
     const draftKeys=Object.keys(session.drafts);
     root.innerHTML=heading('Customer installations','Keep the whole task, source, terms, receiving application and original funded work together.',
-      button('New installation','new','',!editable()||!!session.pending||!!session.accepted))+
+      button('New installation','new','',!editable()||!!session.pending||!!session.accepted)+
+      button('Receive customer periods','workflow-open','',!editable()||!!session.pending||!!session.accepted))+
       '<p class="installation-message" role="'+(session.error?'alert':'status')+'" aria-live="polite">'+esc(session.error||session.notice)+'</p>'+
-      (session.storageNotice?note(session.storageNotice):'')+
+      (session.storageNotice?note(session.storageNotice):'')+workflowPanel()+
       (session.pending?'<div class="installation-recovery"><h4>Original save request retained</h4><p>Recover this exact request before saving another edition. Your later form edits stay in their draft.</p>'+button('Recover original save','recover')+'<code>'+esc(session.pending.body.requestId)+'</code></div>':'')+
       (session.accepted?'<div class="installation-recovery"><h4>Edition saved; readback is pending</h4>'+button('Open saved result','readback')+'</div>':'')+
       '<div class="installation-layout"><aside><label>Find installation<input type="search" data-installation-filter value="'+esc(session.filter)+'"></label>'+
@@ -272,6 +276,85 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
       if(!own(epoch))return;
       historyRows=history.editions;nextBefore=history.nextBefore;
     }finally{if(own(epoch)){loading=false;render();}}
+  }
+  function workflowSelection(value=session.workflowIntake){
+    const source=caseValue.sources.find(row=>row.id===value.sourceId);
+    if(!source)throw new Error('Select the complete original recurring-work source from this case’s Sources.');
+    return {sourceId:source.id,expectedSourceSha256:source.sha256};
+  }
+  function workflowPanel(){
+    const targets=[['new','Create a new installation']];
+    if(session.mode==='edit'&&draft())targets.push(['draft','Update the complete open draft']);
+    if(session.mode==='saved'&&selectedRow)targets.push(['saved','Prepare the selected installation’s next edition']);
+    if(!targets.some(([key])=>key===session.workflowIntake.target))session.workflowIntake.target='new';
+    return workflowIntakePanel({state:session.workflowIntake,inventory:workflowInventory,sources:sourceOptions(),
+      targets,button,editable:editable(),pending:!!session.pending||!!session.accepted,onSources:!!onSources});
+  }
+  function openWorkflow(){
+    capture();const binding=(session.mode==='edit'?draft()?.document:selectedRow?.preview.document)?.workflowPeriods;
+    const value=session.workflowIntake;
+    if(binding){
+      value.sourceId=binding.sourceId;value.cycleIds=binding.periods.map(row=>row.cycleId);
+      value.target=session.mode==='edit'?'draft':'saved';
+    }
+    value.open=true;workflowInventory=null;persist();
+  }
+  async function readWorkflows(){
+    capture();const epoch=++generation,value=copy(session.workflowIntake);
+    await reloadCase();if(!own(epoch))return;
+    const selection=workflowSelection(value);
+    const result=await api(prefix+'/installation-workflows',{expectedVersion:caseValue.program.version,...selection});
+    if(!own(epoch)||session.workflowIntake.sourceId!==value.sourceId)return;
+    if(result.source?.caseId!==caseId||!same(result.selection,selection)||!Array.isArray(result.periods))
+      throw new Error('Reopen the exact complete recurring-work source.');
+    workflowInventory=result;
+    session.workflowIntake.cycleIds=session.workflowIntake.cycleIds.filter(id=>result.periods.some(row=>row.cycleId===id));
+    if(!session.workflowIntake.cycleIds.length&&result.periods.length===1)
+      session.workflowIntake.cycleIds=[result.periods[0].cycleId];
+    session.notice='Read '+result.periods.length+' complete original customer periods from '+result.profile.name+'.';
+    persist();
+  }
+  async function prepareWorkflow(){
+    capture();
+    const value=copy(session.workflowIntake),inventory=workflowInventory;
+    const cycleIds=(inventory?.periods??[]).filter(row=>value.cycleIds.includes(row.cycleId)).map(row=>row.cycleId);
+    if(!inventory||!cycleIds.length)throw new Error('Read and select the original customer periods first.');
+    const originalDraft=value.target==='draft'?copy(draft()):null;
+    const originalSaved=value.target==='saved'?selectedRow:null;
+    if(value.target==='draft'&&!originalDraft||value.target==='saved'&&!originalSaved)
+      throw new Error('Reopen the complete Installation destination.');
+    const epoch=++generation,selection=copy(inventory.selection);
+    await reloadCase();if(!own(epoch))return;
+    if(!same(workflowSelection(value),selection))throw new Error('Read the selected original recurring source again.');
+    const installationId=originalDraft?.installationId??originalSaved?.id??null;
+    const expectedRevision=originalDraft?.expectedRevision??
+      (originalSaved?list().find(row=>row.id===originalSaved.id)?.revision:0);
+    if(expectedRevision===undefined)throw new Error('Reopen the current saved Installation edition.');
+    const document=originalDraft?.document??originalSaved?.preview.document;
+    const result=await api(prefix+'/installation-workflow-seed',{expectedVersion:caseValue.program.version,
+      ...selection,cycleIds,installationId,expectedRevision,...(document?{document}:{})});
+    if(!own(epoch))return;
+    const binding=result.document?.workflowPeriods;
+    if(result.source?.caseId!==caseId||result.installationId!==installationId||result.expectedRevision!==expectedRevision||
+      binding?.sourceId!==selection.sourceId||binding?.sourceSha256!==selection.expectedSourceSha256||
+      binding?.profileId!==inventory.profile.id||!cycleIds.every(id=>binding.periods.some(row=>row.cycleId===id)))
+      throw new Error('Reopen the original customer source and selected Installation.');
+    capture();
+    const live=originalDraft?session.drafts[originalDraft.key]:null;
+    const laterEdits=originalDraft&&(!live||live.token!==originalDraft.token||
+      !same(live.document,originalDraft.document)||live.note!==originalDraft.note);
+    const key=originalDraft&&!laterEdits?originalDraft.key:'workflow-'+crypto.randomUUID();
+    session.drafts[key]={key,token:crypto.randomUUID(),label:inventory.profile.name+' · operating periods',
+      installationId,expectedRevision,document:result.document,
+      note:originalDraft?.note||'Receive original customer operating periods from '+inventory.profile.name,dirty:true};
+    session.notice='Prepared '+binding.periods.length+' complete original periods for the Installation’s next edition.'+
+      (result.workflow.resetCycleIds.length?' Changed original periods now have open acceptance steps.':'')+
+      (laterEdits?' Your later form edits remain in the open draft; the received periods are in a separate retained draft.':'');
+    if(!laterEdits){
+      session.draftKey=key;session.mode='edit';session.selected=null;selectedRow=null;
+      preview=null;previewDraft=null;session.workflowIntake.open=false;
+    }
+    persist();
   }
   async function newDraft(){
     capture();const epoch=++generation,seeded=await api(prefix+'/installation-seed',{expectedVersion:caseValue.program.version});
@@ -395,6 +478,18 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
     if(event.target.matches('[data-installation-filter]')){session.filter=event.target.value;const start=event.target.selectionStart;render();const input=$('[data-installation-filter]');input.focus();try{input.setSelectionRange(start,start);}catch{}}
   });
   root.addEventListener('change',event=>{
+    if(event.target.matches('[data-workflow-period-field],[data-workflow-period-cycle]')){
+      capture();
+      if(event.target.matches('[data-workflow-period-field]')){
+        const key=event.target.dataset.workflowPeriodField;session.workflowIntake[key]=event.target.value;
+        if(key==='sourceId'){workflowInventory=null;session.workflowIntake.cycleIds=[];}
+      }else{
+        const id=event.target.dataset.workflowPeriodCycle;
+        session.workflowIntake.cycleIds=event.target.checked?[...new Set([...session.workflowIntake.cycleIds,id])]:
+          session.workflowIntake.cycleIds.filter(value=>value!==id);
+      }
+      persist();render();return;
+    }
     if(event.target.matches('[data-installation-field]')){capture();controls();}
     if(event.target.matches('[data-installation-file]')&&event.target.files[0])run(()=>importDraft(event.target.files[0]));
   });
@@ -406,6 +501,11 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
       const input=$('[data-installation-file]');input.value='';input.click();return;
     }
     run(async()=>{
+      if(action==='workflow-open')return openWorkflow();
+      if(action==='workflow-close'){capture();session.workflowIntake.open=false;persist();return;}
+      if(action==='workflow-sources'){capture();persist();onSources?.();return;}
+      if(action==='workflow-read')return readWorkflows();
+      if(action==='workflow-prepare')return prepareWorkflow();
       if(action==='new')return newDraft();
       if(action==='open'||action==='current')return openEdition(target.dataset.id);
       if(action==='edition')return openEdition(session.selected.id,Number(target.dataset.revision));
@@ -434,7 +534,12 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
       if(action==='remove-facilitator')value.document.payment.facilitators.splice(Number(target.dataset.index),1);
       if(action==='add-check')value.document.checks.push({id:'step-'+crypto.randomUUID().slice(0,8),title:'New acceptance step',criterion:'',
         tranche:null,required:true,state:'OPEN',operator:'',observedAt:null,note:'',sourceIds:[],workIds:[],purchaseIds:[],outcomeIds:[]});
-      if(action==='remove-check')value.document.checks.splice(Number(target.dataset.index),1);
+      if(action==='remove-check'){
+        const index=Number(target.dataset.index),check=value.document.checks[index];
+        if(workflowBoundCheck(value.document,check))
+          throw new Error('Receive the complete original customer periods to update their acceptance steps.');
+        value.document.checks.splice(index,1);
+      }
       value.dirty=true;preview=null;previewDraft=null;persist();
     });
   });

@@ -427,3 +427,30 @@ source relationships, subject IDs by role, selected-cell counts and quantity
 closure rows. Accounting subjects use kind=accounting and preserve the existing
 metrics interface. Delivery requests that prepare an analysis from a plan can
 supply this same accounting object inside receiving_waters.
+
+
+## Original-feature selection and editable study receiving
+
+Use the original source's field names, native feature IDs and coordinate system when defining or revising receiving waters. The geographic reader preserves the source file; any clipped geometry shown while selecting is a display aid. Saving the plan resolves the chosen IDs against the original retained source again. A published source-area relationship uses its original polygon. An upstream HUC relationship also needs the complete retained catchment network and its actual catchment-ID and downstream fields.
+
+The existing native browser owner can now continue through the editable study controls in the same operation:
+
+```sh
+PYTHON -B operator/receiving_water_operate.py \\
+  --preparation ACTUAL_PUBLIC_WATER_PREPARATION_JSON \\
+  --output-dir OUTSIDE_WORKSPACE \\
+  --node ACTUAL_NODE \\
+  --node-modules ACTUAL_NODE_MODULES \\
+  --chromium ACTUAL_CHROMIUM \\
+  --editable-selection
+```
+
+For an already-running operator, set `"editable_selection": true` in its existing private browser-control JSON. The course opens the original saved plan in Study transfer, verifies its selected root, returns through **Open in Receiving waters**, opens **Revise source plan**, opens the original-feature chooser, operates its native-ID subset control and applies an actual source choice to a disposable form draft, discards that draft, reopens the exact original selection, visits every receiving-area edit page, operates the title control and restores it, then saves the unchanged complete selection through the original queue. The original plan remains unchanged. With the same scientific implementation, preparation can reuse its original identity. If the installed engine has advanced, the course records the actual new immutable result and the exact preserved original selection and engine identity; it never relabels that result as the older plan. If the command also selects an actual completed analysis, the same sequence retains its original run cohort, quantities, normalization and accounting choices. It performs the existing map/save/export course and then reopens those revision forms in a fresh browser context. Original native hydrology runs remain the same saved inputs.
+
+The browser records the actual queued task and complete request before submission and resumes an interrupted original task. Source editions and runtime choices remain in the existing operation identity. It captures the real Study, source chooser, applied draft, revision and reopened screens at 1440px and 390px. These screenshots and exact native results are written beside the original map downloads; they are part of the same operating course.
+
+### Render and inspect the outgoing product
+
+Before presenting this app, report, demo or export as ready for a client or prospect, the producing operator must run the exact outgoing edition, look at its actual screens or real screenshots, and operate its important controls. Check the populated Receiving plan and analysis, source chooser, selected records, loading and error messages, long tables, desktop/screenshare and narrow/phone widths, downloads and fresh reopening. Merely capturing screenshots, seeing HTTP200, counting DOM elements or passing source checks does not replace looking at the product.
+
+Use the retained screenshot paths to inspect the actual text, maps, table columns, clipping, overflow, typography and spacing. Repair observed problems in the maintained source, then reopen the corrected edition. Keep the interface plain and industrial: readable tables, consistent spacing, restrained controls and useful labels. Inspect the downloaded HTML/PDF as well as the app before delivering those files. Record the actual viewed artifact and any repaired problem in the existing operation handoff, while continuing source and native integration.

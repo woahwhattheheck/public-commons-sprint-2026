@@ -1,5 +1,6 @@
 import {attachReceivingWaterMonitoring} from './receiving_water_monitoring.mjs';
 import {attachReceivingWaterReport} from './receiving_water_report.mjs';
+import {attachReceivingSourcePicker} from './receiving_water_sources.mjs';
 import {copySelection,selectionObject,newReceptor,receptorFields,planFields,revisePlan,analysisFields,reviseAnalysis,groupFields,reviseGroup,changedPaths} from './receiving_water_editing.mjs';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const fmt = value => value === null || value === undefined || !Number.isFinite(Number(value)) ? '—' : Number(value).toLocaleString(undefined,{maximumFractionDigits:3});
@@ -30,6 +31,7 @@ const safeDate = () => new Date().toISOString().slice(0,10);
 export function attachReceivingWaters(context){
   const {getState,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast}=context;
   const monitoring=attachReceivingWaterMonitoring(context);
+  const sourcePicker=attachReceivingSourcePicker({api,endpoint,getState,toast});
   const report=attachReceivingWaterReport({...context,refreshReportView:()=>{
     const target=host?.querySelector('#water-report-sources');
     if(target)target.innerHTML=report.render();
@@ -111,6 +113,7 @@ export function attachReceivingWaters(context){
     return html;
   }
   function detach(){
+    sourcePicker.detach();
     report.detach();
     studyRequest++;
     version++;host?.removeEventListener('input',onInput);host?.removeEventListener('change',onChange);host?.removeEventListener('toggle',onToggle,true);host=null;clearTimeout(timer);timer=null;controller?.abort();controller=null;
@@ -440,7 +443,7 @@ export function attachReceivingWaters(context){
       field('Context buffer (metres)',input('receptor_buffer',f.buffer,'type="number" min="0" step="any"'),'Used for geometric context. A published source-area relationship requires zero.')+
       field('Original designation',input('receptor_designation',f.designation),'Other classification and source metadata remain retained.')+
       '</div><p class="water-note">Changing a source keeps its original filters, layer and supporting metadata until you explicitly edit them. Review these bindings and the advanced selection when choosing another source edition.</p>'+
-      '<div class="water-actions">'+control('water-source-inspect','Inspect selected source')+control('water-receptor-remove','Remove area')+'</div></fieldset>';
+      '<div class="water-actions">'+control('water-source-pick','Choose original features and relationship')+control('water-source-inspect','Inspect source sample')+control('water-receptor-remove','Remove area')+'</div><div data-water-source-slot></div></fieldset>';
   }
   function readReceptorFields(root){
     return Object.fromEntries(['title','id','family','source','layer','features','where','method','rationale','buffer','designation']
@@ -478,6 +481,7 @@ export function attachReceivingWaters(context){
       field('Catchment network',sourceSelector('plan_catchments',f.catchments,false),'Required for HUC / ToHUC upstream relationships. Clearing this choice removes the complete optional network and its advanced settings.',true)+
       field('Catchment layer',input('plan_catchment_layer',f.catchmentLayer),'Retain the original layer name when supplied.',true)+
       field('Catchment ID field',input('plan_huc_field',f.huc))+field('Downstream HUC field',input('plan_tohuc_field',f.tohuc))+
+      '<div class="full">'+control('water-catchment-pick','Choose original network and routing fields')+'<div data-water-network-source-slot></div></div>'+
       field('Projected analysis CRS',input('plan_crs',f.crs,'required'),'Use a projected CRS measured in metres.',true)+
       '<div class="full" data-water-plan-pages></div><div class="full" id="water-receptor-rows"></div><div class="full">'+control('water-receptor-add','Add receiving area')+'</div>'+
       draftTools(seed,origin)+'</div>',
@@ -486,6 +490,7 @@ export function attachReceivingWaters(context){
       },()=>{
         root=formRoot();
         root.receivingPlanEditor={
+          catchmentSeed:copySelection(seed.catchments||{}),
           add(){flush();const added=newReceptor(++nextReceptor);rows.push({index:nextReceptor,seed:added,fields:receptorFields(added)});page=Math.floor((rows.length-1)/pageLength);paint();},
           remove(node){flush();const index=rows.findIndex(row=>String(row.index)===node?.dataset.waterReceptorIndex);if(index<0)throw Error('Choose an area in this form.');rows.splice(index,1);paint();}
         };
@@ -493,6 +498,56 @@ export function attachReceivingWaters(context){
         paint();mountDraft(root,seed,read,next=>planForm(next,origin,root),workspace,origin?.selection||seed);
       });
   }
+  function readNativeIds(raw){
+    if(!raw)return undefined;
+    let ids;if(raw.trim().startsWith('[')){try{ids=JSON.parse(raw);}catch{throw Error('Native IDs must be a complete JSON array.');}}
+    else ids=raw.split(',').map(item=>item.trim()).filter(Boolean);
+    if(!Array.isArray(ids)||!ids.length||ids.some(id=>!['string','number'].includes(typeof id)||typeof id==='number'&&(!Number.isFinite(id)||!Number.isSafeInteger(id)))||new Set(ids.map(String)).size!==ids.length)
+      throw Error('Choose distinct exact string or safely represented numeric native feature IDs. Keep other advanced identity settings in the retained selection.');
+    return ids;
+  }
+  async function chooseOriginalSource(button,mode='receptor'){
+    const form=formRoot(),root=mode==='catchments'?form:button.closest(mode==='catalog'?'[data-water-catalog-source]':'[data-water-receptor]');
+    if(!root||!form)throw Error('Open the current Receiving source form.');
+    const prefix=mode==='catchments'?'plan':mode==='catalog'?'catalog':'receptor';
+    const names=mode==='catchments'?['plan_catchments','plan_catchment_layer','plan_huc_field','plan_tohuc_field']:
+      mode==='catalog'?['catalog_source','catalog_layer','catalog_feature_ids','catalog_where']:
+      ['receptor_source','receptor_layer','receptor_features','receptor_where','receptor_method','receptor_rationale','receptor_buffer'];
+    const snapshot=()=>JSON.stringify(names.map(name=>value(name,root)));
+    const expected=snapshot(),workspace=currentWorkspace(),marker=version;
+    const current=()=>formRoot()===form&&form.isConnected&&form.closest('dialog')?.open!==false&&root.isConnected&&
+      workspace===currentWorkspace()&&marker===version&&snapshot()===expected;
+    const sourceName=mode==='catchments'?'plan_catchments':prefix+'_source',layerName=mode==='catchments'?'plan_catchment_layer':prefix+'_layer';
+    const choice=sourceChoice(sourceName,root,false)||{};
+    const seed=mode==='catchments'?copySelection(form.receivingPlanEditor?.catchmentSeed||{}):{};
+    Object.assign(seed,choice);const layer=value(layerName,root);if(layer)seed.layer=layer;else delete seed.layer;
+    if(mode==='catchments'){seed.id_field=value('plan_huc_field',root);seed.downstream_field=value('plan_tohuc_field',root);}
+    else{
+      const where=value(prefix+'_where',root);seed.where=where?jsonObject(where,'Original source filter'):{};
+      const ids=readNativeIds(value(mode==='catalog'?'catalog_feature_ids':'receptor_features',root));if(ids)seed.feature_ids=ids;
+      if(mode==='receptor'){seed.method=value('receptor_method',root);seed.rationale=value('receptor_rationale',root);seed.buffer_m=value('receptor_buffer',root);}
+    }
+    const container=root.querySelector(mode==='catchments'?'[data-water-network-source-slot]':'[data-water-source-slot]');
+    const write=(name,next)=>{const node=root.querySelector('[name="'+name+'"]');if(!node)throw Error('Reopen the complete Receiving form.');
+      const str=next===undefined||next===null?'':String(next);
+      if(node.tagName==='SELECT'&&str&&![...node.options].some(option=>option.value===str)){const option=document.createElement('option');option.value=str;option.textContent='Selected retained original source';node.append(option);}
+      node.value=str;
+    };
+    return sourcePicker.open({container,mode,selection:seed,isCurrent:current,onApply:result=>{
+      if(!current())throw Error('The original source fields changed. Reopen the chooser before applying.');
+      write(sourceName,JSON.stringify({source_collection_id:result.source_collection_id,source_id:result.source_id}));write(layerName,result.layer);
+      if(mode==='catchments'){write('plan_huc_field',result.id_field);write('plan_tohuc_field',result.downstream_field);}
+      else{
+        const whereName=prefix+'_where',before=value(whereName,root),old=before?jsonObject(before,'Original source filter'):{};
+        if(JSON.stringify(old)!==JSON.stringify(result.where||{}))write(whereName,Object.keys(result.where||{}).length?pretty(result.where):'');
+        write(mode==='catalog'?'catalog_feature_ids':'receptor_features',result.feature_ids?JSON.stringify(result.feature_ids):'');
+        if(mode==='receptor'){write('receptor_method',result.method);write('receptor_rationale',result.rationale);write('receptor_buffer',result.buffer_m);}
+      }
+      root.dispatchEvent(new Event('input',{bubbles:true}));
+      toast('Original source selection applied. Review the complete form and save through its existing queue.');
+    }});
+  }
+
   async function inspectSource(button){
     const root=button.closest('[data-water-receptor]'),choice=sourceChoice('receptor_source',root);
     const layer=value('receptor_layer',root),result=await api(endpoint('/api/source-info',{collection:choice.source_collection_id,source:choice.source_id,...(layer?{layer}:{})}));
@@ -673,13 +728,13 @@ export function attachReceivingWaters(context){
       field('Class selection rationale',area('catalog_rationale','','rows="2"'),'Explain the selected classified-water scope.',true)+
       '<details class="full"><summary>Original layer and record selection</summary>'+
       field('Source layer',input('catalog_layer'),'Optional exact layer name.',true)+
-      field('Native feature IDs',input('catalog_feature_ids'),'Optional comma-separated native feature IDs.',true)+
+      field('Native feature IDs',input('catalog_feature_ids'),'Optional JSON array of native IDs; numeric and string values retain their type. New comma-separated IDs are strings.',true)+
       field('Exact source attribute filter',area('catalog_where','{}','rows="2" spellcheck="false"'),'Exact original field names and values.',true)+
       field('Original ArcGIS layer metadata',area('catalog_metadata','','rows="6" spellcheck="false"'),'Use the complete original metadata JSON when it is not already stored with the source.',true)+
       field('Explicit field mapping',area('catalog_field_map','','rows="3" spellcheck="false"'),'Optional mapping of object_id, classification, name, description, status, system_id and intake_id to original field names.',true)+
       field('Original status filter',area('catalog_status_filter','','rows="3" spellcheck="false"'),'Optional {"field":"original status field","include":["original value"]}.',true)+
       field('Per-record source interpretation',area('catalog_record_overrides','','rows="4" spellcheck="false"'),'Optional exact object-ID keyed overrides retained in the catalog.',true)+
-      '</details></div><div class="water-actions">'+control('water-catalog-source-remove','Remove source')+'</div></fieldset>';
+      '</details></div><div class="water-actions">'+control('water-catalog-source-pick','Choose original published features')+control('water-catalog-source-remove','Remove source')+'</div><div data-water-source-slot></div></fieldset>';
   }
   async function catalogForm(){
     await loadCatalog();nextCatalogSource=1;
@@ -695,7 +750,7 @@ export function attachReceivingWaters(context){
           const profile=value('catalog_profile',root),source=sourceChoice('catalog_source',root);
           const layer=value('catalog_layer',root);if(layer)source.layer=layer;
           const where=jsonObject(value('catalog_where',root)||'{}','Source attribute selection');if(Object.keys(where).length)source.where=where;
-          const ids=value('catalog_feature_ids',root).split(',').map(x=>x.trim()).filter(Boolean);if(ids.length)source.feature_ids=ids;
+          const ids=readNativeIds(value('catalog_feature_ids',root));if(ids?.length)source.feature_ids=ids;
           const urls=value('catalog_evidence',root).split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
           if(!urls.length||urls.some(url=>!/^https?:\/\//i.test(url)))throw Error('Enter original HTTP or HTTPS authority evidence URLs for each source.');
           const vintage={status:value('catalog_status',root),evidence:urls.map(url=>({url}))};
@@ -877,6 +932,9 @@ export function attachReceivingWaters(context){
     if(action==='water-analysis-resume')return resumeAnalysis(id);
     if(action==='water-reload')return loadSelection();
     if(action==='water-delivery')return openDeliveryForAnalysis(id);
+    if(action==='water-source-pick')return chooseOriginalSource(button,'receptor');
+    if(action==='water-catchment-pick')return chooseOriginalSource(button,'catchments');
+    if(action==='water-catalog-source-pick')return chooseOriginalSource(button,'catalog');
     if(action==='water-source-inspect')return inspectSource(button);
     if(action==='water-receptor-add'){if(!formRoot()?.receivingPlanEditor)throw Error('Reopen the source-plan form.');formRoot().receivingPlanEditor.add();return;}
     if(action==='water-receptor-remove'){if(!formRoot()?.receivingPlanEditor)throw Error('Reopen the source-plan form.');formRoot().receivingPlanEditor.remove(button.closest('[data-water-receptor]'));return;}

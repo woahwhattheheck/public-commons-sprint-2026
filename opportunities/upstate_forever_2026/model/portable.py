@@ -506,11 +506,9 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         raise ValueError("Choose a new archive path")
-    pending = destination.parent / (".archive-" + destination.name + ".pending")
-    if pending.exists():
-        raise ValueError("The original archive staging path is already present")
+    pending = None
     source_root = Path(__file__).resolve().parent.parent
-    excluded = {destination, pending}
+    excluded = {destination}
     selection = {"include_intermediates": bool(include_intermediates),
                  "include_deliveries": bool(include_deliveries)}
     inventory_selection = dict(selection)
@@ -523,6 +521,13 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
         selection["include_delivery_assets"] = True
     records = {}
     try:
+        # Each invocation owns its exclusive staging file. A competing backup
+        # that fails lock admission must never remove another writer's archive.
+        pending_fd, pending_name = tempfile.mkstemp(
+            prefix=".archive-", suffix=".pending", dir=destination.parent)
+        pending = Path(pending_name)
+        os.close(pending_fd)
+        excluded.add(pending)
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
             stack.enter_context(held(root / ".receiving-water-report-source.lock", blocking=False))
@@ -566,7 +571,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             inputs += extra_inputs
             inputs, databases, database_sources = stack.enter_context(
                 snapshot_databases(inputs, destination.parent, frozen=frozen_databases))
-            with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED,
+            with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED,
                                  compresslevel=3, allowZip64=True) as archive:
                 for name, path, before in inputs:
                     member_name(name)
@@ -648,7 +653,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 os.close(fd)
         return result
     finally:
-        pending.unlink(missing_ok=True)
+        if pending is not None:
+            pending.unlink(missing_ok=True)
 
 def _archive_identity(source):
     value = os.fstat(source.fileno())
@@ -772,6 +778,293 @@ def restore(archive_path, destination):
             return _restore_archive(archive, source, before, manifest, destination)
 
 
+RECEIVING_COMPLETION = "receiving-complete.json"
+RECEIVING_SCHEMA = "upstate.scientific-workspace-receiving-completion/v1"
+
+
+def _receiving_file(destination, relative):
+    """Require an ordinary retained member without an alias inside the receiver."""
+    relative = member_name(relative).as_posix()
+    path = Path(destination).joinpath(*member_name(relative).parts)
+    if (path.resolve(strict=True) != Path(destination).resolve(strict=True) / relative
+            or not stat.S_ISREG(path.lstat().st_mode)):
+        raise ValueError("Receiving member is not its original regular path: " + relative)
+    return path
+
+
+def _receiving_completion(manifest, result):
+    return {"schema": RECEIVING_SCHEMA,
+            "archive_sha256": result["archive_sha256"],
+            "manifest_sha256": hashlib.sha256(canonical(manifest)).hexdigest(),
+            "result_sha256": hashlib.sha256(canonical(result)).hexdigest(),
+            "result": result}
+
+
+def _receiving_result(manifest, destination, archive_sha256, details, record):
+    return {"schema": "upstate.scientific-workspace-receiving/v1",
+            "project": manifest["project"],
+            "directory": str(destination), "workspace": str(destination / "workspace"),
+            "application": str(destination / "application"),
+            "archive_sha256": archive_sha256, "members": len(manifest["members"]),
+            "selection": manifest["selection"], "identity": "MATCH",
+            "database_snapshots": manifest.get("database_snapshots", {}),
+            **details, **received_delivery(manifest, destination, record=record)}
+
+
+def _legacy_received_record(manifest, destination, archive_sha256, archive_bytes):
+    """Recognize only the registration/derived-navigation changes made by restore."""
+    delivery = manifest.get("delivery") or {}
+    original = delivery.get("record")
+    if original is None:
+        return None, None
+    relative = "workspace/deliveries/" + identifier(delivery["id"]) + "/delivery-state.json"
+    record = read_json(_receiving_file(destination, relative))
+    if record.get("id") != delivery["id"] or record.get("selection") != original["selection"]:
+        raise ValueError("Received delivery registration differs from its original selection")
+    # An original completed record is left untouched by native registration.
+    archived = manifest["members"].get(relative)
+    path = _receiving_file(destination, relative)
+    if (record.get("state") == "complete" and archived is not None
+            and path.stat().st_size == archived["bytes"]
+            and file_digest(path) == archived["sha256"]):
+        return relative, record
+    if record == original:
+        return relative, record
+    working = {"path": "working/scientific-workspace.zip",
+               "bytes": archive_bytes, "sha256": archive_sha256}
+    for root in ("delivery/", "workspace/deliveries/" + delivery["id"] + "/"):
+        path = _receiving_file(destination, root + working["path"])
+        if path.stat().st_size != archive_bytes or file_digest(path) != archive_sha256:
+            raise ValueError("Received working archive differs from its original")
+    expected = {**original, "files": {**original["files"], "working_archive": working}}
+    if record == expected:
+        return relative, record
+    # New navigation is additive: all original fields/roles remain exact, and
+    # earlier captured navigators keep their own immutable descriptor roles.
+    if not isinstance(original.get("atlas"), dict) or "report" not in original["files"]:
+        raise ValueError("Received delivery has unrecognized changes")
+    files = dict(expected["files"])
+    for role in ("map_atlas_received_browser", "received_delivery_inventory"):
+        previous = files.pop(role, None)
+        if previous is not None:
+            key = "captured_" + role + "_" + previous["sha256"]
+            if key in files and files[key] != previous:
+                raise ValueError("Received navigation has conflicting captured descriptors")
+            files[key] = previous
+    source_files = dict(files)
+    directory = "workspace/deliveries/" + delivery["id"] + "/"
+    nav_root = "received-navigation-" + archive_sha256
+    for role, filename, title in (
+            ("received_delivery_inventory", "inventory.json", "Received original delivery inventory"),
+            ("map_atlas_received_browser", "atlas-browser.html", "Received scientific map atlas")):
+        item = record.get("files", {}).get(role)
+        if (not isinstance(item, dict) or item.get("path") != nav_root + "/" + filename
+                or item.get("title") != title):
+            raise ValueError("Received navigation lacks its original derived descriptor")
+        path = _receiving_file(destination, directory + item["path"])
+        if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:
+            raise ValueError("Received navigation bytes differ from their saved descriptor")
+        files[role] = item
+    maps = {name: item["path"] for name, item in original.get("maps", {}).items()}
+    report_path = source_files["report"]["path"]
+    expected_inventory = {
+        "schema": "upstate.received-delivery-navigation/v1",
+        "delivery_id": delivery["id"], "source_archive": working,
+        "selection": original["selection"],
+        "source_snapshot": original.get("received_snapshot", {}),
+        "files": source_files, "maps": maps, "rasters": {}, "report_pdf": report_path,
+        "project_assets": sorted({item["path"] for item in source_files.values()
+                                  if item["path"] != report_path and item["path"] not in set(maps.values())}),
+        "scope": ("Verified files restored from the original scientific workspace archive "
+                  "and that same enclosing archive. This navigation is composed after receiving."),
+    }
+    inventory = read_json(_receiving_file(
+        destination, directory + files["received_delivery_inventory"]["path"]))
+    if inventory != expected_inventory:
+        raise ValueError("Received navigation changed its original source inventory")
+    expected = {**expected, "files": files, "received_navigation": {
+        "schema": "upstate.received-delivery-navigation/v1",
+        "source_archive_sha256": archive_sha256,
+        "inventory_role": "received_delivery_inventory",
+        "browser_role": "map_atlas_received_browser"}}
+    if record != expected:
+        raise ValueError("Received delivery has changes beyond its native registration")
+    return relative, record
+
+
+def resume_restore(archive_path, destination, *, expected_archive_sha256=None):
+    """Reconcile the same published receive; never restore over existing work."""
+    from .workspace import Workspace
+    destination = Path(destination).absolute()
+    if destination.is_symlink() or not destination.is_dir():
+        raise ValueError("Select the original published receiving directory")
+    with held(destination.parent / (".receive-" + destination.name + ".lock"), blocking=False):
+        with Path(archive_path).open("rb") as source:
+            before = _archive_identity(source)
+            with zipfile.ZipFile(source) as archive:
+                manifest = _inspect_archive(archive, verify=False)
+                archive_sha256 = _archive_digest(source, before)
+                if expected_archive_sha256 is not None and archive_sha256 != expected_archive_sha256:
+                    raise ValueError("Receiving archive differs from its original upload")
+                receipt_path = destination / RECEIVING_COMPLETION
+                if receipt_path.exists() or receipt_path.is_symlink():
+                    receipt = read_json(_receiving_file(destination, RECEIVING_COMPLETION))
+                    result = receipt.get("result")
+                    if not isinstance(result, dict) or receipt != _receiving_completion(manifest, result):
+                        raise ValueError("Receiving completion record differs from its original result")
+                    expected = {"schema": "upstate.scientific-workspace-receiving/v1",
+                                "project": manifest["project"], "directory": str(destination),
+                                "workspace": str(destination / "workspace"),
+                                "application": str(destination / "application"),
+                                "archive_sha256": archive_sha256,
+                                "members": len(manifest["members"]),
+                                "selection": manifest["selection"], "identity": "MATCH"}
+                    if any(result.get(name) != value for name, value in expected.items()):
+                        raise ValueError("Receiving completion belongs to another archive or destination")
+                    project = read_json(_receiving_file(destination, "workspace/workspace.json"))
+                    if any(project.get(name) != manifest["project"].get(name) for name in ("schema", "id")):
+                        raise ValueError("Received workspace belongs to another original project")
+                    application = destination / "application"
+                    if application.is_symlink() or not application.is_dir():
+                        raise ValueError("Received application directory is missing")
+                    return {**result, "reused_completed_output": True}
+                # Older successful receivers have no completion record. Verify
+                # original bytes, allowing only native delivery registration.
+                _inspect_archive(archive, verify=True)
+                changed_record, record = _legacy_received_record(
+                    manifest, destination, archive_sha256, before[2])
+                for name, expected in manifest["members"].items():
+                    path = _receiving_file(destination, name)
+                    if name == changed_record:
+                        continue
+                    if path.stat().st_size != expected["bytes"] or file_digest(path) != expected["sha256"]:
+                        raise ValueError("Already-received member differs from its original archive: " + name)
+                details = _verify_restored_workspace(manifest, destination)
+                result = _receiving_result(manifest, destination, archive_sha256, details, record)
+                if _archive_identity(source) != before:
+                    raise ValueError("Original archive changed during receiving reconciliation")
+                atomic_json(receipt_path, _receiving_completion(manifest, result), immutable=True)
+                return {**result, "reused_completed_output": True}
+
+
+def _verify_restored_workspace(manifest, destination):
+    from .workspace import Workspace
+    verified_members = _received_member_aliases(manifest, destination)
+    restored = Workspace(destination / "workspace")
+    if restored.project != manifest["project"]:
+        raise ValueError("Receiving changed the original workspace identity")
+    for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons",
+                 "planning-inventories", "portfolios", "portfolio-reports",
+                 "biophysical-evidence", "biophysical-ranges"):
+        restored._list(kind)
+    if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):
+        from .biophysical_evidence import verify_all as verify_biophysical_evidence
+        verify_biophysical_evidence(restored)
+    if restored._list("planning-inventories"):
+        from .planning_inventory import inspect as inspect_planning_inventory
+        for inventory in restored._list("planning-inventories"):
+            inspect_planning_inventory(restored, inventory["id"])
+    if restored._list("portfolios"):
+        from .portfolios import verify_portfolio
+        for portfolio in restored._list("portfolios"):
+            verify_portfolio(restored, portfolio)
+    for report in restored._list("portfolio-reports"):
+        for retained in report["files"].values():
+            path = restored.root.joinpath(*member_name(retained["path"]).parts)
+            if (not path.is_file() or path.stat().st_size != retained["bytes"]
+                    or file_digest(path) != retained["sha256"]):
+                raise ValueError("Receiving changed a conservation portfolio report")
+    reviews = restored._list("spatial-reviews")
+    if reviews:
+        from .spatial import SpatialReview
+        reviewer = SpatialReview(restored)
+        for review in reviews:
+            reviewer.validate_saved(review, verified_members=verified_members)
+    if restored._list("spatial-regions"):
+        from .spatial_regions import SpatialRegions
+        SpatialRegions(restored).verify()
+    if restored._list("spatial-cohorts"):
+        from .spatial_cohorts import SpatialCohorts
+        SpatialCohorts(restored).verify()
+    spatial_exports = restored.overview().get("spatial_exports", [])
+    if spatial_exports:
+        from .spatial_exports import SpatialExports
+        exporter = SpatialExports(restored)
+        for value in spatial_exports:
+            exporter.inspect(value["id"], verified_members=verified_members)
+    if restored._list("reviews"):
+        from .reviews import validate_workspace
+        # Extraction already checked every retained member against its SHA-256.
+        validate_workspace(restored)
+    community_tables = restored._list("community-tables")
+    community_plans = restored._list("community-plans")
+    community_reports = restored._list("community-reports")
+    if community_tables or community_plans or community_reports:
+        from . import communities
+        from .common import verify_file
+        for table in community_tables:
+            original, _ = restored.source_file(
+                table["source"]["collection_id"], table["source"]["source_id"])
+            if file_digest(original) != table["source"]["sha256"]:
+                raise ValueError("Receiving changed the original community source")
+        for plan in community_plans:
+            table = communities.get_table(restored, plan["table_id"])
+            if table["source"] != plan["source"]:
+                raise ValueError("Received community plan changed its table edition")
+            communities.verify_plan_context(restored, plan)
+        for report in community_reports:
+            plan = communities.get_plan(restored, report["plan_id"])
+            if (report["table_id"] != plan["table_id"] or
+                    report["context_snapshot_sha256"] != plan["context"]["snapshot_sha256"]):
+                raise ValueError("Received community report changed its saved plan")
+            for artifact in report["files"].values():
+                verify_file(restored.root, artifact)
+    for grid in restored.overview()["grids"]:
+        if grid["state"] == "complete":
+            restored.get_grid(grid["id"])
+    for run in restored.overview()["runs"]:
+        original = restored.inspect_run(run["id"])
+        if original["state"] == "complete":
+            for artifact in original["artifacts"].values():
+                relative = member_name(artifact["path"]).as_posix()
+                name = member_name("workspace/runs/" + original["id"] + "/" + relative).as_posix()
+                retained = manifest["members"].get(name)
+                if (retained is None or retained["sha256"] != artifact["sha256"]
+                        or ("bytes" in artifact and retained["bytes"] != artifact["bytes"])):
+                    raise ValueError("Receiving changed a completed native result")
+    # Original capture bodies are already byte-verified during extraction.
+    # Reattach their operation lineage and imported editions without running
+    # GIS derivation or rewriting an immutable request from its original host.
+    source_acquisitions = verify_acquisitions(
+        restored.root, verified_members,
+        source_ids={row["id"] for row in restored._list("sources")})
+    retained_acquisitions = manifest.get("source_acquisitions")
+    if retained_acquisitions is not None and retained_acquisitions != source_acquisitions:
+        raise ValueError("Receiving changed the original source acquisition lineage")
+    implementation = verify_implementation(restored.root, verified_members)
+    retained_implementation = manifest.get("implementation")
+    if retained_implementation is not None and retained_implementation != implementation:
+        raise ValueError("Receiving changed the original implementation plans or reports")
+    parameter_studies = verify_parameter_studies(restored, verified_members)
+    retained_studies = manifest.get("parameter_studies")
+    if retained_studies is not None and retained_studies != parameter_studies:
+        raise ValueError("Receiving changed the original parameter studies or exports")
+    details = {"source_acquisitions": source_acquisitions,
+               "implementation": implementation, "parameter_studies": parameter_studies}
+    if any((restored.root / "compute-programmes").glob("*/interaction-links/*.json")):
+        from .programme_interactions import validate_workspace as validate_programme_interactions
+        validate_programme_interactions(restored, verified_members=manifest["members"])
+    # Verify retained Scenario analysis source context before publication.
+    if any((restored.root / "scenario-source-contexts").glob("*.json")):
+        from .analysis_source_context import verify_workspace as verify_analysis_source_context
+        details["scenario_source_context"] = verify_analysis_source_context(restored)
+    # Verify retained original point-source observation bindings before publication.
+    if any((restored.root / "point-source-bindings").glob("*.json")):
+        from source.retained_point_sources import verify_workspace as verify_point_source_bindings
+        details["point_source_context"] = verify_point_source_bindings(restored)
+    return details
+
+
 def _restore_archive(archive, archive_source, before, manifest, destination):
     from .workspace import Workspace
     destination.parent.mkdir(parents=True, exist_ok=True)
@@ -793,106 +1086,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                 target.chmod(int(expected["mode"], 8) & 0o777)
         # Restore selected original delivery bindings before saved Spatial checks.
         _register_received_delivery(manifest, pending)
-        verified_members = _received_member_aliases(manifest, pending)
-        restored = Workspace(pending / "workspace")
-        if restored.project != manifest["project"]:
-            raise ValueError("Receiving changed the original workspace identity")
-        for kind in ("sources", "profiles", "scenarios", "observations", "observation-comparisons",
-                     "planning-inventories", "portfolios", "portfolio-reports",
-                     "biophysical-evidence", "biophysical-ranges"):
-            restored._list(kind)
-        if (restored._list("biophysical-evidence") or restored._list("biophysical-ranges")):
-            from .biophysical_evidence import verify_all as verify_biophysical_evidence
-            verify_biophysical_evidence(restored)
-        if restored._list("planning-inventories"):
-            from .planning_inventory import inspect as inspect_planning_inventory
-            for inventory in restored._list("planning-inventories"):
-                inspect_planning_inventory(restored, inventory["id"])
-        if restored._list("portfolios"):
-            from .portfolios import verify_portfolio
-            for portfolio in restored._list("portfolios"):
-                verify_portfolio(restored, portfolio)
-        for report in restored._list("portfolio-reports"):
-            for retained in report["files"].values():
-                path = restored.root.joinpath(*member_name(retained["path"]).parts)
-                if (not path.is_file() or path.stat().st_size != retained["bytes"]
-                        or file_digest(path) != retained["sha256"]):
-                    raise ValueError("Receiving changed a conservation portfolio report")
-        reviews = restored._list("spatial-reviews")
-        if reviews:
-            from .spatial import SpatialReview
-            reviewer = SpatialReview(restored)
-            for review in reviews:
-                reviewer.validate_saved(review, verified_members=verified_members)
-        if restored._list("spatial-regions"):
-            from .spatial_regions import SpatialRegions
-            SpatialRegions(restored).verify()
-        if restored._list("spatial-cohorts"):
-            from .spatial_cohorts import SpatialCohorts
-            SpatialCohorts(restored).verify()
-        spatial_exports = restored.overview().get("spatial_exports", [])
-        if spatial_exports:
-            from .spatial_exports import SpatialExports
-            exporter = SpatialExports(restored)
-            for value in spatial_exports:
-                exporter.inspect(value["id"], verified_members=verified_members)
-        if restored._list("reviews"):
-            from .reviews import validate_workspace
-            # Extraction already checked every retained member against its SHA-256.
-            validate_workspace(restored)
-        community_tables = restored._list("community-tables")
-        community_plans = restored._list("community-plans")
-        community_reports = restored._list("community-reports")
-        if community_tables or community_plans or community_reports:
-            from . import communities
-            from .common import verify_file
-            for table in community_tables:
-                original, _ = restored.source_file(
-                    table["source"]["collection_id"], table["source"]["source_id"])
-                if file_digest(original) != table["source"]["sha256"]:
-                    raise ValueError("Receiving changed the original community source")
-            for plan in community_plans:
-                table = communities.get_table(restored, plan["table_id"])
-                if table["source"] != plan["source"]:
-                    raise ValueError("Received community plan changed its table edition")
-                communities.verify_plan_context(restored, plan)
-            for report in community_reports:
-                plan = communities.get_plan(restored, report["plan_id"])
-                if (report["table_id"] != plan["table_id"] or
-                        report["context_snapshot_sha256"] != plan["context"]["snapshot_sha256"]):
-                    raise ValueError("Received community report changed its saved plan")
-                for artifact in report["files"].values():
-                    verify_file(restored.root, artifact)
-        for grid in restored.overview()["grids"]:
-            if grid["state"] == "complete":
-                restored.get_grid(grid["id"])
-        for run in restored.overview()["runs"]:
-            original = restored.inspect_run(run["id"])
-            if original["state"] == "complete":
-                for artifact in original["artifacts"].values():
-                    relative = member_name(artifact["path"]).as_posix()
-                    name = member_name("workspace/runs/" + original["id"] + "/" + relative).as_posix()
-                    retained = manifest["members"].get(name)
-                    if (retained is None or retained["sha256"] != artifact["sha256"]
-                            or ("bytes" in artifact and retained["bytes"] != artifact["bytes"])):
-                        raise ValueError("Receiving changed a completed native result")
-        # Original capture bodies are already byte-verified during extraction.
-        # Reattach their operation lineage and imported editions without running
-        # GIS derivation or rewriting an immutable request from its original host.
-        source_acquisitions = verify_acquisitions(
-            restored.root, verified_members,
-            source_ids={row["id"] for row in restored._list("sources")})
-        retained_acquisitions = manifest.get("source_acquisitions")
-        if retained_acquisitions is not None and retained_acquisitions != source_acquisitions:
-            raise ValueError("Receiving changed the original source acquisition lineage")
-        implementation = verify_implementation(restored.root, verified_members)
-        retained_implementation = manifest.get("implementation")
-        if retained_implementation is not None and retained_implementation != implementation:
-            raise ValueError("Receiving changed the original implementation plans or reports")
-        parameter_studies = verify_parameter_studies(restored, verified_members)
-        retained_studies = manifest.get("parameter_studies")
-        if retained_studies is not None and retained_studies != parameter_studies:
-            raise ValueError("Receiving changed the original parameter studies or exports")
+        details = _verify_restored_workspace(manifest, pending)
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
         archive_sha256 = _archive_digest(archive_source, before)
@@ -901,33 +1095,22 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
             working_archive = _retain_received_archive(
                 archive_source, pending, before, archive_sha256)
         received_record = _register_received_delivery(manifest, pending, working_archive)
-        result = {"schema": "upstate.scientific-workspace-receiving/v1", "project": manifest["project"],
-                  "directory": str(destination), "workspace": str(destination / "workspace"),
-                  "application": str(destination / "application"),
-                  "archive_sha256": archive_sha256, "members": len(manifest["members"]),
-                  "selection": manifest["selection"], "identity": "MATCH",
-                  "database_snapshots": manifest.get("database_snapshots", {}),
-                  "source_acquisitions": source_acquisitions,
-                  "implementation": implementation,
-                  "parameter_studies": parameter_studies,
-                  **received_delivery(manifest, destination, record=received_record)}
-        if any((restored.root / "compute-programmes").glob("*/interaction-links/*.json")):
-            from .programme_interactions import validate_workspace as validate_programme_interactions
-            validate_programme_interactions(restored, verified_members=manifest["members"])
-        # Verify retained Scenario analysis source context before publication.
-        if any((restored.root / "scenario-source-contexts").glob("*.json")):
-            from .analysis_source_context import verify_workspace as verify_analysis_source_context
-            result["scenario_source_context"] = verify_analysis_source_context(restored)
-        # Verify retained original point-source observation bindings before publication.
-        if any((restored.root / "point-source-bindings").glob("*.json")):
-            from source.retained_point_sources import verify_workspace as verify_point_source_bindings
-            result["point_source_context"] = verify_point_source_bindings(restored)
+        result = _receiving_result(
+            manifest, destination, archive_sha256, details, received_record)
+        # This complete result travels in the same atomic directory publication.
+        atomic_json(pending / RECEIVING_COMPLETION,
+                    _receiving_completion(manifest, result), immutable=True)
 
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():
             raise ValueError("Receiving destination appeared during capture")
         os.rename(pending, destination)
         pending = None
+        parent_fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+        try:
+            os.fsync(parent_fd)
+        finally:
+            os.close(parent_fd)
         return result
     finally:
         if pending is not None:

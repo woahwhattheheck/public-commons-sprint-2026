@@ -390,6 +390,7 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     try {
       const loaded=await api(endpoint('/api/receptors/catalog'));
       if(epoch!==generation||workspace!==requested||!frame)return;
+      if(loaded?.workspace_key!==requested)throw Error('The source-water catalogue belongs to another workspace.');
       catalog=loaded;
       if(!draft.experiment_id&&catalog.experiments?.length)draft.experiment_id=catalog.experiments[0].id;
       if(!customProfile&&!catalog.receptor_profiles?.some(row=>row.id===draft.receptor_profile_id)&&catalog.receptor_profiles?.length)chooseProfile(catalog.receptor_profiles[0].id);
@@ -461,16 +462,20 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     return (files||[]).filter(item=>ticketURL(item)).map(item=>
       '<a href="'+esc(ticketURL(item))+'?download=1" download>'+esc(item.label||item.filename)+'</a>').join(' · ');
   }
-  async function openResult(kind,id) {
+  async function openResult(kind,id,{preserveDraft=false}={}) {
+    if(!Object.hasOwn(transferKinds,kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original saved source-water record.');
     const requested=workspace, context=viewContext(), epoch=++generation;fetching=true;
     status('Opening the saved source-water product and original file references…');
     try {
-      const loaded=await api(endpoint('/api/receptors/'+kind,{id}));
+      const loaded=await api(endpoint('/api/receptors/'+kind,{id,workspace:requested}));
       if(!currentView(context)||epoch!==generation)return false;
+      if(loaded?.id!==id||loaded?._kind!==kind||loaded?.workspace_key!==requested)
+        throw Error('The saved source-water reply identifies another study or workspace.');
       result=loaded;filters={profile:'',scenario:'',area:'',pollutant:'',search:''};page=0;packageFiles=[];pathSelection=null;selectedMapHuc='';
       if(kind==='network'){
         retainNetworkSource(loaded);
-        if(draft.area_authoring?.source_body_sha256===loaded.source_binding.body_sha256){
+        if(!preserveDraft&&draft.area_authoring?.source_body_sha256===loaded.source_binding.body_sha256){
           const previous=draft.area_authoring.network_id;draft.area_authoring.network_id=loaded.id;
           if(draft.network_source_id==='network:'+previous)draft.network_source_id='network:'+loaded.id;
           remember();
@@ -1157,6 +1162,21 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
     await openResult(selected.kind,selected.id);
     if(workspace===selected.workspace)node('[data-rc-result]')?.scrollIntoView({block:'start'});
   }
+  async function openStudy(selection) {
+    const requested=currentWorkspace();
+    const kind=Object.keys(transferKinds).find(key=>transferKinds[key]===selection?.kind);
+    if(!requested||selection?.workspace_key!==requested||workspace!==requested||!frame)
+      throw Error('Open this received study in its original workspace.');
+    if(!kind||!/^[0-9a-f]{64}$/.test(selection?.id||''))
+      throw Error('Choose an original saved source-water record.');
+    if(!catalog)throw Error('Refresh the original source-water catalogue before opening this study.');
+    const context=viewContext(),expectedGeneration=generation+1;
+    const completed=await openResult(kind,selection.id,{preserveDraft:true});
+    if(!currentView(context)||generation!==expectedGeneration)return null;
+    if(!completed)throw Error('The saved source-water study could not be opened. Review the original result error.');
+    node('[data-rc-result]')?.scrollIntoView({block:'start'});
+    return {workspace_key:requested,kind:selection.kind,id:selection.id};
+  }
   async function dispatch(button) {
     const action=button?.dataset?.action,id=button?.dataset?.id,requested=currentWorkspace();
     if(button?.dataset?.workspace!==requested)throw Error('Open this task in its original workspace.');
@@ -1402,10 +1422,10 @@ export function attachReceptorWorkbench({getState, getWorkspace, api, endpoint, 
       }
       if(target.dataset.rcRowFilter==='search'){filters.search=target.value;page=0;renderQuantities();}
     });
-    loadCatalog();
+    return loadCatalog();
   }
   function detach() {
     remember();generation++;transferVersion++;transferring=false;root=null;frame=null;fetching=false;observing=false;
   }
-  return {mount,update,detach,taskActions,dispatch};
+  return {mount,update,detach,taskActions,dispatch,openStudy};
 }

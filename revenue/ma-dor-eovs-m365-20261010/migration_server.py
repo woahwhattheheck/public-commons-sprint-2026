@@ -17,6 +17,7 @@ import uuid
 
 from migration_workspace import MigrationWorkspace, MigrationError
 import financial_workspace
+import property_workspace
 from migration_portable import PortableService
 
 READS = {
@@ -31,7 +32,11 @@ READS = {
     "case.rehearsal.compare", "case.review.get", "case.cutover.get", "case.list",
 }
 READS.update(financial_workspace.READS)
+READS.update(property_workspace.READS)
 STATIC = {
+    "/property": ("public/property.html", "text/html; charset=utf-8"),
+    "/property.js": ("public/property.js", "text/javascript; charset=utf-8"),
+    "/property.css": ("public/property.css", "text/css; charset=utf-8"),
     "/financial": ("public/financial.html", "text/html; charset=utf-8"),
     "/financial.js": ("public/financial.js", "text/javascript; charset=utf-8"),
     "/financial.css": ("public/financial.css", "text/css; charset=utf-8"),
@@ -204,7 +209,7 @@ class WorkbenchHandler(BaseHTTPRequestHandler):
                 kind = query.get("kind", [""])[0]
                 identifier = query.get("id", [""])[0]
                 format_name = query.get("format", ["ndjson"])[0]
-                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover"} | set(financial_workspace.KINDS):
+                if kind not in {"case.dataset", "case.plan", "case.rehearsal", "case.review", "case.cutover"} | set(financial_workspace.KINDS) | set(property_workspace.KINDS):
                     raise ValueError("Choose a complete case migration export")
                 if format_name not in {"ndjson", "csv"}:
                     raise ValueError("Choose NDJSON or CSV")

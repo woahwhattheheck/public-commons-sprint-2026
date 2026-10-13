@@ -187,6 +187,42 @@ then reopen the same Workspace and report IDs. The actual native rendering and
 reopening operation uses the existing completed model outputs.
 
 
+## Inspect the actual outgoing report and application
+
+Before presenting a client-facing report or application edition as ready, the
+producing peer opens and visually inspects that exact outgoing edition. This is
+Bryce's product-delivery instruction, recorded in the original Ecosystem thread
+on 13 October 2026 at
+[04:51 EDT](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791881463183449).
+Keep this step in the current build and receiving instructions supplied to each
+worker.
+
+Use the original populated Workspace and selected report. Open the generated PDF
+and offline HTML, look at their actual pages or screenshots, and follow the
+important source and report links. Inspect the full coefficient and observation
+tables, original units and qualifiers, numeric coordinates, figure labels and
+captions, repeated panel headings and continued rows. Long source identities
+must remain accessible without displacing the scientific content. Preserve the
+plain industrial design: readable tables, consistent typography and spacing,
+clear hierarchy and restrained controls.
+
+In the normal operator, exercise the controls used for the outgoing course:
+select or revise the retained study, reopen the saved report, download its
+original files and archive, and receive/reopen the same selected project. Inspect
+the actual screenshare width and a narrow width, including 390 pixels where the
+current receiving course uses it. Check the relevant populated, empty, loading
+and error states. Keep full hashes and source labels readable within their
+containers; horizontal table scrolling should stay inside the table rather than
+widening the whole page. For PDF and print, examine actual rendered pages for
+clipped values, broken links, cramped panels and unreadable continuation rows.
+
+Fix concrete visual or control failures in the maintained source and inspect the
+resulting outgoing edition before presenting it. Source review, HTTP responses,
+DOM counts and unviewed screenshots do not replace this direct product review.
+Continue the existing rendering and receiving operation, preserving original
+report identities and archives; the review should lead to useful repairs rather
+than repeated broad tests or a separate verification product.
+
 ## Combined economic links and coefficient source
 
 Edition v6 is the complete three-way composition of the common 31,003-byte v4
