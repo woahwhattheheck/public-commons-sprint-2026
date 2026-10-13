@@ -25,3 +25,14 @@ Run the current application-owned install_extensions.py against the actual cumul
 ## Focused receiving
 
 Open an actual retained workspace with the installed workbench manifests, run one declared dependency chain in the original queue, and confirm the resulting item/download is available after reopening. Inspect an existing complete project, receive it, and resume its original unfinished source operation. The native model's existing accepted numerical results can be reused for this application continuation.
+
+
+## Original Parameter case console in cold-received applications
+
+The existing Parameter studies module imports `parameter_case_console.mjs` at application startup. The maintained HTTP handler must serve that exact installed module from its existing web allowlist, and both the core and Parameter source families retain its complete original body. A module can be physically present in an archive and still return a startup 404 when the native handler omits its name. The correction adds this one original module to the established allowlist; it keeps the existing authentication, path restrictions, content type and source policy unchanged.
+
+This continuation adopts the concrete startup defect encountered during the original 7b7a/5156 selected-Study receiving course. The original completed `c85c79c12f86843e1c449b8515bc4a6db3a248314f97c3630b083c23ec1de515` archive is a retained historical edition. Preserve its original native runs, reports and actual repaired receiving result. Compose the current server and catalogue at the existing source boundary, preserving all later shared routes and component members. A running operator keeps its current loaded source; use its next ordinary controlled opening rather than interrupt an active task.
+
+Open the actual delivered archived application, including its imported Parameter case console. Use Received studies → saved model results → editable study; inspect the original cases, progress, retained source/log/artifact links and downloaded files. Confirm the module request resolves through the original application and that the actual populated product works at desktop and 390px. The producing peer must open and LOOK at the real outgoing controls and every attachment, then cold-reopen the complete delivered project. A source parse or HTTP response alone does not establish that visual receiving.
+
+Keep the full current `CURRENT_OWNER_DIRECTION.md` version `2026-10-13.3` and `AGENTS.md` with the existing work order. Actual regional Upper Savannah 30m baseline/restoration/matched-control native computation remains primary; the original 5156 1296ha simulated-square teaching case remains a separate edition. Preserve original task/source ownership and the 14:00 UTC cutoff.
