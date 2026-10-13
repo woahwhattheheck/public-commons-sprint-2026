@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-chiques-nutrients",
+  "source_reference": "ECO-CHIQUES-NUTRIENT-SOURCES-RD12-20261013: complete original TN/NOx/TP calibration source receiving in the maintained Measurements collection and review engine.",
+  "components": {
+    "measurement-chiques-nutrients": {
+      "title": "Chiques nutrient calibration originals, attributed native cells and complete collection handover",
+      "paths": [
+        "integration/component_fragments/measurement-chiques-nutrients.json",
+        "measurement_workspace/CHIQUES_NUTRIENT_SOURCES.md",
+        "measurement_workspace/engine/chiques_nutrient_cli.mjs",
+        "measurement_workspace/engine/chiques_nutrient_reports.mjs",
+        "measurement_workspace/engine/chiques_nutrient_workspace.mjs",
+        "measurement_workspace/engine/chiques_nutrients.mjs",
+        "measurement_workspace/engine/cli.mjs",
+        "measurement_workspace/engine/http.mjs",
+        "measurement_workspace/operator.py",
+        "measurement_workspace/reference/run-chiques-nutrients.mjs",
+        "measurement_workspace/reference/run-chiques-nutrients.py",
+        "measurement_workspace/web/chiques_nutrients.mjs",
+        "measurement_workspace/web/extension.mjs",
+        "measurement_workspace/web/workspace.js",
+        "operator/extensions/measured-observations.json",
+        "operator/web/chiques_nutrients.mjs",
+        "operator/web/measured_observations.mjs",
+        "operator/web/measured_observations_extension.mjs"
+      ],
+      "requires": [
+        "measurement-collections",
+        "measurement-source-reconciliation"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-chiques-nutrients"
+  ]
+}
