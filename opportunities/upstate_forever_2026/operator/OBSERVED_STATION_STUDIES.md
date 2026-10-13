@@ -1,6 +1,6 @@
 # Observed station studies
 
-Seven prepared studies connect the original gauge, lake and outfall sources to the maintained Station Geography desk. The existing saved edition, editable location choice, map, table, source download and portable receiving operations apply to these studies.
+Nine prepared studies connect the original gauge, lake and outfall sources to the maintained Station Geography desk. The existing saved edition, editable location choice, map, table, source download and portable receiving operations apply to these studies.
 
 | Prepared study | Stations | Linked context rows | Original location candidates |
 | --- | ---: | ---: | ---: |
@@ -9,8 +9,6 @@ Seven prepared studies connect the original gauge, lake and outfall sources to t
 | Eighteenmile lake study | 5 | 254 | 5 |
 | Eighteenmile agency outfall locations | 10 | 740 | 18 |
 | Eighteenmile indexed flowline locations | 10 | 740 | 18 |
-| Additional HUC05–07 NWIS gauge locations | 13 | 26,242 | 26 |
-| Additional HUC05–07 NLDI gauge locations | 13 | 26,242 | 26 |
 | Complete regional observed discharge | 29 | 2,291 | 29 |
 | Complete regional observed discharge and stage | 30 | 2,294 | 30 |
 | HUC05–07 original NWIS gauge positions | 13 | 26,242 | 26 |
