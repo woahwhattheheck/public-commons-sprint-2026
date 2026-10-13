@@ -593,3 +593,29 @@ Serialization follows the original QGIS implementation:
 - https://api.qgis.org/api/3.44/qgsmaplayerstyle_8cpp_source.html
 - https://api.qgis.org/api/3.44/qgscolorrampshader_8cpp_source.html
 - https://github.com/qgis/QGIS/blob/final-3_44_0/src/core/raster/qgssinglebandpseudocolorrenderer.cpp
+
+
+### Opening the generated review in the operator
+
+The GIS review opens through its original declared-member URL, so its report-relative
+TIFF, JSON and CSV links stay attached to the same retained review. In Chromium,
+an opaque sandbox suppresses the operator's `SameSite=Strict` session cookie on
+clicks inside the document. The operator therefore applies a generated-review
+policy to `REVIEW.html` only after it recreates the HTML with the installed review
+producer and confirms the complete UTF-8 length and SHA-256 against that exact
+retained file. The checked `review.json` must identify the same complete review,
+selection and layers. Geographic view companions are verified by the original
+renderer; labels and embedded data use its existing escaping.
+
+This exact-template match permits the generated review to retain the operator's
+origin and use the ordinary authenticated member downloads. Every other member,
+received HTML/SVG and a review from an unmatched producer edition keeps the original
+opaque document policy. Original file bytes, review identity and ZIP contents stay
+unchanged. The complete report ZIP continues to open independently through the
+same relative files.
+
+During the maintained receiving course, open the actual review from **Editable GIS
+projects**, operate its geographic controls, follow its TIFF/JSON/CSV links, and
+reopen the downloaded report. Inspect the populated desktop and narrow views and
+the actual attachments as required by `AGENTS.md` and
+`CURRENT_OWNER_DIRECTION.md` version `2026-10-13.3`.
