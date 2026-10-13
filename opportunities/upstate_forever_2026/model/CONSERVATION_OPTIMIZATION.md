@@ -675,6 +675,31 @@ override those prior exclusions through the maintained decision interface, while
 unavailable positive-weight family support and minimum decision coverage remain
 enforced. The editor preserves both map types when reopening a saved request.
 
+### Author a cohort of decision comparisons
+
+In a multi-criteria decision, add the matched physical criteria relevant to the
+question and choose their selected families, quantities, directions and weights.
+Open **Native case comparisons → Add comparisons across matched families**.
+Choose the criteria that should vary together and the original families to compare.
+
+**Add reviewed family comparisons** creates one editable case per selected family.
+Each case changes the complete baseline/treatment pair for the chosen criteria.
+Other criteria retain their selected values, and weights, limits and preference
+profiles retain their values. The selected case and equivalent existing comparison
+maps are recognized, so a cohort containing the selected family does not add that
+case twice. Existing authored cases remain editable.
+
+For example, selecting the nitrogen, phosphorus and sediment criteria and eight
+retained families produces seven additional case maps when all three selected
+criteria already use the first family. Selecting only nitrogen instead asks a
+different question: nitrogen varies by family while the other criteria keep their
+selected families. Review that scientific choice in the resulting case list.
+
+Changing the criteria can invalidate unfinished batch choices; review them against
+the current criterion list before adding cases. Saving and reopening retain the
+authored case maps in the maintained `scenario_stability` request. Case comparison
+uses the fixed criterion scales described above and explicit listed-case counts.
+
 ### Saved portfolios, geography and reports
 
 Unit details expose own baseline, treatment, signed reduction/increase, common
