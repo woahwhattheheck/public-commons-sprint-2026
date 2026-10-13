@@ -72,6 +72,7 @@ APPLICATION_DIRECTORIES = (
     "eco_intelligence",
     "measurement_workspace",
     "observations",
+    "assessment",
     "checks",
     "docs",
     "examples",
