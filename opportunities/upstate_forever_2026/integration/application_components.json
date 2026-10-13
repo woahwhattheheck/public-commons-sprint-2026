@@ -1235,8 +1235,8 @@
             "mode": "100644"
           },
           "operator/web/native-interactions.mjs": {
-            "bytes": 39569,
-            "sha256": "61a826e62de8dc35a48f47c994d6b153aa44ba9a4fcda641e2cedf3561e2f664",
+            "bytes": 39576,
+            "sha256": "9cb6c436ed7e0cf6cb39887f894374beab65bc387e0960ec45c1a6f05c427825",
             "mode": "100644"
           }
         }
