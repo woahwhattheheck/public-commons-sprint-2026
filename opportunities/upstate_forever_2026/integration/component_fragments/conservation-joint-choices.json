@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "conservation-joint-choices",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/4840",
+  "extend_components": {
+    "conservation": {
+      "paths": [
+        "model/conservation_joint_choices.py",
+        "operator/web/conservation_joint_choices.mjs",
+        "CONSERVATION_JOINT_CHOICES.md"
+      ]
+    }
+  },
+  "required_components": []
+}
