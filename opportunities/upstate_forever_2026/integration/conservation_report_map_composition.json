@@ -120,13 +120,15 @@
     "installer": {
       "before_bytes": 65946,
       "before_sha256": "8da0c5e4b6fb38c7cdeddd65f86f1256186da1aa1876c00c454bedb303e4bbfd",
-      "after_bytes": 66911,
-      "after_sha256": "45a03ab398ce718d5014290b4d1087c2e1d7dcbb53fbc96c10f6081663514d90",
+      "after_bytes": 68103,
+      "after_sha256": "77c515d812cd3a1aac24681881760611dd78dccd8cac0458ff947a4cc86b33e4",
       "changes": [
         "Receive the complete geographic helper, guide and source composition.",
         "Require the original shared map renderer and dispatcher when receiving geographic source.",
         "Recognize exact previously published source/CLI/guide/component/installer identities.",
-        "Recognize the actual64,962-byte regional receiver before its maintained3578 successor."
+        "Recognize the actual64,962-byte regional receiver before its maintained3578 successor.",
+        "Require all three geographic source files when the received producer imports the map helper; preserve older complete packets.",
+        "Validate original shared renderer role-label capability through its actual top-level function before installation."
       ]
     }
   },
@@ -156,8 +158,8 @@
       "sha256": "ee8b9fc6a4f5254ec39e35ab421f6f3807ed6e55c9d22c2d02d6b779e01da1ab"
     },
     "operator/install_conservation.py": {
-      "bytes": 66911,
-      "sha256": "45a03ab398ce718d5014290b4d1087c2e1d7dcbb53fbc96c10f6081663514d90"
+      "bytes": 68103,
+      "sha256": "77c515d812cd3a1aac24681881760611dd78dccd8cac0458ff947a4cc86b33e4"
     }
   }
 }
