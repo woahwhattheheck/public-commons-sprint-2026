@@ -1,6 +1,6 @@
 import {createHash} from 'node:crypto';
 import {clean, number, day, InputError, parseCSV, safeJSON} from './parse.mjs';
-import {WQP_CHARACTERISTIC_EDITION,CHARACTERISTIC_MAPPING,CHARACTERISTIC_FIELDS,characteristicUnit,interpretCharacteristic,compatibleCharacteristicLimit} from './characteristics.mjs';
+import {WQP_CHARACTERISTIC_EDITIONS,CHARACTERISTIC_MAPPING,CHARACTERISTIC_FIELDS,characteristicUnit,interpretCharacteristic,compatibleCharacteristicLimit} from './characteristics.mjs';
 export const hash = text => createHash('sha256').update(text).digest('hex');
 export const stable = value => JSON.stringify(value, (key, val) => val && !Array.isArray(val) && typeof val==='object' ? Object.fromEntries(Object.keys(val).sort().map(k=>[k,val[k]])) : val);
 
@@ -95,7 +95,7 @@ export function fieldReader(headers, overrides={}) {
   if(!overrides || typeof overrides!=='object' || Array.isArray(overrides)) throw new InputError('Column mapping must be an object');
   if(Object.hasOwn(overrides,DETECTION_MAPPING)&&overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION)throw new InputError('Unsupported WQP detection interpretation edition');
   const characteristics=Object.hasOwn(overrides,CHARACTERISTIC_MAPPING);
-  if(characteristics&&(overrides[CHARACTERISTIC_MAPPING]!==WQP_CHARACTERISTIC_EDITION||overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION))throw new InputError('Choose the supported WQP characteristic and detection interpretation editions together');
+  if(characteristics&&(!WQP_CHARACTERISTIC_EDITIONS.includes(overrides[CHARACTERISTIC_MAPPING])||overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION))throw new InputError('Choose the supported WQP characteristic and detection interpretation editions together');
   const fields=characteristics?{...FIELDS,...CHARACTERISTIC_FIELDS}:FIELDS;
   for (const [key,name] of Object.entries(overrides)) {
     if(key===DETECTION_MAPPING||key===CHARACTERISTIC_MAPPING)continue;
@@ -105,7 +105,7 @@ export function fieldReader(headers, overrides={}) {
   }
   const mapping = Object.fromEntries(Object.entries(fields).map(([key, aliases])=>[key,Object.hasOwn(overrides,key) ? overrides[key] : aliases.find(x=>headers.includes(x)) || '']));
   if(Object.hasOwn(overrides,DETECTION_MAPPING))mapping[DETECTION_MAPPING]=WQP_DETECTION_EDITION;
-  if(characteristics)mapping[CHARACTERISTIC_MAPPING]=WQP_CHARACTERISTIC_EDITION;
+  if(characteristics)mapping[CHARACTERISTIC_MAPPING]=overrides[CHARACTERISTIC_MAPPING];
   // The directive travels inside the resolved mapping and thus the import ID.
   // Unpinned historical imports keep their exact original normalization.
   return {mapping, get:(row,key)=>[DETECTION_MAPPING,CHARACTERISTIC_MAPPING].includes(key)?(mapping[key]||''):clean(row[mapping[key]])};
@@ -178,11 +178,12 @@ export function normaliseWQP(raw, get) {
   const versioned=get(raw,DETECTION_MAPPING)===WQP_DETECTION_EDITION;
   const sourceLimits=limits(raw,versioned), declaredUnit=get(raw,'unit');
   const inferredUnit=!declaredUnit && sourceLimits.length===1 ? sourceLimits[0].unit : '';
-  const extended=get(raw,CHARACTERISTIC_MAPPING)===WQP_CHARACTERISTIC_EDITION;
+  const characteristicEdition=get(raw,CHARACTERISTIC_MAPPING);
+  const extended=WQP_CHARACTERISTIC_EDITIONS.includes(characteristicEdition);
   const ordinarySpec=unitSpec(declaredUnit||inferredUnit);
   const spec=extended?characteristicUnit(declaredUnit||inferredUnit,characteristic,ordinarySpec):ordinarySpec;
   const characteristicContext=extended?Object.fromEntries(Object.keys(CHARACTERISTIC_FIELDS).map(key=>[key,get(raw,key)])):null;
-  const classified=extended?interpretCharacteristic({characteristic,fraction:get(raw,'fraction'),spec,pcode:get(raw,'pcode'),method:get(raw,'method'),...characteristicContext}):null;
+  const classified=extended?interpretCharacteristic({edition:characteristicEdition,characteristic,fraction:get(raw,'fraction'),spec,pcode:get(raw,'pcode'),method:get(raw,'method'),...characteristicContext}):null;
   const [parameter,basis]=classified?[classified.parameter,classified.basis]:constituent(characteristic,get(raw,'pcode'),get(raw,'fraction'),spec);
   const rawValue=get(raw,'value'), detection=get(raw,'detection'), qualifier=get(raw,'qualifier');
   const match=/^([<>]=?|≤|≥)\s*(.+)$/.exec(rawValue);
