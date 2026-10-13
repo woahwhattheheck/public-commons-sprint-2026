@@ -5465,7 +5465,8 @@
         "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
         "source_tools/receive_observed_scientific_review.py",
         "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
-        "observations/eighteenmile_2023/scientific-review.request.json"
+        "observations/eighteenmile_2023/scientific-review.request.json",
+        "source/water_context/20261013/regional-scientific-review.request.json"
       ],
       "requires": [
         "eco13",
