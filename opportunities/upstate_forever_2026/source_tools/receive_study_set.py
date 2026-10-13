@@ -40,7 +40,7 @@ class ReceivingError(RuntimeError):
         self.code, self.status = code, status
 
 
-ITEM_ERRORS = (OSError, ValueError, ReceivingError, http.client.HTTPException,
+ITEM_ERRORS = (OSError, EOFError, ValueError, ReceivingError, http.client.HTTPException,
                zipfile.BadZipFile, KeyError, TypeError)
 
 
@@ -373,43 +373,16 @@ class LocalOperator:
         finally:
             connection.close()
 
-    def download(self, ticket: dict, destination: Path) -> dict:
-        wanted = {key: ticket[key] for key in ("bytes", "sha256")}
-        if destination.exists():
-            if file_hash(destination) != (wanted["bytes"], wanted["sha256"]):
-                raise ValueError("A receiving result already contains different bytes: " + destination.name)
-            return wanted
-        route = ticket.get("url")
-        if not isinstance(route, str) or not re.fullmatch(r"/api/file/[0-9a-f]{64}", route):
-            raise ValueError("Select an original retained-file ticket")
-        destination.parent.mkdir(parents=True, exist_ok=True)
-        fd, temporary = tempfile.mkstemp(prefix=".result-", dir=destination.parent)
-        connection = self.connection()
-        try:
-            connection.request("GET", route, headers=self.headers())
-            response = connection.getresponse()
-            if response.status != 200:
-                self.response(response)
-                raise ReceivingError("FILE_RESPONSE", "The original file was not returned in full", response.status)
-            hashed, size = hashlib.sha256(), 0
-            with os.fdopen(fd, "wb") as output:
-                fd = -1
-                for block in iter(lambda: response.read(CHUNK), b""):
-                    output.write(block)
-                    hashed.update(block)
-                    size += len(block)
-                output.flush()
-                os.fsync(output.fileno())
-            if (size, hashed.hexdigest()) != (wanted["bytes"], wanted["sha256"]):
-                raise ValueError("The downloaded result differs from its original byte identity")
-            os.link(temporary, destination)
-            return wanted
-        finally:
-            if fd != -1:
-                os.close(fd)
-            connection.close()
-            with contextlib.suppress(FileNotFoundError):
-                os.unlink(temporary)
+    def download(self, ticket: dict, destination: Path, *, progress=None) -> dict:
+        # Import from this complete application's existing receiver, including
+        # when invoked directly from an unrelated working directory. Planning
+        # remains independent of the native model and its GIS dependencies.
+        application = str(Path(__file__).resolve().parents[1])
+        if application not in sys.path:
+            sys.path.insert(0, application)
+        from model.retained_download import download
+        received = download(self.port, self._token, ticket, destination, progress=progress)
+        return {key: received[key] for key in ("bytes", "sha256")}
 
 
 def task_until_complete(client: LocalOperator, task: dict, *, retry_failed=False) -> dict:

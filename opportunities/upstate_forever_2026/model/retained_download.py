@@ -6,6 +6,8 @@ is no second server, retry loop, scientific task, or credential in saved state.
 """
 from __future__ import annotations
 
+import contextlib
+from datetime import datetime, timezone
 import hashlib
 import http.client
 import json
@@ -13,10 +15,9 @@ import os
 from pathlib import Path
 import re
 import stat
+import tempfile
 import time
 from typing import Callable, Mapping
-
-from .common import atomic_json, canonical, held, now, read_json
 
 SCHEMA = "upstate.retained-download/v1"
 COHORT_SCHEMA = "upstate.retained-download-cohort/v1"
@@ -38,7 +39,10 @@ def descriptor(ticket: Mapping) -> dict:
 
 
 def _open(path: Path, flags: int, mode: str):
-    fd = os.open(path, flags | os.O_NOFOLLOW, 0o600)
+    if path.is_symlink():
+        raise ValueError("A receiving member was replaced by a symbolic link: " + path.name)
+    fd = os.open(path, flags | getattr(os, "O_NOFOLLOW", 0)
+                 | getattr(os, "O_BINARY", 0), 0o600)
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             raise ValueError("A receiving member is not a regular file: " + path.name)
@@ -49,11 +53,70 @@ def _open(path: Path, flags: int, mode: str):
 
 
 def _sync_directory(path: Path):
+    # Windows fsync accepts regular files, not directory handles. Every body and
+    # checkpoint is flushed before publication on both supported platforms.
+    if os.name == "nt":
+        return
     fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(fd)
     finally:
         os.close(fd)
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def canonical(value) -> bytes:
+    return json.dumps(value, sort_keys=True, ensure_ascii=False,
+                      separators=(",", ":"), allow_nan=False).encode("utf-8")
+
+
+def read_json(path: Path):
+    with _open(path, os.O_RDONLY, "rb") as source:
+        return json.load(source)
+
+
+def atomic_json(path: Path, value, *, immutable=False):
+    body = canonical(value) + b"\n"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=".write-", dir=path.parent)
+    try:
+        with os.fdopen(fd, "wb") as output:
+            output.write(body)
+            output.flush()
+            os.fsync(output.fileno())
+        if immutable:
+            try:
+                os.link(temporary, path)
+            except FileExistsError:
+                with _open(path, os.O_RDONLY, "rb") as source:
+                    if source.read() != body:
+                        raise ValueError("The immutable receiving plan differs")
+        else:
+            os.replace(temporary, path)
+        _sync_directory(path.parent)
+    finally:
+        with contextlib.suppress(FileNotFoundError):
+            os.unlink(temporary)
+
+
+@contextlib.contextmanager
+def held(path: Path, *, blocking=True):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with _open(path, os.O_CREAT | os.O_RDWR, "r+b") as lock:
+        if os.name == "nt":
+            import msvcrt
+            if os.fstat(lock.fileno()).st_size == 0:
+                lock.write(b"0")
+                lock.flush()
+            lock.seek(0)
+            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK, 1)
+        else:
+            import fcntl
+            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+        yield
 
 
 def _matches(path: Path, selected: dict) -> bool:

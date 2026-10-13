@@ -6,7 +6,7 @@
 
 Use complete `upstate.scientific-workspace-archive/v1` ZIPs with `ARCHIVE.json`, `workspace/workspace.json`, the selected Workspace and its application. A report-only ZIP or an outer handoff containing nested archives is not a runnable Study. Select the complete original Workspace archive inside that handoff. Teaching, regional, input-response and receiving/review families keep their own explicit labels, original project IDs, source classifications and accepted cases.
 
-Keep the selected originals in one directory, with the selection JSON at its root. Subdirectories are supported. These commands use Python's standard library; actual native calculations continue to use the existing selected-interpreter invocation and InVEST environment.
+Keep the selected originals in one directory, with the selection JSON at its root. Subdirectories are supported. These commands use Python's standard library and the complete application's maintained `model/retained_download.py`; actual native calculations continue to use the existing selected-interpreter invocation and InVEST environment.
 
 ```sh
 python application/source_tools/receive_study_set.py plan \
@@ -76,6 +76,10 @@ The index records this filter and omitted original tickets. A filtered selection
 Open each received project through the ordinary workbench Workspace selector, then use its original Runs, Parameter studies, source and reporting views. All original retained run IDs from the archive must remain in the received catalogue. Cases added to the live Workspace remain visible, with their original IDs, state and record. The catalogue is an observation of the live application, not a frozen archive of a running calculation.
 
 ## Independent failures and continuation
+
+Result downloads use the same maintained receiver as `operator/rehearsal_cli.py`. An interruption keeps the verified prefix and checkpoint in a private `.upstate-download-*` directory beside the intended artifact. Repeating the same receiving command verifies that prefix, requests only the remaining bytes from the original operator with `Range` and `If-Range`, and publishes the final path only after its complete original size and SHA match. A new operator port, session or ticket can continue the same body. Keep these checkpoint directories with the result directory when moving unfinished receiving work. Session credentials are never saved there.
+
+The complete application must include `model/retained_download.py`. Its receiving primitives use the standard library on Linux and Windows without importing the native science runtime. Existing completed artifact files are reused by exact checksum; a different existing output is preserved. The shared receiver preserves each original run-relative filename, and its interruption state does not issue another restore or scientific task.
 
 A failed archive or individual result download is recorded with its actual error while the other selected Studies and run files continue. Already restored Workspaces and copied correct originals are reused. After repairing a failed restore's actual input/runtime fault, `--retry-failed` resumes that same task. An interrupted task is resumed once per invocation; a cancelled task is not silently restarted. Reconnect the same selection and checkpoint after a client interruption.
 
