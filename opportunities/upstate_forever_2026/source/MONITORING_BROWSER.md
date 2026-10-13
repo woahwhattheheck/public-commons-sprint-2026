@@ -189,3 +189,37 @@ For the completed original b9d5 scientific Workspace, the actual retained three-
 ```
 
 The native receiver reads this frontier's actual ordered plans and uses its first plan as the baseline. The original separate six-area campaign remains the campaign selected by the existing Monitoring browser selection. Attach observed contexts only after reading their actual saved IDs for these exact frontier plans.
+
+
+## Retain the saved comparison as a scientific report source
+
+Add an explicit report title to the saved-comparison course:
+
+```sh
+node source/run_monitoring_browser.mjs \
+  --url-file PRIVATE_OPERATOR_URL_FILE \
+  --restored-selection monitoring-browser-selection.json \
+  --workspace ACTUAL_RECEIVING_OPERATOR_KEY \
+  --comparison-selection monitoring-budget-selection.json \
+  --comparison-report-title "Regional monitoring budget choices — scientific report" \
+  --output COMPARISON_REPORT_BROWSER_DIRECTORY \
+  --browser-executable /tmp/chromium \
+  --browser-renderer-limit 2
+```
+
+The title requires `--comparison-selection` and must contain 1–300 characters. Optionally add `--comparison-report-delivery ACTUAL_SAVED_DELIVERY_ID` to append the new report source to the selected delivery's existing ordered study choices. Omitting that optional ID prepares a new report selection. The delivery ID must already exist in the selected original Workspace.
+
+The browser uses the original Monitoring panel, **Use this Monitoring work in the scientific report**:
+
+1. Choose **Saved budget comparison** as the report scope, select the actual comparison just saved by this course, and enter the requested report source title.
+2. Submit **Prepare scientific report source** through the original `monitoring.report.prepare` queue. The same durable request journal captures its original operation and payload before transmission. Reentry resumes that task after an interrupted browser.
+3. Refresh the original saved-source library and open this exact retained report. Verify its complete native record, comparison selection, original document entry and ordered scientific source selection.
+4. Download every original file exposed by that report's native tickets, sequentially. Each download is checked against the retained byte count and SHA-256; an indexed filename keeps same-named members distinct.
+5. Open the original combined scientific delivery form when the Workspace already contains the completed physical model cohort required by that form. Check the exact ordered report-source titles and retained baseline selection, then close the form.
+6. Reopen the same report source in a fresh browser and after the original complete Workspace transfer. Verify the immutable report and original source fingerprints again in each receiving view.
+
+A standalone Monitoring report source can be prepared, downloaded and transferred before physical NDR/SDR results exist. In that case the browser records the completed source and the current completed-run count; the combined model-delivery form remains a later operation using its original prerequisite. The course prepares the selected scientific source and does not submit a new model calculation or a composite delivery build.
+
+This option adds `journal.input.comparison_report` with the normalized title and optional delivery ID. It also records `comparison_report_id` at completion. Commands without the new option preserve their earlier input and queued actions exactly. To expand an earlier completed comparison course with report preparation, use a new output directory. To continue this report course, use its same output, selections and title with `--resume`.
+
+The saved report's complete native record, document source and ordered delivery-selection fingerprints live in `request-state.json`. Its queued stage is `comparison-report-prepare`. Downloads retain all original report packet, scientific source, map, recipe and preparation members supplied by the native producer. The same existing Workspace archive captures that saved report before fresh-browser and independent-receiving checks.
