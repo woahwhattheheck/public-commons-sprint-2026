@@ -187,3 +187,37 @@ The immutable adoption selection includes `adoption_format_version: 2`, the orig
 The same `source_tools/receive_webmap_gis.py` now continues through independent table adoption. It checks the actual catalogue choice, admits the original dated Census CSV without working geometry, verifies all original metadata/companions and the complete native profile, and opens the completed native task's source downloads. It then selects the adopted originals and received-edition provenance using the actual Investigations repository references and delegates to the maintained `receiving/eco_intelligence/receive_original_collection.py` for its original export, companion checks, portable re-export and restart/reopen.
 
 This receiver uses `receiving_version: typed-source-selection-v2` and a separate `source-only-collection` state directory beneath the same receiving operation. Preserve any active earlier receiver and its task state. Run the maintained continuation only after that original lifetime is reconciled; use a new state directory for a different receiving/GIS version. The saved result reports `source_only_collection_id`, `source_only_tables`, `source_only_refs` and `source_only_collection_export` alongside the original full GIS course.
+
+
+## Review received vector edits before source adoption
+
+Each received GIS edition with vector layers now has **Review all vector layers** in the existing Editable GIS desk. This queues `gis.vector.review` through the original Operations queue. The received edition and explicit layer IDs determine the immutable review identity. Retrying the same request reopens the original task and result.
+
+The completed review appears beside that same received edition and source-adoption form. Open it to inspect the original and working CRS, exact paired-feature counts, attribute changes, geometry changes, unresolved identities, and full original source context. Complete JSON, CSV, HTML and a self-contained ZIP use the existing authenticated download tickets. Extract the ZIP and open `review.html` to read every feature offline.
+
+### What the comparison means
+
+The comparison uses the retained original primary and every declared companion, with their exact path, byte length and SHA256. It resolves the original source layer and original selection from `source_request`, and validates the saved `source_field_map` and `source_identity_field`. Feature order and desktop GeoPackage row numbers are not used to infer a match.
+
+A feature with one exact original identity on each side is compared field by field. Literal identifiers, empty strings, nulls and zero values remain distinct. Added and removed fields are shown, and field-type changes remain explicit in the layer schema. An identity appearing only on one side is reported as an added or removed **identity**: editing an ID can produce the same observation as adding or removing a feature. When working IDs are absent, unmatched original features are reported without assuming deletion. Duplicate IDs are shown as ambiguous groups with every original and working feature.
+
+XY geometry uses Shapely topological equality in equivalent declared CRSs, so changing a polygon's ring order alone does not create a spatial edit. Geometry type and Z coordinate changes are recorded separately in the equality result; Z comparison retains the complete coordinate multiset. Measured M coordinates, invalid geometry or differing CRSs produce an explicit unassessed comparison. The review does not repair geometry, reproject it implicitly, convert areas, or derive scientific impact from a desktop edit.
+
+The baseline is the complete retained original source selection. A sealed edition retains previous project metadata and file hashes, but does not retain all former working geometry bodies; the report therefore does not describe a previous editable edition as its baseline.
+
+After reviewing the result, the existing source-adoption form creates a separate native source collection from that exact received edition. The review and adoption remain independently retained and share the original receipt/edition identity. Working layers carry their complete original context as before; original tables and documents can also be adopted separately.
+
+### Native receiving and workspace restore
+
+The existing `source_tools/receive_webmap_gis.py` course now queues the review for its actual, unchanged ten-county received vector, requires ten exact original matches with unchanged attributes and geometry, opens all four original task downloads, and checks the same retained review after Operator restart. Its prior GIS, typed-table, source-only adoption and selected-source collection phases are unchanged.
+
+Review files live under `gis-vector-reviews/<selection-id>/` in the original Workspace. The current portable backup recursively retains that directory and the new model/operator/descriptor files. The extension's original `verify_workspace` callback verifies the review's project, received edition, complete files and full report when restoring. Download tickets are regenerated for the receiving workspace key.
+
+The new component is installed with the normal application source cohort:
+
+- `model/gis_vector_review.py`
+- `operator/gis_vector_reviews.py`
+- `operator/extensions/gis-vector-reviews.json`
+- the complete current `operator/web/gis-projects.mjs`
+
+There is no new parallel GIS workspace, task queue, archive format or scientific solver.
