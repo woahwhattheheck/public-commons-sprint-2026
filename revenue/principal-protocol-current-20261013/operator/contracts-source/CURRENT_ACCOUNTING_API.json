@@ -1,0 +1,293 @@
+{
+  "schema": "principal.current-accounting-additions.v2",
+  "base": {
+    "repository": "principal-Protocol-org/principal",
+    "commit": "f35b914cbf4896255a3711d81795b810b0a47f1c"
+  },
+  "accountingEdition": 2,
+  "migration": "new-initialization-only",
+  "units": {
+    "balance": "USDC accounting atoms (1e7)",
+    "credit": "underlying atoms (1e7)",
+    "pending": "underlying atoms (1e7)",
+    "sampleValue": "USDC per underlying, scaled1e7",
+    "lockedShares": "SY share atoms (1e7)"
+  },
+  "types": {
+    "OracleSample": {
+      "sequence": "u64",
+      "value": "i128",
+      "timestamp": "u64",
+      "observed_at": "u64"
+    },
+    "RecoveryMovement": {
+      "amount": "i128",
+      "backing_credit": "i128",
+      "pending_underlying": "i128"
+    },
+    "YieldPosition": {
+      "balance": "i128",
+      "backing_credit": "i128",
+      "pending": "i128",
+      "current_rate": "i128",
+      "projected_yield": "i128",
+      "last_factor": "i128"
+    },
+    "YieldRecovery": {
+      "sequence": "u64",
+      "source_account": "Address",
+      "issuer": "Address",
+      "yt_amount": "i128",
+      "pending_underlying": "i128",
+      "recorded_at": "u64"
+    }
+  },
+  "methods": {
+    "oracle_adapter": {
+      "sample_count": {
+        "args": [],
+        "returns": "u64"
+      },
+      "get_sample": {
+        "args": [
+          [
+            "sequence",
+            "u64"
+          ]
+        ],
+        "returns": "Option<OracleSample>"
+      },
+      "first_at_or_after": {
+        "args": [
+          [
+            "timestamp",
+            "u64"
+          ]
+        ],
+        "returns": "Option<OracleSample>"
+      }
+    },
+    "yt_token": {
+      "accounting_edition": {
+        "args": [],
+        "returns": "u32"
+      },
+      "accounting_rate": {
+        "args": [],
+        "returns": "i128"
+      },
+      "maturity_sample": {
+        "args": [],
+        "returns": "Option<OracleSample>"
+      },
+      "total_backing_credit": {
+        "args": [],
+        "returns": "i128"
+      },
+      "total_pending": {
+        "args": [],
+        "returns": "i128"
+      },
+      "total_claimed": {
+        "args": [],
+        "returns": "i128"
+      },
+      "backing_credit": {
+        "args": [
+          [
+            "account",
+            "Address"
+          ]
+        ],
+        "returns": "i128"
+      },
+      "yield_position": {
+        "args": [
+          [
+            "account",
+            "Address"
+          ]
+        ],
+        "returns": "YieldPosition"
+      },
+      "settle_yield": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "from",
+            "Address"
+          ]
+        ],
+        "returns": "i128",
+        "authorization": "original minter"
+      },
+      "consume_yield": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "from",
+            "Address"
+          ],
+          [
+            "amount",
+            "i128"
+          ]
+        ],
+        "returns": "void",
+        "authorization": "original minter"
+      },
+      "seize_position": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "account",
+            "Address"
+          ],
+          [
+            "amount",
+            "i128"
+          ]
+        ],
+        "returns": "RecoveryMovement",
+        "authorization": "original recovery escrow"
+      },
+      "seize_pending": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "account",
+            "Address"
+          ],
+          [
+            "amount",
+            "i128"
+          ]
+        ],
+        "returns": "i128",
+        "authorization": "original recovery escrow"
+      }
+    },
+    "principal_manager": {
+      "accounting_edition": {
+        "args": [],
+        "returns": "u32"
+      },
+      "locked_shares": {
+        "args": [],
+        "returns": "i128"
+      },
+      "total_deposited_underlying": {
+        "args": [],
+        "returns": "i128"
+      },
+      "total_paid_principal": {
+        "args": [],
+        "returns": "i128"
+      },
+      "total_paid_yield": {
+        "args": [],
+        "returns": "i128"
+      },
+      "principal_reserve": {
+        "args": [],
+        "returns": "i128"
+      },
+      "backing_underlying": {
+        "args": [],
+        "returns": "i128"
+      }
+    },
+    "recovery_escrow": {
+      "recover_yield": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ],
+          [
+            "account",
+            "Address"
+          ],
+          [
+            "amount",
+            "i128"
+          ]
+        ],
+        "returns": "i128",
+        "authorization": "current SAC issuer; original source account deauthorized"
+      },
+      "finalize_yield": {
+        "args": [
+          [
+            "caller",
+            "Address"
+          ]
+        ],
+        "returns": "i128",
+        "authorization": "current SAC issuer"
+      },
+      "yield_recovery_count": {
+        "args": [],
+        "returns": "u64"
+      },
+      "yield_recovery_receipt": {
+        "args": [
+          [
+            "sequence",
+            "u64"
+          ]
+        ],
+        "returns": "Option<YieldRecovery>"
+      }
+    }
+  },
+  "errors": {
+    "yt_token": {
+      "AccountingEditionRequired": 15,
+      "InvalidSettlementSample": 16,
+      "AlreadyMature": 17
+    },
+    "principal_manager": {
+      "AccountingEditionRequired": 14,
+      "Insolvent": 15,
+      "UnexpectedTransfer": 16,
+      "PrincipalNotRepresentable": 17
+    },
+    "oracle_adapter": {
+      "InvalidObservation": 7
+    }
+  },
+  "nativeCourse": {
+    "build": [
+      "build",
+      "--locked",
+      "--release",
+      "--target",
+      "wasm32v1-none",
+      "--workspace",
+      "--exclude",
+      "principal_integration_tests"
+    ],
+    "testPackage": "principal_integration_tests",
+    "test": "accounting_lifecycle",
+    "requiredArtifacts": [
+      "current-01-live-repeated-claims.json",
+      "current-02-frozen-final.json",
+      "current-03-explicit-pending-recovery.json",
+      "current-04-recovered-final.json",
+      "current-05-complete-maturity-proof.json"
+    ]
+  }
+}
