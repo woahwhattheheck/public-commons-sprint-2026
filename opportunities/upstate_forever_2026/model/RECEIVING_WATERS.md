@@ -294,3 +294,11 @@ reports and studies remain inspectable. Use the normal Receiving report action
 or the existing receiving_water_report_cli.py command, then the maintained
 Scientific Reports renderer. Open every resulting PDF page and map, the desktop
 and narrow HTML and its source links, and the complete exported source archive.
+
+Selected Study capture explicitly admits report-source editions 1, 2 and 3.
+Edition 3 retains the complete original map specification and renderer modules;
+completed-analysis captures also require their actual accounting formatter.
+Earlier edition-2 captures keep their original supported module sets. Designation
+end dates retain the original compiler's exclusive-end meaning in displayed
+labels. Complete report capture and cold receiving use the same original
+lineage and source-member checks.
