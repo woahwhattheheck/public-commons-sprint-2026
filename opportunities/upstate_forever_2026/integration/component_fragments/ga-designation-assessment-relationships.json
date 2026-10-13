@@ -6,7 +6,10 @@
       "paths": [
         "source/ga_designation_assessment_relationships/20261013/build-relationships.mjs",
         "source/ga_designation_assessment_relationships/20261013/rebuild.mjs",
-        "source/ga_designation_assessment_relationships/20261013/README.md"
+        "source/ga_designation_assessment_relationships/20261013/README.md",
+        "source/ga_designation_assessment_relationships/20261013/bind-native-geography.mjs",
+        "source/ga_designation_assessment_relationships/20261013/open-native-geography.mjs",
+        "source/ga_designation_assessment_relationships/20261013/NATIVE_GEOGRAPHY.md"
       ],
       "source_manifests": [
         "ga_designation_assessment_relationships.sources.json"
