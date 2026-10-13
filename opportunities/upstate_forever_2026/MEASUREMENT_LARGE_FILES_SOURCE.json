@@ -226,14 +226,14 @@
     },
     {
       "path": "operator/web/measured_returned_reviews.mjs",
-      "bytes": 20239,
-      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374",
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
       "role": "native"
     },
     {
       "path": "measurement_workspace/web/returned_reviews.mjs",
-      "bytes": 20239,
-      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374",
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
       "role": "native"
     }
   ],

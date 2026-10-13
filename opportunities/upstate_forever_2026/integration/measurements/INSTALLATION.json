@@ -12,7 +12,7 @@
     "download_lifecycle_commit": "6af867c99ba8ac84141adbf5b31a2d3efe9130f8",
     "outer_database_commit": "109eb3a2af0f67924a4d104552cac9918f69fbcc",
     "workspace_transport_commit": "cc01c5710da426fd5c4f571fd2d040afd3cea1a3",
-    "returned_review_engine_commit": "c2579cad55bd617085e769400c26eb60a705c017",
+    "returned_review_engine_commit": "6503066267af8f8c63734fea9c8d30a6326b2b73",
     "returned_review_provider_commit": "8caee9462899baa0003f92e42330c0791800cbf0",
     "returned_review_panel_commit": "0b93b60b53318c2a996b24e5cf965921bea4ced7",
     "returned_review_receiving_commit": "3cc2c54194124ef3644d66f1e389848ed13a4409",
@@ -25,6 +25,11 @@
     "native_receiving_repair": {
       "pull_request": 4543,
       "merge": "dc34216f61d6f6de40b553901416a0226e81bfba"
+    },
+    "returned_review_decision_selection": {
+      "base": "dc34216f61d6f6de40b553901416a0226e81bfba",
+      "helper_sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e",
+      "purpose": "Clear an unsubmitted decision selection before replacement reads; preserve admitted native task identity."
     }
   },
   "files": [
@@ -56,7 +61,7 @@
     {
       "path": "MEASUREMENT_LARGE_FILES_SOURCE.json",
       "bytes": 9350,
-      "sha256": "d4eeb7501e8017ca3abc2eea8b513743ce37292284886f0dd7cffaec78c8955f"
+      "sha256": "5d395ca3540074f1a48f053dc8d9f6fcb135dc2b46a90123ed0aeabdcb080e11"
     },
     {
       "path": "MEASUREMENT_RETURNED_REVIEWS.md",
@@ -280,8 +285,8 @@
     },
     {
       "path": "measurement_workspace/web/returned_reviews.mjs",
-      "bytes": 20239,
-      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e"
     },
     {
       "path": "measurement_workspace/web/workspace.css",
@@ -320,8 +325,8 @@
     },
     {
       "path": "operator/MEASUREMENT_RETURNED_REVIEWS.md",
-      "bytes": 10159,
-      "sha256": "cd3de40036d47db9c61eb5e0581326042aeb950ad22bbfc57916b049f78cf894"
+      "bytes": 10618,
+      "sha256": "408b9b39254d2f0bad3b177b2f3051ce7e5a89d4cf33c3743ad04ee4a2c97fe3"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -375,8 +380,8 @@
     },
     {
       "path": "operator/web/measured_returned_reviews.mjs",
-      "bytes": 20239,
-      "sha256": "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
+      "bytes": 20896,
+      "sha256": "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e"
     },
     {
       "path": "source/MEASURED_CHEMISTRY_RECEIVING.md",
@@ -474,7 +479,8 @@
       "746bd5e68bacc9c2e47bab4589a69a3585679eea239562a7aacbfcb168ca5fb2",
       "7cb7a1e24592dabdd2c5d2fa85b22b4318b1c9424c05ce93aa1c253108f23880",
       "95ebc0c41d8cb8c139f37f4412de4838bffc029b6b28f34f7c364ab21d9ec91e",
-      "3ca590c7321151db63d72eb02b080641cd921325d992e486a37173d8f6bbf5a5"
+      "3ca590c7321151db63d72eb02b080641cd921325d992e486a37173d8f6bbf5a5",
+      "d24cab14e5f37954eeef37634f6ad3b5ee60003ca1a2d1b6ae041d245c41590c"
     ],
     "CURRENT_OWNER_DIRECTION.md": [
       "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9",
@@ -563,7 +569,8 @@
       "4fbf3134a643a16d14e160b2af32bdc234e8b6555ee0ef4f72249aed1aeee99b",
       "654dbcdddc80bbb0ecbb5cb627d58a1b1a1025b8ad9e28022bcfb1c438bb6671",
       "c375d715e00d67828bdbc3430ca621aa781cb8cf3b9ae14eca2bd3a6283bfd59",
-      "151f45cc189e766f3b8e47f7f86cd68050ed408f46cf39b5f36e55d2e5f19676"
+      "151f45cc189e766f3b8e47f7f86cd68050ed408f46cf39b5f36e55d2e5f19676",
+      "d4eeb7501e8017ca3abc2eea8b513743ce37292284886f0dd7cffaec78c8955f"
     ],
     "install_measurement_large_files.py": [
       "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
@@ -646,13 +653,16 @@
     ],
     "operator/MEASUREMENT_RETURNED_REVIEWS.md": [
       "e9b175c5ba661119fc8b33a7222dac4f713247b625879a2f826bb01572164a85",
-      "9f73f969706819bfe1d31e230247b477af26d976ed9a6f14006651601ee76fa3"
+      "9f73f969706819bfe1d31e230247b477af26d976ed9a6f14006651601ee76fa3",
+      "cd3de40036d47db9c61eb5e0581326042aeb950ad22bbfc57916b049f78cf894"
     ],
     "measurement_workspace/web/returned_reviews.mjs": [
-      "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd"
+      "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
     ],
     "operator/web/measured_returned_reviews.mjs": [
-      "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd"
+      "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
+      "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
     ],
     "AGENTS.md": [
       "27e178ba2e5769624667016941c40c8eca9b202752c64c6283ca0be92184da9c"
