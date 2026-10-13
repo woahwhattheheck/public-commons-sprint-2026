@@ -1,14 +1,14 @@
 {
   "schema": "upstate.application-source-overlay/v1",
   "operation_id": "UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z",
-  "edition": "complete-current-application-3938-20261013",
+  "edition": "complete-current-application-native-repairs-20261013",
   "source_repository": "woahwhattheheck/public-commons-sprint-2026",
   "source_commit": "97fdd7ab82676b8ca1c52bd311186c541eb94d44",
   "source_application_path": "opportunities/upstate_forever_2026",
   "source_application_tree": "a7ebc5119ea8785319aa866ea16d1f9c4425f4ae",
   "distribution_kind": "complete canonical current application source; direct CLI and maintained current-source Operator",
   "file_count": 5248,
-  "source_bytes": 465412317,
+  "source_bytes": 465413711,
   "source_files": [
     {
       "path": ".claude/rules/rendered-product-inspection.md",
@@ -3788,8 +3788,8 @@
     },
     {
       "path": "model/decision_analysis.py",
-      "bytes": 89232,
-      "git_blob_sha": "e6b592e10cc5660f2ab15a1b03deb0bdeae91a29",
+      "bytes": 89490,
+      "git_blob_sha": "637baffdef0be720646b1ba2191b3e91a9e6d046",
       "mode": "100644"
     },
     {
@@ -3986,8 +3986,8 @@
     },
     {
       "path": "model/ensemble_study_transfer.py",
-      "bytes": 29999,
-      "git_blob_sha": "6fe5f5b183a0f00842b23862d36e2d9b3c6f12c6",
+      "bytes": 30286,
+      "git_blob_sha": "c002b03e0b4f0fa2214aba2dd168fd2b5991d1c2",
       "mode": "100644"
     },
     {
@@ -5960,8 +5960,8 @@
     },
     {
       "path": "model/scenario_footprint.py",
-      "bytes": 31429,
-      "git_blob_sha": "ddf9aca94c9598be4887f831cc37d0fa2aa7a92b",
+      "bytes": 32279,
+      "git_blob_sha": "9e70a38a32153d9f51b55d7794528d3ffc273425",
       "mode": "100644"
     },
     {
@@ -6086,8 +6086,8 @@
     },
     {
       "path": "model/simulated_customer_review.py",
-      "bytes": 41620,
-      "git_blob_sha": "8663eead0c864e00080e4b0596d319129ec4e8f5",
+      "bytes": 41619,
+      "git_blob_sha": "83573a1e7ae4073c0655b57d10c1260c55db2054",
       "mode": "100644"
     },
     {
@@ -31501,7 +31501,68 @@
       "mode": "100644"
     }
   ],
-  "source_overlays": [],
+  "source_overlays": [
+    {
+      "source_commit": "72db8c593faa609e49521feb333544be8ffd2999",
+      "purpose": "Exact native-exercised footprint preview, customer-response enum and decision PathLike repairs; original scientific inputs and completed outputs unchanged",
+      "paths": [
+        {
+          "path": "model/scenario_footprint.py",
+          "before": {
+            "git_blob_sha": "ddf9aca94c9598be4887f831cc37d0fa2aa7a92b",
+            "bytes": 31429
+          },
+          "after": {
+            "git_blob_sha": "9e70a38a32153d9f51b55d7794528d3ffc273425",
+            "bytes": 32279,
+            "sha256": "ec9526725e96fe31db6f7abd42df78323e7c5fc59f2804285d445fd4772bda4f"
+          }
+        },
+        {
+          "path": "model/simulated_customer_review.py",
+          "before": {
+            "git_blob_sha": "8663eead0c864e00080e4b0596d319129ec4e8f5",
+            "bytes": 41620
+          },
+          "after": {
+            "git_blob_sha": "83573a1e7ae4073c0655b57d10c1260c55db2054",
+            "bytes": 41619,
+            "sha256": "65b6d3223e0f593c6240b8765b62954fa2567e23b0f9768512f0fa8fb4288def"
+          }
+        },
+        {
+          "path": "model/decision_analysis.py",
+          "before": {
+            "git_blob_sha": "e6b592e10cc5660f2ab15a1b03deb0bdeae91a29",
+            "bytes": 89232
+          },
+          "after": {
+            "git_blob_sha": "637baffdef0be720646b1ba2191b3e91a9e6d046",
+            "bytes": 89490,
+            "sha256": "16d0e43f1fe186c1852d41552e8f5f8288fb823ef4ccc2e81c87c2f9d61f67a9"
+          }
+        }
+      ]
+    },
+    {
+      "source_commit": "75b68c2d007dda5d24c29fd529a6638159d58dd7",
+      "purpose": "Support the actual original Scientific Study source versions 1 and 2 while preserving all captured source, native-run, paired and joint-comparison closure checks",
+      "paths": [
+        {
+          "path": "model/ensemble_study_transfer.py",
+          "before": {
+            "git_blob_sha": "6fe5f5b183a0f00842b23862d36e2d9b3c6f12c6",
+            "bytes": 29999
+          },
+          "after": {
+            "git_blob_sha": "c002b03e0b4f0fa2214aba2dd168fd2b5991d1c2",
+            "bytes": 30286,
+            "sha256": "5f4ed01b6e5540ca6287d9b25d4c6f4b907c13dfd99ed4b44792e5c0f1314138"
+          }
+        }
+      ]
+    }
+  ],
   "included_changes": [
     {
       "pull_request": 3901,
@@ -31522,13 +31583,23 @@
       "pull_request": 3942,
       "merge": "2cea70a10044ee44a31d0be3f1f1b2481d752962",
       "purpose": "Included compatibility and isolated-Workspace execution policy"
+    },
+    {
+      "pull_request": 3985,
+      "merge": "72db8c593faa609e49521feb333544be8ffd2999",
+      "purpose": "Native-exercised footprint preview and PathLike reader fixes; includes original customer response enum correction from 98074b7"
+    },
+    {
+      "pull_request": 4005,
+      "merge": "75b68c2d007dda5d24c29fd529a6638159d58dd7",
+      "purpose": "Exact supported Study v2 original-source transfer admission"
     }
   ],
   "instructions": [
     "Strip only the enclosing Git ZIP folder; model/operator/source_tools are at the application root.",
     "Use the complete current source directly for --prepare-only with the existing GIS-capable Python. An Operator installer and an installed InVEST engine are not prerequisites for this preparation command.",
     "Run one writer per actual Workspace. Independent hosts may execute the same original recipe in their own isolated Workspaces, retaining their actual IDs and runtime.",
-    "Current compatibility, carrier and installer source corrections are included. Do not replay legacy transforms over already-composed registered providers as a condition of direct native preparation.",
+    "Current compatibility, carrier, installer and native-exercised source repairs are included. Do not replay legacy transforms over already-composed registered providers as a condition of direct native preparation.",
     "Keep native inputs, completed IDs and scientific output units intact. Upgrade a running child only at its ordinary process boundary.",
     "Open and LOOK at actual outgoing populated screens and ALL attachments, operate controls/downloads/save-reopen, and play/listen/watch final media per current included owner instructions.",
     "This source distribution is not an installed, executed, visually inspected or completed-model receipt. Actual receiving output remains authoritative."

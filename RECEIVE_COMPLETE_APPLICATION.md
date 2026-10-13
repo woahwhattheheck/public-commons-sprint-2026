@@ -1,6 +1,6 @@
-# Complete current application — canonical source edition 97fdd7ab
+# Complete current application — canonical source with native receiving repairs
 
-This application-only distribution contains every canonical application file at `97fdd7ab82676b8ca1c52bd311186c541eb94d44`, including the completed field/QC recording join from PR3938 and the current-source compatibility and capacity corrections. Its original source and policy inventory is in `SOURCE_OVERLAY.json`. No source overlay remains to be applied.
+This application-only distribution contains every canonical application file at `97fdd7ab82676b8ca1c52bd311186c541eb94d44`, including the completed field/QC recording join from PR3938 and the current-source compatibility and capacity corrections. Four exact merged receiving repairs are already composed: the full-resolution/reduced-mask preview, the customer-response decision spelling, the PathLike decision reader, and original Scientific Study source versions 1 and 2. These come from merged PR3985 (including the earlier customer correction) and PR4005. Original scientific inputs and completed native outputs are unchanged. Its complete source and policy inventory, original preimages and exact repair postimages are in `SOURCE_OVERLAY.json`. No source overlay remains to be applied.
 
 This is the complete application source for the existing Upper Savannah case and its retained scientific inputs. The source directory directly contains `model/`, `operator/`, `source_tools/`, `source/`, `observations/` and `integration/`. Strip only the Git ZIP's enclosing directory. An application-only ZIP does not contain an extra `opportunities/upstate_forever_2026/` prefix.
 
@@ -62,4 +62,4 @@ Read the current included owner instructions. The producing worker must open the
  
 ## Included source and actual receiving
 
-The inventory binds 5,248 original source/policy files totaling 465,412,317 bytes by original Git blob identity and mode; this root guide and the inventory are distribution metadata. The application source is complete at the pinned commit. Its scientific calculation, installed runtime, populated browser operation and final attachments must be received and used on the actual executing host. Preserve the actual command/output and any precise exception; source publication alone does not establish execution or acceptance.
+The inventory binds 5,248 original source/policy files totaling 465,413,711 bytes by original Git blob identity and mode; this root guide and the inventory are distribution metadata. The application source retains the complete pinned canonical edition with only the four explicitly recorded merged repairs. Its scientific calculation, installed runtime, populated browser operation and final attachments must be received and used on the actual executing host. Preserve the actual command/output and any precise exception; source publication alone does not establish execution or acceptance.
