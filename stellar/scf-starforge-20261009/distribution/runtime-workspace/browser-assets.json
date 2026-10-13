@@ -330,6 +330,13 @@
         "output-search.css",
         "text/css; charset=utf-8"
       ]
+    ],
+    [
+      "/application-result-sets.mjs",
+      [
+        "application-result-sets.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
