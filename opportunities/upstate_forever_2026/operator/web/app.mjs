@@ -51,6 +51,8 @@ let teamPerson=null,connectionEpoch=0;
 let state=null,view=viewLabels[location.hash.slice(1)]?location.hash.slice(1):'overview',poll=null,refreshing=false,refreshQueued=false;
 let formContext=null,detailContext=null,taskPanel=false,toastTimer=null,sourcePreview=null;
 let lastTaskStates=new Map(),lastRendered='',logOffset=0,itemRequest=0,detailRequest=0;
+let formRevision=0,navigationRevision=0,workspaceRevision=0;
+const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
 
 const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast});
@@ -309,10 +311,13 @@ function render(){
 function runTitle(id){const row=state?.data.runs.find(x=>x.id===id);return row?named('scenarios',row.selection.scenario_id)+' · '+named('profiles',row.selection.profile_id)+' · '+nativeModelLabel(row.selection):short(id);}
 function renderTasks(){
   const tasks=state?.tasks||[],active=tasks.filter(x=>['queued','running'].includes(x.state));
-  $('#task-count').textContent=active.length;
+  for(const row of tasks)acceptedTasks.delete(workspace+':'+row.id);
+  const retained=[...acceptedTasks.values()].filter(row=>row.connectionEpoch===connectionEpoch);
+  const retainedMarkup=retained.length?'<section class="section-body"><h3>Recently accepted operations</h3>'+retained.map(row=>'<article class="task-row"><h3>'+esc(actionLabels[row.action]||row.action)+'</h3><p>'+esc(row.workspaceTitle)+'</p><p class="note">Saved in its original workspace. Opening this record does not submit it again.</p>'+button('task-open-retained','Open saved operation','data-id="'+esc(row.id)+'" data-workspace="'+esc(row.workspace)+'"','small')+'</article>').join('')+'</section>':'';
+  $('#task-count').textContent=active.length+retained.length;
   $('#task-banner').hidden=!active.length;
   if(active.length)$('#task-banner').innerHTML='<strong>'+esc(active[0].state==='running'?'Original operation running':'Original operation queued')+'</strong>'+esc(actionLabels[active[0].action]||active[0].action)+button('tasks','Inspect operations','','small');
-  $('#task-list').innerHTML=tasks.length?tasks.map(row=>'<article class="task-row"><h3>'+esc(actionLabels[row.action]||row.action)+badge(row.state)+'</h3><time>'+esc(when(row.created_at))+'</time>'+(row.error?'<p class="error-text">'+esc(row.error.message)+'</p>':'')+'<div class="task-actions">'+button('task-open','Details','data-id="'+row.id+'"','small')+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','small'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"','small'):'')+'</div></article>').join(''):'<div class="section-body note">Workspace operations will appear here with their selected inputs and retained attempts.</div>';
+  $('#task-list').innerHTML=retainedMarkup+(tasks.length?tasks.map(row=>'<article class="task-row"><h3>'+esc(actionLabels[row.action]||row.action)+badge(row.state)+'</h3><time>'+esc(when(row.created_at))+'</time>'+(row.error?'<p class="error-text">'+esc(row.error.message)+'</p>':'')+'<div class="task-actions">'+button('task-open','Details','data-id="'+row.id+'"','small')+(['failed','interrupted','cancelled'].includes(row.state)?button('task-resume','Resume original selection','data-id="'+row.id+'"','small'):'')+(row.state==='queued'?button('task-cancel','Cancel before start','data-id="'+row.id+'"','small'):'')+'</div></article>').join(''):'<div class="section-body note">Workspace operations will appear here with their selected inputs and retained attempts.</div>');
 }
 function fileList(files){
   if(!files?.length)return '';
@@ -439,9 +444,10 @@ function downloadObservationComparison(){
  a.href=url;a.download='watershed-observation-comparison-'+short(detailContext.observationComparison.id)+'.csv';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
-async function showTask(id,focus=true){
-  const request=++itemRequest,requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace||request!==itemRequest)return;
-  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest)return;
+async function showTask(id,focus=true,isCurrent=()=>true){
+  if(!isCurrent())return;
+  const request=++itemRequest,requestedWorkspace=workspace,row=await api(endpoint('/api/task',{id}));if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;
+  const registeredActions=await extensions.taskActions(row);if(workspace!==requestedWorkspace||request!==itemRequest||!isCurrent())return;
   const body='<div class="meta">'+badge(row.state)+'<span>'+esc(when(row.created_at))+'</span><span>'+row.attempts.length+' retained attempts</span></div>'+(row.error?'<div class="notice error">'+esc(row.error.message)+'</div>':'')+
   (row.result?.workspace_key?'<div class="notice"><strong>Original workspace restored</strong>'+button('workspace-select','Open restored copy','data-id="'+row.result.workspace_key+'"','small')+'</div>':'')+
   (row.action==='spatial.review.export'&&row.result?.id?'<div class="page-actions">'+itemButton('spatial_exports',row.result.id,'Open map pack')+'</div>':'')+
@@ -465,6 +471,7 @@ const sourceRows=(collection,kind=null)=>{const edition=sources().find(x=>x.id==
 const requireSources=()=>{if(!sources().length)throw Error('Import an original source edition first.');};
 function setOptions(node,rows,selected=node.value){node.innerHTML=select('_',rows,selected,node.required).replace(/^<select[^>]*>|<\/select>$/g,'');}
 function openForm(title,description,html,submit,onSubmit,setup){
+  formRevision++;
   formContext={workspace,operation_id:crypto.randomUUID(),onSubmit,busy:false};
   $('#form-title').textContent=title;$('#form-description').textContent=description;
   $('#form-body').innerHTML=html;$('#form-submit').textContent=submit;
@@ -472,19 +479,74 @@ function openForm(title,description,html,submit,onSubmit,setup){
   if(!formDialog.open)formDialog.showModal();
   if(setup)setup();
 }
-async function submitAction(action,payload){
-  if(formContext&&formContext.workspace!==workspace)throw Error('The selected workspace changed. Reopen this form in the intended workspace.');
-  const submittedOperation=formContext?.operation_id||crypto.randomUUID();
-  const originalRequest={workspace,action,payload,operation_id:submittedOperation};
-  const request=operatingJourney?operatingJourney.beforeSubmission(originalRequest):originalRequest;
-  const result=await api('/api/actions',{method:'POST',body:request});
-  operatingJourney?.acceptTask(result,submittedOperation);
-  formDialog.close();formContext=null;
-  taskPanel=true;$('#task-panel').hidden=false;
-  toast((actionLabels[action] || action)+' retained.');
-  await refresh({force:true});
-  await showTask(result.id);
+function admissionContext(action,operationId){
+  return {workspace,workspaceRevision,connectionEpoch,formRevision,navigationRevision,
+    itemRequest,operation_id:operationId,action,
+    workspaceTitle:state?.workspaces?.find(row=>row.id===workspace)?.title||workspace};
+}
+function currentAdmission(ticket,{details=true}={}){
+  return capability&&connectionEpoch===ticket.connectionEpoch&&workspace===ticket.workspace&&
+    workspaceRevision===ticket.workspaceRevision&&formRevision===ticket.formRevision&&
+    navigationRevision===ticket.navigationRevision&&(!details||itemRequest===ticket.itemRequest);
+}
+function retainedTaskNotice(ticket){
+  return (actionLabels[ticket.action]||ticket.action)+' retained in '+ticket.workspaceTitle+
+    '. Open Tasks to inspect the saved operation.';
+}
+async function presentAcceptedTask(ticket,result){
+  // Acceptance is complete before any refresh, dialog or result inspection.
+  // A later display failure must never turn this into a request to submit again.
+  if(connectionEpoch!==ticket.connectionEpoch)return result;
+  acceptedTasks.set(ticket.workspace+':'+result.id,{...ticket,id:result.id});
+  if(currentAdmission(ticket)){
+    taskPanel=true;$('#task-panel').hidden=false;
+    for(const button of $$('[data-action="tasks"]'))button.setAttribute('aria-expanded','true');
+  }
+  renderTasks();toast(retainedTaskNotice(ticket));
+  if(!currentAdmission(ticket))return result;
+  try{
+    await refresh({force:true});
+    if(currentAdmission(ticket)&&!formDialog.open)
+      await showTask(result.id,true,()=>currentAdmission(ticket,{details:false})&&!formDialog.open);
+  }catch(error){
+    if(connectionEpoch===ticket.connectionEpoch)
+      toast(retainedTaskNotice(ticket)+' '+(error.message||String(error)));
+  }
   return result;
+}
+async function submitAction(action,payload){
+  const context=formContext;
+  if(context&&context.workspace!==workspace)throw Error('The selected workspace changed. Reopen this form in the intended workspace.');
+  const submittedOperation=context?.operation_id||crypto.randomUUID();
+  const ticket=admissionContext(action,submittedOperation),journey=operatingJourney;
+  const originalRequest={workspace:ticket.workspace,action,payload,operation_id:submittedOperation};
+  const request=journey?journey.beforeSubmission(originalRequest):originalRequest;
+  const result=await api('/api/actions',{method:'POST',body:request});
+  if(context)context.acceptedTask={id:result.id,workspace:ticket.workspace};
+  if(connectionEpoch!==ticket.connectionEpoch)return result;
+  if(workspace===ticket.workspace&&workspaceRevision===ticket.workspaceRevision){
+    try{journey?.acceptTask(result,submittedOperation);}
+    catch(error){toast('Operation retained. Journey display: '+(error.message||String(error)));}
+  }
+  if(formContext===context&&currentAdmission(ticket,{details:false})){
+    formDialog.close();formContext=null;
+  }
+  return presentAcceptedTask(ticket,result);
+}
+async function openAcceptedTask(id,targetWorkspace){
+  const ticket=acceptedTasks.get(targetWorkspace+':'+id);
+  if(!ticket||ticket.connectionEpoch!==connectionEpoch)return;
+  if(formDialog.open)throw Error('Finish or close the current draft before opening the saved operation.');
+  const epoch=connectionEpoch,revision=formRevision,selectedView=navigationRevision;
+  const revisionWorkspace=workspaceRevision+(workspace!==targetWorkspace?1:0);
+  if(workspace!==targetWorkspace)await selectWorkspace(targetWorkspace);
+  if(connectionEpoch!==epoch||workspace!==targetWorkspace||workspaceRevision!==revisionWorkspace||
+      formRevision!==revision||navigationRevision!==selectedView||formDialog.open)return;
+  taskPanel=true;$('#task-panel').hidden=false;
+  for(const button of $$('[data-action="tasks"]'))button.setAttribute('aria-expanded','true');
+  await showTask(id,true,()=>connectionEpoch===epoch&&workspace===targetWorkspace&&
+    workspaceRevision===revisionWorkspace&&formRevision===revision&&
+    navigationRevision===selectedView&&!formDialog.open);
 }
 async function uploadFile(file){
   if(!file)throw Error('Choose the original file.');
@@ -1121,17 +1183,20 @@ async function runtimeDialog(){
  detail('Actual installed scientific runtime','<p class="note">Versions are read from this operator’s existing Python environment. Native run preparation verifies the selected original model installation.</p><pre class="json-view">'+esc(pretty(value))+'</pre>',{kind:'runtime'});
 }
 async function executeAction(action,payload){
- const row=await api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:crypto.randomUUID()}});
- await refresh({force:true});await showTask(row.id);return row;
+ const ticket=admissionContext(action,crypto.randomUUID());
+ const row=await api('/api/actions',{method:'POST',body:{workspace:ticket.workspace,action,payload,operation_id:ticket.operation_id}});
+ return presentAcceptedTask(ticket,row);
 }
 async function navigate(next){
  if(!viewLabels[next]&&!extensions.hasView(next))return;
+ navigationRevision++;
  view=next;operatingJourney?.updateRail(next);history.replaceState(null,'','#'+next);lastRendered='';render();$('#main').focus();
 }
 async function selectWorkspace(id){
  nativeJobs.detach();
  if(operatingJourney?.isBusy())throw Error('Wait for the current journey request before changing workspaces.');
  if(formDialog.open)throw Error('Finish or close the current draft before changing workspaces.');
+ workspaceRevision++;
  workspaceFinder.reset();
  sourceReports.reset();
  rehearsal.detach();
@@ -1151,6 +1216,7 @@ async function dispatch(button){
  if(action?.startsWith('community-'))return community.dispatch(button);
  if(action?.startsWith('review-'))return customerReviews.dispatch(button);
  if(action?.startsWith('water-'))return receivingWaters.dispatch(button);
+ if(action==='task-open-retained')return openAcceptedTask(id,button.dataset.workspace);
  if(action==='refresh')return refresh({force:true});
  if(action==='tasks'||action==='tasks-close'){taskPanel=action==='tasks'?!taskPanel:false;$('#task-panel').hidden=!taskPanel;for(const b of $$('[data-action="tasks"]'))b.setAttribute('aria-expanded',String(taskPanel));return;}
  if(action==='form-close'){if(formContext?.busy)throw Error('The current request is being retained. Wait for its response before closing.');formDialog.close();formContext=null;return;}
@@ -1197,14 +1263,27 @@ document.addEventListener('click',async event=>{
  const nav=event.target.closest('[data-view]');if(nav){event.preventDefault();await navigate(nav.dataset.view);return;}
  const button=event.target.closest('[data-action]');if(!button)return;
  event.preventDefault();
- try{clearError();await dispatch(button);}catch(error){if(formDialog.open){$('#form-error').textContent=error.message;$('#form-error').hidden=false;}else globalError(error);}
+ const interaction=admissionContext(button.dataset.action,null),context=formContext;
+ try{clearError();await dispatch(button);}catch(error){
+  if(currentAdmission(interaction,{details:false})){
+   if(formDialog.open&&formContext===context){$('#form-error').textContent=error.message;$('#form-error').hidden=false;}
+   else if(!formDialog.open)globalError(error);
+  }
+ }
 });
 form.addEventListener('submit',async event=>{
  event.preventDefault();if(!formContext||formContext.busy)return;
  if(!form.reportValidity())return;
- const current=formContext;current.busy=true;$('#form-submit').disabled=true;$('#form-error').hidden=true;$('#form-progress').textContent='Retaining the original selection…';
+ const current=formContext,epoch=connectionEpoch;current.busy=true;$('#form-submit').disabled=true;$('#form-error').hidden=true;$('#form-progress').textContent='Retaining the original selection…';
  try{await current.onSubmit();}
- catch(error){$('#form-error').textContent=error.message;$('#form-error').hidden=false;$('#form-progress').textContent='Draft retained in this form. Correct the selection or retry the same request.';}
+ catch(error){
+  if(formContext===current&&workspace===current.workspace&&connectionEpoch===epoch){
+   $('#form-error').textContent=error.message;$('#form-error').hidden=false;
+   $('#form-progress').textContent=current.acceptedTask?
+    'Operation retained. Open Tasks to inspect the saved operation.':
+    'Draft retained in this form. Correct the selection or retry the same request.';
+  }
+ }
  finally{if(formContext===current){current.busy=false;$('#form-submit').disabled=false;}}
 });
 formDialog.addEventListener('cancel',event=>{if(formContext?.busy)event.preventDefault();else formContext=null;});
@@ -1218,7 +1297,7 @@ function showConnection(message='Open your private access link or paste it below
  programmes.detach();community.detach();customerReviews.detach();experiments.detach();
  receivingWaters.detach();portfolio.detach();parameterStudies.detach();deliveryInspection.detach();
  capability=null;teamPerson=null;state=null;workspace=null;clearTimeout(poll);
- lastTaskStates.clear();lastRendered='';refreshQueued=false;taskPanel=false;
+ lastTaskStates.clear();acceptedTasks.clear();lastRendered='';refreshQueued=false;taskPanel=false;
  sessionStorage.removeItem(keyName);sessionStorage.removeItem('upstate-selected-workspace');
  if(formDialog.open)formDialog.close();if(detailDialog.open)detailDialog.close();formContext=null;detailContext=null;
  $('#task-panel').hidden=true;$('#task-list').replaceChildren();$('#task-count').textContent='0';
