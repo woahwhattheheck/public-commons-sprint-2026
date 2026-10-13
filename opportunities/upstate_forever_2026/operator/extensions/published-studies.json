@@ -2,14 +2,16 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",
     "published_studies.css",
     "published_review_reports.mjs",
     "published_microbial_selection.mjs",
-    "published_original_reports.mjs"
+    "published_original_reports.mjs",
+    "published_interpretation.mjs",
+    "published_interpretation.css"
   ],
   "backend": {
     "module": "published_study_operator",
@@ -29,7 +31,10 @@
       "published-study.review.export",
       "published-study.review.import",
       "published-study.review.prepare-source",
-      "published-study.microbial-selection.prepare"
+      "published-study.microbial-selection.prepare",
+      "published-study.interpretation.save",
+      "published-study.interpretation.export",
+      "published-study.interpretation.import"
     ],
     "invoke": {
       "handler": "invoke",
@@ -194,6 +199,45 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/interpretation-catalog",
+        "operation": "interpretation-catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/interpretation-preview",
+        "operation": "interpretation-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/interpretation-get",
+        "operation": "interpretation-get",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -238,7 +282,8 @@
       "showTask"
     ],
     "styles": [
-      "/web/published_studies.css"
+      "/web/published_studies.css",
+      "/web/published_interpretation.css"
     ],
     "view": {
       "id": "published-studies",

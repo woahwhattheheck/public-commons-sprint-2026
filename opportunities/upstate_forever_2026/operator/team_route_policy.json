@@ -113,7 +113,10 @@
     "/api/profile-workbench/management/catalog",
     "/api/profile-workbench/management/preview",
     "/api/profile-workbench/management/inspect",
-    "/api/profile-workbench/management/published-preview"
+    "/api/profile-workbench/management/published-preview",
+    "/api/published-studies/interpretation-catalog",
+    "/api/published-studies/interpretation-preview",
+    "/api/published-studies/interpretation-get"
   ],
   "writePosts": [
     "/api/decisions/assessment/upload",
