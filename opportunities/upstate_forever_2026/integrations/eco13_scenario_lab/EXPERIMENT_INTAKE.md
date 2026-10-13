@@ -3,8 +3,8 @@
 This document covers the older inspection envelope used by the retained NativeJobsEngine adapter. For the current original Upper Savannah model.experiments workflow, start with [UPSTATE_RECEIVING.md](UPSTATE_RECEIVING.md). The ordinary adopt command selects the current receiver when source_format is upstate.experiment/v1.
 
 Version 0.1.1 adds read-only receiving from the existing Upper Savannah
-`NativeJobsEngine.inspect(experiment)` envelope, as published by A73C in Slack
-canvas F0C8PGPP6PL. The original application still plans, submits, supervises,
+`NativeJobsEngine.inspect(experiment)` envelope. The original application still
+plans, submits, supervises,
 cancels and edits its experiments. Intake never invokes its submit or run methods.
 
 Export the original inspection JSON using the application's existing
