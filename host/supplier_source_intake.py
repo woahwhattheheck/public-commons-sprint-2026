@@ -59,6 +59,15 @@ def filename(value):
         raise ValueError("Expected a plain original filename")
     return value
 
+def sync_directory(path):
+    """Complete a filename publication before reporting that it is durable."""
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+    try:
+        os.fsync(descriptor)
+    finally:
+        os.close(descriptor)
+
+
 def write_once(path, body):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -67,6 +76,7 @@ def write_once(path, body):
     if path.exists():
         if not path.is_file() or path.read_bytes() != body:
             raise ValueError("Existing output differs: " + path.name)
+        sync_directory(path.parent)
         return
     fd, temporary = tempfile.mkstemp(prefix=".source-", dir=path.parent)
     try:
@@ -81,6 +91,9 @@ def write_once(path, body):
                 raise ValueError("Concurrent output differs: " + path.name)
     finally:
         os.unlink(temporary)
+    # This also completes a concurrent exact-body publication. Sync after the
+    # temporary filename is removed; an interrupted sync is completed by replay.
+    sync_directory(path.parent)
 
 def original_bytes(item, originals, downloads):
     name = filename(item["filename"])
