@@ -1,0 +1,157 @@
+use soroban_sdk::{contractevent, Address};
+
+#[contractevent]
+pub struct DepositRequested {
+    #[topic]
+    pub controller: Address,
+    pub epoch: u64,
+    pub amount: i128,
+}
+
+#[contractevent]
+pub struct EpochFulfilled {
+    #[topic]
+    pub epoch: u64,
+    pub share_price: i128,
+    pub total_deposited: i128,
+}
+
+#[contractevent]
+pub struct DepositClaimed {
+    #[topic]
+    pub controller: Address,
+    pub epoch: u64,
+    pub amount: i128,
+    pub shares: i128,
+}
+
+#[contractevent]
+pub struct RedeemRequested {
+    #[topic]
+    pub controller: Address,
+    pub epoch: u64,
+    pub shares: i128,
+}
+
+#[contractevent]
+pub struct RedeemClaimed {
+    #[topic]
+    pub controller: Address,
+    pub epoch: u64,
+    pub shares: i128,
+    pub assets: i128,
+}
+
+#[contractevent]
+pub struct EpochClosed {
+    #[topic]
+    pub epoch: u64,
+    pub total_deposited: i128,
+    pub total_shares_redeeming: i128,
+}
+
+#[contractevent]
+pub struct CustodianSet {
+    #[topic]
+    pub custodian: Address,
+}
+
+#[contractevent]
+pub struct NoticeSet {
+    pub secs: u64,
+}
+
+#[contractevent]
+pub struct Deployed {
+    #[topic]
+    pub custodian: Address,
+    pub assets: i128,
+    pub net_deployed: i128,
+}
+
+#[contractevent]
+pub struct Funded {
+    #[topic]
+    pub from: Address,
+    pub assets: i128,
+    pub net_deployed: i128,
+}
+
+#[contractevent]
+pub struct DepositCancelled {
+    #[topic]
+    pub controller: Address,
+    pub epoch: u64,
+    pub amount: i128,
+}
+
+#[contractevent]
+pub struct RedeemCancelled {
+    #[topic]
+    pub controller: Address,
+    pub epoch: u64,
+    pub shares: i128,
+}
+
+#[contractevent]
+pub struct UpgradeProposed {
+    pub eta: u64,
+}
+
+#[contractevent]
+pub struct UpgradeDelayProposed {
+    pub secs: u64,
+    pub eta: u64,
+}
+
+#[contractevent]
+pub struct UpgradeCancelled {}
+
+#[contractevent]
+pub struct UpgradeDelaySet {
+    pub secs: u64,
+}
+
+#[contractevent]
+pub struct Upgraded {
+    pub schema_version: u32,
+}
+
+#[contractevent]
+pub struct WindDownDelaySet {
+    pub secs: u64,
+}
+
+#[contractevent]
+pub struct WindDownProposed {
+    pub active_at: u64,
+}
+
+#[contractevent]
+pub struct WindDownProposalCancelled {}
+
+#[contractevent]
+pub struct WindDownActivated {}
+
+#[contractevent]
+pub struct WindDownRoundFinalized {
+    #[topic]
+    pub round: u32,
+    pub pot: i128,
+    pub credited: i128,
+    pub acc_per_share: i128,
+}
+
+#[contractevent]
+pub struct WindDownClaimed {
+    #[topic]
+    pub holder: Address,
+    pub surrendered: i128,
+    pub assets: i128,
+}
+
+#[contractevent]
+pub struct DepositCapUpdated {
+    pub old_cap: Option<i128>,
+    pub new_cap: Option<i128>,
+}
