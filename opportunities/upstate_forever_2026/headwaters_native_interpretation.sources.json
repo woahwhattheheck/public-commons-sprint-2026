@@ -19,11 +19,11 @@
       "classification": "SIMULATED DEMONSTRATION INPUTS; ORIGINAL COMPLETED NATIVE OUTPUTS",
       "originator": "TokenJunkieLabs",
       "path": "source/headwaters_native_interpretation_20261013/scientific-report.json",
-      "bytes": 26730,
-      "sha256": "15b071bb953eac86cd3f610cb297fe61c759b423823d8df7f400d83bcdad96ab",
+      "bytes": 29073,
+      "sha256": "ec8a1315c6eb1df24daafe6abd87af36c8efc39d8c0fb78f875eb169cbb86da8",
       "metadata": {
         "report_schema": "upstate.observed-report/v1",
-        "producer": "headwaters-native-interpretation-20261013-v1",
+        "producer": "headwaters-native-interpretation-20261013-v2",
         "scientific_review": "Original completed source-bound outputs and assumptions retained for modeling-team review",
         "source_case": "upstate-simulated-piedmont-headwaters-v1",
         "original_project_id": "1b6a344c-df5a-4986-a5e4-47a2d158324b",
@@ -77,8 +77,8 @@
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/CHAPTER.md",
-          "bytes": 12504,
-          "sha256": "33663c83563080f7b3dbfbe4d6efaef8f4c4f79017e9af9ced31fcc29ac1301a"
+          "bytes": 14077,
+          "sha256": "cce0cefd8336359591f3afa29e9a395da4844d401c9e340a82717568fe3fe3bf"
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/RECEIVING.md",
@@ -112,8 +112,8 @@
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/report.html",
-          "bytes": 17057,
-          "sha256": "0b83bf5f2713a46637591d82f44034f710c1fe343040d787b347b747756c0a12"
+          "bytes": 20057,
+          "sha256": "4c43f48056c0f7a93463e351b5648e80b0f25eb2e597eb76f520a4dca09b1320"
         },
         {
           "path": "source/headwaters_native_interpretation_20261013/retained/numeric/release.json",
@@ -227,8 +227,8 @@
         },
         {
           "path": "source_tools/headwaters_native_report_views.mjs",
-          "bytes": 14417,
-          "sha256": "b0af64c8955bb74f8e883e5872c76173acae1b95ebd0ea5c6460cb96d8f31f04"
+          "bytes": 16251,
+          "sha256": "d3db29a0c75ebc03c83b95c5f8fbfde30b6f2e85a6126d45d454af455bd57f00"
         }
       ]
     }
