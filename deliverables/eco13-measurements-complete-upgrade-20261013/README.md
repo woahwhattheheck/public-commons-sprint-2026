@@ -88,11 +88,11 @@ After installing this complete edition, use the existing Large files and complet
 ```sh
 node "$APP/measurement_workspace/engine/cli.mjs" large-prepare --workspace "$MEASUREMENTS" --file "$ORIGINAL_CSV" --kind wqp --label "Retained source"
 node "$APP/measurement_workspace/engine/cli.mjs" large-commit --workspace "$MEASUREMENTS" --intake "$INTAKE_ID" --expected-revision "$REVIEWED_REVISION"
-node "$APP/measurement_workspace/engine/cli.mjs" large-export --workspace "$MEASUREMENTS" --output "$EDITION_DIRECTORY"
+node "$APP/measurement_workspace/engine/cli.mjs" large-export --workspace "$MEASUREMENTS" --native-workspace "$WORKSPACE" --output "$EDITION_DIRECTORY"
 node "$APP/measurement_workspace/engine/cli.mjs" large-receive --workspace "$EMPTY_MEASUREMENTS" --file "$EDITION_DIRECTORY/project.zip"
 ```
 
-Use the actual returned intake ID and reviewed revision; the receive target is an independently owned empty Measurements directory. Their input is the actual retained original CSV or editable archive, and their `--workspace` path is the native Measurements directory. Preserve the original source/parser/record identities and existing selected 533-row receiving operation. Use separate owned copies at an ordinary operation boundary.
+Use the actual returned intake ID and reviewed revision; the receive target is an independently owned empty Measurements directory. The scientific application export explicitly supplies its original scientific Workspace so the maintained capture_native_domain path retains the bound catchment context. A standalone Measurements directory without a bound scientific Workspace may omit --native-workspace and remains explicitly unbound. Their input is the actual retained original CSV or editable archive, and their `--workspace` path is the native Measurements directory. Preserve the original source/parser/record identities and existing selected 533-row receiving operation. Use separate owned copies at an ordinary operation boundary.
 
 For a streamed source already committed in the active Measurements directory, the original authenticated `GET snapshot` now includes the exact source content and rejected rows inside the same native read transaction as the records, revision and portable tables. The original collection publication must match that reviewed portable document and native domain before the existing Chemistry binding captures the complete companion ZIP. The snapshot is still a complete original document; the large-file APIs remain the efficient route for streaming large population transfers.
 
