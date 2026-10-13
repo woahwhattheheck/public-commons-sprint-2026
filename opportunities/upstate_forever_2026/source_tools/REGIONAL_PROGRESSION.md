@@ -56,6 +56,48 @@ The same retained continuation accepts `--chemistry-selection ACTUAL_SELECTION.j
 
 Use `--monitoring-selection ACTUAL_SELECTION.json` to run the original `operator/monitoring_receiving.py` in the same retained Workspace. Its `network` names the actual original domain/station sources, and its `configuration` states the planning costs and calendar. The original Monitoring engine owns design, campaign, field export, native receiving and continuation. Its separate received campaign and original progress file remain in the continuation's `monitoring/` directory. A native nonfeasible or solver design result remains an explicit `design_diagnostic` with its original status and `campaign_created: false`; the complete project archive still proceeds. Only the receiver's completed campaign, independent receiving record and revision produce `campaign_received`. The final progression result carries `monitoring_outcome`. Actual regional data and a named planning configuration should be supplied for this regional operation.
 
+
+## Adopt one prepared regional Monitoring campaign
+
+Prepare the original regional domain and station editions once in the same scientific Workspace:
+
+```bash
+python -B source_tools/prepare_regional_monitoring.py \
+  --workspace ACTUAL_WORKSPACE \
+  --output MONITORING_OUTPUT \
+  --domain-manifest ORIGINAL_DOMAIN/sources.json \
+  --context-manifest observations/eighteenmile_2023/npdes/model-sources.json \
+  --frontier
+```
+
+The default original station manifest contains the 67 WGS84, six NAD83 and 14 UTM17N source stations, with their original companions. The selected winter scenario states its engineer-authored costs and three-round calendar. Native geometric assignment, optimization, campaign creation, field export and independent receiving use the original Monitoring implementation. The optional frontier retains the USD 4,800, 9,000 and 13,200 budget alternatives in a further complete receiving archive. See [Regional Monitoring](../source/REGIONAL_MONITORING.md) for exact source intake and replaceable planning assumptions.
+
+Add these three arguments to the existing regional continuation:
+
+```text
+--monitoring-selection MONITORING_OUTPUT/monitoring-selection.json
+--monitoring-opening MONITORING_OUTPUT/monitoring-opening.json
+--monitoring-receiving MONITORING_OUTPUT/receiving/receiving.json
+```
+
+The continuation verifies the completed receiver's original Workspace directory, project, source bindings, configuration and independent campaign revision, then adopts its exact network, plan and campaign. It creates no second design. The browser opens those actual saved records, operates the native campaign/calendar controls, downloads the original reports and field package, restores a complete editable Workspace, and reopens the same campaign there. These records are also included in the regional continuation's final complete scientific transfer.
+
+Omitting `--monitoring-receiving` retains the original selection-only receiver operation. Omitting both new arguments preserves the existing operation fingerprint. An original infeasible design remains the explicit retained design diagnostic; its nonexistent campaign is not sent to the campaign browser.
+
+The Monitoring browser's original action bodies and task identities remain in its private `request-state.json`. Interrupted runs use `--resume` only when that original state exists. A finished child journal is adopted only after its exact opening/receiver hashes and original project, workspace, network, plan and campaign identities match.
+
+## Use an installed browser
+
+`--browser-executable /absolute/path/to/chromium` selects an existing Chromium executable for the original Profile, Source updates, Chemistry, Monitoring and saved-view browser drivers. Use the current application containing the matching option in each driver. It is an execution setting and does not change the retained scientific request or selection fingerprint. The existing `--browser-channel`, `--headed` and `--video` options remain available.
+
+For an actual cloud worker with the installed runtime used in this sprint:
+
+```text
+--browser-executable /tmp/chromium
+```
+
+The complete original Chemistry functional case can be prepared alongside the real regional data with `source_tools/prepare_chemistry_reference.py`; its emitted `chemistry-selection.json` supplies the existing `--chemistry-selection`. Its unchanged authored reference inputs and measured regional sources retain their separate source identities.
+
 ## Continue after a process interruption
 
 Rerun the same command with the same output directory. The output's `.progression.lock` allows one owner. `progression.json` retains the original selection, current stage, native task IDs, browser output identities and completed transfer.
