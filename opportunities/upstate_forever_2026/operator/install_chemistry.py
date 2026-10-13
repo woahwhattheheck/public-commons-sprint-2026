@@ -87,7 +87,18 @@ FILES = [
     "integrations/monitoring/PREDECESSORS.json",
     "integrations/monitoring/source_adoption.json",
     "integration/monitoring_observed_sources.json",
-    "integration/monitoring_study_transfer_sources.json"
+    "integration/monitoring_study_transfer_sources.json",
+    "model/monitoring_field_assignment.py",
+    "operator/monitoring_field_assignment_operator.py",
+    "operator/extensions/monitoring-field-assignment.json",
+    "operator/web/monitoring_field_assignment.mjs",
+    "operator/web/monitoring_field_assignment.css",
+    "source_tools/receive_monitoring_field_assignment.py",
+    "source/monitoring_field_assignment/RECEIVING.md",
+    "integration/component_fragments/monitoring-field-assignment.json",
+    "source_tools/monitoring_field_assignment_browser.mjs",
+    "source_tools/receive_monitoring_field_assignment_browser.mjs",
+    "source/monitoring-field-study/source/prepare_field_package_edition.py"
 ]
 
 ORIGINAL_SHA256 = {
@@ -300,6 +311,16 @@ FIELD_RACE_PREVIOUS_SHA256 = {
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "ddaa2b118825fdc4c8ea26f568bbd721a2704542cf75f96b5fd06de1ec7bc5bf"
 }
 
+FIELD_ASSIGNMENT_PREVIOUS_SHA256 = {
+    "integration/component_fragments/monitoring-field-study.json": "915b907e1a2531708efd1125501e43863e58ea79b7d12ca5d699c31d5946c7ef",
+    "operator/install_chemistry.py": "70ad65fa6d5dcfc07f85fe6f23c71db1d3717dd4b75868e7d15b765b89195682",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "d90e4992d165f8b7b1784e945c8df749a2ae31be1ee319ea494d1508d94452b8",
+    "source/monitoring-field-study/source-manifest.json": "e4fddfb4837676f96e8722f05b582b8cdc7f186cb20dd5fe050636aff090f7db",
+    "source/monitoring-field-study/INSTALLATION.md": "c3374d5f109820a16e6f1245fbafe8d92a83d5092f086a818c006bb716e71c42"
+}
+
+SHARED_IMPLEMENTATION_FILES = ("model/implementation.py", "model/implementation_schema.py", "model/portable_implementation.py")
+
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
 
@@ -413,7 +434,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
         fcntl.flock(handle, fcntl.LOCK_EX)
         pending, preimages, shared, inherited = {}, {}, {}, {}
         derived_rechecks = []
-        for name in [*SHARED_REPORT_FILES, *SHARED_STUDY_FILES, *SHARED_MONITORING_FILES, *SHARED_FIELD_FILES]:
+        for name in [*SHARED_REPORT_FILES, *SHARED_STUDY_FILES, *SHARED_MONITORING_FILES, *SHARED_FIELD_FILES, *SHARED_IMPLEMENTATION_FILES]:
             shared[name] = _snapshot(target, name, required=True)
         for name in FILES:
             current = _snapshot(target, name)
@@ -438,7 +459,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
                      RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
-                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name)}):
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name), FIELD_ASSIGNMENT_PREVIOUS_SHA256.get(name)}):
                 if name in FIELD_DERIVED_FILES:
                     derived_rechecks.append(name)
                 else:

@@ -15,7 +15,7 @@
       "companions": [
         {
           "path": "CURRENT_OWNER_DIRECTION.md",
-          "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+          "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c"
         },
         {
           "path": "Monitoring_Field_Support_Brief.pdf",
@@ -904,6 +904,18 @@
         {
           "path": "source-selection.json",
           "sha256": "b8925db7bba7e8a23bdf974dee41a1b8f6ca2e0dd1acd67e99d9177ec099bdf7"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/source-manifest.json",
+          "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/source-manifest.json",
+          "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/source-manifest.json",
+          "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
         }
       ]
     },
@@ -919,7 +931,7 @@
       "companions": [
         {
           "path": "CURRENT_OWNER_DIRECTION.md",
-          "sha256": "57945ea0e6eca762011e9f7e6febd39255359143d454fd3aa58a3a849ec14fc9"
+          "sha256": "fd8e10a067ebdc76464326843a4b67c7f724fe8c4064f069fe3d9fe257ee2d3c"
         },
         {
           "path": "Ecosystem_Monitoring_Field_Planning.html",
@@ -1808,6 +1820,18 @@
         {
           "path": "source-selection.json",
           "sha256": "b8925db7bba7e8a23bdf974dee41a1b8f6ca2e0dd1acd67e99d9177ec099bdf7"
+        },
+        {
+          "path": "original/b795ec76a4a2b67b21415baedaf0bc0629eb8acb323bb9ff5b16659e40cd9dc7/utility-ecoli-observations/source-manifest.json",
+          "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-wgs84/original/source-manifest.json",
+          "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
+        },
+        {
+          "path": "original/5c1835b235f6508c282efe64684da5aaffbfadb18803939020732ef0af118e64/utility-ecoli-native-nad83/original/source-manifest.json",
+          "sha256": "7dbcc1b0d4d6f48f8a9d43fdbfd6ad3308b8435f4085e57aceb9e774b4c3e37e"
         }
       ]
     }

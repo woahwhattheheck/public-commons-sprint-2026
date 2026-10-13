@@ -2,7 +2,7 @@
 
 This directory retains the original RIVER13 field-planning contribution delivered in the same completed Monitoring/Chemistry project. The selected native project is `b9d5d257-c6bb-4f07-b975-8e8c63705db3`; the original field-support identity is `e62688692e78bc7cb1551d15cff73afa2a6e3db47b44e78a06e34a89656b51aa`. The original source and finished data remain separately identifiable.
 
-The original eight-file source packet contains **198,490 bytes of producer, template, instructions and the delivered manifest**. Its six unchanged members retain their original bytes. The maintained HTML template includes the reviewed selection-import lifetime correction; the original template digest remains in the immutable original manifest. The maintained `source/make_field_brief.py` adds explicit `--study` and `--output` arguments in place of the author's local directory; its actual report content, tables and layout are preserved.
+The original eight-file source packet contains **198,490 bytes of producer, template, instructions and the delivered manifest**. The original delivery remains retained as historical provenance; maintained producer/template/manifest changes below have their own exact source identities. The maintained HTML template includes the reviewed selection-import lifetime correction; the original template digest remains in the immutable original manifest. The maintained `source/make_field_brief.py` adds explicit `--study` and `--output` arguments in place of the author's local directory; its actual report content, tables and layout are preserved.
 
 ## What is already complete
 
@@ -45,12 +45,12 @@ Open the private operator URL returned by this original server. Keep the capabil
 
 The **239-member, 20,991,819-byte original field package** is `Ecosystem_Monitoring_Field_Support_Complete.zip`, retained as `file_00000000ef0882309246334fdbda66dd`. The unified **609-member, 50,994,281-byte** recipient package is `Ecosystem_Monitoring_Chemistry_and_Field_Package.zip`, `file_00000000a3d8820e8ea80d226d5856c6`. Obtain and extract the existing original package through the receiving host's supported Files path. Preserve the selected application, scientific Workspace and source editions; do not repeat source acquisition.
 
-The source-only installed directory is **not** that complete scientific package. Its retained `source-manifest.json` names the exact original delivered HTML/table and **223 companions per entry**, including original data, examples and rendered PDF. Import it only from the complete unchanged extracted package that actually contains those members. Do not copy this immutable manifest onto rebuilt outputs with different bytes.
+The source-only installed directory is **not** that complete scientific package. The historical delivered manifest named 223 companions per entry. This successor carries the producer's corrected manifest with 226 companions, adding only three original nested manifests already physically present in that package. First use `prepare_field_package_edition.py` below to copy the original extracted package independently and replace only its root manifest, then import that verified corrected edition. Do not apply the manifest to rebuilt outputs with different body bytes.
 
 ```bash
 python -B APP/source/monitoring-field-study/source/receive_field_support.py \
   --application APP --workspace WORKSPACE \
-  --package COMPLETE_FIELD_PACKAGE --output OUTPUT/field-source-receiving.json
+  --package INDEPENDENT_CORRECTED_PACKAGE --output OUTPUT/field-source-receiving.json
 ```
 
 This existing receiver verifies the original project, exact network digest and all three saved plan digests before additive `Workspace.import_sources`. It then uses the maintained `Workspace.source_file` to reopen every imported entry. The actual original completed receiver reported source collection `371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3`, with:
@@ -148,3 +148,20 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
 
+
+## Continue a retained field selection into an editable assignment
+
+The complete original ten-file Field assignments component (PR4349/4406/4451, source 8b97244c) is included in this same guarded installation. Its separate registered **Field assignments** view previews the retained source/selection, saves an editable native Implementation plan, retains all explicit unassigned areas and selected rounds, and reopens the original report and portable project. Use `source/monitoring_field_assignment/RECEIVING.md` and the included original native/browser receiving commands. Original selection JSON, assignment engine and source semantics are unchanged; observation points are not silently converted into campaign stations.
+
+The existing registered application must include its original Implementation core (`model/implementation.py`, `model/implementation_schema.py`, `model/portable_implementation.py`); this installer checks and preserves those shared modules. Start the original operator normally on the independently installed application copy so its new descriptor loads. Preserve an already admitted operation and current scientific Workspace.
+
+The retained field-support source manifest now contains the producer's exact corrected descriptors: three formerly omitted nested manifests are included in every entry, raising each companion list from 223 to 226. The old collection 371fca0c remains a historical edition and is not relabelled or rewritten. Import the corrected complete original scientific package through the original source importer to create its own native collection identity. Existing scientific selection/support/frontier/plan IDs and body hashes are unchanged. The earlier delivered eight-file source/manifest identity remains historical provenance; the corrected source-manifest SHA is cfa0cb8bb0a0d7c7054eed8e37f479947d951aba6f4dfc3a3f64e08e3ce2dc88.
+
+Prepare the corrected independent package, then use the original receiving command:
+
+```sh
+python -B STAGE/source/monitoring-field-study/source/prepare_field_package_edition.py --package ORIGINAL_EXTRACTED_239_PACKAGE --manifest STAGE/source/monitoring-field-study/source-manifest.json --output INDEPENDENT_CORRECTED_PACKAGE
+python -B STAGE/source/monitoring-field-study/source/receive_field_support.py --application APP --workspace WORKSPACE --package INDEPENDENT_CORRECTED_PACKAGE --output FIELD_SOURCE_OPENING_JSON
+```
+
+The preparer validates the exact original and corrected manifests, all original bodies and companion bytes, copies the complete original package independently, and changes only its root manifest. It never rewrites the historical source collection or original extracted directory. Use the actual new source collection ID returned by the existing importer for subsequent field-selection/assignment operations. Its complete unchanged data still carries the original geographic, station and plan identities.
