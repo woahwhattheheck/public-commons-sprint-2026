@@ -167,3 +167,57 @@ Every selected Decision revision follows the declared `ES26/diagnostic-common-su
 The current diagnostic object may have a newer report. Its current state travels as part of the editable scientific workspace; the Decision's retained report revision remains the source of its saved numbers. Reopening and receiving the Decision verifies that pinned report and manifest. Revisions prepared from a donor workspace stay explicit external scientific references when imported through standalone project JSON; restoring the original whole or selected scientific workspace keeps the local source closure.
 
 After receiving, open the saved Decision, inspect its diagnostic source revision and calculate using its original gains. Then revise costs, constraints or objectives through the normal Decision workbench, preserving the earlier input and calculation history. Prepare a further Decision study explicitly when a new ecological analysis changes the physical gains. The saved earlier study continues to use its own report revision.
+
+
+## Completed Decision map releases and adopted native runs
+
+With **Include related results** enabled, selecting a saved Decision study now
+retains every completed original map/client release bound to that study's saved
+calculation history. The transfer matches the original study ID, calculation ID,
+revision and result hashes, explicit mapped profile, chosen whole candidate, and
+frontier point where applicable. A release of an earlier revision remains bound
+to that revision; a newer study head does not replace its scientific context.
+
+The original release directory travels intact: atlas, GIS layers and metadata,
+client/scientific reports, original Decision HTML/CSV/selection/project exports,
+and retained report bindings. Its existing complete working archive is included
+when it is part of that original release. The preview lists these bytes under
+**Completed map and client releases**, so an archive already present inside a
+release contributes its actual size.
+
+Typed dependencies follow the producer's saved fields. Linked watershed reports,
+scenario analyses, Economic desk editions, receiving-water plans and analyses,
+water designations, and saved-map reviews/exports retain their original records,
+native run cohorts, and complete source collections. Map reviews preserve their
+earlier review IDs and original atlas origins. No renderer, model or solver runs
+during selection, capture, or receiving.
+
+The transfer receipt pins each completed release's record, selection, Decision
+binding and file descriptors. Original receiving checks the same inventory and
+binding after restore. Reopen the received workspace's original atlas or Decision
+desk to continue; the mapped profile remains a display choice and the saved
+across-profile decision remains unchanged.
+
+An experiment's explicit `selection.source_run_ids` are retained even before its
+case files are materialized. These are the actual original run IDs adopted by the
+native experiment engine after its grid/profile/scenario/model and producing-stage
+checks. Their run selections, producing stages, outputs, grids, profiles,
+scenarios and original sources all travel through the existing run dependency
+path. The original Scenario experiments designer preserves these choices during
+**Revise design** and offers completed runs from the chosen baseline's grid/model
+scope. Retained choices remain visible when absent from the current catalogue;
+remove one explicitly or restore its source record.
+
+The original CLI passes the same JSON selection through unchanged:
+
+```sh
+python -B -m model.experiment_cli --workspace /owned/project preview selection.json
+python -B -m model.experiment_cli --workspace /owned/project prepare selection.json
+python -B -m model.experiment_cli --workspace /owned/project sync EXPERIMENT_ID
+```
+
+Place exact original IDs in the optional `source_run_ids` JSON list. The engine
+omits canonical-only entries from its normalized selection to preserve existing
+plan identities; completed noncanonical sources remain explicit and frozen.
+`sync` uses retained completed runs; `run` retains the original native execution
+behavior for unfinished cases.

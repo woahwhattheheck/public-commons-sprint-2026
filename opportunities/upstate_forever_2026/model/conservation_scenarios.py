@@ -358,27 +358,34 @@ def _study_reference(workspace, record):
     return study["selection"]["spec"].get("baseline_run_id")
 
 
-def _same_scope(workspace, candidate, selection, *, required=False):
+def _experiment_run_compatible(candidate):
+    """Admit a completed original or the current engine's resumable selection."""
     native = candidate["selection"]
-    # The experiment engine retains its requested-version case identity. Also
-    # check the completed stages so a resumed run cannot admit incompatible
-    # physical quantities merely because its original request names this version.
     execution = conservation._native_execution(candidate, require_supported=False)
+    if candidate.get("state") == "complete":
+        # The original experiment engine validates and binds noncanonical
+        # completed selections explicitly; never rewrite their requested version.
+        return execution["supported"]
+    if native.get("invest_version") != INVEST_VERSION:
+        return False
     completed = [name for name in selected_models(native)
                  if ((candidate.get("stages") or {}).get(name) or {}).get("completed_at")]
-    compatible = execution["supported"] if candidate.get("state") == "complete" else all(
-        execution["model_versions"][name]["comparison_version"] == INVEST_VERSION
-        for name in completed)
+    return all(execution["model_versions"][name]["comparison_version"] == INVEST_VERSION
+               for name in completed)
+
+
+def _same_scope(workspace, candidate, selection, *, required=False):
+    native = candidate["selection"]
+    compatible = _experiment_run_compatible(candidate)
     same = (native["grid_id"] == selection["grid_id"]
             and native["profile_id"] == selection["profile_id"]
             and selected_models(native) == selected_models(selection)
-            and native.get("invest_version") == INVEST_VERSION
             and compatible
             and workspace._get("scenarios", native["scenario_id"])["kind"] == "baseline")
     if required and not same:
         raise ValueError(
             "Choose an original-landcover baseline with the same grid, profile and selected models, "
-            "the experiment engine's retained requested version, and compatible per-model execution versions")
+            "compatible per-model execution versions, and a completed original or current-version resumable selection")
     return same
 
 
@@ -417,11 +424,41 @@ def _reference_run(workspace, record, selection, baseline_run_id=None):
     return workspace.prepare_run(_native_selection(selection, scenario["id"]))
 
 
+def _alternative_run(workspace, record, selection, source_run_ids=()):
+    """Use the explicitly selected original, then the scenario's retained run."""
+    def same_case(candidate):
+        native = candidate["selection"]
+        return (native["grid_id"] == selection["grid_id"]
+                and native["profile_id"] == selection["profile_id"]
+                and native["scenario_id"] == record["scenario_id"]
+                and selected_models(native) == selected_models(selection))
+
+    explicit = []
+    for run_id in source_run_ids:
+        candidate = workspace.inspect_run(run_id)
+        if same_case(candidate):
+            explicit.append(candidate)
+    if len(explicit) > 1:
+        raise ValueError("Choose only one original source run for the conservation alternative")
+    candidate = explicit[0] if explicit else None
+    if candidate is None and record.get("run_id"):
+        retained = workspace.inspect_run(record["run_id"])
+        if same_case(retained):
+            candidate = retained
+    if candidate is not None:
+        if not _experiment_run_compatible(candidate):
+            raise ValueError(
+                "The selected conservation alternative needs compatible per-model execution versions "
+                "and a completed original or current-version resumable selection")
+        return candidate
+    return workspace.prepare_run(_native_selection(selection, record["scenario_id"]))
+
+
 def _experiment_request(value):
     if not isinstance(value, dict):
         raise ValueError("Supply the conservation experiment selection")
     allowed = {"conservation_scenario_id", "title", "reason", "baseline_run_id",
-               "prepare_run", "scenario_ids", "profile_ids", "design", "axes"}
+               "prepare_run", "scenario_ids", "profile_ids", "design", "axes", "source_run_ids"}
     extra = set(value) - allowed
     if extra:
         raise ValueError("Unknown conservation experiment fields: " + ", ".join(sorted(extra)))
@@ -429,6 +466,11 @@ def _experiment_request(value):
     requested["conservation_scenario_id"] = identifier(requested.get("conservation_scenario_id"))
     if requested.get("baseline_run_id") is not None:
         identifier(requested["baseline_run_id"])
+    if "source_run_ids" in requested:
+        if not isinstance(requested["source_run_ids"], list):
+            raise ValueError("Original source run IDs must be a list")
+        requested["source_run_ids"] = list(dict.fromkeys(
+            identifier(run_id) for run_id in requested["source_run_ids"]))
     return requested
 
 
@@ -460,7 +502,7 @@ def prepare_experiment(workspace, value):
         workspace, {**record["selection"], "prepare_run": selected}, footprint, record["layer"])
     with held(workspace.root / ".workspace.lock", blocking=False):
         baseline = _reference_run(workspace, record, selected, request.get("baseline_run_id"))
-        alternative = workspace.prepare_run(_native_selection(selected, record["scenario_id"]))
+        alternative = _alternative_run(workspace, record, selected, request.get("source_run_ids", ()))
         additional = request.get("scenario_ids", [])
         if not isinstance(additional, list):
             raise ValueError("Additional scenario IDs must be a list")
@@ -476,6 +518,8 @@ def prepare_experiment(workspace, value):
             "baseline_run_id": baseline["id"], "scenario_ids": scenarios,
             "profile_ids": request.get("profile_ids", []),
             "design": request.get("design", "one_at_a_time"), "axes": request.get("axes", []),
+            "source_run_ids": list(dict.fromkeys([
+                baseline["id"], alternative["id"], *request.get("source_run_ids", [])])),
         }
         preview = experiments.preview(workspace, experiment_selection)
         normalized = preview["selection"]
