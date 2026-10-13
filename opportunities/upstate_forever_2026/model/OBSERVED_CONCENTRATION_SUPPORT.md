@@ -75,3 +75,23 @@ The collector binds each original normalized row, station row and printed season
 For normalized observation rows, the original agency response also receives its actual retained selector and member identity. Its SHA256 must match the original response hash carried by the normalized row. A missing or different original response raises a source-integrity error at this boundary. The displayed values, activity IDs, source record indices, dates, qualifiers, units and reporting limits remain unchanged.
 
 This binding supplies the `source_selector` required by the existing comparison producer and keeps the same original identity in the exported concentration context and series support. The `observed-context-20261013-v3` delivery binding causes the native report operation to retain this completed collector edition.
+
+## Original study namespaces in regional reports (collector v4)
+
+The same five original study inputs can be retained at the root of an observed
+source or below the original `observations/eighteenmile_2023/` namespace in the
+regional hydrology report. The collector resolves that namespace from the retained
+measurement and selected-chlorophyll member names, then requires the complete
+study, stations and seasonal-summary inputs in the same namespace. An incomplete
+or ambiguous namespace is reported explicitly before report composition.
+
+The maintained Published Studies reader still receives its original logical CSV
+names and source-authored row paths. Each returned row's source selector and
+original-response selector bind the actual retained collection, source, full
+member path and SHA256. The full concentration-context artifact records those
+full input-member paths in the selected source namespace. The regional
+report therefore includes the same 85-record campaign microcystin support and
+75-record reconciled chlorophyll cohort as the directly imported original study.
+Source values, qualifiers, activity groups, dates and reporting limits remain in
+the maintained reader and support calculation. The collector v4 binding enters
+the existing report identity for ordinary saved-selection regeneration.
