@@ -82,3 +82,28 @@ Original integration operation: **SCF-GRIDFABRIC-BROWSER-PROCEDURES-1FB3-2026101
 ## Direct archive API
 
 The installed export `./seller/gridfabric-plaid/procedure-archive` provides typed `exportGridProcedureArchive` and `receiveGridProcedureArchive` functions. Export takes a complete verified capture directory and a new private output file. Receive takes the exact compressed byte count and SHA-256 plus a new private output directory. Both retain all original member bytes and use the same offline validator as the browser. A failed reception leaves its incomplete directory for inspection; choose an explicit new destination after receiving the failure.
+
+## Compare a source correction with the earlier report
+
+Use **Compare reports and outcomes** after the original reporting workflow has prepared a revised response. The useful question is: which reported intervals changed, which source gaps remain, and which mapping or operating decisions explain the difference?
+
+1. In **Capture and saved requests**, open the earlier and later complete captures, or receive their complete archives in **Receive and return**. Select captures from the same original workspace and Plaid instance.
+2. Open **Compare reports and outcomes**. Select the before and after requests. A request UUID may also be entered directly when it is on another history page.
+3. Choose **Read both original captures**. The existing authenticated reader receives every original capture member. A restored browser response alone is insufficient.
+4. Choose the report on each side. Captures with more than one report require an explicit report choice. Choose **Compare selected reports**.
+5. Review source gaps and the before/after original quantities, then open the mapping parameters, calculation details, source rows and quality information. The interval table pages through all results; JSON and HTML downloads retain every row.
+6. Review retained device/management outcomes and customer procedure changes. Use the original main console or Operating Plans editor for any subsequent operating decision.
+
+Intervals match by original report specifier, rId and timestamp. A quantity difference is **after minus before**, using the exact decimal strings already calculated and rounded by the original GridFabric engine. It appears only when device, channel, kind, unit, aggregation, time basis and effective interval period match. Different units or semantics stay visible without a numeric subtraction. The comparison performs no new aggregation, unit conversion, energy-saving estimate or causal analysis.
+
+A **source gap resolved** means the same measurement changes from NEEDS_SOURCE to READY. A change to a different unit, device or period is identified as changed semantics even when its new report is READY. Missing values are never zero-filled. A row selected on only one side does not establish creation, deletion or zero activity in the operating workspace.
+
+READY means the original report response was prepared. VTN acceptance remains a separate original management outcome. An adapter's ACKNOWLEDGED status retains its original HTTP-success meaning and complete response. Changed source precedence, correction links and quality flags remain visible even when rounded quantities are equal.
+
+### Keep and reopen the complete comparison
+
+Download the **full comparison JSON**, **readable comparison report** and both **complete capture archives**. The JSON retains all selected original records, full plan histories, mappings, source metadata and comparison choices. Original binary files and raw responses remain in the two archives.
+
+On another receiving host, import both archives through the existing native receiver. Open the full comparison JSON in the comparison tab, read the two received original requests, and explicitly reopen the comparison. The result is re-derived from both complete originals and must match the saved JSON in full. An HTML report is readable on its own; exact source verification and continued comparison require the JSON and both archives.
+
+Comparison selections and an imported comparison are included in the existing complete browser-work backup. A cold page must read the original captures again. Prior imported comparisons can be retained in that backup while starting another selection. Editing a capture or report choice removes the displayed old result immediately.
