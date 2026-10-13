@@ -903,12 +903,11 @@ def _markdown_report(title, sections, prepared):
         for block in blocks:
             if isinstance(block, dict) and block.get("kind") == "figure":
                 figure = _figure(block)
-                target = figure["path"].replace(" ", "%20").replace("(", "%28").replace(")", "%29")
-                alt = figure["alt"].replace("\\", "\\\\").replace("[", "\\[").replace("]", "\\]").replace("\n", " ")
-                lines.extend(["![" + alt + "](" + target + ")", ""])
+                # Reuse the maintained link/cell escaping for original captions and paths.
+                lines.extend(["!" + _markdown_cell(link(figure["alt"], figure["path"])), ""])
                 if figure.get("title"):
-                    lines.extend([str(figure["title"]), ""])
-                lines.extend([figure["caption"], ""])
+                    lines.extend([_markdown_cell(figure["title"]), ""])
+                lines.extend([_markdown_cell(figure["caption"]), ""])
             elif isinstance(block, dict) and block.get("kind") == "table":
                 if block.get("caption"):
                     lines.extend([_markdown_cell(block["caption"]), ""])

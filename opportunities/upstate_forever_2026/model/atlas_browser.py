@@ -269,12 +269,17 @@ def render(state, manifest):
 
 
 def write(directory, state, manifest):
-    """Add the offline browser to the same captured artifact list and file state."""
+    """Add a stable offline browser to the captured artifact list and file state."""
     directory = Path(directory)
     target = directory / BROWSER_PATH
-    atomic_bytes(target, render(state, manifest).encode("utf-8"))
-    state["files"][BROWSER_KEY] = describe_file(directory, target, title="Offline map atlas browser")
     assets = manifest.setdefault("project_assets", [])
     if BROWSER_PATH not in assets:
         assets.append(BROWSER_PATH)
+    # Include this page in the index on the first render, but never its own
+    # previous checksum: self-reference would alter every resumed capture.
+    rendered_state = {**state, "files": {
+        name: item for name, item in state.get("files", {}).items()
+        if name != BROWSER_KEY and item.get("path") != BROWSER_PATH}}
+    atomic_bytes(target, render(rendered_state, manifest).encode("utf-8"))
+    state["files"][BROWSER_KEY] = describe_file(directory, target, title="Offline map atlas browser")
     return state["files"][BROWSER_KEY]
