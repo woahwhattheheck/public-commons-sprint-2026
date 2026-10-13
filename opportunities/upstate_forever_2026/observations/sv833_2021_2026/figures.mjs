@@ -7,7 +7,7 @@ export function renderSV833Figures(result) {
   let s=`<g><title>${e(tooltip)}</title>`;
   if(m.upper===null){s+=`<path d="M${x},${y(m.lower)}V${y(m.lower)-20}m-4,6l4,-6l4,6" fill="none" stroke="#222" stroke-width="1.4"/><circle cx="${x}" cy="${y(m.lower)}" r="3" fill="white" stroke="#222"/>`}
   else if(m.lower!==m.upper){s+=`<line x1="${x}" x2="${x}" y1="${y(m.lower)}" y2="${y(m.upper)}" stroke="#555" stroke-width="1.2"/><circle cx="${x}" cy="${y(m.lower)}" r="2.5" fill="${m.lower_open?"white":"#444"}" stroke="#444"/><circle cx="${x}" cy="${y(m.upper)}" r="2.5" fill="${m.upper_open?"white":"#444"}" stroke="#444"/>`}
-  else s+=`<circle cx="${x}" cy="${y(m.lower)}" r="3.2" fill="#fff" stroke="#222" stroke-width="1.2"/>`;
+  else s+=`<circle cx="${x}" cy="${y(m.lower)}" r="3.2" fill="#222" stroke="#222" stroke-width="1.2"/>`;
   return s+"</g>";
  };
  let time="";
@@ -30,7 +30,7 @@ export function renderSV833Figures(result) {
   for(const t of p.xticks)scatter+=`<line x1="${x(t)}" x2="${x(t)}" y1="${oy}" y2="${oy+h}" stroke="#e4e6e7"/><text x="${x(t)}" y="${oy+h+20}" text-anchor="middle" font-size="11">${t}</text>`;
   for(const t of p.yticks)scatter+=`<line x1="${ox}" x2="${ox+w}" y1="${y(t)}" y2="${y(t)}" stroke="#e4e6e7"/><text x="${ox-10}" y="${y(t)+4}" text-anchor="end" font-size="10">${t}</text>`;
   scatter+=`<path d="M${ox},${oy}V${oy+h}H${ox+w}" stroke="#555" fill="none"/><text x="${ox+w/2}" y="${oy+h+45}" font-size="12" text-anchor="middle">${p.xLabel}</text>`;
-  for(const a of result.activities){const xx=a.measurements[p.x],yy=a.measurements[p.y];if(!xx||!yy)continue;scatter+=point(x(xx.lower),y,yy,a.date+" · "+a.activity+" · "+xx.lower+" "+xx.unit+" / "+(yy.upper===null?">":"")+yy.lower+" "+yy.unit)}
+  for(const a of result.activities){const xx=a.measurements[p.x],yy=a.measurements[p.y];if(!xx||!yy)continue;scatter+=point(x(xx.lower),y,yy,a.date+" · "+a.activity+" · "+xx.lower+" "+xx.unit+" / "+(yy.upper===null?">":"")+yy.lower+" "+yy.unit+" · "+xx.result_ids+" / "+yy.result_ids)}
  });
  scatter+=`<text x="70" y="410" font-size="12">Plots include reporting intervals; Spearman coefficients use exact numerical pairs only.</text><text x="70" y="432" font-size="12">Each pair shares the exact original ActivityIdentifier. No interpolation or fitted causal model.</text>`;
  return{"sv833-observation-timeline.svg":svg("timeline",1000,795,"SV-833 turbidity, bacteria, and phosphorus observations","Three aligned time panels show every original activity from 2021 through the captured 2026 observations. E. coli uses a logarithmic axis and arrows for above-quantitation values; phosphorus reporting intervals are retained.",time),"sv833-activity-associations.svg":svg("associations",1100,450,"SV-833 same-activity associations","Three panels show turbidity versus bacteria, turbidity versus phosphorus, and temperature versus oxygen. Original censored intervals are plotted, and exact-pair correlation coverage is stated.",scatter)};
