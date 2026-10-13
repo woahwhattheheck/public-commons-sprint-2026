@@ -14,19 +14,19 @@
 .eco13-desk .eco13-muted,.eco13-desk small{font-size:12px;color:var(--eco13-muted)}
 .eco13-desk small{display:block;margin-top:4px}
 .eco13-desk .eco13-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-.eco13-desk button,.eco13-desk input,.eco13-desk select{font:inherit;color:inherit;background:#fff;border:1px solid #858585;border-radius:2px;min-height:36px}
+.eco13-desk button,.eco13-desk input,.eco13-desk select,.eco13-desk textarea{font:inherit;color:inherit;background:#fff;border:1px solid #858585;border-radius:2px;min-height:36px}
 .eco13-desk button{padding:7px 11px;cursor:pointer;line-height:1.35}
 .eco13-desk button:hover:enabled{background:#e9e9e9}
 .eco13-desk button:disabled{color:#686868;border-color:#c6c6c6;background:#f5f5f5;cursor:default}
 .eco13-desk button[type=submit]{background:#242424;color:#fff;border-color:#242424}
 .eco13-desk button[type=submit]:hover:enabled{background:#000}
 .eco13-desk button[type=submit]:disabled{background:#e0e0e0;color:#686868;border-color:#c6c6c6}
-.eco13-desk input,.eco13-desk select{padding:7px 9px;max-width:100%;width:100%}
+.eco13-desk input,.eco13-desk select,.eco13-desk textarea{padding:7px 9px;max-width:100%;width:100%}
 .eco13-desk input:disabled{background:#f2f2f2;color:#6d6d6d}
 .eco13-desk input::placeholder{color:#666}
 .eco13-desk :focus-visible{outline:3px solid #333;outline-offset:2px}
 .eco13-desk label{display:block;font-size:13px;font-weight:550;margin:12px 0}
-.eco13-desk label>input,.eco13-desk label>select{display:block;margin-top:5px;font-weight:400}
+.eco13-desk label>input,.eco13-desk label>select,.eco13-desk label>textarea{display:block;margin-top:5px;font-weight:400}
 .eco13-desk input[type=checkbox]{display:inline-block;width:17px;min-height:17px;height:17px;accent-color:#222;flex:0 0 auto;margin:3px 0 0}
 .eco13-desk .eco13-check{display:flex;align-items:flex-start;gap:9px;font-weight:400;margin:10px 0}
 .eco13-desk .eco13-check strong{font-weight:550}
@@ -91,3 +91,5 @@
 .eco13-desk .eco13-economic-report h3{margin-top:0;}
 .eco13-desk .eco13-economic-report th small{display:block;font-weight:400;color:#555;margin-top:.3rem;}
 .eco13-desk .eco13-economic-report td div+div{margin-top:.3rem;}
+
+.eco13-desk textarea{resize:vertical;min-height:5rem;line-height:1.5}

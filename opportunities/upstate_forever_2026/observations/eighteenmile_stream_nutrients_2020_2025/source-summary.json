@@ -1,0 +1,140 @@
+{
+  "schema": "upstate.stream-source-summary/v1",
+  "original_result_rows": 589,
+  "original_activity_count": 153,
+  "quantified_count": 408,
+  "censored_count": 181,
+  "source_columns": [
+    "OrganizationIdentifier",
+    "OrganizationFormalName",
+    "ActivityIdentifier",
+    "ActivityTypeCode",
+    "ActivityMediaName",
+    "ActivityMediaSubdivisionName",
+    "ActivityStartDate",
+    "ActivityStartTime/Time",
+    "ActivityStartTime/TimeZoneCode",
+    "ActivityEndDate",
+    "ActivityEndTime/Time",
+    "ActivityEndTime/TimeZoneCode",
+    "ActivityDepthHeightMeasure/MeasureValue",
+    "ActivityDepthHeightMeasure/MeasureUnitCode",
+    "ActivityDepthAltitudeReferencePointText",
+    "ActivityTopDepthHeightMeasure/MeasureValue",
+    "ActivityTopDepthHeightMeasure/MeasureUnitCode",
+    "ActivityBottomDepthHeightMeasure/MeasureValue",
+    "ActivityBottomDepthHeightMeasure/MeasureUnitCode",
+    "ProjectIdentifier",
+    "ActivityConductingOrganizationText",
+    "MonitoringLocationIdentifier",
+    "ActivityCommentText",
+    "SampleAquifer",
+    "HydrologicCondition",
+    "HydrologicEvent",
+    "SampleCollectionMethod/MethodIdentifier",
+    "SampleCollectionMethod/MethodIdentifierContext",
+    "SampleCollectionMethod/MethodName",
+    "SampleCollectionEquipmentName",
+    "ResultDetectionConditionText",
+    "CharacteristicName",
+    "ResultSampleFractionText",
+    "ResultMeasureValue",
+    "ResultMeasure/MeasureUnitCode",
+    "MeasureQualifierCode",
+    "ResultStatusIdentifier",
+    "StatisticalBaseCode",
+    "ResultValueTypeName",
+    "ResultWeightBasisText",
+    "ResultTimeBasisText",
+    "ResultTemperatureBasisText",
+    "ResultParticleSizeBasisText",
+    "PrecisionValue",
+    "ResultCommentText",
+    "USGSPCode",
+    "ResultDepthHeightMeasure/MeasureValue",
+    "ResultDepthHeightMeasure/MeasureUnitCode",
+    "ResultDepthAltitudeReferencePointText",
+    "SubjectTaxonomicName",
+    "SampleTissueAnatomyName",
+    "ResultAnalyticalMethod/MethodIdentifier",
+    "ResultAnalyticalMethod/MethodIdentifierContext",
+    "ResultAnalyticalMethod/MethodName",
+    "MethodDescriptionText",
+    "LaboratoryName",
+    "AnalysisStartDate",
+    "ResultLaboratoryCommentText",
+    "DetectionQuantitationLimitTypeName",
+    "DetectionQuantitationLimitMeasure/MeasureValue",
+    "DetectionQuantitationLimitMeasure/MeasureUnitCode",
+    "PreparationStartDate",
+    "ProviderName"
+  ],
+  "stations": [
+    {
+      "site_id": "SV-233",
+      "record_count": 263,
+      "activity_count": 68,
+      "whole_basin_membership": "inside"
+    },
+    {
+      "site_id": "SV-245",
+      "record_count": 4,
+      "activity_count": 1,
+      "whole_basin_membership": "inside"
+    },
+    {
+      "site_id": "SV-375",
+      "record_count": 185,
+      "activity_count": 48,
+      "whole_basin_membership": "inside"
+    },
+    {
+      "site_id": "SV-376",
+      "record_count": 137,
+      "activity_count": 36,
+      "whole_basin_membership": "inside"
+    }
+  ],
+  "characteristics": [
+    {
+      "parameter": "Ammonia",
+      "record_count": 124,
+      "censored_count": 105,
+      "original_result_types": [
+        "Actual"
+      ]
+    },
+    {
+      "parameter": "Nitrate + Nitrite",
+      "record_count": 153,
+      "censored_count": 0,
+      "original_result_types": [
+        "Actual"
+      ]
+    },
+    {
+      "parameter": "Kjeldahl nitrogen",
+      "record_count": 153,
+      "censored_count": 41,
+      "original_result_types": [
+        "Actual"
+      ]
+    },
+    {
+      "parameter": "Phosphorus",
+      "record_count": 153,
+      "censored_count": 35,
+      "original_result_types": [
+        "Actual"
+      ]
+    },
+    {
+      "parameter": "Nitrogen",
+      "record_count": 6,
+      "censored_count": 0,
+      "original_result_types": [
+        "Calculated"
+      ]
+    }
+  ]
+}

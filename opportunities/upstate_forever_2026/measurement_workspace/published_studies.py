@@ -25,9 +25,13 @@ from typing import Any
 import zipfile
 
 if __package__:
+    from . import study_context as application_context
     from .observation_support import enrich_observation_context, report_html as support_report_html
+    from .source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata, builtin_companion
 else:
+    import study_context as application_context
     from observation_support import enrich_observation_context, report_html as support_report_html
+    from source_observations import INDEX as OBSERVATION_INDEX, load_observations, observation_files, filter_calendar, series_metadata, builtin_companion
 
 STORE_SCHEMA = "upstate.published-study-record/v1"
 EXPORT_SCHEMA = "upstate.published-study-export/v1"
@@ -94,6 +98,8 @@ UNIT_DEFINITIONS = {
     "FNU": "Formazin nephelometric units",
     "degC": "Degrees Celsius",
     "uS/cm": "Microsiemens per centimetre",
+    "MPN/100mL": "Most probable number per 100 millilitres; original source spelling",
+    "MPN/100 ml": "Most probable number per 100 millilitres; original source spelling",
 }
 SURFACE_PARAMETERS = {
     "ph": ("ph_min_su", "ph_max_su", "SU"),
@@ -304,6 +310,13 @@ def decode_companion(data: bytes) -> tuple[dict[str, bytes], dict[str, Any]]:
 
 def companion_from_directory(directory: Path) -> tuple[dict[str, bytes], dict[str, Any]]:
     directory = directory.resolve(strict=True)
+    if (directory / "study-files.json").is_file():
+        companion, _ = builtin_companion(directory)
+        files, origin = decode_companion(companion)
+        return files, {
+            **origin, "source_format": "declared_original_observation_inventory",
+            "original_directory": str(directory),
+        }
     files = {}
     for path in sorted(directory.rglob("*")):
         if path.is_symlink():
@@ -325,6 +338,14 @@ COHORT_MANIFEST = "eighteenmile_chlorophyll_reconciled.sources.json"
 REPORT_MANIFEST = "eighteenmile_lake_observation_report.sources.json"
 PAIRED_MANIFEST = "eighteenmile_lake_paired_analysis.sources.json"
 MICROCYSTIN_MANIFEST = "eighteenmile_lake_microcystin_reconciliation.sources.json"
+STREAM_STUDY_ID = "scdes-eighteenmile-streams-2020-2025"
+STREAM_CONTEXT_MANIFEST = "eighteenmile_stream_nutrient_analysis.sources.json"
+STREAM_CONTEXT_ROOT = "application-context/stream-nutrients"
+STREAM_RETAINED_MANIFEST = STREAM_CONTEXT_ROOT + "/" + STREAM_CONTEXT_MANIFEST
+STREAM_SOURCE_PREFIXES = (
+    "observations/eighteenmile_stream_nutrients_2020_2025/analysis/",
+    "source/eighteenmile-stream-nutrients-20261013/original/",
+)
 INSTALLED_CONTEXT_MANIFESTS = (COHORT_MANIFEST, REPORT_MANIFEST, PAIRED_MANIFEST, MICROCYSTIN_MANIFEST)
 INSTALLED_CONTEXT_PATHS = INSTALLED_CONTEXT_MANIFESTS + tuple(
     "observations/eighteenmile_2023/" + name for name in (
@@ -379,7 +400,7 @@ OBSERVATION_PARAMETERS = {
 }
 
 
-def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[dict[str, Any]]:
+def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE, *, raw_wqp=False) -> list[dict[str, Any]]:
     reader = csv.DictReader(io.StringIO(data.decode("utf-8-sig"), newline=""))
     required = {
         "station_id", "monitoring_location_id", "activity_id", "date", "local_time",
@@ -387,7 +408,7 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
         "detection_limit", "detection_limit_unit", "depth", "depth_unit",
     }
     headers = reader.fieldnames or []
-    field_map = WQP_FIELDS if source_file in (WQP_FILE, WQP_COHORT) else COHORT_FIELDS if source_file == COHORT_FILE else None
+    field_map = WQP_FIELDS if source_file in (WQP_FILE, WQP_COHORT) else COHORT_FIELDS if source_file == COHORT_FILE or raw_wqp else None
     expected = set(field_map.values()) if field_map else required
     if len(headers) != len(set(headers)) or not expected.issubset(headers):
         raise ValueError("The original observation CSV has an incompatible column contract.")
@@ -409,6 +430,7 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
             "activity_type": original.get("activity_type", original.get("ActivityTypeCode", "")),
             "activity_comment": original.get("activity_comment", original.get("ActivityCommentText", "")),
             "result_comment": original.get("result_comment", original.get("ResultCommentText", "")),
+            "laboratory_comment": original.get("laboratory_comment", original.get("ResultLaboratoryCommentText", "")),
         }
         for field in ("value", "detection_limit", "depth"):
             if raw[field] == "":
@@ -446,6 +468,11 @@ def _observation_rows(data: bytes, source_file: str = OBSERVATION_FILE) -> list[
 
 
 def _combined_observations(files):
+    registered = load_observations(files, _observation_rows)
+    if registered is not None:
+        if any(name in files for name in (OBSERVATION_FILE, COHORT_FILE, WQP_FILE, WQP_COHORT)):
+            raise ValueError("Use one explicit observation cohort per study version.")
+        return registered
     if WQP_FILE in files and WQP_COHORT in files:
         measured = _observation_rows(files[WQP_FILE], WQP_FILE)
         cohort = _observation_rows(files[WQP_COHORT], WQP_COHORT)
@@ -487,6 +514,10 @@ def _dated_context(complete, sites, parameters, observation_context):
             if row["site_id"] in sites and (not parameters or row["parameter"] in parameters)]
     coverage = [row for row in complete["wqp_coverage"]
                 if row["site_id"] in sites and (not parameters or row["parameter"] in parameters)]
+    generic = complete["study"].get("observation_calendar_filters") is True
+    if generic:
+        selected_ids = {row["record_id"] for row in observation_context["rows"]}
+        rows = [row for row in rows if row["record_id"] in selected_ids]
     observed_dates = {row["date"] for row in observation_context["rows"]}
     flow = [row for row in complete["flow_rows"] if row["sampling_date"] in observed_dates]
     return {
@@ -494,12 +525,16 @@ def _dated_context(complete, sites, parameters, observation_context):
         "rows": rows, "coverage": coverage, "summary": complete["wqp_summary"],
         "calendar": complete["wqp_calendar"], "flow_rows": flow,
         "flow_methods": complete["flow_methods"],
-        "dates_without_flow_context": sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
-        "selection_notes": [
+        "dates_without_flow_context": [] if generic else sorted(observed_dates - {row["sampling_date"] for row in complete["flow_rows"]}),
+        "selection_notes": (complete["study"].get("observation_selection_notes") or [
+            "Station, characteristic, year and month filters select original dated WQP result rows. Original source CSVs remain complete in every study export.",
+            "Series keep their own fraction, analytical method, result value type, basis fields and support unit. Calculated source nitrogen remains a distinct characteristic and result type.",
+            "Whole-basin point membership is source context; it does not establish location upstream of a gauge within the same unsplit reach.",
+        ] if generic else [
             "WQP result rows retain the complete original acquisition year and original project identities. Station and parameter filters select these rows; continuous month/year and published depth-stratum filters apply to the published tables.",
             "Chlorophyll comparisons use the explicit reconciled cohort. Microcystin comparisons show every original campaign activity, including additional visits, with their own calendar and detection limits.",
             "Upstream flow context joins the retained agency reporting dates of the selected comparison activities. Original source response IDs, record indices and qualifiers remain in each row.",
-        ],
+        ]),
     }
 
 
@@ -527,37 +562,52 @@ def _manifest_path(manifest_name, value):
     return _name("/".join(parts))
 
 
+def installed_context_paths(study_id: str) -> tuple[str, ...]:
+    legacy = INSTALLED_CONTEXT_PATHS if study_id == application_context.LAKE_STUDY else ()
+    return tuple(dict.fromkeys((*legacy, *application_context.manifest_names(study_id))))
+
+
+def _stream_context(application: Path, manifest_path: Path) -> dict[str, bytes]:
+    """Preserve the original application layout for registered scientific context."""
+    return application_context.retained_files(application, manifest_path)
+
+
 def add_installed_context(files: dict[str, bytes], manifests: list[Path]) -> tuple[dict[str, bytes], list[dict[str, Any]]]:
     """Compose explicit native report/cohort context without replacing the primary edition."""
-    if _json(files["study.json"]).get("study_id") != "scdes-eighteenmile-lake-2023":
-        raise ValueError("The installed Eighteenmile context belongs to its original study identity.")
+    study_id = _json(files["study.json"]).get("study_id")
+    allowed = installed_context_paths(study_id)
+    if not allowed:
+        raise ValueError("This study has no registered installed context family.")
     additions, origins = {}, []
     for supplied in manifests:
         path = Path(supplied).resolve(strict=True)
-        relative = next((name for name in INSTALLED_CONTEXT_PATHS
+        relative = next((name for name in allowed
                          if path.parts[-len(PurePosixPath(name).parts):] == PurePosixPath(name).parts), None)
         if relative is None or not path.is_file():
             raise ValueError("Choose a supported original study context manifest.")
         application = path.parents[len(PurePosixPath(relative).parts) - 1]
-        root = (application / "observations" / "eighteenmile_2023").resolve(strict=True)
-        manifest_name = relative.removeprefix("observations/eighteenmile_2023/")
         native_bytes = path.read_bytes()
         native = _json(native_bytes)
-        if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
-            raise ValueError("A study context manifest must use upstate.sources/v1.")
-        retained = {manifest_name: native_bytes}
-        for entry in native["entries"]:
-            for item in [entry, *entry.get("companions", [])]:
-                name = _manifest_path(manifest_name, item["path"])
-                target = (root / name).resolve(strict=True)
-                if not target.is_relative_to(root) or not target.is_file():
-                    raise ValueError("Original study context must remain inside its study directory.")
-                raw = target.read_bytes()
-                if item.get("sha256", _hash(raw)) != _hash(raw) or item.get("bytes", len(raw)) != len(raw):
-                    raise ValueError("An original study context source changed: " + name)
-                if name in retained and retained[name] != raw:
-                    raise ValueError("A native context assigns conflicting source bytes: " + name)
-                retained[name] = raw
+        if relative in application_context.FAMILIES:
+            retained = application_context.retained_files(application, path)
+        else:
+            root = (application / "observations" / "eighteenmile_2023").resolve(strict=True)
+            manifest_name = relative.removeprefix("observations/eighteenmile_2023/")
+            if native.get("schema") != "upstate.sources/v1" or not isinstance(native.get("entries"), list):
+                raise ValueError("A study context manifest must use upstate.sources/v1.")
+            retained = {manifest_name: native_bytes}
+            for entry in native["entries"]:
+                for item in [entry, *entry.get("companions", [])]:
+                    name = _manifest_path(manifest_name, item["path"])
+                    target = (root / name).resolve(strict=True)
+                    if not target.is_relative_to(root) or not target.is_file():
+                        raise ValueError("Original study context must remain inside its study directory.")
+                    raw = target.read_bytes()
+                    if item.get("sha256", _hash(raw)) != _hash(raw) or item.get("bytes", len(raw)) != len(raw):
+                        raise ValueError("An original study context source changed: " + name)
+                    if name in retained and retained[name] != raw:
+                        raise ValueError("A native context assigns conflicting source bytes: " + name)
+                    retained[name] = raw
         for name, raw in retained.items():
             if name in additions and additions[name] != raw:
                 raise ValueError("Installed study context manifests disagree at " + name)
@@ -578,15 +628,15 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         row for row in rows
         if row["site_id"] in sites
         and (not parameters or row["parameter"] in parameters)
-        and (not strata or "surface" in strata)
+        and (not strata or ("surface" in strata and study.get("observation_calendar_filters") is not True))
         and (not start or row["date"] >= start)
         and (not end or row["date"] <= end)
     ]
     groups = {}
     for row in chosen:
-        groups.setdefault((row["site_id"], row["parameter"], row.get("project_id", ""), row.get("activity_type", "")), []).append(row)
+        groups.setdefault((row["site_id"], row["parameter"], row.get("project_id", ""), row.get("activity_type", ""), row.get("series_key", "")), []).append(row)
     series = []
-    for (site_id, parameter, project_id, activity_type), records in sorted(groups.items()):
+    for (site_id, parameter, project_id, activity_type, series_key), records in sorted(groups.items()):
         numeric = [row["value"] for row in records if row["value"] is not None and not row["censored"]]
         units = sorted({row["unit"] for row in records if row["value"] is not None and row["unit"]})
         comparable_units = len(units) == 1 and all(
@@ -623,18 +673,25 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
             support = "Microcystin campaign context"
             basis += " All original campaign microcystin activities are shown with their actual activity type and calendar; printed report statistics retain their separate analytical cohort."
         if censored:
-            basis += " This quantified-only mean uses no substituted values; the published mean retains the report's separate censor treatment."
+            basis += " This quantified-only mean uses no substituted values."
+            if published:
+                basis += " The published mean retains the report's separate censor treatment."
         if parameter == "microcystins" and (missing_reference_dates or additional_dates):
             basis += " The original microcystin calendar differs from the chlorophyll visit calendar; the exact missing and additional dates are retained."
         if len(identifiers) != len(set(identifiers)):
             basis += " Multiple result rows share an activity identifier; record count and distinct activity count are shown separately."
         if qualifiers:
             basis += " Original result qualifiers are retained: " + ", ".join(qualifiers) + "."
+        metadata = series_metadata(records)
+        if metadata:
+            support = metadata.get("source_sample_support", "Original sampling activities")
+            basis += " Fraction, method authority and identifier, result value type, original basis fields and effective support unit define separate series."
         series.append({
+            **metadata,
             "site_id": site_id, "parameter": parameter, "project_id": project_id,
             "activity_type": activity_type, "sample_support": support,
             "parameter_original": sorted({row["parameter_original"] for row in records}),
-            "unit": units[0] if comparable_units else "; ".join(units),
+            "unit": units[0] if comparable_units else metadata.get("support_unit", "; ".join(units)),
             "record_count": len(records), "activity_count": len(set(identifiers)),
             "numeric_count": len(numeric), "censored_count": censored, "missing_count": missing,
             "date_count": len(set(dates)), "period_start": dates[0], "period_end": dates[-1],
@@ -662,7 +719,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
         "schema": "upstate.published-study-observation-comparison/v1",
         "rows": sorted(chosen, key=lambda row: (row["date"], row["local_time"], row["site_id"], row["parameter"], row["activity_id"])),
         "series": series, "period_start": start, "period_end": end,
-        "temporal_support": "Original activities within the published grab-sampling campaign; continuous month/year filters apply only to continuous summaries.",
+        "temporal_support": ("Original sampling dates within the selected year and months; all original result fields and source query intervals are retained." if study.get("observation_calendar_filters") is True else "Original activities within the published grab-sampling campaign; continuous month/year filters apply only to continuous summaries."),
         "parameter_mapping": OBSERVATION_PARAMETERS,
     }
 
@@ -670,7 +727,7 @@ def _observation_context(rows, seasonal, study, sites, parameters, strata):
 def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: str, version_id: str):
     """Register original map/table identities and every retained study document."""
     manifest_entries, source_entries, seen_ids, native_ids = [], {}, set(), {}
-    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, *INSTALLED_CONTEXT_MANIFESTS) if name in files]
+    manifest_names = [name for name in ("model-sources.json", "wqp/flow-context-sources.json", "wqp/flow-context-public-sources.json", "wqp_20261013/source-manifest.json", FIGURE_MANIFEST, *INSTALLED_CONTEXT_MANIFESTS, *application_context.retained_manifest_names()) if name in files]
     for manifest_name in manifest_names:
         parent = PurePosixPath(manifest_name).parent
         native = _json(files[manifest_name])
@@ -700,6 +757,12 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
                     raise ValueError("Study map companion bytes changed: " + companion_name)
                 companion.update(path="source/" + companion_name, sha256=_hash(body), bytes=len(body))
                 companions.append(companion)
+            if manifest_name != name and not any(item["path"] == "source/" + manifest_name for item in companions):
+                manifest_body = files[manifest_name]
+                companions.append({
+                    "path": "source/" + manifest_name, "sha256": _hash(manifest_body),
+                    "bytes": len(manifest_body),
+                })
             entry.update(path="source/" + name, sha256=_hash(raw), bytes=len(raw), companions=companions)
             entry["metadata"] = {
                 **entry.get("metadata", {}), "study_id": study_id,
@@ -728,7 +791,7 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
         if name in source_entries:
             continue
         suffix = PurePosixPath(name).suffix.lower()
-        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".cjs", ".txt", ".html", ".svg"):
+        if suffix not in (".csv", ".json", ".geojson", ".md", ".pdf", ".png", ".jpg", ".jpeg", ".mjs", ".cjs", ".py", ".txt", ".html", ".svg"):
             continue
         source_id = "study-" + _hash(name.encode("utf-8"))[:16]
         if source_id in seen_ids:
@@ -756,6 +819,15 @@ def _source_manifest(files: dict[str, bytes], study: dict[str, Any], study_id: s
             if vector.get("type") != "FeatureCollection":
                 raise ValueError("Study GeoJSON sources must be FeatureCollections.")
             source_crs = vector.get("crs", {}).get("properties", {}).get("name")
+            if not source_crs:
+                declarations = {
+                    item["source_crs"] for item in manifest_entries
+                    if item.get("kind") == "vector" and item.get("source_crs")
+                    and item.get("sha256") == _hash(raw)
+                }
+                if len(declarations) == 1:
+                    source_crs = declarations.pop()
+                    entry["metadata"]["coordinate_reference_basis"] = "Identical original body registered by an original native vector manifest."
             if not isinstance(source_crs, str) or not source_crs:
                 raise ValueError("A study vector must retain its explicit original coordinate reference system.")
             entry["source_crs"] = source_crs
@@ -813,6 +885,7 @@ class PublishedStudyStore:
         evidence: dict[str, bytes] | None = None,
         operation_id: str | None = None,
         context_manifests: list[Path] | None = None,
+        context_application: str | Path | None = None,
     ) -> dict[str, Any]:
         if isinstance(source, bytes):
             files, origin = decode_companion(source)
@@ -832,6 +905,14 @@ class PublishedStudyStore:
         if study.get("schema") != STUDY_SCHEMA:
             raise ValueError("Unsupported published study metadata schema.")
         study_id = _safe_id(study["study_id"])
+        context_manifests = list(context_manifests or [])
+        if context_application is not None:
+            application = Path(context_application).resolve(strict=True)
+            context_manifests.extend(
+                application / name for name in installed_context_paths(study_id)
+                if (application / name).is_file()
+            )
+        context_manifests = list(dict.fromkeys(path.resolve() for path in context_manifests))
         if context_manifests:
             files, context_origins = add_installed_context(files, context_manifests)
             origin = {**origin, "installed_context": context_origins}
@@ -840,7 +921,7 @@ class PublishedStudyStore:
             for name, filename in TABLE_FILES.items() if filename in files
         }
         observed = _combined_observations(files)
-        measurements = _observation_rows(files[WQP_FILE], WQP_FILE) if WQP_FILE in files else []
+        measurements = observed if OBSERVATION_INDEX in files else (_observation_rows(files[WQP_FILE], WQP_FILE) if WQP_FILE in files else [])
         result_counts = {
             "observed_activities": len(observed), "original_result_rows": len(measurements),
             "original_activity_count": len({(row["monitoring_location_id"], row.get("project_id", ""), row["activity_id"]) for row in measurements}),
@@ -904,7 +985,7 @@ class PublishedStudyStore:
                 if staging.exists():
                     shutil.rmtree(staging)
         record = _json(record_path.read_bytes())
-        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v8":
+        if not record.get("source_collection_id") or record.get("source_registration_schema") != "upstate.published-study-sources/v10":
             source_manifest, source_entries = _source_manifest(files, study, study_id, version_id)
             manifest_path = final / "sources.json"
             _atomic(manifest_path, _json_bytes(source_manifest))
@@ -916,7 +997,7 @@ class PublishedStudyStore:
             }
             record["counts"] = {**{name: len(rows) for name, rows in tables.items()}, **result_counts}
             record["source_collection_id"] = collection["id"]
-            record["source_registration_schema"] = "upstate.published-study-sources/v8"
+            record["source_registration_schema"] = "upstate.published-study-sources/v10"
             record["source_entries"] = source_entries
             _atomic(record_path, _json_bytes(record))
         _atomic(
@@ -944,8 +1025,9 @@ class PublishedStudyStore:
                 row["source_selector"] = selector
         notes = _json(original("source_notes.json"))
         context_files = {name: original(name) for name in CONTEXT_FILES if name in record["source_entries"]}
+        context_files.update(observation_files(original, record["source_entries"]))
         observed = _combined_observations(context_files)
-        measurements = _observation_rows(context_files[WQP_FILE], WQP_FILE) if WQP_FILE in context_files else []
+        measurements = observed if OBSERVATION_INDEX in context_files else (_observation_rows(context_files[WQP_FILE], WQP_FILE) if WQP_FILE in context_files else [])
         coverage = _context_rows(context_files[WQP_COVERAGE], WQP_COVERAGE) if WQP_COVERAGE in context_files else []
         calendar = _context_rows(context_files[WQP_CALENDAR], WQP_CALENDAR) if WQP_CALENDAR in context_files else []
         flow = _context_rows(context_files[FLOW_FILE], FLOW_FILE) if FLOW_FILE in context_files else []
@@ -983,6 +1065,12 @@ class PublishedStudyStore:
                 value = _json(original(entry["path"]))
                 if isinstance(value, dict) and value.get("schema") == "upstate.published-study-visual-context/v1":
                     visual.append(value)
+        native_catalog_bytes = (self._version_root(study_id, record["version_id"]) / "sources.json").read_bytes()
+        expected_catalog = record["source_manifest"]
+        if len(native_catalog_bytes) != expected_catalog["bytes"] or _hash(native_catalog_bytes) != expected_catalog["sha256"]:
+            raise ValueError("The retained study source manifest changed.")
+        native_catalog = _json(native_catalog_bytes)
+        native_entries = {entry["id"]: entry for entry in native_catalog["entries"]}
         return {
             "record": record, "study": study, "tables": tables,
             "source_notes": notes, "visual_context": visual,
@@ -993,7 +1081,11 @@ class PublishedStudyStore:
             "wqp_summary": summary, "flow_rows": flow, "flow_methods": flow_methods,
             "available_stations": list(available_stations.values()),
             "source_artifacts": [
-                {**entry, "source_selector": {
+                {**entry,
+                 "title": native_entries[record["source_entries"][entry["path"]]].get("title"),
+                 "role": native_entries[record["source_entries"][entry["path"]]].get("role"),
+                 "source_metadata": native_entries[record["source_entries"][entry["path"]]].get("metadata", {}),
+                 "source_selector": {
                     "source_collection_id": record["source_collection_id"],
                     "source_id": record["source_entries"][entry["path"]],
                 }} for entry in record["source_files"]
@@ -1089,7 +1181,7 @@ class PublishedStudyStore:
             relevant_notes.append(note)
         seasonal = selected.get("seasonal", [])
         observation_context = _observation_context(
-            complete["observation_rows"], selected.get("seasonal", []), complete["study"],
+            filter_calendar(complete["observation_rows"], complete["study"], year, month_set), selected.get("seasonal", []), complete["study"],
             sites, parameter_set, stratum_set,
         )
         observation_context = enrich_observation_context(observation_context)
@@ -1116,7 +1208,7 @@ class PublishedStudyStore:
             "temporal_support": {
                 "seasonal": complete["study"].get("grab_sampling", {}),
                 "continuous": complete["study"].get("continuous", {}),
-                "month_filter_applies_to": ["monthly_do", "monthly_ph"],
+                "month_filter_applies_to": (["observations", "original_measurements"] if complete["study"].get("observation_calendar_filters") is True else ["monthly_do", "monthly_ph"]),
             },
             "unit_definitions": UNIT_DEFINITIONS,
             "coverage": {
@@ -1217,6 +1309,39 @@ class PublishedStudyStore:
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
 
+        registered_rows = {}
+        for row in context["observations"]["rows"]:
+            if row.get("source_observation"):
+                registered_rows.setdefault(row["source_file"], []).append(row)
+        selected_sources = []
+        for source_file, selected_rows in sorted(registered_rows.items()):
+            source, descriptor = self.source_file(study_id, source_file, context["record"]["version_id"])
+            headers = csv.DictReader(io.StringIO(source.read_text(encoding="utf-8-sig"))).fieldnames or []
+            output = io.StringIO(newline="")
+            writer = csv.DictWriter(output, fieldnames=headers, lineterminator="\n")
+            writer.writeheader()
+            writer.writerows(row["raw_cells"] for row in selected_rows)
+            filename = "selected-activities/" + _name(source_file)
+            _atomic(destination / filename, output.getvalue().encode("utf-8"))
+            written.append(filename)
+            selected_sources.append({
+                "path": filename, "original_source_path": source_file,
+                "original_source_sha256": selected_rows[0]["original_source_sha256"],
+                "original_source_url": selected_rows[0].get("original_source_url", ""),
+                "record_count": len(selected_rows),
+                "rows": [{"selected_csv_row": number, "original_csv_row": row["source_csv_row"],
+                          "record_id": row["record_id"], "activity_id": row["activity_id"]}
+                         for number, row in enumerate(selected_rows, 2)],
+            })
+        if selected_sources:
+            filename = "selected-activities/index.json"
+            _atomic(destination / filename, _json_bytes({
+                "schema": "upstate.selected-original-observations/v1",
+                "study_id": study_id, "version_id": context["record"]["version_id"],
+                "sources": selected_sources,
+            }))
+            written.append(filename)
+
         for key, filename in (
             ("rows", "wqp-results-selected.csv"), ("coverage", "wqp-coverage-selected.csv"),
             ("flow_rows", "upstream-flow-selected.csv"),
@@ -1231,19 +1356,25 @@ class PublishedStudyStore:
             _atomic(destination / filename, output.getvalue().encode("utf-8"))
             written.append(filename)
         support_output = io.StringIO(newline="")
-        support_columns = (
+        series_columns = (
             "site_id", "parameter", "project_id", "activity_type", "sample_support",
+            "series_key", "sample_fraction", "method_authority", "method_id",
+            "result_value_type", "result_weight_basis", "result_time_basis",
+            "result_temperature_basis", "result_particle_size_basis", "support_unit",
+        )
+        interval_columns = (
             "record_count", "distinct_activity_count", "quantified_count", "below_limit_count",
             "unresolved_count", "unit", "mean_lower", "mean_upper",
             "mean_upper_inclusive", "complete_interval_support", "basis",
         )
+        support_columns = series_columns + interval_columns
         support_writer = csv.DictWriter(support_output, fieldnames=support_columns, lineterminator="\n")
         support_writer.writeheader()
         for series in context["observations"]["series"]:
             support = series.get("observation_support", {})
             support_writer.writerow({
-                **{name: series.get(name, "") for name in support_columns[:5]},
-                **{name: support.get(name, "") for name in support_columns[5:]},
+                **{name: series.get(name, "") for name in series_columns},
+                **{name: support.get(name, "") for name in interval_columns},
             })
         _atomic(destination / "observation-support-selected.csv", support_output.getvalue().encode("utf-8"))
         written.append("observation-support-selected.csv")
@@ -1406,7 +1537,8 @@ class PublishedStudyStore:
         observations = context.get("observations", {})
         observed = table("Original activities and published summaries", observations.get("series", []), [
             ("site_id", "Station"), ("parameter", "Parameter"), ("unit", "Unit"),
-            ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_support", "Sample support"),
+            ("project_id", "Source project"), ("activity_type", "Original activity type"), ("sample_fraction", "Sample fraction"),
+            ("result_value_type", "Original result type"), ("original_methods", "Analytical methods"), ("sample_support", "Sample support"),
             ("record_count", "Original rows"), ("activity_count", "Activities"),
             ("numeric_count", "Quantified"), ("censored_count", "Censored"),
             ("published_n", "Printed n"), ("mean", "Quantified mean"),
@@ -1426,9 +1558,14 @@ class PublishedStudyStore:
             ("site_id", "Station"), ("date", "Date"), ("local_time", "Local time"),
             ("source_timezone", "Source time zone"), ("project_id", "Source project"),
             ("activity_type", "Original activity type"), ("parameter_original", "Source parameter"),
+            ("sample_fraction", "Sample fraction"), ("result_value_type", "Original result type"),
+            ("method_authority", "Method authority"), ("method_id", "Method identifier"),
             ("value", "Original value"), ("unit", "Unit"), ("detection_condition", "Detection"),
             ("detection_limit", "Limit"), ("detection_limit_unit", "Limit unit"),
             ("depth", "Depth"), ("depth_unit", "Depth unit"), ("activity_id", "Activity identifier"),
+            ("result_comment", "Original result comment"),
+            ("activity_comment", "Original activity comment"),
+            ("laboratory_comment", "Original laboratory comment"),
         ])
         cohort = context.get("cohort_reconciliation")
         if cohort:
@@ -1481,9 +1618,10 @@ class PublishedStudyStore:
                 '" style="max-width:100%;height:auto"><figcaption>' + esc(item["title"]) + "</figcaption></figure>"
                 for item in context["scientific_figures"]
             ) + "</section>"
+        source_cohort = study.get("observation_calendar_filters") is True
         url = study.get("original_url", "")
         source_link = (
-            '<a href="' + esc(url) + '">Original publisher report</a>'
+            '<a href="' + esc(url) + '">' + ("Original agency source query" if source_cohort else "Original publisher report") + "</a>"
             if url.startswith("https://") else esc(url)
         )
         return (
@@ -1497,20 +1635,21 @@ class PublishedStudyStore:
             ".meta{color:#515861}.source{border-left:3px solid #7e8790;padding-left:14px}"
             "@media print{body{margin:10mm;padding:0}table{font-size:9px}thead{display:table-header-group}tr{break-inside:avoid}section{overflow:visible}}</style>"
             "</head><body><header><p class='meta'>Published field study</p><h1>" + esc(study["title"]) + "</h1>"
-            "<p>Technical report " + esc(study.get("technical_report")) + " · " + esc(study.get("publication")) + "</p>"
+            "<p>" + ("Original agency observations" if source_cohort else "Technical report " + esc(study.get("technical_report"))) + " · " + esc(study.get("publication")) + "</p>"
             "<p>Selected stations: " + esc(", ".join(selection["site_ids"])) +
             " · Parameters: " + esc(", ".join(selection["parameters"]) or "all") +
             " · Strata: " + esc(", ".join(selection["strata"]) or "all") + "</p>"
-            "<p>Continuous selection: year " + esc(selection.get("year") or "all") +
+            "<p>" + ("Sampling-date selection: year " if source_cohort else "Continuous selection: year ") + esc(selection.get("year") or "all") +
             "; months " + esc(", ".join(map(str, selection.get("months", []))) or "all") +
-            ". Seasonal statistics retain the complete published campaign.</p>"
+            (". Original sampling dates define this selected cohort.</p>" if source_cohort else ". Seasonal statistics retain the complete published campaign.</p>") +
             "<p class='meta'>Study " + esc(context["record"]["study_id"]) + " · Version " +
             esc(context["record"]["version_id"]) + " · Source collection " +
             esc(context["record"]["source_collection_id"]) + "</p></header>"
-            "<div class='source'><p>" + source_link + "</p><p>Seasonal rows retain their original sample support, "
-            "depths and concentration units. Monthly n values count days. Original numeric cells remain available "
-            "in the accompanying CSV files.</p>" + visuals + "</div>" +
-            related_reports + seasonal + observed + figures + monthly + ranges + stations + permits +
+            "<div class='source'><p>" + source_link + "</p><p>" +
+            (esc(study.get("observation_scope", "")) if source_cohort else "Seasonal rows retain their original sample support, depths and concentration units. Monthly n values count days. Original numeric cells remain available in the accompanying CSV files.") +
+            "</p>" + visuals + "</div>" +
+            related_reports + ("" if source_cohort else seasonal) + observed + figures +
+            ("" if source_cohort else monthly + ranges) + stations + ("" if source_cohort else permits) +
             "<section><h2>Source notes</h2><ul>" + notes + "</ul></section></body></html>"
         )
 
@@ -1554,13 +1693,11 @@ def main() -> None:
                 parser.error("--evidence requires RELATIVE_NAME=FILE")
             evidence[_name(name)] = Path(filename).read_bytes()
         context_manifests = list(args.context_manifest)
-        if args.with_installed_context:
-            application = Path(args.application).resolve()
-            context_manifests.extend(application / name for name in INSTALLED_CONTEXT_PATHS if (application / name).is_file())
         context_manifests = list(dict.fromkeys(path.resolve() for path in context_manifests))
         result = store.import_source(
             args.source, evidence=evidence, operation_id=args.operation_id,
             context_manifests=context_manifests,
+            context_application=args.application if args.with_installed_context else None,
         )
     elif args.command == "list":
         result = store.list_studies()

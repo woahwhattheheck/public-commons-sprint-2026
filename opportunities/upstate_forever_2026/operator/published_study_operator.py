@@ -9,14 +9,20 @@ from typing import Any
 from urllib.parse import quote
 
 from model.common import describe_file
+from measurement_workspace.source_observations import builtin_companion
+from measurement_workspace import utility_microbiology as microbial
 from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA, _manifest_path, INSTALLED_CONTEXT_PATHS
 
 ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
 BUILTIN_ID = "scdes-eighteenmile-lake-2023"
+BUILTIN_DIRECTORIES = {
+    BUILTIN_ID: "eighteenmile_2023",
+    "scdes-eighteenmile-streams-2020-2025": "eighteenmile_stream_nutrients_2020_2025",
+}
 # Interactive original reports use an opaque origin and cannot call the operator.
 REPORT_POLICY = ("sandbox allow-scripts allow-downloads allow-modals allow-popups "
                  "allow-popups-to-escape-sandbox; default-src 'none'; "
-                 "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; "
+                 "script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
                  "connect-src 'none'; object-src 'none'; base-uri 'none'; "
                  "form-action 'none'; frame-ancestors 'self'")
 
@@ -37,7 +43,14 @@ class PublishedStudyProvider:
                 self.roots[root_id] = path
         self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
 
-    def _builtin_source(self):
+    def _builtin_source(self, builtin_id=BUILTIN_ID):
+        if builtin_id == microbial.BUILTIN_ID:
+            return microbial.builtin_companion(self.builtin.parent.parent)
+        if builtin_id != BUILTIN_ID:
+            directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
+            if directory is None:
+                self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
+            return builtin_companion(self.builtin.parent / directory)
         required = (
             "study.json", "stations.csv", "stations.json", "seasonal_summaries.csv",
             "surface_ranges.csv", "continuous_monthly_do.csv", "continuous_monthly_ph.csv",
@@ -213,7 +226,8 @@ class PublishedStudyProvider:
                 reports.append({
                     "path": artifact["path"], "url": artifact["preview_url"],
                     "download": artifact["download"], "sha256": artifact["sha256"],
-                    "bytes": artifact["bytes"],
+                    "bytes": artifact["bytes"], "title": artifact.get("title"),
+                    "role": artifact.get("role"), "source_metadata": artifact.get("source_metadata", {}),
                 })
         result["retained_reports"] = reports
         return result
@@ -248,13 +262,18 @@ class PublishedStudyProvider:
         try:
             if operation == "catalog":
                 builtin = []
-                if (self.builtin / "study.json").is_file():
-                    metadata = json.loads((self.builtin / "study.json").read_text(encoding="utf-8-sig"))
-                    builtin.append({
-                        "id": BUILTIN_ID, "title": metadata["title"],
-                        "publication": metadata.get("publication"),
-                        "counts": metadata.get("content_counts", {}),
-                    })
+                for builtin_id, directory in BUILTIN_DIRECTORIES.items():
+                    source = self.builtin.parent / directory / "study.json"
+                    if source.is_file():
+                        metadata = json.loads(source.read_text(encoding="utf-8-sig"))
+                        builtin.append({
+                            "id": builtin_id, "title": metadata["title"],
+                            "publication": metadata.get("publication"),
+                            "counts": metadata.get("content_counts", {}),
+                        })
+                microbial_source = microbial.catalog_entry(self.builtin.parent.parent)
+                if microbial_source:
+                    builtin.append(microbial_source)
                 return {
                     **store.list_studies(),
                     "builtin_studies": builtin,
@@ -285,9 +304,14 @@ class PublishedStudyProvider:
                 evidence = {}
                 builtin_id = payload.get("builtin_id")
                 if builtin_id is not None:
-                    if builtin_id != BUILTIN_ID or not (self.builtin / "study.json").is_file():
+                    if builtin_id == microbial.BUILTIN_ID:
+                        available = microbial.catalog_entry(self.builtin.parent.parent) is not None
+                    else:
+                        directory = BUILTIN_DIRECTORIES.get(builtin_id) if isinstance(builtin_id, str) else None
+                        available = directory is not None and (self.builtin.parent / directory / "study.json").is_file()
+                    if not available:
                         self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
-                    source, evidence = self._builtin_source()
+                    source, evidence = self._builtin_source(builtin_id)
                 elif isinstance(payload.get("source_json"), str):
                     source = payload["source_json"].encode("utf-8")
                 else:
@@ -303,13 +327,14 @@ class PublishedStudyProvider:
                 include_context = payload.get("include_installed_context", False)
                 if not isinstance(include_context, bool):
                     self._fail("STUDY_REQUEST", "Choose whether to include the installed study context.")
-                context_manifests = []
-                if include_context and builtin_id is None:
-                    application = self.builtin.parent.parent
-                    context_manifests = [application / name for name in INSTALLED_CONTEXT_PATHS if (application / name).is_file()]
+                context_application = (
+                    self.builtin.parent.parent
+                    if include_context or builtin_id == "scdes-eighteenmile-streams-2020-2025"
+                    else None
+                )
                 result = store.import_source(
                     source, evidence=evidence, operation_id=task["operation_id"],
-                    context_manifests=context_manifests,
+                    context_application=context_application,
                 )
                 record = result["record"]
                 manifest_path = Path(record["source_manifest"]["path"])

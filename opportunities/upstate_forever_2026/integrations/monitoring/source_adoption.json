@@ -1,7 +1,7 @@
 {
   "schema": "upstate.component-source-adoption/v1",
   "component": "Monitoring design and field operations",
-  "version": "1.2.1",
+  "version": "1.3.0",
   "archive": {
     "drive_file_id": "1NLDkD5byBTZ2hOYxQio7Uv_KkxgBLQ8d",
     "bytes": 101834,
@@ -12,8 +12,8 @@
     {
       "source": "src/opportunities/upstate_forever_2026/model/MONITORING.md",
       "path": "model/MONITORING.md",
-      "bytes": 16462,
-      "sha256": "9c83188496d087f78505557330856e206c5cb7f98c750c7f4429d1903fd2cd0d",
+      "bytes": 17717,
+      "sha256": "2a31b106a2f13852d1644f2c3c42b0262195245ba39990586d7058afc00387e8",
       "original_bytes": 15870,
       "original_sha256": "473986c5a439276ee406b1cf426693e486ca2447e84fbbebc28f47cb2a107e14"
     },
@@ -93,7 +93,7 @@
       "source": "src/opportunities/upstate_forever_2026/operator/extensions/monitoring.json",
       "path": "operator/extensions/monitoring.json",
       "bytes": 1567,
-      "sha256": "dd42f8a79612669422d6d1d3ddf91bff8f8d017d90eb60c2f601252e8627ced8",
+      "sha256": "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c",
       "original_bytes": 1567,
       "original_sha256": "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf"
     },
@@ -132,8 +132,8 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring-component.mjs",
       "path": "operator/web/monitoring-component.mjs",
-      "bytes": 23679,
-      "sha256": "46747a23fb5d77dac210eb16fa0894774956e5a1776c5a48c278b1a26a47a288",
+      "bytes": 23690,
+      "sha256": "52cc07c29bde345efbe305ad0b47a7835c75af16649a8d7c548a80f849d575be",
       "original_bytes": 23470,
       "original_sha256": "74733636160383214ead70221766e622cb9b2940bb12ef238adbcdb9cc5edd6d"
     },
@@ -148,8 +148,8 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs",
       "path": "operator/web/monitoring.mjs",
-      "bytes": 4568,
-      "sha256": "4997a2652034fae1708455f742b72b68dcc7d3a405c0ff303c7c69828b6ab9ea",
+      "bytes": 7172,
+      "sha256": "1728c22d5b2c9ffaf572b9cea8d9f9dcc4a3e28edd81c5125d7af9d227b124be",
       "original_bytes": 4274,
       "original_sha256": "0a76feed9d9bd4ac929fa8e9ad0f28f95205fa705c9f6314ef79e3f095e4b895"
     }
@@ -173,5 +173,19 @@
       "workspace-scoped asynchronous refresh and input controls"
     ],
     "retained_archive_manifest": "integrations/monitoring/MANIFEST.json"
-  }
+  },
+  "compositions": [
+    {
+      "operation_id": "ECO13-WATER-MONITORING-20261013",
+      "version": "1.3.0",
+      "guide": "operator/RECEIVING_WATER_MONITORING.md",
+      "changes": [
+        "Prepare a retained complete HUC planning source from an original water plan or saved priority raster",
+        "Preserve the full native graph and show context-only candidate exclusions in the original Monitoring form",
+        "Wait for original desk startup before the registered openNetwork handoff",
+        "Capture the bridge under its original Workspace lock and preserve current installer joins"
+      ],
+      "preserved": "Original ASTRA-MONITOR12 network builder, optimization solver, calendar, costs, campaigns and field history"
+    }
+  ]
 }

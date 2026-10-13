@@ -16,6 +16,7 @@ from .common import (INVEST_VERSION, ROLES, SOURCE_IDS, atomic_bytes, atomic_jso
                      now, read_json, verify_file)
 from .profiles import checked_parameters, scenario_spec
 from . import common as scientific_common
+from .native_execution import storage_exhausted
 
 SELECTION_SCHEMA = "upstate.compute-programme-selection/v1"
 PROGRAMME_SCHEMA = "upstate.compute-programme/v1"
@@ -1054,6 +1055,8 @@ class ComputeProgrammes:
                         attempt.update(state="complete", completed_at=now(), reused=reused)
                     except Exception as exc:
                         attempt.update(state="failed", completed_at=now(), error=_error(exc))
+                        if storage_exhausted(exc):
+                            raise
                     self._write_state(key, state)
                 if state["state"] != "paused":
                     baseline = self.workspace.inspect_run(by_name[baseline_name]["run_id"])
@@ -1086,6 +1089,8 @@ class ComputeProgrammes:
                             except Exception as exc:
                                 state["comparisons"].pop(name, None)
                                 state["comparison_errors"][name] = _error(exc)
+                                if storage_exhausted(exc):
+                                    raise
                             self._write_state(key, state)
                 if state["state"] != "paused":
                     actual = {name: self.workspace.inspect_run(binding["run_id"])
@@ -1106,8 +1111,13 @@ class ComputeProgrammes:
                 current = state.get("current_run")
                 if current and state["attempts"].get(current) and state["attempts"][current][-1]["state"] == "running":
                     state["attempts"][current][-1].update(state=terminal, completed_at=now(), error=_error(exc))
-                self._write_state(key, state, state=terminal, phase=state["phase"], error=_error(exc))
-                if not isinstance(exc, (KeyboardInterrupt, SystemExit)):
+                capacity_failure = storage_exhausted(exc)
+                try:
+                    self._write_state(key, state, state=terminal, phase=state["phase"], error=_error(exc))
+                except OSError:
+                    if not capacity_failure:
+                        raise
+                if not capacity_failure and not isinstance(exc, (KeyboardInterrupt, SystemExit)):
                     try:
                         self.report(key, _locked=True)
                     except Exception as report_error:

@@ -22,7 +22,9 @@ from .common import (
     atomic_json, describe_file, digest, held, identifier, now, read_json,
     verify_file, retain_file,
 )
+
 from .model_selection import required_outputs, run_models, validate_completed_run
+from .native_versions import comparison_versions, models_for_outputs
 
 PLAN_KIND = "interaction-plans"
 RESULT_KIND = "interaction-results"
@@ -188,8 +190,10 @@ def _read_design(workspace, selection):
         collection = collections[collection_id]
         for patch in patches:
             entry = _source_entry(collection, patch.get("mask_source_id"))
-            if entry.get("kind") != "vector":
-                raise ValueError("Each action mask must be a retained vector source")
+            if entry.get("kind") not in ("vector", "raster"):
+                raise ValueError("Each action mask must be a retained vector or binary raster source")
+            if entry["kind"] == "raster" and (patch.get("layer") or patch.get("where")):
+                raise ValueError("Binary raster action masks do not select a vector layer or attribute filter")
 
     retain_masks(base_scenario)
     for index, raw in enumerate(raw_actions):
@@ -325,11 +329,12 @@ def _read_state(workspace, plan_id):
             for key in _PROGRESS_FIELDS:
                 if key in progress:
                     state[key] = progress[key]
-            active = state.get("active_case") or {}
-            key = active.get("coalition_key")
-            if key in state.get("cases", {}) and active.get("run_id") == state["cases"][key]["run_id"]:
-                if active.get("native_state") is not None:
-                    state["cases"][key]["state"] = active["native_state"]
+            active_rows = state.get("active_cases") or [state.get("active_case") or {}]
+            for active in active_rows:
+                key = active.get("coalition_key")
+                if key in state.get("cases", {}) and active.get("run_id") == state["cases"][key]["run_id"]:
+                    if active.get("native_state") is not None:
+                        state["cases"][key]["state"] = active["native_state"]
     return state
 
 def _state_summary(workspace, plan_id):
@@ -364,13 +369,14 @@ def list_plans(workspace):
             "state": state.get("state", "planned"), "phase": state.get("phase", "planned"),
             "completed_cases": state.get("completed_cases", 0),
             "result_id": state.get("result_id"), "updated_at": state.get("updated_at"),
+            "execution": state.get("execution"), "active_cases": state.get("active_cases", []),
         })
     return sorted(rows, key=lambda row: (str(row.get("updated_at") or ""), row["id"]), reverse=True)
 
 
 _PROGRESS_FIELDS = (
     "state", "phase", "updated_at", "completed_cases", "analysis_progress",
-    "active_case", "result_id", "last_result_id", "native_execution_requested",
+    "active_case", "active_cases", "execution", "result_id", "last_result_id", "native_execution_requested",
 )
 _CHECKPOINT_POLICY = ContextVar("native_interaction_checkpoint_policy", default=None)
 
@@ -499,8 +505,10 @@ def _prepare_cases(workspace, plan, state):
     collection_id, mapping = _composed_masks(workspace, plan, state)
     baseline = plan["snapshot"]["baseline_scenario"]
     old_selection = plan["snapshot"]["baseline_selection"]
+    selected_models = run_models({"selection": old_selection})
     for case in plan["coalitions"]:
         key = case["key"]
+        previous = state["cases"].get(key)
         if case["mask"] == 0:
             run = workspace.inspect_run(plan["selection"]["baseline_run_id"])
         else:
@@ -525,15 +533,17 @@ def _prepare_cases(workspace, plan, state):
             selection["scenario_id"] = scenario["id"]
             if "models" in old_selection:
                 selection["models"] = deepcopy(old_selection["models"])
-            run = workspace.prepare_run(selection)
+            # A retained case keeps the original requested declaration and run ID
+            # across native software updates. Only a new case is prepared today.
+            run = (workspace.inspect_run(previous["run_id"]) if previous
+                   else workspace.prepare_run(selection))
             for name in ("grid_id", "profile_id", "scenario_id"):
                 if run["selection"].get(name) != selection[name]:
                     raise ValueError("Native preparation did not preserve coalition " + name)
-            if "models" in old_selection and run["selection"].get("models") != old_selection["models"]:
+            if run_models(run) != selected_models:
                 raise ValueError("Native preparation did not preserve selected model stages")
-            if run["selection"].get("invest_version") != old_selection.get("invest_version"):
-                raise ValueError("Coalitions and baseline must use the same native model version")
-        previous = state["cases"].get(key)
+            # Completed outcomes are compared by their executed model stages in
+            # _native_inputs. A saved requested version is retained as provenance.
         if previous and (
                 previous.get("run_id") != run["id"]
                 or previous.get("selection") != run["selection"]):
@@ -562,7 +572,7 @@ def _grid_file(workspace, grid, name):
 
 
 def _native_inputs(workspace, plan, state):
-    records, names = [], None
+    records, completed_runs, names = [], [], None
     baseline_selection = plan["snapshot"]["baseline_selection"]
     for case in plan["coalitions"]:
         retained = state["cases"].get(case["key"])
@@ -574,10 +584,10 @@ def _native_inputs(workspace, plan, state):
         validate_completed_run(run)
         if run["selection"] != retained["selection"]:
             raise ValueError("Native coalition selection changed: " + case["key"])
-        for key in ("grid_id", "profile_id", "invest_version"):
+        for key in ("grid_id", "profile_id"):
             if run["selection"].get(key) != baseline_selection.get(key):
                 raise ValueError("Native coalitions differ in " + key)
-        if run["selection"].get("models") != baseline_selection.get("models"):
+        if run_models(run) != run_models({"selection": baseline_selection}):
             raise ValueError("Native coalitions differ in selected model stages")
         selected_names = set(run.get("artifacts", {})) & set(MASS_UNITS)
         if not selected_names:
@@ -603,7 +613,10 @@ def _native_inputs(workspace, plan, state):
             **deepcopy(case), "run_id": run["id"], "selection": deepcopy(run["selection"]),
             "artifacts": descriptors, "paths": paths,
         })
-    return records, sorted(names or [])
+        completed_runs.append(run)
+    names = sorted(names or [])
+    versions = comparison_versions(completed_runs, models_for_outputs(names))
+    return records, names, versions
 
 
 def _assert_grid(dataset, grid):
@@ -1048,12 +1061,25 @@ def _write_attribution_geopackage(path, zones, rows, crs):
     return True
 
 
-def _analysis_identity(workspace, plan, records):
+def _requested_identity_is_equivalent(records, versions):
+    """Keep original result IDs only where their requested binding is accurate."""
+    if not records:
+        return False
+    declared = records[0]["selection"].get("invest_version")
+    if any(row["selection"].get("invest_version") != declared for row in records):
+        return False
+    return all(
+        value.get("comparison_version") and
+        value["comparison_version"] == value.get("requested_version")
+        for row in records for value in versions["runs"][row["run_id"]].values())
+
+
+def _analysis_identity(workspace, plan, records, versions):
     grid = workspace.get_grid(plan["snapshot"]["grid"]["id"])
     reporting = grid.get("files", {}).get("reporting_mask")
     if reporting is None:
         reporting = grid.get("files", {}).get("reporting_mask.tif")
-    return {
+    identity = {
         "schema": "upstate.interaction-analysis-selection/v1",
         "plan_id": plan["id"], "baseline_run_id": plan["selection"]["baseline_run_id"],
         "grid_id": grid["id"], "reporting_mask": deepcopy(reporting),
@@ -1064,6 +1090,47 @@ def _analysis_identity(workspace, plan, records):
         "support_method": "reporting-area-all-coalitions-all-selected-metrics-finite/v1",
         "allocation_method": "fixed-action-order-native-coalition-game/v1",
     }
+    if not _requested_identity_is_equivalent(records, versions):
+        identity["native_versions"] = deepcopy(versions)
+    return identity
+
+
+def _retained_native_versions(result):
+    """Check frozen provenance without requiring historical run directories."""
+    versions = result.get("native_versions")
+    bound = result["selection"].get("native_versions")
+    if versions is None:
+        if bound is not None:
+            raise ValueError("Retained interaction result lacks its bound native versions")
+        return  # Historical results remain readable with their original declaration.
+    if bound is not None and bound != versions:
+        raise ValueError("Retained interaction result native-version binding differs")
+    records = result["selection"]["runs"]
+    models = list(models_for_outputs(result["metrics"]))
+    if (not models or versions.get("models") != models
+            or set(versions.get("versions", {})) != set(models)
+            or set(versions.get("runs", {})) != {row["run_id"] for row in records}):
+        raise ValueError("Retained interaction native-version scope differs")
+    for record in records:
+        actual = versions["runs"][record["run_id"]]
+        if set(actual) != set(models):
+            raise ValueError("Retained interaction native model provenance is incomplete")
+        requested = record["selection"].get("invest_version")
+        requested = requested.strip() if isinstance(requested, str) and requested.strip() else None
+        for model in models:
+            version = actual[model].get("comparison_version")
+            if not version or version != versions["versions"][model]:
+                raise ValueError("Retained interaction execution versions differ")
+            if (actual[model].get("model") != model
+                    or actual[model].get("requested_version") != requested):
+                raise ValueError("Retained interaction native declaration differs")
+    if bound is None and not _requested_identity_is_equivalent(records, versions):
+        raise ValueError("Retained interaction provenance requires an explicit identity binding")
+    expected = [{**deepcopy(record),
+                 "native_versions": deepcopy(versions["runs"][record["run_id"]])}
+                for record in records]
+    if result.get("runs") != expected:
+        raise ValueError("Retained native run index provenance differs")
 
 
 def get_result(workspace, result_id, *, verify=True):
@@ -1073,6 +1140,7 @@ def get_result(workspace, result_id, *, verify=True):
     if (result.get("id") != result_id
             or digest(result.get("selection")) != result_id):
         raise ValueError("Retained native interaction result identity changed")
+    _retained_native_versions(result)
     if type(verify) is not bool:
         raise ValueError("verify must be a boolean")
     if verify:
@@ -1084,9 +1152,10 @@ def get_result(workspace, result_id, *, verify=True):
 def _analyze(workspace, plan, state):
     state["state"] = "analyzing"
     state["active_case"] = None
+    state["active_cases"] = []
     _checkpoint(workspace, state, "verify-native")
-    records, names = _native_inputs(workspace, plan, state)
-    identity = _analysis_identity(workspace, plan, records)
+    records, names, versions = _native_inputs(workspace, plan, state)
+    identity = _analysis_identity(workspace, plan, records, versions)
     result_id = digest(identity)
     directory = Path(workspace.root) / RESULT_KIND / result_id
     directory.mkdir(parents=True, exist_ok=True)
@@ -1145,8 +1214,11 @@ def _analyze(workspace, plan, state):
             path = directory / (name.replace("_", "-") + ".csv")
             _write_csv(path, rows, fields)
             artifacts[name + "_csv"] = describe_file(directory, path, rows=len(rows))
+        native_run_index = [
+            {**deepcopy(record), "native_versions": deepcopy(versions["runs"][record["run_id"]])}
+            for record in identity["runs"]]
         index_path = directory / "native-run-index.json"
-        atomic_json(index_path, identity["runs"])
+        atomic_json(index_path, native_run_index)
         artifacts["native_run_index"] = describe_file(directory, index_path)
         geometry_path = directory / "zonal-action-attribution.gpkg"
         if _write_attribution_geopackage(
@@ -1175,7 +1247,10 @@ def _analyze(workspace, plan, state):
             },
             "scopes": support["scopes"], "summaries": summaries,
             "action_attribution": actions, "pair_interactions": pairs,
-            "coalition_outcomes": outcomes, "runs": identity["runs"],
+            "coalition_outcomes": outcomes, "runs": native_run_index,
+            "native_versions": deepcopy(versions),
+            "native_version_binding": ("executed_model_cohort" if "native_versions" in identity
+                                       else "legacy_requested_equivalent"),
             "artifacts": artifacts,
             "interpretation": {
                 "csv_string_safety": (
@@ -1242,10 +1317,12 @@ def analyze_plan(workspace, plan_id):
             raise
 
 
-def apply_plan(workspace, plan_id, run_models=False):
+def apply_plan(workspace, plan_id, run_models=False, *, workers=1, reuse_source_run_ids=None):
     """Prepare or resume all retained coalitions using the original Workspace runner."""
     if type(run_models) is not bool:
         raise ValueError("run_models must be a boolean")
+    from .interaction_dispatch import options, run_cases
+    workers, donors = options(workspace, workers, reuse_source_run_ids)
     plan = _object(workspace, PLAN_KIND, plan_id)
     with held(_state_path(workspace, plan["id"]).parent / ".interaction.lock", blocking=False), _checkpoint_session():
         _check_snapshot(workspace, plan)
@@ -1263,49 +1340,9 @@ def apply_plan(workspace, plan_id, run_models=False):
                 state["state"] = "prepared"
                 _checkpoint(workspace, state, "prepared")
                 return deepcopy(state)
-            state["state"] = "running"
-            grouped = {}
-            for retained in state["cases"].values():
-                grouped.setdefault(retained["run_id"], []).append(retained)
-            attempted = set()
-            for case in plan["coalitions"]:
-                retained = state["cases"][case["key"]]
-                run_id = retained["run_id"]
-                if run_id in attempted:
-                    continue
-                attempted.add(run_id)
-                related = grouped[run_id]
-                previous_complete = sum(row["state"] == "complete" for row in related)
-                state["active_case"] = {
-                    "coalition_key": case["key"], "run_id": run_id,
-                    "native_state": retained.get("state"),
-                }
-                _checkpoint(workspace, state, "native")
-                try:
-                    run = workspace.inspect_run(run_id)
-                    if run.get("state") != "complete":
-                        run = workspace.run(run_id)
-                    actual = workspace.inspect_run(run_id)
-                    for row in related:
-                        row["state"] = actual.get("state")
-                        row.pop("error", None)
-                    if actual.get("state") != "complete":
-                        raise RuntimeError(
-                            "Native coalition did not complete: " + case["key"]
-                            + " (" + str(actual.get("state")) + ")")
-                except Exception as exc:
-                    error = {"phase": "native", "coalition_key": case["key"],
-                             "run_id": run_id, "error_type": type(exc).__name__,
-                             "message": str(exc)}
-                    state["errors"].append(error)
-                    for row in related:
-                        row["state"] = "failed"
-                        row["error"] = deepcopy(error)
-                state["active_case"]["native_state"] = retained.get("state")
-                state["completed_cases"] += (
-                    sum(row["state"] == "complete" for row in related) - previous_complete)
-                _checkpoint(workspace, state, "native")
-            state["active_case"] = None
+            run_cases(
+                workspace, plan, state, workers=workers, reuse_source_run_ids=donors,
+                checkpoint=lambda phase: _checkpoint(workspace, state, phase))
             if state["errors"]:
                 state["state"] = "failed"
                 _checkpoint(workspace, state, "native")

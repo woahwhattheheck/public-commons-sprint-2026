@@ -3,7 +3,7 @@ const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;
 const fmt=value=>typeof value==='number'?(Number.isFinite(value)?(value!==0&&Math.abs(value)<0.0001?value.toExponential(4):value.toLocaleString(undefined,{maximumFractionDigits:6})):'Unavailable'):String(value??'—');
 const short=value=>String(value||'').slice(0,12);
 const table=(headers,rows)=>'<div class="table-scroll"><table><thead><tr>'+headers.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(row=>'<tr>'+row.map(x=>'<td>'+esc(fmt(x))+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
-const template='<main class="native-combinations"><header><h1>Conservation combinations</h1><p>Compare conservation actions individually and together using their retained native scenarios. Allocate the combined annual export benefit while preserving interactions between actions.</p></header><div role="alert" data-error hidden></div><form data-design><div class="fields"><label>Study title<input name="title" value="Conservation action combinations" required></label><label>Retained baseline run<input name="baseline" list="combination-runs" autocomplete="off" required placeholder="Select or paste the complete native run ID"></label></div><datalist id="combination-runs"></datalist><p class="muted" data-baseline-note></p><div class="toolbar"><button type="button" data-action="runs-previous">Previous runs</button><button type="button" data-action="runs-next">More runs</button><span data-run-page></span></div><h2>Ordered conservation actions</h2><p>Each action uses patches from a saved scenario. Preview resolves the baseline-relative patch selection. The order below is the application order in every modeled combination, including overlapping edits.</p><div data-actions></div><button type="button" data-action="add-action">Add conservation action</button><fieldset><legend>Attribution design</legend><div class="fields"><label>Method<select name="estimator"><option value="exact">Exact coalition attribution</option><option value="permutation">Sample attribution paths</option></select></label><label>Sampled permutations<input name="permutations" type="number" min="1" value="128" step="1"></label><label>Random seed<input name="seed" type="number" min="0" value="0" step="1"></label><label>Maximum distinct cases<input name="max_cases" type="number" min="2" value="4096" step="1"></label></div><label class="check"><input name="pairwise" type="checkbox" checked>Include every pair interaction</label><p class="muted">Sampling changes attribution paths through the same ordered scenarios. Preview shows the distinct native cases before they are retained or queued.</p></fieldset><details><summary>Optional reporting zones</summary><div class="fields"><label>Retained polygon source<select name="zone"><option value="">Whole reporting area</option></select></label><label>Zone identity field<input name="zone_field" value="huc12"></label><label>Native layer override<input name="zone_layer"></label><label>Source feature filter, JSON object<textarea name="zone_where" rows="2"></textarea></label></div></details><div class="toolbar"><button type="submit" data-preview>Preview combinations</button><button type="button" data-action="save" data-save disabled>Save combination plan</button></div></form><section data-preview-result hidden></section><section><h2>Continue a saved combination study</h2><div class="toolbar"><select name="plans" aria-label="Saved combination study"></select><button type="button" data-action="refresh">Refresh studies</button></div><div class="toolbar"><button type="button" data-action="prepare" data-needs-plan>Prepare cases</button><button type="button" data-action="run" data-needs-plan>Run and analyze / resume</button><button type="button" data-action="analyze" data-needs-plan>Reanalyze completed cases</button><button type="button" data-action="download-plan" data-needs-plan>Download plan</button></div><div data-plan></div><div data-operations></div></section><section data-result hidden></section><section data-method><h2>Reading the results</h2><p>Benefit is baseline export minus the combination export, on the same finite cells shared across every coalition and every selected metric. Nitrogen and phosphorus remain kg/year; sediment remains metric tonnes/year. Positive nonadditivity means the combined benefit exceeds the sum of standalone benefits.</p><p>Shapley attribution allocates the combined modeled benefit across the selected actions. Exact designs use every coalition. Sampled designs include the reported sampling error of marginal contributions. The attribution describes this saved set of actions and its global application order.</p></section></main>';
+const template='<main class="native-combinations"><header><h1>Conservation combinations</h1><p>Compare conservation actions individually and together using their retained native scenarios. Allocate the combined annual export benefit while preserving interactions between actions.</p></header><div role="alert" data-error hidden></div><form data-design><div class="fields"><label>Study title<input name="title" value="Conservation action combinations" required></label><label>Retained baseline run<input name="baseline" list="combination-runs" autocomplete="off" required placeholder="Select or paste the complete native run ID"></label></div><datalist id="combination-runs"></datalist><p class="muted" data-baseline-note></p><div class="toolbar"><button type="button" data-action="runs-previous">Previous runs</button><button type="button" data-action="runs-next">More runs</button><span data-run-page></span></div><h2>Ordered conservation actions</h2><p>Each action uses patches from a saved scenario. Preview resolves the baseline-relative patch selection. The order below is the application order in every modeled combination, including overlapping edits.</p><div data-actions></div><button type="button" data-action="add-action">Add conservation action</button><fieldset><legend>Attribution design</legend><div class="fields"><label>Method<select name="estimator"><option value="exact">Exact coalition attribution</option><option value="permutation">Sample attribution paths</option></select></label><label>Sampled permutations<input name="permutations" type="number" min="1" value="128" step="1"></label><label>Random seed<input name="seed" type="number" min="0" value="0" step="1"></label><label>Maximum distinct cases<input name="max_cases" type="number" min="2" value="4096" step="1"></label></div><label class="check"><input name="pairwise" type="checkbox" checked>Include every pair interaction</label><p class="muted">Sampling changes attribution paths through the same ordered scenarios. Preview shows the distinct native cases before they are retained or queued.</p></fieldset><details><summary>Optional reporting zones</summary><div class="fields"><label>Retained polygon source<select name="zone"><option value="">Whole reporting area</option></select></label><label>Zone identity field<input name="zone_field" value="huc12"></label><label>Native layer override<input name="zone_layer"></label><label>Source feature filter, JSON object<textarea name="zone_where" rows="2"></textarea></label></div></details><div class="toolbar"><button type="submit" data-preview>Preview combinations</button><button type="button" data-action="save" data-save disabled>Save combination plan</button></div></form><section data-preview-result hidden></section><section><h2>Continue a saved combination study</h2><div class="toolbar"><select name="plans" aria-label="Saved combination study"></select><button type="button" data-action="refresh">Refresh studies</button></div><div class="toolbar"><label>Parallel native runs<input name="workers" type="number" min="1" step="1" value="1"></label><button type="button" data-action="prepare" data-needs-plan>Prepare cases</button><button type="button" data-action="run" data-needs-plan>Run and analyze / resume</button><button type="button" data-action="analyze" data-needs-plan>Reanalyze completed cases</button><button type="button" data-action="download-plan" data-needs-plan>Download plan</button></div><div data-plan></div><div data-operations></div></section><section data-result hidden></section><section data-method><h2>Reading the results</h2><p>Benefit is baseline export minus the combination export, on the same finite cells shared across every coalition and every selected metric. Nitrogen and phosphorus remain kg/year; sediment remains metric tonnes/year. Positive nonadditivity means the combined benefit exceeds the sum of standalone benefits.</p><p>Shapley attribution allocates the combined modeled benefit across the selected actions. Exact designs use every coalition. Sampled designs include the reported sampling error of marginal contributions. The attribution describes this saved set of actions and its global application order.</p></section></main>';
 
 
 const metricName=value=>({nitrogen_export:'Nitrogen',phosphorus_export:'Phosphorus',sediment_export:'Sediment',n_export:'Nitrogen',p_export:'Phosphorus',sed_export:'Sediment'}[value]||String(value||'').replaceAll('_',' '));
@@ -13,6 +13,37 @@ const finite=value=>typeof value==='number'&&Number.isFinite(value);
 const quantity=(value,units)=>finite(value)?fmt(value)+(units?' '+units:''):'Unavailable';
 const card=(label,value)=>'<div class="result-card"><span>'+esc(label)+'</span><strong>'+esc(value)+'</strong></div>';
 const actionName=(rows,id)=>{const row=rows.find(x=>x.action_id===id);return row?.action_title||id;};
+
+function renderNativeVersions(result){
+ const cohort=result.native_versions;
+ let output='<section><h3>Executed model versions</h3>';
+ if(!cohort||!Array.isArray(cohort.models)||!cohort.runs||typeof cohort.runs!=='object'){
+  return output+'<p>No per-model execution provenance was recorded in this saved result. Its original run identities and native output records remain in the retained selection.</p></section>';
+ }
+ const rows=[];
+ const basis={completed_stage_runtime:'Completed native stage',observed_run_fallback:'Observed run metadata',requested_legacy:'Requested version (legacy)',unavailable:'Unavailable'};
+ for(const [runId,versions] of Object.entries(cohort.runs)){
+  if(!versions||typeof versions!=='object')continue;
+  for(const model of cohort.models){
+   const value=versions[model];
+   if(!value||typeof value!=='object')continue;
+   const reused=value.reused_from;
+   rows.push([runId,String(model).toUpperCase(),value.comparison_version,
+    basis[value.basis]||value.basis||'Not recorded',value.requested_version,value.stage_completed_at,
+    reused?.run_id?String(reused.run_id)+' / '+String(reused.model||model):'']);
+  }
+ }
+ if(!rows.length)return output+'<p>No per-model execution provenance was recorded in this saved result. Its original run identities and native output records remain in the retained selection.</p></section>';
+ output+='<p>Each selected model uses a consistent comparison version across the retained combinations. Different selected models can have different versions.</p>'
+  +table(['Native model','Comparison version'],cohort.models.map(model=>[String(model).toUpperCase(),cohort.versions?.[model]]))
+  +'<details><summary>Run and model provenance ('+rows.length+' rows)</summary>'
+  +table(['Run','Model','Comparison version','Version source','Requested version','Stage completed','Reused stage origin'],rows.slice(0,200))
+  +(rows.length>200?'<p>Showing the first 200 rows. Download the tables or open the printable report to see every retained run and model.</p>':'')
+  +'<p>Completed-stage records describe the executed stage and reused origin. Observed-run fallback uses retained run metadata. A requested legacy version is the saved request and is labeled separately from observed execution.</p>'
+  +'<p>The complete source table and JSON retain observed stage/run versions, requested-version differences and the original nested stage-reuse record.</p></details></section>';
+ return output;
+}
+
 export function renderNativeCombinationResult(result,selection={}){
  const summaries=result.summaries||[],scopes=[...new Map(summaries.map(row=>[scopeKey(row),row])).entries()];
  const metrics=[...new Set(summaries.map(row=>row.metric))];
@@ -54,13 +85,13 @@ export function renderNativeCombinationResult(result,selection={}){
  detail+='<details><summary>Modeled combinations ('+outcomes.length+')</summary>'+table(['Actions','Annual export ('+units+')','Annual reduction ('+units+')','Export outside common support ('+units+')'],outcomes.slice(0,200).map(row=>[(row.action_ids||[]).map(id=>actionName(attribution,id)).join(' + ')||'Baseline',row.annual_export,row.benefit,row.excluded_annual_export]))+(outcomes.length>200?'<p>Showing the first 200 combinations. Download tables includes every retained combination.</p>':'')+'</details>';
  const downloads=(result._downloads||[]).map(item=>'<a href="'+esc('/api/file/'+encodeURIComponent(item.id)+'?download=1')+'">'+esc(item.artifact_id.replaceAll('_',' '))+'</a>').join('');
  const method='<p class="muted">All compared exports use the same '+esc(fmt(summary?.common_valid_cells??0))+' finite cells across every combination and selected pollutant. Actions apply in the saved order: '+esc((result.application_order||[]).map(id=>actionName(attribution,id)).join(' → '))+'.</p>';
- return '<h2>'+title+'</h2>'+toolbar+cards+interpretation+detail+'<h3>Spatial results and source tables</h3><div class="toolbar">'+downloads+'</div>'+method;
+ return '<h2>'+title+'</h2>'+toolbar+cards+interpretation+detail+renderNativeVersions(result)+'<h3>Spatial results and source tables</h3><div class="toolbar">'+downloads+'</div>'+method;
 }
 
 export function createNativeInteractions(host){
  let root=null,key=null,epoch=0,abort=null,busy=false,catalog=null,offset=0;
  let actions=[],preview=null,previewKey=null,plan=null,result=null,planStamp='',stateStamp='';
- let catalogRead=0,planRead=0,resultRead=0,previewRead=0,pending=null,watch=null,watchRead=null;
+ let catalogRead=0,planRead=0,resultRead=0,previewRead=0,pending=null,watch=null,watchRead=null,casePage=0,caseFilter='';
  const workspace=()=>host.getWorkspace?.()||host.getState()?.workspace_key;
  const alive=e=>root&&e===epoch&&workspace()===key;
  const $=s=>root?.querySelector(s);
@@ -73,7 +104,7 @@ export function createNativeInteractions(host){
  function readRows(){return $$('[data-row]').map(row=>({id:row.querySelector('[name=action_id]').value,title:row.querySelector('[name=action_title]').value,scenario_id:row.querySelector('[name=scenario]').value,patches:row.querySelector('[name=patches]').value}));}
  function draft(){
   const d={actions:readRows()};
-  for(const name of ['title','baseline','estimator','permutations','seed','max_cases','zone','zone_field','zone_layer','zone_where'])d[name]=$('[name='+name+']').value;
+  for(const name of ['title','baseline','estimator','permutations','seed','max_cases','zone','zone_field','zone_layer','zone_where','workers'])d[name]=$('[name='+name+']').value;
   d.pairwise=$('[name=pairwise]').checked;d.plan_id=$('[name=plans]').value;return d;
  }
  function saveDraft(){if(root)try{sessionStorage.setItem(draftKey(),JSON.stringify(draft()));}catch{}}
@@ -87,6 +118,10 @@ export function createNativeInteractions(host){
   $('[data-action=runs-next]').disabled=busy||catalog?.next_offset==null;
   $('[name=plans]').disabled=busy;
   $('[name=permutations]').disabled=busy||$('[name=estimator]').value!=='permutation';
+  $('[name=workers]').disabled=busy;
+  const previousCases=$('[data-action=cases-previous]'),nextCases=$('[data-action=cases-next]');
+  if(previousCases)previousCases.disabled=busy||casePage===0;
+  if(nextCases)nextCases.disabled=busy||nextCases.dataset.last==='true';
  }
  function actionRows(){
   const options=(catalog?.actions||[]).map(x=>'<option value="'+esc(x.id)+'">'+esc(x.title)+' ('+x.patch_count+' patches)</option>').join('');
@@ -148,13 +183,23 @@ export function createNativeInteractions(host){
  }
  function renderPlan(){
   if(!plan){$('[data-plan]').innerHTML='';return;}
+  const oldDetails=$('[data-case-details]'),detailsOpen=oldDetails?.open||false;
   const s=plan.state||{},cases=Object.values(s.cases||{}),summary=plan.preview?.summary||{},progress=s.analysis_progress||{};
-  const active=s.active_case?'<p>Current combination: '+esc(s.active_case.coalition_key)+' · native run '+esc(short(s.active_case.run_id))+' · '+esc(s.active_case.native_state||s.state)+'</p>':'';
+  const pool=Array.isArray(s.active_cases)?s.active_cases:(s.active_case?[s.active_case]:[]);
+  const active=pool.length?table(['Running combination','Native run','State','Model stage'],pool.map(item=>{const retained=s.cases?.[item.coalition_key];return [(retained?.action_ids||[]).map(id=>plan.actions?.find(action=>action.id===id)?.title||id).join(' + ')||(item.coalition_key==='baseline'?'Baseline':item.coalition_key),item.run_id,item.native_state||s.state,[item.model,item.phase].filter(Boolean).join(' / ')];})):'';
+  const execution=s.execution?'<p class="muted">'+esc(fmt(s.execution.workers))+' parallel native run'+(s.execution.workers===1?'':'s')+' · '+esc(fmt(s.execution.finished_runs||0))+' runs finished in this operation · '+esc(fmt(s.execution.skipped_complete_runs||0))+' completed runs reused.</p><p class="muted">Retained stage records: '+esc(fmt(s.execution.reused_stage_records||0))+' reused and '+esc(fmt(s.execution.native_stage_records||0))+' executed.</p>':'';
   const analysis=progress.total_rasters!=null?'<p>Common reporting area: '+esc(fmt(progress.completed_rasters||0))+' of '+esc(fmt(progress.total_rasters))+' native rasters processed.</p>':progress.completed_outcome_rows!=null?'<p>Annual export: '+esc(fmt(progress.completed_outcome_rows))+' reporting rows calculated.</p>':'';
+  const states=[...new Set(cases.map(x=>x.state||'planned'))].sort();
+  if(caseFilter&&!states.includes(caseFilter))caseFilter='';
+  const filtered=caseFilter?cases.filter(x=>(x.state||'planned')===caseFilter):cases;
+  const pages=Math.max(1,Math.ceil(filtered.length/200));casePage=Math.max(0,Math.min(casePage,pages-1));
+  const controls='<div class="toolbar"><label>Case state<select name="case_state"><option value="">All states</option>'+states.map(value=>'<option value="'+esc(value)+'"'+(value===caseFilter?' selected':'')+'>'+esc(value)+'</option>').join('')+'</select></label><button type="button" data-action="cases-previous">Previous cases</button><span>Page '+(casePage+1)+' of '+pages+' · '+filtered.length+' cases</span><button type="button" data-action="cases-next" data-last="'+(casePage>=pages-1?'true':'false')+'">More cases</button></div>';
   $('[data-plan]').innerHTML='<h3>'+esc(plan.title)+'</h3>'+table(['State','Phase','Completed cases','Required coalitions'],[[s.state||'planned',s.phase||'planned',s.completed_cases??cases.filter(x=>x.state==='complete').length,summary.coalition_count??plan.coalitions?.length]])+
-   active+analysis+(s.errors?.length?'<div class="notice">'+esc(JSON.stringify(s.errors))+'</div>':'')+
-   '<details><summary>Retained native case bindings ('+cases.length+')</summary>'+(s.case_status_snapshot_at?'<p class="muted">Case details saved '+esc(s.case_status_snapshot_at)+'. The completion count above follows the current operation.</p>':'')+table(['Coalition','Actions','Native run','State'],cases.map(x=>[x.key,(x.action_ids||[]).join(', '),x.run_id,x.state]))+'</details>';
+   execution+active+analysis+(s.errors?.length?'<div class="notice">'+esc(JSON.stringify(s.errors))+'</div>':'')+
+   '<details data-case-details'+(detailsOpen?' open':'')+'><summary>Retained native case bindings ('+cases.length+')</summary>'+(s.case_status_snapshot_at?'<p class="muted">Case details saved '+esc(s.case_status_snapshot_at)+'. The completion count above follows the current operation.</p>':'')+controls+table(['Coalition','Actions','Native run','State'],filtered.slice(casePage*200,(casePage+1)*200).map(x=>[x.key,(x.action_ids||[]).join(', '),x.run_id,x.state]))+'<p class="muted">Download plan includes every retained case binding.</p></details>';
   buttons();
+  $('[data-action=cases-previous]').disabled=busy||casePage===0;
+  $('[data-action=cases-next]').disabled=busy||casePage>=pages-1;
  }
  async function loadPlan(id,force=false){
   const e=epoch,n=++planRead,row=catalog?.plans?.find(p=>p.id===id),stamp=JSON.stringify([id,row?.state,row?.phase,row?.updated_at,row?.completed_cases,row?.result_id]);
@@ -231,10 +276,11 @@ export function createNativeInteractions(host){
     if(action==='down'&&index<actions.length-1)[actions[index+1],actions[index]]=[actions[index],actions[index+1]];
     actionRows();invalidate();return;
    }
+   if(action==='cases-previous'||action==='cases-next'){casePage+=action==='cases-previous'?-1:1;renderPlan();return;}
    if(action==='runs-previous'||action==='runs-next'){offset=action==='runs-previous'?Math.max(0,offset-100):catalog.next_offset;await loadCatalog();return;}
    if(action==='refresh'){planStamp='';await loadCatalog();return;}
    if(action==='save'){const value=selection();if(!preview||JSON.stringify(value)!==previewKey)throw Error('Preview the current action choices before saving.');await runAction('interaction.plan',{selection:value});return;}
-   if(action==='prepare'||action==='run'){await runAction('interaction.apply',{plan_id:plan.id,run_models:action==='run'});return;}
+   if(action==='prepare'||action==='run'){const workers=Number($('[name=workers]').value);if(!Number.isSafeInteger(workers)||workers<1)throw Error('Choose a positive whole number of parallel native runs.');await runAction('interaction.apply',{plan_id:plan.id,run_models:action==='run',workers});return;}
    if(action==='analyze'){await runAction('interaction.analyze',{plan_id:plan.id});return;}
    if(action==='download-plan'){download(JSON.stringify(plan,null,2)+'\n','combination-plan-'+short(plan.id)+'.json','application/json');return;}
    if(action.startsWith('report-')){
@@ -248,7 +294,7 @@ export function createNativeInteractions(host){
  async function mount(node){
   detach();root=node;key=workspace();const e=epoch;abort=new AbortController();root.innerHTML=template;
   let d={};try{const saved=JSON.parse(sessionStorage.getItem(draftKey())||'{}');if(saved&&typeof saved==='object'&&!Array.isArray(saved))d=saved;}catch{}
-  for(const name of ['title','baseline','estimator','permutations','seed','max_cases','zone_field','zone_layer','zone_where'])if(d[name]!==undefined)$('[name='+name+']').value=d[name];
+  for(const name of ['title','baseline','estimator','permutations','seed','max_cases','zone_field','zone_layer','zone_where','workers'])if(d[name]!==undefined)$('[name='+name+']').value=d[name];
   $('[name=pairwise]').checked=d.pairwise??true;actions=Array.isArray(d.actions)&&d.actions.length?d.actions:[{id:'action-1',title:'',scenario_id:'',patches:''}];
   if(d.plan_id){const o=root.ownerDocument.createElement('option');o.value=d.plan_id;o.textContent=short(d.plan_id);$('[name=plans]').append(o);$('[name=plans]').value=d.plan_id;}
   if(d.zone){const o=root.ownerDocument.createElement('option');o.value=d.zone;o.textContent=d.zone;$('[name=zone]').append(o);$('[name=zone]').value=d.zone;}
@@ -256,8 +302,10 @@ export function createNativeInteractions(host){
   root.addEventListener('click',event=>{if(event.target.closest('[data-action]')){event.preventDefault();event.stopPropagation();}clicked(event).catch(ex=>error(ex,e));},{signal:abort.signal});
   root.addEventListener('input',event=>{if(event.target.closest('[data-design]')){invalidate();selectionNote();}},{signal:abort.signal});
   root.addEventListener('change',event=>{
-   if(event.target.name==='plans'){plan=null;result=null;planStamp='';renderPlan();$('[data-result]').hidden=true;saveDraft();if(event.target.value)loadPlan(event.target.value,true).catch(ex=>error(ex,e));}
+   if(event.target.name==='plans'){casePage=0;caseFilter='';plan=null;result=null;planStamp='';renderPlan();$('[data-result]').hidden=true;saveDraft();if(event.target.value)loadPlan(event.target.value,true).catch(ex=>error(ex,e));}
    else if(['result_scope','result_metric'].includes(event.target.name))renderResult();
+   else if(event.target.name==='workers')saveDraft();
+   else if(event.target.name==='case_state'){casePage=0;caseFilter=event.target.value;renderPlan();}
    else if(event.target.closest('[data-design]')){actions=readRows();if(event.target.name==='scenario')actionRows();invalidate();selectionNote();}
   },{signal:abort.signal});
   $('[data-design]').addEventListener('submit',event=>{event.preventDefault();guarded(async()=>{
@@ -276,7 +324,7 @@ export function createNativeInteractions(host){
   const stamp=JSON.stringify([rows.map(t=>[t.id,t.state,t.updated_at,t.ended_at]),progress.map(p=>[p.id,p.state,p.phase,p.updated_at,p.completed_cases,p.result_id])]);
   if(stamp!==stateStamp){stateStamp=stamp;if(!busy)loadCatalog().catch(ex=>error(ex));}
  }
- function detach(){if(root)saveDraft();epoch++;abort?.abort();root=null;key=null;abort=null;busy=false;watch=null;watchRead=null;catalog=null;offset=0;plan=null;result=null;preview=null;previewKey=null;planStamp='';stateStamp='';catalogRead++;planRead++;resultRead++;previewRead++;}
+ function detach(){if(root)saveDraft();epoch++;abort?.abort();root=null;key=null;abort=null;busy=false;watch=null;watchRead=null;catalog=null;offset=0;casePage=0;caseFilter='';plan=null;result=null;preview=null;previewKey=null;planStamp='';stateStamp='';catalogRead++;planRead++;resultRead++;previewRead++;}
  async function openDesign(value){
   if(root&&key!==workspace())detach();
   if(!root){pending={workspace:workspace(),selection:JSON.parse(JSON.stringify(value))};await host.navigate?.('native-interactions');return;}

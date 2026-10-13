@@ -468,3 +468,39 @@ calculation. The utility source selection itself computes no pollutant load.
 
 See the [complete original two-utility source study](../source/utility-source-context/20261013/README.md)
 for the independently traversed source records and runnable Node source join.
+
+
+## Original utility observations in the saved report
+
+When the complete utility_observed_context.sources.json edition is installed,
+each original utility card also displays the original E. coli records, stations,
+sample dates and Information Only count. The same Save and export action binds
+the source edition to the utility profile and exact selected HUC12 membership.
+
+The saved brief includes station/year coverage, original microbial detection
+states, station geography and the separately located regional nutrient/flow
+context. Its complete source HTML and flat station/year/method CSV expose numeric
+summaries beside original censored counts and explicit comment-filter alternatives.
+Regional Eighteenmile stations retain their own source geometry and gauge relation.
+They appear as regional context alongside the utility-specific microbial cohort.
+
+All original input tables and metadata are copied into the existing saved export
+under observed-sources. The ordinary file transport verifies these members, and
+the offline brief links to them by relative path. The observed source binding
+participates in the export identity; older saved selections retain their original
+files and can still reopen.
+
+The native receiver source_tools/receive_utility_source_context.py performs the
+same optional original-source binding and export. Keep the application checkout
+fixed during that run and return its actual receiving.json from the existing
+receiving operation.
+
+The reusable source compiler is source_tools/build_utility_observed_context.mjs.
+Its complete method/source guide is source/utility-observed-context/20261013/README.md.
+
+A single `utility-watershed-packet.zip` download carries the verified saved file
+inventory at its original relative paths, including the brief, selected data,
+original profile and observation sources. Extract the ZIP and open
+`watershed-selection-brief.html`; its local source links resolve within the packet.
+The archive includes `packet.json` with each carried file identity. The native
+utility receiver writes the same complete packet for each utility selection.

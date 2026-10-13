@@ -197,13 +197,23 @@ export function createInvestigationClient(options) {
   refreshes.set(w,operation);return operation;
  }
  async function accept(task,c,p,hydrate=true){
-  if(task.workspace!==c.workspace || task.action!==p.body.action || task.operation_id!==p.body.operation_id ||
+  // Original Operator.submit may return an identical active task already admitted
+  // under another operation ID. Retain that exact admission, then poll only it.
+  const expectedOperation=p.acceptedOperationId||p.body.operation_id;
+  const joinedActive=!p.taskId&&!p.acceptedOperationId&&task.operation_id!==p.body.operation_id&&
+   ['queued','running'].includes(task.state);
+  if(task.workspace!==c.workspace || task.action!==p.body.action ||
+      typeof task.operation_id!=='string'||!task.operation_id||
+      (!joinedActive&&task.operation_id!==expectedOperation) ||
+      (p.taskId&&p.taskId!==task.id) ||
       stable(task.payload)!==stable(p.body.payload) || !originalId(task.id))
    throw Error('The returned operation does not match this original workspace request.');
+  p.acceptedOperationId=task.operation_id;p.joinedExistingTask=p.joinedExistingTask||joinedActive;
   c.lastTask=task;p.taskId=task.id;p.taskState=task.state;p.error=null;
   if(task.state==='complete'){
    const r=task.result||{};c.lastResult=clone(r);c.pending=null;
-   if(r.session_id && (['intelligence.session.create','intelligence.diagnostic.open'].includes(p.body.action)||!c.sessionId||c.sessionId===r.session_id)){
+   if(r.session_id && ((['intelligence.session.create','intelligence.diagnostic.open'].includes(p.body.action) &&
+       (p.selectedSessionId===undefined||c.sessionId===p.selectedSessionId))||!c.sessionId||c.sessionId===r.session_id)){
     if(c.sessionId!==r.session_id){c.sessionId=r.session_id;c.session=null;c.evidence=null;c.exported=null;c.collection=null;c.collectionId=null;++c.sessionRead;++c.collectionRead;}
    }
    if(r.collection_id && c.sessionId===r.session_id)c.collectionId=r.collection_id;
@@ -237,7 +247,7 @@ export function createInvestigationClient(options) {
   if(!Object.hasOwn(actionNames,action))throw Error('Choose a registered investigation operation.');
   const w=getWorkspace(),c=context(w);
   if(c.pending)throw Error('Reopen or finish the existing investigation operation first.');
-  const p={body:{workspace:w,action,payload:clone(payload),operation_id:makeId()},taskId:null,taskState:null,error:null};
+  const p={body:{workspace:w,action,payload:clone(payload),operation_id:makeId()},selectedSessionId:c.sessionId,taskId:null,taskState:null,error:null};
   c.pending=p;changed(c);return send(c,p);
  }
  async function retry(){
@@ -474,12 +484,14 @@ export function attachInvestigations(host) {
  async function designNativeProgramme(){
   const owner=workspaceId(host.getState()),sid=client.requireSession(),state=client.snapshot();
   if(!state.catalog?.native_experiments)throw Error('The original native programme designer is unavailable in this workspace.');
-  if(typeof host.openExtension!=='function')throw Error('Install the maintained extension host for the original programme designer.');
+  const openProgramme=typeof host.openNativeProgramme==='function'?host.openNativeProgramme:
+   typeof host.openExtension==='function'?options=>host.openExtension('experiments','openForInvestigation',options):null;
+  if(!openProgramme)throw Error('Install the maintained original programme designer.');
   const prior=state.experimentSubmission;
   if(prior&&!['complete','failed','interrupted','canceled','cancelled'].includes(prior.taskState))
    throw Error('The retained programme task is still active. Open its original task before starting another from this panel.');
   remember();
-  await host.openExtension('experiments','openForInvestigation',{workspace_key:owner,onSubmitted:async task=>{
+  await openProgramme({workspace_key:owner,onSubmitted:async task=>{
    const generation=epoch;
    const current=()=>epoch===generation&&workspaceId(host.getState())===owner&&client.snapshot().sessionId===sid;
    await client.trackExperimentSubmission(task,sid,owner);
@@ -519,7 +531,7 @@ export function attachInvestigations(host) {
    const links=p._native_tasks||[];
    for(const task of links){const group=el('div',null,'intelligence-inline');
     group.append(el('span',(task.action||'Original task')+' · '+task.state),button('Inspect retained task',()=>client.nativeTask(task.id)));
-    if(!task._intelligence_origin)group.append(button('Open live operator task',()=>host.showTask(task.id)));
+    if(task.open_task===true || (task.open_task===undefined&&!task._intelligence_origin))group.append(button('Open live operator task',()=>host.showTask(task.id)));
     if(task.experiment_id)group.append(button('Open saved programme',()=>client.experiment(task.experiment_id)));
     if(task.run_id)group.append(button('Open native outputs',()=>host.openItem('runs',task.run_id)));article.append(group);}
    if(p.status==='ready')article.append(button('Execute original action',()=>client.queue('intelligence.execute',{plan_id:p.id})));
@@ -637,6 +649,7 @@ export function attachInvestigations(host) {
   return link;
  }
  function renderSourceChoices(state){
+  const owner=workspace,generation=epoch;
   const term=(nodes.sourceFilter.value||'').toLowerCase(),chosen=new Set((state.sourceSelection||[]).map(stable));
   const sources=state.sourceCatalog?.sources||[],known=new Set(sources.map(row=>stable(row.ref)));
   clear(nodes.sourceChoices);
@@ -646,14 +659,14 @@ export function attachInvestigations(host) {
    shown++;
    const label=el('label',null,'intelligence-source-choice'),input=el('input'),body=el('span');
    input.type='checkbox';input.value=json(source.ref);input.checked=chosen.has(stable(source.ref));
-   input.addEventListener('change',()=>{const focus=doc.activeElement===input;client.selectSources([source.ref],input.checked);if(focus)[...nodes.sourceChoices.querySelectorAll('input')].find(node=>node.value===input.value)?.focus({preventScroll:true});});
+   input.addEventListener('change',()=>{if(!root||workspace!==owner||epoch!==generation)return;const focus=doc.activeElement===input;client.selectSources([source.ref],input.checked);if(focus)[...nodes.sourceChoices.querySelectorAll('input')].find(node=>node.value===input.value)?.focus({preventScroll:true});});
    body.append(el('strong',source.label),el('small',[source.ref.kind==='artifact'?'Native output':'Original data',source.units==null?'Units not declared':String(source.units),source.bytes==null?null:displayNumber(source.bytes)+' bytes'].filter(Boolean).join(' · ')));
    label.append(input,body);nodes.sourceChoices.append(label);
   }
   for(const ref of state.sourceSelection||[]){
    if(known.has(stable(ref)))continue;
    const label=el('label',null,'intelligence-source-choice'),input=el('input');input.type='checkbox';input.checked=true;
-   input.addEventListener('change',()=>client.selectSources([ref],false));
+   input.addEventListener('change',()=>{if(root&&workspace===owner&&epoch===generation)client.selectSources([ref],false);});
    label.append(input,el('span','Selected file is no longer registered: '+ref.id+(ref.member?' / '+ref.member:'')));
    nodes.sourceChoices.append(label);
   }
@@ -687,6 +700,7 @@ export function attachInvestigations(host) {
   if(!p){if(state.lastTask)nodes.pending.append(button('Open last original operation',()=>host.showTask(state.lastTask.id)));return;}
   nodes.pending.append(el('strong',actionNames[p.body.action]||p.body.action),el('p',p.taskState||'Sending original request'),
    el('p',p.body.operation_id,'intelligence-id'));
+  if(p.joinedExistingTask)nodes.pending.append(el('p','Joined original task operation: '+p.acceptedOperationId,'intelligence-id'));
   if(p.error)nodes.pending.append(el('p',p.error,'intelligence-error'));
   if(p.taskId)nodes.pending.append(button('Open original operation',()=>host.showTask(p.taskId)),button('Refresh retained status',()=>client.poll()));
   else nodes.pending.append(button('Retry this original request',()=>client.retry()));

@@ -13,11 +13,13 @@ from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifi
                      now, read_json, relative_file)
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
 from .portable_acquisitions import capture_lock_paths, verify_acquisitions
+from .portable_implementation import locked_implementation, verify_implementation
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
     "observed_hydrology_context.report.json",
     "observed_hydrology_context.sources.json",
+    "calibration_station_geography.sources.json",
     "eighteenmile_scientific_figures.sources.json",
     "eighteenmile_routine_nutrient_flow.sources.json",
     "README.md",
@@ -518,6 +520,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
     try:
         with contextlib.ExitStack() as stack:
             stack.enter_context(held(root / ".workspace.lock", blocking=False))
+            stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))
             for path in sorted((root / "experiments").glob("*/.experiment.lock")):
                 stack.enter_context(held(path, blocking=False))
             for path in sorted((root / "runs").glob("*/.run.lock")):
@@ -530,6 +533,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
             # operation directory before inventory, in the donor helper's order.
             for path in capture_lock_paths(root):
                 stack.enter_context(held(path, blocking=False))
+            stack.enter_context(locked_implementation(root))
             if not include_deliveries:
                 staging = stack.enter_context(tempfile.TemporaryDirectory(
                     prefix=".archive-review-deliveries-", dir=destination.parent))
@@ -586,12 +590,14 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                     raise ValueError("Application changed while its archive was captured")
                 source_acquisitions = verify_acquisitions(
                     root, records, source_ids={row["id"] for row in workspace._list("sources")})
+                implementation = verify_implementation(root, records)
                 manifest = {"schema": FORMAT, "project": workspace.project, "created_at": now(),
                             "selection": selection, "members": records,
                             "database_snapshots": databases,
                             "receiving": "python application/model/cli.py restore ARCHIVE NEW_DIRECTORY",
                             "source_views": "Recreated from the original content-addressed objects on demand",
-                            "source_acquisitions": source_acquisitions}
+                            "source_acquisitions": source_acquisitions,
+                            "implementation": implementation}
                 if delivery:
                     expected_application = (delivery.get("record", {}).get("selection") or {}).get(
                         "application_sha256")
@@ -614,7 +620,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                       "path": str(destination), "bytes": archive_bytes,
                       "sha256": archive_sha256, "members": len(records),
                       "selection": selection, "database_snapshots": databases,
-                      "source_acquisitions": source_acquisitions}
+                      "source_acquisitions": source_acquisitions,
+                      "implementation": implementation}
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
@@ -858,6 +865,10 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         retained_acquisitions = manifest.get("source_acquisitions")
         if retained_acquisitions is not None and retained_acquisitions != source_acquisitions:
             raise ValueError("Receiving changed the original source acquisition lineage")
+        implementation = verify_implementation(restored.root, verified_members)
+        retained_implementation = manifest.get("implementation")
+        if retained_implementation is not None and retained_implementation != implementation:
+            raise ValueError("Receiving changed the original implementation plans or reports")
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
         archive_sha256 = _archive_digest(archive_source, before)
@@ -873,6 +884,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                   "selection": manifest["selection"], "identity": "MATCH",
                   "database_snapshots": manifest.get("database_snapshots", {}),
                   "source_acquisitions": source_acquisitions,
+                  "implementation": implementation,
                   **received_delivery(manifest, destination, record=received_record)}
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():

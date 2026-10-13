@@ -1,6 +1,15 @@
 # Monitoring design and field operations in the current application
 
-Operation ECO13-MONITORING-DD6B-20261013. This complete source composition adopts ASTRA-MONITOR12 Monitoring 1.2.0 and joins it to the maintained original Upper Savannah application as edition 1.2.1.
+Operation ECO13-MONITORING-DD6B-20261013. This complete source composition adopts ASTRA-MONITOR12 Monitoring 1.2.0 and joins it to the maintained original Upper Savannah application as edition 1.2.1. The maintained receiving-water planning integration is edition 1.3.0; the original implementation and this earlier composition remain retained.
+
+## Continue directly from a saved water study
+
+A saved receiving-water plan or completed priority-raster analysis now creates a
+retained planning source and opens its native Monitoring network. The full
+original HUC graph remains intact; context-only catchments have zero weight and
+visible, editable candidate exclusions. Actual costs, calendar, stations and
+campaign events remain the original Monitoring workflow. See the
+[complete installation, methods and receiving guide](../../operator/RECEIVING_WATER_MONITORING.md).
 
 ## Open the scientific workflow
 

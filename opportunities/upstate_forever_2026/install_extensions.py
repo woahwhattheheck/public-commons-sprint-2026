@@ -71,6 +71,69 @@ def method(source, owner, name, transform):
     return "".join(lines[:node.lineno - 1]) + updated + "".join(lines[node.end_lineno:])
 
 
+def registry_initialization(source, registration):
+    """Retain one original registry and its complete current route set."""
+    parsed = ast.parse(source)
+    owners = [node for node in parsed.body
+              if isinstance(node, ast.ClassDef) and node.name == "Operator"]
+    initializers = [node for owner in owners for node in owner.body
+                    if isinstance(node, ast.FunctionDef) and node.name == "__init__"]
+    if len(owners) != 1 or len(initializers) != 1:
+        raise ValueError("Preserve the original Operator.__init__ registry owner")
+    assignments = [
+        node for node in ast.walk(initializers[0])
+        if isinstance(node, ast.Assign) and any(
+            isinstance(target, ast.Attribute) and target.attr == "extensions"
+            and isinstance(target.value, ast.Name) and target.value.id == "self"
+            for target in node.targets)
+    ]
+    if not assignments:
+        return add(source, '        for path in (self.root / "tasks").glob("*.json"):\n',
+                   registration, "installed extension initialization", before=True)
+    if len(assignments) != 1:
+        raise ValueError("Preserve one current extension registry initialization")
+    node = assignments[0]
+    loaded = node.value
+    factory = (loaded.func.value
+               if isinstance(loaded, ast.Call)
+               and isinstance(loaded.func, ast.Attribute)
+               and loaded.func.attr == "load" else None)
+    if (not isinstance(factory, ast.Call) or not isinstance(factory.func, ast.Name)
+            or factory.func.id != "ExtensionRegistry" or loaded.args or loaded.keywords):
+        raise ValueError("Compose the maintained ExtensionRegistry(...).load() initialization")
+    keywords = {item.arg: item for item in factory.keywords}
+    if None in keywords or len(keywords) != len(factory.keywords):
+        raise ValueError("Preserve explicit original extension registry arguments")
+    for name, original in (("builtin_actions", "ACTIONS"), ("builtin_kinds", "KINDS")):
+        value = keywords.get(name)
+        if value is None or not isinstance(value.value, ast.Name) or value.value.id != original:
+            raise ValueError("Preserve the original registry " + name)
+    if "builtin_routes" not in keywords:
+        raise ValueError("Preserve the explicit original builtin route inventory")
+    routes = ast.literal_eval(keywords["builtin_routes"].value)
+    if (not isinstance(routes, (list, tuple)) or any(
+            not isinstance(row, (list, tuple)) or len(row) != 2
+            or not all(isinstance(value, str) for value in row) for row in routes)):
+        raise ValueError("Preserve the original builtin method/path pairs")
+    missing = [row for row in BASE_ROUTES if row not in [tuple(value) for value in routes]]
+    changed = False
+    if missing:
+        keywords["builtin_routes"].value = ast.parse(repr(tuple(tuple(row) for row in routes) + tuple(missing)),
+                                                    mode="eval").body
+        changed = True
+    if "source_roots" not in keywords:
+        factory.keywords.append(ast.keyword(arg="source_roots", value=ast.Name(id="source_roots", ctx=ast.Load())))
+        changed = True
+    elif (not isinstance(keywords["source_roots"].value, ast.Name)
+          or keywords["source_roots"].value.id != "source_roots"):
+        raise ValueError("Preserve current registered source-root forwarding")
+    if not changed:
+        return source
+    lines = source.splitlines(keepends=True)
+    lines[node.lineno - 1:node.end_lineno] = [" " * node.col_offset + ast.unparse(node) + "\n"]
+    return "".join(lines)
+
+
 def patch_server(source):
     source = add(source, "from model.spatial_exports import SpatialExports\n",
                  "from extension_registry import ExtensionRegistry\n", "extension import")
@@ -95,8 +158,7 @@ def patch_server(source):
         "            builtin_routes=" + repr(BASE_ROUTES) + ",\n"
         "            source_roots=source_roots).load()\n"
     )
-    source = add(source, '        for path in (self.root / "tasks").glob("*.json"):\n',
-                 registration, "installed extension initialization", before=True)
+    source = registry_initialization(source, registration)
     source = method(source, "Operator", "submit", lambda section: replace(
         section, "if action not in ACTIONS or not isinstance(payload, dict):",
         "if (action not in ACTIONS and not self.extensions.handles_action(action)) or not isinstance(payload, dict):",
@@ -114,7 +176,7 @@ def patch_server(source):
         "retained extension items", before=True))
 
     def task_view(section):
-        if "return self.extensions.decorate_task(" in section:
+        if "self.extensions.decorate_task(" in section:
             return section
         lines = section.splitlines(keepends=True)
         positions = [index for index, line in enumerate(lines) if line.startswith("        return ")]
@@ -207,6 +269,17 @@ def patch_view_lifecycle(source):
         source = source.replace(join, "", 1)
     if "if(extensions.render(view,$('#content'),state))" in source:
         raise ValueError("Compose the current authored extension view dispatch")
+    # Current registered desks own a complete branch with additional native
+    # controller cleanup. Preserve that branch rather than preceding it with
+    # the earlier dispatch and a different cleanup set.
+    native_dispatch = re.findall(
+        r"(?ms)^  if\(extensions\.hasView\(view\)\)\{\n.*?"
+        r"^    extensions\.render\(view,\$\('#content'\),state\);return;\n  \}",
+        source)
+    if native_dispatch:
+        if len(native_dispatch) != 1:
+            raise ValueError("Preserve one complete registered desk dispatch")
+        return source
     # Include the line boundary: Conservation has its own four-space loop.
     navigation = (
         "\n  for(const node of $$('[data-view]'))"

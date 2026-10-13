@@ -82,3 +82,13 @@ The C1 visible questionnaire contains 343 formula occurrences and reaches three 
 Structural groups are candidates for migration mapping. They do not establish that distinct questions have equivalent business meaning. Static reachability also does not establish that an inherited branch executes for every answer, or that a hidden sheet can be removed. The output preserves those distinctions so the application can join the original calculation, revision and reporting implementation.
 
 The programme projects references and stored source values. Calculation of a respondent's answers stays with the selected application's workbook engine.
+
+## Use the completed original projection
+
+The complete revision 2 output is available as [ATSSC_Original_Formula_Groups_and_Dependencies.zip](https://chatgpt.com/api/library/files/libfile_24e125f7933481919868085ff377214b/download), the retained 2,350,227-byte version 1 artifact. `DERIVED_ASSETS.json` records its exact saved identity and the complete member-manifest identities. Its 39 members include all five families' full formula records, structural groups, source issues, reference tokens, dependency edges, worksheet dependencies and original questionnaire text. C1 also includes the complete prompt and representative-rule boundary. The exact original classifier and source manifest travel with the output.
+
+The adjacent `ATSSC_Formula_Dependency_Inventory.json` and `ATSSC_Formula_Source_Manifest.json` preserve all member byte lengths and SHA-256 values. The completed native projection used openpyxl 3.1.5, retained all 7,661 formulas, expanded all 1,345 shared followers, and produced 2,269 direct dependency edges and 11,050 reference-token rows. Their source keys are the original workbook SHA, worksheet and exact cell.
+
+Use `formula_records.json` for effective shared expressions and retained cached values; `structural_groups.json` for complete group membership; `formula_references.csv` for each original reference token and its classification; and `formula_dependency_edges.csv` for joins between original formula cells. Keep source issues with their affected cells when applying the selected calculation engine. The full C1 boundary provides the seven requested cached prompts, representative production and allocation rules, and the activity-only public-summary expressions.
+
+The corrected projection classifies worksheet-qualified broken references as original reference errors. C1 has no visible-formula dependency on its inherited broken-reference branch. The original Producer family has two visible formula cells with original reference-error dependencies; their exact cell keys and expressions remain in that family's output for its migration disposition.

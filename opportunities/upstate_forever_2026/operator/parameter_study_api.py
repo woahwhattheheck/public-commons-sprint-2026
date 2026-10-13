@@ -93,5 +93,7 @@ class ParameterStudyAPI:
             "limit": limit,
             "comparison_basis": result["comparison_basis"],
             "range_basis": result["range_basis"],
+            "aggregation": {name: value for name, value in result.get("aggregation", {}).items()
+                            if name != "pairs"},
             "artifact_sha256": artifact["sha256"],
         }

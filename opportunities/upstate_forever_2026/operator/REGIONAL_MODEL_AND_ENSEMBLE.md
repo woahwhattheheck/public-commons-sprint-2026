@@ -697,3 +697,85 @@ eight-file component:
 Restart the operator to register its descriptor. The complete installation, exact source
 selection schema, commands and interpretation are in
 [operator/GAUGE_SUPPORT.md](GAUGE_SUPPORT.md).
+
+## 16. Exact daily-flow support for the original annual-reference dates
+
+The maintained hydrology source now accepts the original annual-reference
+binding directly. It intersects each record's exclusive-end period with the
+captured daily-flow dates and retains the original declared flow gauge and
+time-series identity. The complete source family includes the original daily
+records, original gauge/catchment responses, unchanged source-author calendar
+summaries, full reference-period results and a native source manifest.
+
+Save the original annual-reference catalog and choose the existing import:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" annual-references \\
+  > "$UPSTATE_OPERATION/annual-references.json"
+
+node source/hydrology-huc05-07-20261013/rebuild_reference_support.mjs \\
+  --source-root source/hydrology-huc05-07-20261013 \\
+  --binding "$UPSTATE_OPERATION/annual-references.json" \\
+  --import-id "$UPSTATE_ANNUAL_IMPORT_ID" \\
+  --output "$UPSTATE_OPERATION/annual-reference-flow-support"
+
+"$UPSTATE_PYTHON" -B -m model.cli --workspace "$UPSTATE_WORKSPACE" \\
+  source-import "$UPSTATE_OPERATION/annual-reference-flow-support/reference-support.sources.json"
+```
+
+The record table distinguishes the full requested period, captured overlap,
+outside-source days, absent dates and original nonnumeric observations. Approved,
+estimated, provisional and revised flags remain independent. The covered-days
+volume integrates only original numeric daily means; complete-period volume is
+available when the entire requested period has numeric coverage. Each retained
+row preserves its source reference even when its declared gauge is outside this
+captured edition.
+
+The command verifies all retained members and reproduces the six existing
+calendar outputs against their original hashes before writing the selected
+period support. An identical output directory can be reused. Choose a distinct
+output directory for another reference binding or source edition. The full
+replay, interpretation, import and API guide is
+[source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md](../source/hydrology-huc05-07-20261013/FLOW_REFERENCE_SUPPORT.md).
+
+## 17. Prepare and evaluate flow context in the annual-reference workflow
+
+In the existing Scenario sensitivity evaluation form, select the imported
+annual-reference edition, then choose **Original daily-flow context**. Use
+**Prepare original flow context** to queue the source replay and inspect its
+retained JSON, CSV and printable report. Reopen the evaluation form to select
+that source, or choose **Prepare original support and evaluate** to prepare
+and evaluate within the same saved task.
+
+The completed result displays the exact original observation and flow stations,
+record periods, numeric/requested days, outside-source days, source qualifiers
+and covered-days volume beside its calibration. Downloads include the complete
+original support, date availability and original reference binding. The saved
+scientific handoff retains the support source and the subset of admitted records
+selected by the actual positive-weight objectives.
+
+The same source preparation and evaluation are available through the CLI:
+
+```sh
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" flow-support \\
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID"
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" flow-support-sources
+
+"$UPSTATE_PYTHON" -B -m model.ensemble_consumers_cli \\
+  --workspace "$UPSTATE_WORKSPACE" calibration \\
+  --ensemble-id "$UPSTATE_ENSEMBLE_ID" \\
+  --annual-import-id "$UPSTATE_ANNUAL_IMPORT_ID" \\
+  --prepare-flow-support
+```
+
+The receiving runtime supplies Node.js for the original producer. Preparation
+retains its command, stdout/stderr and resumable state in the same Workspace.
+Original import, observation, preparation, record, station, constituent, method
+and period identities must match when the support is linked. Existing
+`--prepare-only`, `--standard-errors` and `calibration-resume` continue to use
+the saved handoff. The complete Workspace backup carries the source collections,
+flow operation, readable report and calibration result into independent receiving.
