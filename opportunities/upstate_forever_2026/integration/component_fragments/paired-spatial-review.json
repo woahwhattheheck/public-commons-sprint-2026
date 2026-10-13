@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "paired-spatial-review",
+  "components": {
+    "paired-spatial-review": {
+      "title": "Offline original-cell review and editable GIS handoff from completed paired results",
+      "paths": [
+        "source_tools/paired_spatial_review.py",
+        "source_tools/paired_spatial_review.html",
+        "source_tools/install_paired_spatial_review.py",
+        "docs/PAIRED_SPATIAL_REVIEW.md"
+      ],
+      "requires": ["paired-ensemble"]
+    }
+  },
+  "required_components": ["paired-spatial-review"]
+}
