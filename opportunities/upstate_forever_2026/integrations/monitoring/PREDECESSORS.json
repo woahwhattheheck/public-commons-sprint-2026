@@ -503,5 +503,12 @@
     "src/opportunities/upstate_forever_2026/integration/monitoring_observed_sources.json": "03e80cfd1ccd9e8d22d96b447776e5a8782ba1be8dbdcf24ca79ee62c9105296",
     "src/opportunities/upstate_forever_2026/integration/monitoring_study_transfer_sources.json": "022bd02d6d69963386ea549919cb661a0f39a5d437d235ab1b49da977e990e6f",
     "src/opportunities/upstate_forever_2026/operator/web/monitoring.mjs": "fc32b32ac15149e72e564a110f1e04fb8a1fa4c1241662171df69701111479cc"
+  },
+  "maintained-before-stale-field-error-b142073240a3b40211034beb7bb265baace2a705": {
+    "src/opportunities/upstate_forever_2026/model/monitoring_field_selection.py": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/source_adoption.json": "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75",
+    "src/opportunities/upstate_forever_2026/integration/monitoring_observed_sources.json": "52f038d5dad4ddd5bdf05b0d4f71bcc07f3b1fc77af3f4b93c4bd8a6033dcc7e",
+    "src/opportunities/upstate_forever_2026/integration/monitoring_study_transfer_sources.json": "cb1bf76f2bce93d89d15aac19ffb2934b89b89b7fa85847e5654e2ac3024a503",
+    "src/opportunities/upstate_forever_2026/integrations/monitoring/PREDECESSORS.json": "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a"
   }
 }

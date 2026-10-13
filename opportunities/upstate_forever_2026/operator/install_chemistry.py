@@ -289,6 +289,17 @@ FIELD_RECEIVING_PREVIOUS_SHA256 = {
     "integration/reach_chemistry/COMPOUND_SOURCE.json": "5ded95c23ac431860ef2ae72d70bbe03f6f8e270362893e5cb5ce01c87070094"
 }
 
+FIELD_RACE_PREVIOUS_SHA256 = {
+    "model/monitoring_field_selection.py": "c742bb256126646e17084cf5f22010dbd2f135f4a68b610759b145a561076dbf",
+    "source/monitoring-field-study/source/field_planning.html": "b46469fab2c9c9c0e4a87ecec3613b6c26ef05a43413304df23ce30b4150300e",
+    "integrations/monitoring/source_adoption.json": "a4d141bbc82a5bec3673008537b625606309c1921e2469c645429e70745bfe75",
+    "integration/monitoring_observed_sources.json": "52f038d5dad4ddd5bdf05b0d4f71bcc07f3b1fc77af3f4b93c4bd8a6033dcc7e",
+    "integration/monitoring_study_transfer_sources.json": "cb1bf76f2bce93d89d15aac19ffb2934b89b89b7fa85847e5654e2ac3024a503",
+    "integrations/monitoring/PREDECESSORS.json": "ded24a713479587dea83a23ee954228dc66cbcd44b8650341e2d1e9bea3ba40a",
+    "operator/install_chemistry.py": "0f2749231643587880f074bbac7d04c5a6d08cf9f7bb8c3357220dc4ff83a99a",
+    "integration/reach_chemistry/COMPOUND_SOURCE.json": "ddaa2b118825fdc4c8ea26f568bbd721a2704542cf75f96b5fd06de1ec7bc5bf"
+}
+
 BANK_SCHEMA = "commons.source-bank/v1"
 BANK_LIMIT = 16 * 1024 * 1024
 
@@ -427,7 +438,7 @@ def install(application, source_root=None, dry_run=False, *, source_bank=None):
                      BANK_INTERVAL_PREVIOUS_SHA256.get(name), REPORT_SELECTION_PREVIOUS_SHA256.get(name),
                      STUDY_EDITION_PREVIOUS_SHA256.get(name), LIFETIME_PREVIOUS_SHA256.get(name),
                      RIVER_STUDY_PREVIOUS_SHA256.get(name), RIVER_ORIGINAL_STUDY_SHA256.get(name),
-                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name)}):
+                     FIELD_STUDY_PREVIOUS_SHA256.get(name), FIELD_SELECTION_PREVIOUS_SHA256.get(name), FIELD_CUSTODY_PREVIOUS_SHA256.get(name), FIELD_RECEIVING_PREVIOUS_SHA256.get(name), FIELD_RACE_PREVIOUS_SHA256.get(name)}):
                 if name in FIELD_DERIVED_FILES:
                     derived_rechecks.append(name)
                 else:
