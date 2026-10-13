@@ -4,7 +4,7 @@ The original Upper Savannah explorer can now carry a reviewed utility or watersh
 
 ## Use the original explorer
 
-Open the utility source study at https://chatgpt.com/space/page_e620a8f6b9b48191a6be00b524713167 or the identical application file `source/utility-source-context/20261013/source-explorer.html`.
+In the native **Regional watersheds** desk, choose **Open the original utility source explorer**. The same utility study is available at https://chatgpt.com/space/page_e620a8f6b9b48191a6be00b524713167 or the identical application file `source/utility-source-context/20261013/source-explorer.html`.
 
 Choose ARJWS or PRWD. The original source inventory retains 303 USGS records, the 217-unit model domain, ARJWS's four contributing HUC12s and PRWD's 32. The existing phone layout keeps the complete selected utility name visible.
 

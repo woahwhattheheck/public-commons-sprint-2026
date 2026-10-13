@@ -261,6 +261,16 @@ class WatershedContextActions:
                 bodies[source_hash] = body
         return profiles, bodies
 
+    def _source_explorer(self, workspace):
+        """Open the installed original-data explorer through the normal file ticket."""
+        application = Path(__file__).resolve().parents[1]
+        path = application / "source/utility-source-context/20261013/source-explorer.html"
+        if not path.is_file():
+            return None
+        return self.operator._ticket(
+            workspace, path, describe_file(application, path),
+            "Original utility source explorer and native report review")
+
     def read(self, workspace, operation, value=None):
         value = value or {}
         ws = self.operator.ws(workspace)
@@ -272,6 +282,7 @@ class WatershedContextActions:
                 "sources": self._sources(ws),
                 "networks": self._network_sources(ws),
                 "utility_monitoring": utility_monitoring.catalog(ws),
+                "source_explorer": self._source_explorer(workspace),
             }
         if operation == "monitoring":
             key = identifier(value.get("monitoring_id") or value.get("id"))
