@@ -310,6 +310,8 @@ def _retained_complete(workspace, record, plan, directory, previous, raster_prod
         if ([item["scenario_id"] for item in products] != plan["alternative_scenario_ids"]
                 or any(item["state"] != "complete" for item in products)):
             raise ValueError("The completed parameter result omits requested paired products")
+    for product in operation.get("raster_products", []):
+        verify_file(workspace.root, product["archive"])
     report = operation.get("report", {})
     if report.get("state") != "complete":
         raise ValueError("The completed parameter result has no completed original report")
