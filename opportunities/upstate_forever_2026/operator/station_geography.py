@@ -3,7 +3,8 @@ from pathlib import Path
 from model import station_geography as geography
 from model.common import identifier, read_json, relative_file, verify_file
 
-ACTIONS = frozenset(("station.geography.build", "station.geography.receive"))
+ACTIONS = frozenset(("station.geography.build", "station.geography.receive",
+                     "station.geography.utility-microbial"))
 
 class StationGeography:
     def __init__(self, operator, fault):
@@ -48,11 +49,22 @@ class StationGeography:
                     result[field] = read_json(verify_file(ws.root, selected[0]))
         return result
 
+    def _microbial_catalog(self, ws):
+        from model import utility_microbial_study as microbial
+        installed = microbial.SOURCE_DIRECTORY / "source-manifest.json"
+        retained = any(row.get("original_manifest", {}).get("sha256") == microbial.MANIFEST_SHA256
+                       for row in ws._list("sources"))
+        return {"id": "utility-microbial", "title": microbial.TITLE,
+                "available": installed.is_file() or retained,
+                "installed": installed.is_file(), "retained": retained,
+                "source_counts": microbial.EXPECTED_COUNTS}
+
     def read(self, workspace_key, operation, payload=None):
         payload = payload or {}
         ws = self.operator.ws(workspace_key)
         if operation == "catalog":
-            return {"workspace_key": workspace_key, **geography.catalog(ws)}
+            return {"workspace_key": workspace_key, **geography.catalog(ws),
+                    "utility_microbial": self._microbial_catalog(ws)}
         if operation == "edition":
             return self._edition(workspace_key, payload.get("id") or payload.get("edition_id"))
         if operation == "verify":
@@ -69,6 +81,19 @@ class StationGeography:
         if task["action"] == "station.geography.receive":
             upload = self.operator.upload(identifier(payload.get("upload_id")))
             result = geography.receive(ws, upload["path"], max_extracted_bytes=self.operator.extraction_limit)
+        elif task["action"] == "station.geography.utility-microbial":
+            from model import utility_microbial_study as microbial
+            mode = payload.get("domain_mode", "required")
+            if mode not in ("required", "auto", "none"):
+                self._fail("STATION_DOMAIN", "Choose the original domain or station points.")
+            installed = microbial.SOURCE_DIRECTORY / "source-manifest.json"
+            received = microbial.build(ws, manifest=installed if installed.is_file() else None,
+                                       domain_mode=mode)
+            return {"id": received["station_geography_id"], "title": received["title"],
+                    "build_id": received["station_geography_build_id"],
+                    "summary": received["summary"], "selection": received["selection"],
+                    "utility_microbial": {key: received[key] for key in (
+                        "id", "source_collection_id", "source_counts", "domain", "receiving_file")}}
         else:
             selection = payload.get("selection", payload)
             if not isinstance(selection, dict):
@@ -84,6 +109,13 @@ class StationGeography:
             return task
         edition = self._edition(task["workspace"], edition_id, complete=False)
         task.setdefault("_downloads", []).extend(edition["_downloads"])
+        microbial = (task.get("result") or {}).get("utility_microbial")
+        if microbial and microbial.get("receiving_file"):
+            ws = self.operator.ws(task["workspace"])
+            item = microbial["receiving_file"]
+            path = verify_file(ws.root, item)
+            task["_downloads"].append(self.operator._ticket(
+                task["workspace"], path, item, "Original microbial study receiving.json"))
         task["_station_geography"] = {
             "id": edition_id, "title": edition.get("title"),
             "summary": edition.get("summary", {}), "view": "station-geography",

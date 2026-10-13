@@ -13,6 +13,8 @@ const point = feature => feature?.geometry?.type === 'Point' && list(feature.geo
 const validPoint = coordinates => Array.isArray(coordinates) && coordinates.length >= 2 && coordinates.slice(0,2).every(Number.isFinite);
 const statuses = ['all','located','coincident','selected','ambiguous','missing','invalid','outside','boundary','overlap'];
 const terminal = state => ['complete','failed','interrupted','cancelled'].includes(state);
+const geographyActions = new Set(['station.geography.build','station.geography.receive','station.geography.utility-microbial']);
+const nativeId = value => /^[a-f0-9]{64}$/.test(String(value||''));
 const defaultDraft = () => ({title:'Study station geography',sources:[],watersheds:[],observation_ids:[],observation_tables:[],site_tables:[],sites:[],aliases:{},choices:{}});
 const uriHTML = uri => /^https?:\/\//i.test(String(uri || '')) ? '<a href="' + esc(uri) + '" target="_blank" rel="noopener noreferrer">' + esc(uri) + '</a>' : esc(uri || '—');
 
@@ -106,24 +108,26 @@ export function attachStationGeography(host) {
   let generation=0, controller=null, loading=false, busy=false, error='', message='', taskFingerprint='';
   let sourceFingerprint='', viewBox=null, baseViewBox=null, projectPoint=null, drag=null, advancedOpen=false, formOpen=true;
   let aliasesText='{}', observationTablesText='[]', sourceOptionsText='{}';
+  let microbialDomainMode='required', pendingEdition=null;
   const cacheKey = key => 'upstate-station-geography-v1:' + key;
   const read = (operation,payload={},key=workspace) => host.api('/api/station-geography/'+operation,{method:'POST',body:{workspace:key,...payload},signal:controller?.signal});
   const rows = () => list(edition?.result?.stations);
-  const ownedTasks = () => list(state?.tasks).filter(t=>t.action==='station.geography.build'||t.action==='station.geography.receive');
+  const ownedTasks = () => list(state?.tasks).filter(t=>geographyActions.has(t.action)&&(!t.workspace||t.workspace===workspace));
   function save() {
     if (!workspace) return;
     try {
       sessionStorage.setItem(cacheKey(workspace),JSON.stringify({draft,requests:requests.slice(-32),currentTask,selectedEdition,
-        selectedStation,filter,search,causeFilter,assessmentEdition,watershedFilter,coveragePage,coverageSearch,coverageOpen,page,aliasesText,observationTablesText,sourceOptionsText,advancedOpen,formOpen}));
+        selectedStation,filter,search,causeFilter,assessmentEdition,watershedFilter,coveragePage,coverageSearch,coverageOpen,page,aliasesText,observationTablesText,sourceOptionsText,advancedOpen,formOpen,microbialDomainMode}));
     } catch (_) { /* Original server tasks and source editions remain retained. */ }
   }
   function restore() {
-    draft=defaultDraft(); requests=[]; currentTask=null; selectedEdition=null; selectedStation=null;
+    draft=defaultDraft(); requests=[]; currentTask=null; selectedEdition=null; selectedStation=null;microbialDomainMode='required';
     filter='all';search='';causeFilter='';assessmentEdition='';watershedFilter='';coveragePage=0;coverageSearch='';coverageOpen=false;page=0;aliasesText='{}';observationTablesText='[]';sourceOptionsText='{}';advancedOpen=false;formOpen=true;
     try {
       const value=JSON.parse(sessionStorage.getItem(cacheKey(workspace))||'{}');
       draft={...draft,...(value.draft||{})}; requests=list(value.requests);currentTask=value.currentTask||null;
       selectedEdition=value.selectedEdition||null;selectedStation=value.selectedStation||null;
+      microbialDomainMode=['required','auto','none'].includes(value.microbialDomainMode)?value.microbialDomainMode:'required';
       filter=statuses.includes(value.filter)?value.filter:'all';search=value.search||'';causeFilter=typeof value.causeFilter==='string'?value.causeFilter:'';assessmentEdition=typeof value.assessmentEdition==='string'?value.assessmentEdition:'';page=Number(value.page)||0;
       watershedFilter=typeof value.watershedFilter==='string'?value.watershedFilter:'';
       coveragePage=Math.max(0,Number(value.coveragePage)||0);coverageSearch=typeof value.coverageSearch==='string'?value.coverageSearch:'';coverageOpen=!!value.coverageOpen;
@@ -176,7 +180,21 @@ export function attachStationGeography(host) {
       button('clear-selection','New study selection')+button('go-sources','Open original sources')+'</div><p class="sg-help">Station locations and measured rows remain linked to their original sources. Watershed membership uses the selected retained polygon geometry.</p>'+
       '</fieldset></form></details>';
   }
+  function renderMicrobial() {
+    const target=node?.querySelector('[data-sg-microbial]');if(!target)return;
+    const study=catalog?.utility_microbial;
+    if(!study){target.innerHTML='';return;}
+    target.innerHTML='<section class="sg-presets"><h2>Original utility E. coli study</h2><article><div><h3>'+esc(study.title)+'</h3>'+
+      '<p>Explore 730 original sampled results at 36 stations during 2021–2025: 5 ARJWS stations and 31 Pioneer stations. The retained study preserves original values, censored-result conditions, station identifiers and complete source files.</p>'+
+      '<label>Watershed context<select data-sg-microbial-domain '+(busy?'disabled':'')+'>'+
+      [['required','Use the complete original 217-watershed domain'],['none','Station points and original utility context'],['auto','Use the original domain when retained']].map(([value,label])=>
+        '<option value="'+value+'"'+(microbialDomainMode===value?' selected':'')+'>'+esc(label)+'</option>').join('')+'</select></label>'+
+      '<p class="sg-help">The watershed option uses the exact original model-domain polygons retained in this Workspace. Station-only receiving preserves the original utility-source assignment. Sampled concentrations remain linked to their original activities.</p>'+
+      (study.available?'':'<p class="sg-help">Import the complete original utility E. coli source edition or install its maintained source directory, then refresh originals.</p>')+
+      '</div>'+button('build-microbial','Build original E. coli study',busy||!study.available?'disabled':'')+'</article></section>';
+  }
   function renderPresets() {
+    renderMicrobial();
     const target=node?.querySelector('[data-sg-presets]');if(!target)return;
     const studies=list(catalog?.prepared_studies);
     target.innerHTML=studies.length?'<section class="sg-presets"><h2>Prepared study selections</h2>'+studies.map(study=>
@@ -198,7 +216,7 @@ export function attachStationGeography(host) {
     const tasks=ownedTasks();
     target.innerHTML=tasks.length?'<table><thead><tr><th>Geography operation</th><th>Status</th><th>Result</th><th>Operation</th></tr></thead><tbody>'+tasks.map(task=>{
       const id=task.result?.id;
-      return '<tr><td>'+esc(task.payload?.selection?.title||task.payload?.title||(task.action.endsWith('receive')?'Reopen original geography package':'Build station geography'))+
+      return '<tr><td>'+esc(task.payload?.selection?.title||task.payload?.title||(task.action==='station.geography.utility-microbial'?'Original utility E. coli study':task.action.endsWith('receive')?'Reopen original geography package':'Build station geography'))+
         '<small>'+esc(short(task.id))+'</small></td><td>'+esc(task.state)+(task.error?'<small>'+esc(task.error.message)+'</small>':'')+'</td><td>'+
         (id?button('open-edition','Open edition','data-sg-id="'+esc(id)+'"'):'—')+'</td><td>'+button('open-task','Details and files','data-sg-id="'+esc(task.id)+'"')+
         (['failed','interrupted','cancelled'].includes(task.state)?button('resume-task','Resume','data-sg-id="'+esc(task.id)+'"'):'')+'</td></tr>';
@@ -443,7 +461,8 @@ export function attachStationGeography(host) {
         if(original)draft.sources=[{...sourceRef(original),station_id_field:original.station_id_field||'STAT',native_id_field:original.native_id_field||'OBJECTID'}];
       }
       editionOptions();renderPresets();if(refreshForm)renderForm();renderTasks();save();
-      if(selectedEdition&&!edition)await openEdition(selectedEdition,false);
+      if(pendingEdition)await openPendingEdition();
+      else if(selectedEdition&&!edition)await openEdition(selectedEdition,false);
     }catch(problem){if(key===workspace&&version===generation)fail(problem);}
     finally{loading=false;}
   }
@@ -457,7 +476,9 @@ export function attachStationGeography(host) {
       if(!rows().some(r=>String(r.station_id)===String(selectedStation)))selectedStation=rows()[0]?.station_id||null;
       if(selectDraft)useEdition();
       message='Original stations, source references and complete exports opened.';editionOptions();renderResult(true);notice();
+      return true;
     }catch(problem){if(key===workspace&&version===generation)fail(problem);}
+    return false;
   }
   function useSelection(selection) {
     draft=clone(selection||defaultDraft());
@@ -500,7 +521,8 @@ export function attachStationGeography(host) {
   }
   function editInput(event) {
     const target=event.target;
-    if(target.matches('[data-sg-title]'))draft.title=target.value;
+    if(target.matches('[data-sg-microbial-domain]'))microbialDomainMode=target.value;
+    else if(target.matches('[data-sg-title]'))draft.title=target.value;
     else if(target.matches('[data-sg-source]')){
       const row=list(catalog?.sources).find(s=>sourceKey(s)===target.value);
       draft.sources=row?[{...sourceRef(row),station_id_field:row.station_id_field||node.querySelector('[data-sg-station-field]').value||'STAT',
@@ -557,6 +579,10 @@ export function attachStationGeography(host) {
         await host.refresh({force:true});
       }
       else if(act==='go-sources')host.navigate('sources');
+      else if(act==='build-microbial'){
+        if(!catalog?.utility_microbial?.available)throw Error('Import the complete original utility E. coli source and refresh this desk.');
+        await submit('station.geography.utility-microbial',{domain_mode:microbialDomainMode});
+      }
       else if(act==='build-preset'){
         const study=list(catalog?.prepared_studies).find(s=>s.id===item.dataset.sgPreset);
         if(!study?.ready||!study.selection)throw Error('Import the listed original study sources and refresh this desk.');
@@ -587,12 +613,41 @@ export function attachStationGeography(host) {
       }
     }catch(problem){fail(problem);}
   }
+  async function openPendingEdition() {
+    const target=pendingEdition;
+    if(!target||!node||!catalog||target.workspace!==workspace)return;
+    if(await openEdition(target.id) && pendingEdition===target)pendingEdition=null;
+  }
+  async function requestEdition(id,key=host.getWorkspace()||host.getState()?.workspace_key) {
+    if(!nativeId(id)||!key)throw Error('Choose a retained station geography edition.');
+    if(key!==(host.getWorkspace()||host.getState()?.workspace_key))
+      throw Error('Open the original task Workspace before opening this station edition.');
+    pendingEdition={workspace:key,id};
+    host.navigate('station-geography');
+    if(node&&workspace===key&&catalog)await openPendingEdition();
+  }
+  function taskActions(task) {
+    const key=host.getWorkspace()||host.getState()?.workspace_key,id=task?.result?.id;
+    if(task?.state!=='complete'||!geographyActions.has(task.action)||!task.workspace||
+      task.workspace!==key||!nativeId(id))return '';
+    return '<button type="button" data-action="station-geography-result-open" data-workspace="'+esc(task.workspace)+'" data-id="'+esc(id)+'">Open station geography</button>';
+  }
+  async function dispatch(button) {
+    if(button?.dataset?.action!=='station-geography-result-open')return false;
+    const key=button.dataset.workspace;
+    if(!key||key!==(host.getWorkspace()||host.getState()?.workspace_key))
+      throw Error('Open the original task Workspace before opening this station edition.');
+    host.closeDetail();
+    await requestEdition(button.dataset.id,key);
+    return true;
+  }
   function mount(container,initial=host.getState()) {
     detach();node=container;state=initial;workspace=host.getWorkspace()||state?.workspace_key;
+    if(pendingEdition&&pendingEdition.workspace!==workspace)pendingEdition=null;
     generation++;controller=new AbortController();restore();catalog=null;edition=null;viewBox=null;loading=false;busy=false;error='';message='';
     node.innerHTML='<section class="sg-desk"><header class="sg-heading"><div><h1>Station geography</h1><p>Original station locations, observation links and retained watershed membership.</p></div>'+button('refresh','Refresh originals')+'</header>'+
       '<p class="sg-error" data-sg-error role="alert" hidden></p><p class="sg-message" data-sg-message role="status" hidden></p>'+
-      '<div data-sg-presets></div><div data-sg-form-area></div><section class="sg-reopen"><label>Saved station geography<select data-sg-editions></select></label>'+
+      '<div data-sg-microbial></div><div data-sg-presets></div><div data-sg-form-area></div><section class="sg-reopen"><label>Saved station geography<select data-sg-editions></select></label>'+
       '<label class="sg-upload">Reopen original geography package<input type="file" data-sg-receive accept=".zip,application/zip"></label></section>'+
       '<section data-sg-summary></section><section class="sg-results"><div class="sg-filters"><label>Find station<input type="search" data-sg-search value="'+esc(search)+'" placeholder="Station, watershed, description, county or cause"></label>'+
       '<label>Location status<select data-sg-filter>'+statuses.map(s=>'<option value="'+s+'"'+(s===filter?' selected':'')+'>'+esc(s==='all'?'All stations':s)+'</option>').join('')+'</select></label>'+
@@ -657,5 +712,5 @@ export function attachStationGeography(host) {
   function detach() {
     save();controller?.abort();controller=null;generation++;node=null;drag=null;loading=false;busy=false;
   }
-  return {mount,update,detach,open:async id=>{host.navigate('station-geography');return openEdition(id);}};
+  return {mount,update,detach,taskActions,dispatch,open:requestEdition};
 }
