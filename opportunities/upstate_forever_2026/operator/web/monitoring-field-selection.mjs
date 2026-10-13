@@ -1,7 +1,7 @@
 /** Retain exported field selections in the original scientific Workspace. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function attachMonitoringFieldSelection(node,host,key) {
-  let panel=null,epoch=0,busy=false,loaded=false,catalog={sources:[],selections:[]};
+  let panel=null,epoch=0,busy=false,loaded=false,pending=Promise.resolve(),catalog={sources:[],selections:[]};
   let sourceKey='',title='',selectionText='',filename='',preview=null,opened=null;
   const current=version=>epoch===version&&panel?.isConnected&&node.isConnected&&host.getState()?.workspace_key===key;
   const sourceValue=row=>JSON.stringify([row.source_collection_id,row.source_id]);
@@ -26,7 +26,7 @@ export function attachMonitoringFieldSelection(node,host,key) {
     return '<h3>'+esc(record.title)+'</h3><p>$'+esc(value.budget_usd)+' · '+value.selected_search_areas+' original search areas · '+
       value.selected_stations+' source stations selected for review · '+value.visits+' retained calendar slots</p>'+
       '<p>Rounds: '+esc(value.rounds.join(', ')||'none selected')+'. '+esc(value.meaning)+'.</p>'+
-      '<div class="table-wrap"><table><thead><tr><th>Search area</th><th>Source station</th><th>Original coordinate basis</th><th>Field note</th></tr></thead><tbody>'+
+      '<div class="table-wrap" tabindex="0" aria-label="Selected field locations and notes"><table><thead><tr><th>Search area</th><th>Source station</th><th>Original coordinate basis</th><th>Field note</th></tr></thead><tbody>'+
       value.locations.map(row=>{const s=row.station,p=s.source_properties||{},crs=s.original_coordinate_crs||p.coordinate_crs;
         const xy=s.original_coordinates||[p.coordinate_x,p.coordinate_y];
         return '<tr><td>'+esc(row.huc12)+'</td><td>'+esc(s.id)+'<br>'+esc(row.source_kind)+'</td><td>'+esc(crs)+'<br>'+esc(xy.join(', '))+'</td><td>'+esc(choice.notes[row.huc12]||'')+'</td></tr>';
@@ -35,7 +35,7 @@ export function attachMonitoringFieldSelection(node,host,key) {
       Object.entries(choice.notes).filter(([,note])=>note).map(([huc,note])=>'<strong>'+esc(huc)+'</strong>: '+esc(note)).join('<br>')+
       '</p><p>Source '+esc(record.source.source_collection_id)+' / '+esc(record.source.source_id)+
       '<br>Plan '+esc(choice.plan_id)+'<br>Selection SHA256 '+esc(record.selection_sha256)+'</p>'+
-      '<div class="table-wrap"><table><thead><tr><th>Visit</th><th>Date and local time</th><th>Crew</th><th>Search area</th></tr></thead><tbody>'+
+      '<div class="table-wrap" tabindex="0" aria-label="Original selected field calendar"><table><thead><tr><th>Visit</th><th>Date and local time</th><th>Crew</th><th>Search area</th></tr></thead><tbody>'+
       value.calendar.map(row=>'<tr><td>'+esc(row.visit_key)+'</td><td>'+esc(row.date)+' · '+esc(row.start_local)+'–'+esc(row.finish_local)+
         '</td><td>'+esc(row.crew)+'</td><td>'+esc(row.site_id)+'</td></tr>').join('')+'</tbody></table></div></details>';
   }
@@ -45,7 +45,7 @@ export function attachMonitoringFieldSelection(node,host,key) {
       '<p>These are explicit source-station choices for scientific and access review. Saving them does not assign a station to a campaign or record a collected sample.</p>'+
       '<label>Original field study <select data-field-selection-source><option value="">Choose retained source</option>'+
       catalog.sources.map(row=>'<option value="'+esc(sourceValue(row))+'"'+(sourceValue(row)===sourceKey?' selected':'')+'>'+esc(row.title)+'</option>').join('')+
-      '</select></label> <button type="button" data-field-selection-original>Download original working desk</button>'+
+      '</select></label> <button type="button" data-field-selection-original>Download working field desk</button>'+
       '<p><label>Selection JSON <input data-field-selection-file type="file" accept=".json,application/json"></label> <span>'+esc(filename)+'</span></p>'+
       '<p><label>Saved selection title <input data-field-selection-title maxlength="200" value="'+esc(title)+'"></label></p>'+
       '<p><button type="button" data-field-selection-preview>Review selected source and calendar</button> '+
@@ -84,7 +84,7 @@ export function attachMonitoringFieldSelection(node,host,key) {
     });
     q('[data-field-selection-original]').onclick=()=>run(async version=>{
       const result=await read('source',sourceArgs());if(!current(version))return;
-      q('[data-field-selection-detail]').innerHTML='<p>'+downloadLinks(result)+'</p><p>Open the original HTML, choose stations and notes, and save its selection JSON. The original source remains unchanged.</p>';
+      q('[data-field-selection-detail]').innerHTML='<p>'+downloadLinks(result)+'</p><p>Use the maintained working desk to choose stations and notes, then save its selection JSON. The separately labeled original download preserves the delivered source unchanged.</p>';
     });
     q('[data-field-selection-refresh]').onclick=()=>run(async version=>{
       const result=await read('catalog');if(!current(version))return;catalog=result;loaded=true;paint();status('Saved source and field-selection catalog refreshed.');
@@ -102,9 +102,9 @@ export function attachMonitoringFieldSelection(node,host,key) {
   }
   async function run(action) {
     if(busy)return;
-    const version=epoch;busy=true;disable();
+    const version=epoch;busy=true;let settle;pending=new Promise(resolve=>{settle=resolve;});disable();
     try {await action(version);} catch(error) {if(current(version))status(error.message||String(error));}
-    finally {busy=false;if(panel?.isConnected&&host.getState()?.workspace_key===key)disable();}
+    finally {busy=false;if(panel?.isConnected&&host.getState()?.workspace_key===key)disable();settle();}
   }
   async function mount() {
     const version=++epoch;
@@ -112,7 +112,10 @@ export function attachMonitoringFieldSelection(node,host,key) {
     const container=node.shadowRoot||node;
     if(!container.querySelector('link[data-field-selection-style]')){const style=node.ownerDocument.createElement('link');style.rel='stylesheet';style.href='/web/monitoring-field-selection.css';style.dataset.fieldSelectionStyle='';container.append(style);}
     container.append(panel);paint();
-    if(!loaded)await run(async()=>{
+    const interrupted=busy;
+    if(interrupted)await pending;
+    if(!current(version))return;
+    if(!loaded||interrupted)await run(async()=>{
       const value=await read('catalog');if(!current(version))return;catalog=value;loaded=true;
       if(!sourceKey&&catalog.sources.length===1)sourceKey=sourceValue(catalog.sources[0]);
       paint();

@@ -20,6 +20,16 @@ SUPPORT = "upstate.monitoring-field-support/v1"
 MAX_SELECTION_BYTES = 100000
 
 
+DESK_JOINS = (
+    ("let planIndex=0,currentArea='',recordPage=0,shownRecords=[];",
+     "let planIndex=0,currentArea='',recordPage=0,shownRecords=[],selectionOpening=0,selectionEdit=0;"),
+    ("function persist(){try{",
+     "function persist(){selectionEdit++;try{"),
+    ("$('#selection-file').addEventListener('change',async()=>{try{const file=$('#selection-file').files[0];if(!file)return;if(file.size>100000)throw Error('The selection file is larger than this plan requires.');const value=JSON.parse(await file.text()),r=validateSelection(value);states[D.plans[r.index].plan_id]=r.next;planIndex=r.index;currentArea=plan().selected_ids[0];recordPage=0;updateAll();notify('Reopened the saved field selection against its original plan and source edition.')}catch(e){notify('Selection could not be opened: '+e.message)}finally{$('#selection-file').value=''}});",
+     "$('#selection-file').addEventListener('change',async()=>{const input=$('#selection-file'),file=input.files[0],opening=++selectionOpening,revision=selectionEdit;input.value='';if(!file)return;try{if(file.size>100000)throw Error('The selection file is larger than this plan requires.');const text=await file.text();if(opening!==selectionOpening)return;if(revision!==selectionEdit)throw Error('The field plan changed while this file was opening. Your current choices and notes were kept; open the file again to replace them explicitly.');const value=JSON.parse(text),r=validateSelection(value);states[D.plans[r.index].plan_id]=r.next;planIndex=r.index;currentArea=plan().selected_ids[0];recordPage=0;updateAll();notify('Reopened the saved field selection against its original plan and source edition.')}catch(e){if(opening===selectionOpening)notify('Selection could not be opened: '+e.message)}});"),
+)
+
+
 def require(condition, message):
     if not condition:
         raise ValueError(message)
@@ -56,6 +66,7 @@ def _body(workspace, descriptor):
 def source(workspace, source_collection_id, source_id):
     """Read and verify retained objects directly; receiving never creates source views."""
     collection = workspace._get("sources", source_collection_id)
+    _path(workspace, collection["original_manifest"])
     entries = [entry for entry in collection["entries"] if entry["id"] == source_id]
     require(len(entries) == 1, "Choose an existing retained field-study source")
     entry = entries[0]
@@ -160,9 +171,37 @@ def preview(workspace, *, source_collection_id, source_id, selection_text, title
             "selection_bytes": len(raw), "source": binding, "summary": summary}
 
 
-def _editable_desk(original, selection, selection_sha256):
-    """Initialize the original delivered controls; retain its complete source separately."""
+def _maintained_desk(original):
+    """Repair the proven original file-open race without changing source objects."""
     text = original.decode("utf-8")
+    # Preserve the exact source, but repair its proven asynchronous file-open
+    # race in the derived working copy. Accept the maintained template too.
+    for before, after in DESK_JOINS:
+        if text.count(before) == 1 and text.count(after) == 0:
+            text = text.replace(before, after)
+        else:
+            require(text.count(before) == 0 and text.count(after) == 1,
+                    "The original field-selection opener needs its maintained source join")
+    return text.encode("utf-8")
+
+
+def working_source(workspace, source_collection_id, source_id):
+    _, entry, binding = source(workspace, source_collection_id, source_id)
+    body = _maintained_desk(_body(workspace, entry["body"]))
+    root = workspace.root / "monitoring-field-selections" / "working-desks" / sha256(body).hexdigest()
+    path = root / "field-planning.html"
+    with held(workspace.root / ".monitoring-field-selections.lock"):
+        atomic_bytes(path, body, immutable=True)
+    return {"source": binding, "title": entry["title"], "files": [
+        describe_file(workspace.root, path, label="Maintained working field desk"),
+        {**describe_file(workspace.root, _path(workspace, entry["body"]),
+                         label="Exact original delivered field desk"),
+         "filename": "original-field-planning.html"}]}
+
+
+def _editable_desk(original, selection, selection_sha256):
+    """Initialize the maintained original controls; retain complete source separately."""
+    text = _maintained_desk(original).decode("utf-8")
     storage = "KEY='monitoring-field-selection:'+D.id"
     finish = "fillRecordOptions();updateAll();"
     require(text.count(storage) == 1 and text.count(finish) == 1,

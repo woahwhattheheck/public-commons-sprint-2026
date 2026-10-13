@@ -6,13 +6,13 @@ This is an explicit review layer over the original saved budgets. Historical E. 
 
 ## Original completed source
 
-RIVER’s completed field-support source is imported through `source/monitoring-field-study/receive_field_support.py`. Use its complete 239-member package and the original project, following that directory’s README. The native source collection is `371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3`; the working document is `monitoring-field-planning`. The saved source retains 223 companions. Its support identity is `e62688692e78bc7cb1551d15cff73afa2a6e3db47b44e78a06e34a89656b51aa`.
+RIVER’s completed field-support source is imported through `source/monitoring-field-study/source/receive_field_support.py`. Use its complete 239-member package and the original project, following `source/monitoring-field-study/INSTALLATION.md`. The native source collection is `371fca0c31de80d7309e6b7793ca56ac4563a7135409f667e240340957b098a3`; the working document is `monitoring-field-planning`. The saved source retains 223 companions. Its support identity is `e62688692e78bc7cb1551d15cff73afa2a6e3db47b44e78a06e34a89656b51aa`.
 
 The original three plans select 6, 12 and 18 search areas. Their retained-source join reaches the same 234 E. coli records at 11 stations, including 233 routine samples and one separate field replicate. The complete source keeps all 730 records, 36 original observation stations, 87 native assessment sites and 217 catchments. These source-support counts remain separate from the area objective.
 
 ## Operate the complete field workflow
 
-1. Open the original project’s **Monitoring design** view and find **Saved field selections**. Choose the retained field study and use **Download original working desk**. Open that HTML normally.
+1. Open the original project’s **Monitoring design** view and find **Saved field selections**. Choose the retained field study and use **Download working field desk**. Open the **Maintained working field desk** HTML. The separate **Exact original delivered field desk** link preserves the source edition for inspection.
 2. In the original desk, select a saved budget and search area. Inspect the original candidate source fields, coordinate basis, historical method/condition/date and actual calendar before choosing a station. Add field notes and select the original rounds to include. The separate original JSON and source files stay available in that desk.
 3. Use **Save selection JSON**. Back in the native panel, choose that exact file and a useful title. Select **Review selected source and calendar**. The preview shows the saved plan, review choices, original coordinate basis, notes and every selected native visit.
 4. Select **Retain reviewed selection**. This uses the existing original task queue and its persisted operation identity. On a lost response, repeat the same reviewed selection; the content-addressed native record and immutable files remain the same. If the original task failed or was interrupted, open that retained task in Operations and resume it.
@@ -41,7 +41,9 @@ The `selection_text` is preserved byte-for-byte after UTF-8 encoding; it is not 
 
 Native records live in the original Workspace’s `monitoring_field_selections` collection. Original input and selected working desk live under `monitoring-field-selections`. The original source document and all companions remain in the existing source-object store. The Workspace restore hook reads and verifies retained source members and selected native records without creating source views or modifying the receiving project.
 
-The selected desk is derived through two exact joins in the original delivered HTML: the existing storage key and final control initialization. An unknown successor with different anchors returns an actionable error and preserves the original source. The generated working desk does not replace the source document.
+Both the initial maintained working desk and a reopened selected desk discard a superseded file read: a late earlier file cannot overwrite a newer file or an intervening note, round or budget change. The input is cleared before reading so an earlier completion cannot clear a later selection.
+
+The selected desk is derived through exact joins in the original delivered HTML: the existing storage key, guarded selection-file opening and final control initialization. An unknown successor with different anchors returns an actionable error and preserves the original source. The generated working desk does not replace the source document.
 
 ## Current owner direction and actual product use
 

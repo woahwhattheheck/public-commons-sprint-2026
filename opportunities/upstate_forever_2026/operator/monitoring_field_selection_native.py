@@ -1,7 +1,7 @@
 """Source-bound field-selection receiving on the original operator queue."""
 from copy import deepcopy
 
-from model.common import verify_file, relative_file
+from model.common import verify_file
 from model import monitoring_field_selection as selections
 
 ACTION = "monitoring.field-selection.receive"
@@ -26,10 +26,7 @@ def read(operator, workspace_key, operation, payload):
     if operation == "source":
         if set(value) != {"source_collection_id", "source_id"}:
             raise ValueError("Choose one original field-study source")
-        data, entry, binding = selections.source(workspace, **value)
-        ticket = operator._ticket(workspace_key, relative_file(workspace.root, entry["body"]["object"]),
-                                  entry["body"], "Original field-planning desk")
-        return {"workspace_key": workspace_key, "source": binding, "title": entry["title"], "_downloads": [ticket]}
+        return decorated(operator, workspace_key, selections.working_source(workspace, **value))
     if operation == "preview":
         return {"workspace_key": workspace_key, **selections.preview(workspace, **value)}
     if operation == "inspect":
