@@ -33,6 +33,7 @@ from capture_original_overlays import capture_layer, OriginalResponses, oid_fiel
 from capture_upstream_network import PLANNING_SHA
 
 SCHEMA = "upstate.reporting-parcels/v1"
+PREPARATION_METHOD = "upstate.reporting-parcels/whole-original-polygons/v2"
 TRANSFER_SCHEMA = "upstate.reporting-parcel-transfer/v1"
 CATALOG_SCHEMA = "upstate.sc-parcel-providers/v1"
 DEFAULT_CATALOG = Path(__file__).with_name("SC_PARCEL_PROVIDERS.json")
@@ -878,7 +879,9 @@ def _native_rows(root, plan_value, records, reporting_geometry, county_geometrie
                 **{field: category[field] for field in (
                     "record_class", "native_class", "native_class_field",
                     "classification_basis", "parcel_candidate")}}
-            prepared = {"id": identity, "properties": properties, "geometry": part,
+            # The parcel reducer measures original area and performs its own reporting clip.
+            # Keep the complete analytical polygon; original native bodies remain companions.
+            prepared = {"id": identity, "properties": properties, "geometry": full,
                         "coverage_eligible": category["coverage_eligible"]}
             if category["parcel_candidate"]:
                 parcels.append(prepared)
@@ -986,7 +989,8 @@ def prepare(capture_directory):
         failures = {row["provider_id"]: row["exception"] for row in previous.get("counties", [])
                     if row.get("exception") and row.get("provider_id") not in records}
         progress = _capture_manifest(root, plan_value, records, failures)
-        fingerprint = digest({"preparation_revision": "20261013-native-parcel-attributes-v1",
+        fingerprint = digest({"preparation_method": PREPARATION_METHOD,
+                              "preparation_revision": "20261013-native-parcel-attributes-v1",
                               "plan_sha256": digest(plan_value),
                               "sources": {key: record["sha256"] for key, record in sorted(records.items())},
                               "classification": {county["fips"]: county.get("provider", {}).get("classification")
@@ -1018,7 +1022,8 @@ def prepare(capture_directory):
             staging = Path(temporary)/"inventory"
             staging.mkdir()
             atomic_json(staging/"preparation-context.json",
-                {"source_fingerprint": fingerprint, "plan_sha256": digest(plan_value)}, immutable=True)
+                {"source_fingerprint": fingerprint, "plan_sha256": digest(plan_value),
+                 "preparation_method": PREPARATION_METHOD}, immutable=True)
             gpkg = staging/"reporting-parcels.gpkg"
             _write_layer(gpkg, "parcels_reporting", PARCEL_FIELDS, parcels)
             _write_layer(gpkg, "cadastral_context", PARCEL_FIELDS, contexts)
@@ -1043,9 +1048,11 @@ def prepare(capture_directory):
             atomic_json(staging/"geometry-corrections.json",
                 {"schema": SCHEMA, "corrections": corrections}, immutable=True)
             methods = {"schema": SCHEMA, "analysis_crs": "EPSG:5070", "area_units": "hectares",
+                "preparation_method": PREPARATION_METHOD,
                 "native_feature_identity": "county FIPS : provider ID : native OID",
                 "source_identity": "Original URI, response dates, native OID and retained feature SHA256",
-                "parcel_geometry": "Positive-area intersection with original reporting polygon; whole source retained",
+                "parcel_geometry": "Whole source polygons in the analysis CRS, selected by positive reporting intersection; native bodies retained",
+                "reporting_geometry": "Reporting-area intersections are measured separately; the parcel reducer clips whole geometry itself",
                 "parcel_candidate": "Published parcel layer; provider classification rules retained in the catalog",
                 "coverage": "Unique union of available cadastral polygons, including known road/water context",
                 "parcel_coverage": "Unique union of parcel candidates only",
@@ -1088,6 +1095,8 @@ def prepare(capture_directory):
             "vintage": "Original county editions in county-sources.csv",
             **files["gpkg"], "companions": list(by_path.values()),
             "metadata": {"analysis_crs": "EPSG:5070", "area_units": "hectares",
+                         "preparation_method": PREPARATION_METHOD,
+                         "geometry_scope": "whole_source_polygons",
                          "capture_state": progress["state"], "parcel_count": len(parcels),
                          "cadastral_context_count": len(contexts), "plan_sha256": digest(plan_value),
                          "input_sources": source_rows,
@@ -1114,6 +1123,7 @@ def prepare(capture_directory):
         manifest_name = "parcel-sources-" + fingerprint[:20] + ".json"
         atomic_json(root/manifest_name, manifest, immutable=True)
         result = {"schema": SCHEMA, "kind": "reporting-parcel-inventory",
+            "preparation_method": PREPARATION_METHOD,
             "source_fingerprint": fingerprint, "plan_sha256": digest(plan_value),
             "capture_state": progress["state"], "parcel_count": len(parcels),
             "cadastral_context_count": len(contexts), "excluded_record_count": len(excluded),

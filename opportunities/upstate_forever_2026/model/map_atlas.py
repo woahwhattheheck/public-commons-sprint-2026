@@ -1,0 +1,255 @@
+"""Ordered seven-family map atlas from the existing delivery's native map panels."""
+from __future__ import annotations
+
+import csv
+import io
+import math
+from pathlib import Path
+import textwrap
+
+from .common import MAP_IDS, atomic_bytes, atomic_json, describe_file, finite, verify_file
+from . import cartography
+
+ATLAS_VERSION = "seven-family-atlas/v1"
+PAPER = {"letter": (11.0, 8.5), "a4": (297 / 25.4, 210 / 25.4),
+         "a3": (420 / 25.4, 297 / 25.4)}
+INDEX_ROWS = 14
+FILE_KEYS = ("map_atlas", "map_atlas_index", "map_atlas_csv")
+
+
+def _text(value, label, limit, *, default=""):
+    value = default if value is None else value
+    if not isinstance(value, str):
+        raise ValueError(label + " must be text")
+    value = " ".join(value.split())
+    if len(value) > limit:
+        raise ValueError(label + " must contain at most " + str(limit) + " characters")
+    return value
+
+
+def settings(value=None):
+    """Validate print settings without changing the analytical priority settings."""
+    value = {} if value is None else value
+    if not isinstance(value, dict):
+        raise ValueError("Map settings must be an object")
+    paper = value.get("paper", "a4")
+    if paper not in PAPER:
+        raise ValueError("Choose Letter, A4 or A3 landscape paper")
+    raw_dpi = value.get("dpi", 220)
+    dpi = finite(raw_dpi, "Map DPI", minimum=120)
+    if isinstance(raw_dpi, bool) or dpi != int(dpi) or dpi > 600:
+        raise ValueError("Choose a whole-number map DPI from 120 to 600")
+    percentile = finite(value.get("display_percentile", 98),
+                        "Map display percentile", minimum=0)
+    if percentile > 100:
+        raise ValueError("Map display percentile must be at most 100")
+    titles = value.get("family_titles", {})
+    if not isinstance(titles, dict) or set(titles) - set(MAP_IDS):
+        raise ValueError("Family titles must use the seven original map-family identifiers")
+    return {
+        "paper": paper, "dpi": int(dpi), "display_percentile": percentile,
+        "title": _text(value.get("title"), "Atlas title", 140),
+        "subtitle": _text(value.get("subtitle"), "Atlas subtitle", 220),
+        "family_titles": {key: _text(title, "Map-family title", 110)
+                          for key, title in titles.items() if title},
+    }
+
+
+def _sheet(plt, options, title, page_number, page_count):
+    fig = plt.figure(figsize=PAPER[options["paper"]])
+    fig.text(.07, .945, title, fontsize=16, weight="semibold", va="top")
+    fig.text(.07, .045, "Upper Savannah Scientific Workbench", fontsize=7, color="#444444")
+    fig.text(.93, .045, str(page_number) + " / " + str(page_count),
+             fontsize=7, ha="right", color="#444444")
+    return fig
+
+
+def _wrap(value, width):
+    return "\n".join(textwrap.wrap(str(value), width, break_long_words=False,
+                                   break_on_hyphens=False))
+
+
+def _intro(pdf, plt, options, rows, *, title, selection, grid, footer, page_count):
+    fig = _sheet(plt, options, "Watershed map atlas", 1, page_count)
+    try:
+        fig.text(.07, .80, _wrap(title, 64), fontsize=21, va="top")
+        if options["subtitle"]:
+            fig.text(.07, .65, _wrap(options["subtitle"], 110), fontsize=10, va="top")
+        fig.text(.07, .54, "Seven map families  ·  " + str(len(rows)) + " map sheets",
+                 fontsize=11, va="top")
+        contact = selection["contact"]
+        fig.text(.07, .48, _wrap(contact["name"] + " · " + contact["organization"], 110),
+                 fontsize=9, va="top")
+        fig.text(.07, .44, contact["email"], fontsize=9, va="top")
+        methodology = (
+            "Current nitrogen, phosphorus and sediment sheets use the retained native export values. "
+            "Future sheets show each named alternative minus its baseline. Shared pollutant scales "
+            "retain the same numerical meaning across every alternative. The combined priority is "
+            "the recorded dimensionless decision index."
+        )
+        fig.text(.07, .34, _wrap(methodology, 130), fontsize=9, va="top", linespacing=1.5)
+        fig.text(.07, .19, _wrap(footer, 145), fontsize=8, va="top")
+        fig.text(.07, .11, "Grid " + grid["id"][:16] + " · baseline " +
+                 selection["baseline_run_id"][:16] + " · " +
+                 options["paper"].upper() + " landscape · " + str(options["dpi"]) + " DPI",
+                 fontsize=7, va="top")
+        pdf.savefig(fig, dpi=options["dpi"])
+    finally:
+        plt.close(fig)
+
+    chunks = [rows[start:start + INDEX_ROWS] for start in range(0, len(rows), INDEX_ROWS)]
+    for number, chunk in enumerate(chunks, 2):
+        fig = _sheet(plt, options, "Map contents", number, page_count)
+        try:
+            fig.text(.07, .86, "FAMILY / MAP", fontsize=8, color="#555555")
+            fig.text(.93, .86, "PAGE", fontsize=8, color="#555555", ha="right")
+            for i, row in enumerate(chunk):
+                y = .81 - i * .050
+                heading = str(MAP_IDS.index(row["family"]) + 1) + ". " + row["title"]
+                # The complete subtitle and identifiers are retained in the index files.
+                if row["scenario_run_id"]:
+                    heading += " · " + row["scenario_run_id"][:12]
+                fig.text(.07, y, _wrap(heading, 111), fontsize=8, va="top", linespacing=1.15)
+                fig.text(.93, y, str(row["page"]), fontsize=9, va="top", ha="right")
+            pdf.savefig(fig, dpi=options["dpi"])
+        finally:
+            plt.close(fig)
+
+
+def _index_row(page, number, root, options):
+    family = page["family"]
+    prefix = family + "-"
+    run_id = page["key"][len(prefix):] if page["key"].startswith(prefix) else None
+    panels = []
+    for panel in page["panels"]:
+        panels.append({
+            "title": panel["label"], "units": panel["units"],
+            "signed": bool(panel.get("signed")), "display_scale": panel.get("scale"),
+            "source_raster": Path(panel["path"]).resolve().relative_to(root.resolve()).as_posix(),
+        })
+    return {
+        "page": number, "family": family, "map_key": page["key"],
+        "scenario_run_id": run_id,
+        "title": options["family_titles"].get(family) or page["title"],
+        "subtitle": page["subtitle"], "panels": panels,
+        "overlays": [{"label": overlay["label"], "source": overlay.get("source")}
+                     for overlay in page["overlays"]],
+    }
+
+
+def _csv(rows):
+    output = io.StringIO(newline="")
+    columns = ("atlas_page", "family", "map_key", "scenario_run_id", "title",
+               "map_pdf", "panel", "units", "signed", "scale_minimum",
+               "scale_maximum", "scale_method", "source_raster")
+    writer = csv.DictWriter(output, fieldnames=columns)
+    writer.writeheader()
+    for row in rows:
+        for panel in row["panels"]:
+            scale = panel["display_scale"] or {}
+            writer.writerow({
+                "atlas_page": row["page"], "family": row["family"], "map_key": row["map_key"],
+                "scenario_run_id": row["scenario_run_id"], "title": row["title"],
+                "map_pdf": row["file"]["path"], "panel": panel["title"],
+                "units": panel["units"], "signed": panel["signed"],
+                "scale_minimum": scale.get("minimum"), "scale_maximum": scale.get("maximum"),
+                "scale_method": scale.get("label"), "source_raster": panel["source_raster"],
+            })
+    return output.getvalue().encode("utf-8-sig")
+
+
+def write(directory, pages, *, workspace, selection, grid, boundary, crs,
+          footer, state, state_path):
+    """Write standalone maps and an ordered atlas from the same rendered figures.
+
+    The caller retains scientific panel selection, overlays and shared scales.
+    Retained single maps are verified and reused on resume; their figures are
+    rendered again only to reconstruct an interrupted multi-page document.
+    """
+    options = settings(selection.get("map_settings"))
+    pages = list(pages)
+    if not pages or len({page["key"] for page in pages}) != len(pages):
+        raise ValueError("Atlas map keys must be nonempty and distinct")
+    if {page["family"] for page in pages} != set(MAP_IDS):
+        raise ValueError("The complete atlas must include all seven original map families")
+    order = {family: i for i, family in enumerate(MAP_IDS)}
+    pages.sort(key=lambda page: order[page["family"]])  # preserve selected scenario order
+
+    directory = Path(directory)
+    if state.get("atlas", {}).get("version") == ATLAS_VERSION and all(
+            key in state.get("files", {}) for key in FILE_KEYS):
+        for key in FILE_KEYS:
+            verify_file(directory, state["files"][key])
+        for page in pages:
+            verify_file(directory, state["maps"][page["key"]])
+        return state["atlas"]
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    from matplotlib.backends.backend_pdf import PdfPages
+
+    index_count = math.ceil(len(pages) / INDEX_ROWS)
+    first_map = 2 + index_count
+    total = 1 + index_count + len(pages)
+    title = options["title"] or selection.get("title") or workspace.project["title"]
+    rows = [_index_row(page, first_map + i, workspace.root, options)
+            for i, page in enumerate(pages)]
+    atlas_path = directory / "maps" / "watershed-map-atlas.pdf"
+    pending = directory / "maps" / ".watershed-map-atlas.pending.pdf"
+    atlas_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        with PdfPages(pending, metadata={
+            "Title": title, "Author": selection["contact"]["organization"],
+            "Subject": options["subtitle"] or "Seven-family watershed map atlas",
+            "Creator": "Upper Savannah Scientific Workbench",
+        }) as pdf:
+            _intro(pdf, plt, options, rows, title=title, selection=selection,
+                   grid=grid, footer=footer, page_count=total)
+            for page, row in zip(pages, rows):
+                key = page["key"]
+                target = directory / "maps" / (key + ".pdf")
+                if key in state["maps"]:
+                    verify_file(directory, state["maps"][key])
+                    single_path = None
+                else:
+                    single_path = target.with_name("." + target.name)
+                subtitle = page["subtitle"]
+                if options["subtitle"]:
+                    subtitle = options["subtitle"] + " · " + subtitle
+                cartography.map_pdf(single_path, row["title"], page["panels"],
+                    overlays=page["overlays"], boundary=boundary, crs=crs,
+                    subtitle=subtitle, footer=footer, dpi=options["dpi"],
+                    paper=options["paper"], project_title=title, pdf_pages=pdf,
+                    page_number=row["page"], page_count=total)
+                if single_path is not None:
+                    single_path.replace(target)
+                    state["maps"][key] = describe_file(directory, target)
+                    atomic_json(state_path, state)
+                row["file"] = state["maps"][key]
+            if pdf.get_pagecount() != total:
+                raise ValueError("Atlas page count differs from its retained map index")
+        pending.replace(atlas_path)
+        atlas = {
+            "schema": "upstate.map-atlas/v1", "version": ATLAS_VERSION,
+            "delivery_id": state["id"], "title": title, "settings": options,
+            "pages": rows, "map_count": len(rows), "page_count": total,
+            "baseline_run_id": selection["baseline_run_id"],
+            "scenario_run_ids": list(selection["scenario_run_ids"]),
+            "source_report_id": selection.get("source_report_id"),
+            "grid_id": grid["id"], "grid": grid["grid"],
+            "file": describe_file(directory, atlas_path),
+        }
+        index_path = directory / "maps" / "atlas-index.json"
+        csv_path = directory / "maps" / "atlas-index.csv"
+        atomic_json(index_path, atlas)
+        atomic_bytes(csv_path, _csv(rows))
+        state["files"]["map_atlas"] = atlas["file"]
+        state["files"]["map_atlas_index"] = describe_file(directory, index_path)
+        state["files"]["map_atlas_csv"] = describe_file(directory, csv_path)
+        state["atlas"] = atlas
+        atomic_json(state_path, state)
+        return atlas
+    finally:
+        if pending.exists():
+            pending.unlink()
