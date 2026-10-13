@@ -168,12 +168,12 @@ export function attachRegionalJourney(host){
    field('experiment','Native scenario experiment',option('','Choose a retained experiment',value.experiment_id)+native.map(row=>option(row.id,(row.title||row.selection?.title||row.id)+' · '+(row.state||'retained'),value.experiment_id)).join(''))+
    field('decision','Saved decision study',option('','Choose a saved decision',value.decision_study_id)+list(decisions?.studies).map(row=>option(row.id,(row.title||row.id)+' · revision '+row.head,value.decision_study_id)).join(''))+'</div>';
   html+='<div class="page-actions">'+button('experiment','Open original experiment',!value.experiment_id)+button('prepare-decision','Configure decision from this experiment',!value.experiment_id)+button('decision','Open saved decision revision',!value.decision_study_id)+'</div>';
-  if(experiment?.id===value.experiment_id){
+  if(experiment&&experiment.id===value.experiment_id){
    const baseline=actual('runs',experiment.selection?.baseline_run_id),grid=actual('grids',baseline?.selection?.grid_id);
    html+=facts([['Experiment',experiment.title||experiment.selection?.title||'Selected native experiment'],['Native state',experiment.state],['Baseline grid',grid?.title||grid?.spec?.title||'Open original experiment'],['Requested alternatives',list(experiment.selection?.scenario_ids).length],['Parameter profiles',list(experiment.selection?.profile_ids).length],['Native models',list(experiment.models).map(name=>name.toUpperCase()).join(' / ')]])+
     sourceDetails([['Experiment',experiment.id],['Baseline run',experiment.selection?.baseline_run_id],['Baseline grid',baseline?.selection?.grid_id],['Grid source edition',grid?.spec?.source_collection_id]]);
   }
-  if(decision?.id===value.decision_study_id)html+=facts([['Decision study',decision.study?.title||'Selected decision study'],['Opened revision',decision.revision],['Decision mode',decision.study?.mode==='native_packages'?'Complete native alternatives':'Declared additive actions'],['Retained calculations in revision',list(decision.runs).length]])+
+  if(decision&&decision.id===value.decision_study_id)html+=facts([['Decision study',decision.study?.title||'Selected decision study'],['Opened revision',decision.revision],['Decision mode',decision.study?.mode==='native_packages'?'Complete native alternatives':'Declared additive actions'],['Retained calculations in revision',list(decision.runs).length]])+
    sourceDetails([['Decision study',decision.id],['Decision source experiment',decision.study?.source?.experiment_id||'Open retained decision source'],['Decision source grid',decision.study?.source?.grid_id||'Open retained decision source']]);
   html+='<p class="journey-note">Open the native experiment to inspect paired baseline and alternative results. Decision preparation asks for explicit costs, capacity, metric scales and weights before the original receiver binds those results.</p>';
   return html+'</section>';
