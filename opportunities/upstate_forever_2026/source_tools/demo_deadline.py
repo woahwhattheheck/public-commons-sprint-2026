@@ -12,7 +12,9 @@ from pathlib import Path
 import signal
 import threading
 
-CUTOFF = datetime(2026, 10, 13, 14, 0, tzinfo=timezone.utc)
+# Bryce renewed unfinished work at 14:46 UTC; the recorded call remains 16:00 UTC.
+# The original operation identity and historical 14:00 UTC checkpoint are retained.
+CUTOFF = datetime(2026, 10, 13, 16, 0, tzinfo=timezone.utc)
 OPERATION = "UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z"
 
 
@@ -22,7 +24,7 @@ class DemoDeadlineReached(KeyboardInterrupt):
 
 def check_cutoff():
     if datetime.now(timezone.utc) >= CUTOFF:
-        raise DemoDeadlineReached("The requested demo cutoff is 2026-10-13 14:00 UTC")
+        raise DemoDeadlineReached("The renewed demo cutoff is 2026-10-13 16:00 UTC")
 
 
 @contextmanager
@@ -39,7 +41,7 @@ def cutoff_guard():
     previous_term = signal.getsignal(signal.SIGTERM)
 
     def deadline(signum, frame):
-        raise DemoDeadlineReached("The requested demo cutoff is 2026-10-13 14:00 UTC")
+        raise DemoDeadlineReached("The renewed demo cutoff is 2026-10-13 16:00 UTC")
 
     def terminate(signum, frame):
         if callable(previous_term):
