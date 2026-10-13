@@ -29,15 +29,16 @@ class WorkspaceRetention:
                inputs: Any = None, input_files: dict[str, str | Path] | None = None,
                output_pointers: tuple[str, ...] = (), output_base: str | Path | None = None,
                native_files: dict[str, str | Path] | None = None,
-               native_directories: tuple[str, ...] = ()) -> dict:
+               native_directories: tuple[str, ...] = (),
+               native_file_metadata: dict[str, dict] | None = None) -> dict:
         """Call once native work succeeds, BEFORE deleting its native output files.
 
         inputs is the existing application's frozen input/provenance object.
         input_files binds explicit role names to complete files; no filename guesses.
         Persist the returned metadata with the original job in the original writer.
         """
-        if native_directories and native_files is None:
-            raise ValueError('Native directories require the original native file tree')
+        if (native_directories or native_file_metadata is not None) and native_files is None:
+            raise ValueError('Native directories and metadata require the original native file tree')
         key = self._key(job_id, attempt)
         if not isinstance(result, dict): raise TypeError('Retain the original result dictionary')
         if not isinstance(model_family, str) or not model_family: raise ValueError('model_family required')
@@ -60,7 +61,8 @@ class WorkspaceRetention:
         if native_files is not None:
             from .native_tree import capture_tree
             descriptor['retained_native_tree_sha256'] = self.store.put(
-                capture_tree(self.store, native_files, directories=native_directories))
+                capture_tree(self.store, native_files, directories=native_directories,
+                             expected=native_file_metadata))
         descriptor_sha=self.store.put(descriptor)
         with self.store.transaction() as con:
             previous=con.execute('SELECT value FROM settings WHERE key=?',(key,)).fetchone()
