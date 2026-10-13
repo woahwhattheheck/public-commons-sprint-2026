@@ -9,7 +9,7 @@ The interface is part of the existing installed operator. Its extension descript
 
 ## Use with an original project
 
-1. Open Matched controls in the existing application. Choose the original baseline and saved restoration footprint. Give the study a useful title and scientific reason.
+1. Open Matched controls in the existing application. Choose the original baseline and saved restoration footprint. If no footprint is saved yet, use Scenario footprints to prepare the actual original restoration run’s footprint, then return. This uses the existing land-cover compiler without rerunning NDR/SDR. Original sources opens the existing source intake. Give the study a useful title and scientific reason.
 2. Select the prepared covariates you want to constrain. Available elevation, soil erodibility and rainfall erosivity retain the grid's exact units. Enter increasing numeric boundaries, separated by spaces or commas. The first and last intervals remain open; an empty boundary list is one unconstrained interval. An included covariate still requires valid values at all treatment cells, even with no boundaries; disable it to keep it descriptive only. A project using only NDR may select elevation without requiring unavailable sediment-specific rasters.
 3. To include slope or connectivity, select an already imported aligned original raster, retain its declared units and describe what it measures. The native producer checks the original alignment and source. Elevation does not replace slope.
 4. Optionally select an original binary exclusion raster and a maximum per-pair runoff-proxy difference in the original prepared units. Controls already exclude actual treatment cells and stay within the original reporting mask and exact land-cover transition.
