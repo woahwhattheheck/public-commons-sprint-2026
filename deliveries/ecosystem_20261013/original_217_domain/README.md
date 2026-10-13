@@ -30,4 +30,12 @@ python materialize_original_217.py --base64 Original217_Gzip_Base64.txt --output
 
 The decoder verifies all three complete byte sequences and their SHA-256 values, then writes the original gzip once or reuses an identical existing file. Its JSON output names the actual saved path and all 217 original watershed identities. It uses Python's standard library.
 
-The adjacent `sources.json` is a current transport intake manifest. Its companion `source-provenance.json` retains the original archive, original operated source identity, original field definitions and this exact encoded carrier. Where a matching original domain collection is already imported, continue using it. Otherwise import this manifest through the existing native `Workspace.import_sources` operation and retain the returned collection ID before continuing the assessment preparation. The receiving workspace retains its actual project identity. The original four assessment manifests and their existing preparation command remain the inputs for the same assessment course.
+The adjacent `sources.json` is a current transport intake manifest. Its companion `source-provenance.json` retains the original archive, original operated source identity, original field definitions and this exact encoded carrier. Where a matching original domain collection is already imported, continue using it. Otherwise add this manifest to the existing assessment preparation command as a fifth repeated argument:
+
+```sh
+--manifest INTAKE/sources.json
+```
+
+`INTAKE` is the directory containing these five files and the materialized original gzip. Keep the existing four assessment `--manifest` arguments as well. The native preparation imports every supplied manifest before selecting its original model domain and records the actual returned collection IDs. An explicit existing `Workspace.import_sources` import of this same manifest is also supported.
+
+If an earlier preparation already saved an immutable selection with only the original four manifests, choose a fresh preparation output directory for this five-manifest invocation. Keep the same actual receiving Workspace, project identity and operation4731. The original four assessment source bodies and the current admitted scientific calculation files remain identical.
