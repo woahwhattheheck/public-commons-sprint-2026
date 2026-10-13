@@ -43,19 +43,23 @@ def install(namespace):
     def selected(handler):
         value = getattr(handler, '_source_refresh_payload', None)
         if value is not None:
-            return value.get('workspace') or handler.app.primary
+            return value.get('workspace')
         query = parse_qs(urlsplit(handler.path).query)
-        values = query.get('workspace', [handler.app.primary])
+        values = query.get('workspace', [None])
         if len(values) != 1:
             raise ValueError('Choose one original workspace')
         return values[0]
 
     def workspace(handler):
-        return handler.app.ws(selected(handler))
+        key = handler.selected_workspace(selected(handler),
+                    write=getattr(handler, '_source_refresh_write', False))
+        handler.app.team.require_payload(getattr(handler, '_source_refresh_payload', {}))
+        return handler.app.ws(key)
 
     def authorize(handler, write):
         if '/api/' in urlsplit(handler.path).path:
             handler.authorized()
+            handler._source_refresh_write = bool(write and not urlsplit(handler.path).path.endswith('/api/diff'))
         else:
             handler.check_host()
         return True
@@ -64,7 +68,8 @@ def install(namespace):
         def submit(action, payload, _callable):
             incoming = getattr(handler, '_source_refresh_payload', {})
             operation = incoming.get('operation_id') or uuid.uuid4().hex
-            return handler.app.submit(selected(handler), action, payload, operation)
+            key = handler.selected_workspace(selected(handler), write=True)
+            return handler.app.submit(key, action, payload, operation)
         return submit
 
     base = extend_handler(namespace['Handler'], workspace,

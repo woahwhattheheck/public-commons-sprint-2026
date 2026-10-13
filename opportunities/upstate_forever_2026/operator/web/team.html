@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Team access · Scientific workbench</title><link rel="stylesheet" href="/web/team.css"><script type="module" src="/web/team.mjs"></script></head>
+<body>
+<header><div><p class="eyebrow">SCIENTIFIC WORKBENCH</p><h1>Team access</h1><p id="identity">Connecting…</p></div><nav><a href="/">Open workbench</a><button id="sign-out" type="button">Sign out</button></nav></header>
+<main>
+<p id="message" role="status" hidden></p>
+<section id="connect" hidden><h2>Connect to the installation</h2><p>Open the private access link supplied by your administrator. Local installation owners can use the startup link printed by the operator.</p><a href="/">Return to the workbench</a></section>
+<section id="access-link" hidden><h2>Private access link</h2><p>Give this link directly to the named person. It grants their selected access. This is its only display; use Replace link if another copy is needed.</p><label for="private-link">Access link</label><textarea id="private-link" readonly rows="3" spellcheck="false"></textarea><div class="actions"><button id="copy-link" type="button">Copy link</button><button id="clear-link" type="button">Clear from this page</button></div></section>
+<div id="administration" hidden>
+<section><div class="section-heading"><div><h2>People and projects</h2><p>Viewers inspect and download assigned projects. Analysts also import data, change selections and run work. Administrators manage the whole installation.</p></div><button id="new-person" type="button">Add person</button></div><div class="table-scroll"><table><thead><tr><th>Name</th><th>Access</th><th>State</th><th>Updated</th><th>Manage</th></tr></thead><tbody id="people"></tbody></table></div></section>
+<section><h2>Recent access and task activity</h2><p>The installation retains the complete activity journal; this view shows its latest 200 entries.</p><div class="table-scroll"><table><thead><tr><th>Time</th><th>Person</th><th>Operation</th><th>Project or person</th></tr></thead><tbody id="activity"></tbody></table></div></section>
+</div>
+</main>
+<dialog id="person-dialog"><form id="person-form"><h2 id="form-title">Add person</h2><p id="form-error" role="alert" hidden></p><label for="display-name">Name</label><input id="display-name" name="display_name" required maxlength="120" autocomplete="off"><label class="checkbox"><input id="administrator" name="administrator" type="checkbox"> Installation administrator</label><fieldset id="project-fields"><legend>Project access</legend><div id="project-roles"></div></fieldset><p>Saving permissions ends this person's existing file sessions. Their current link connects with the updated access. Disabled access is reactivated by replacing the link.</p><div class="actions"><button id="save-person" type="submit">Save access</button><button id="close-person" type="button">Cancel</button></div></form></dialog>
+</body></html>
