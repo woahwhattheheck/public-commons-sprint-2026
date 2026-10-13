@@ -39,7 +39,7 @@ export interface DocumentCompositionServiceAnnouncement {
   schema:typeof DOCUMENT_COMPOSITION_SERVICE_LAUNCH_SCHEMA;state:'LISTENING';
   selectionSha256:string;directory:string;runtimeDirectory:string;
   operatorSelection:DocumentCompositionServiceOperator;pid:number;instanceId:string;
-  privateLaunch:string;sourceRoot:string;documentUrl:string;customerUrl:string;
+  privateLaunch:string;sourceRoot:string;documentUrl:string;agentUrl:string;customerUrl:string;
   checkoutUrl:string;jobsUrl:string;collectionsUrl:string;libraryUrl:string;resolutionUrl:string;
 }
 export type DocumentCompositionCustomerHost=Awaited<ReturnType<typeof startJobCustomerWorkspace>>;

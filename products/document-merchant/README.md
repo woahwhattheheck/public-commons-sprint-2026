@@ -124,3 +124,7 @@ Existing invoices and reports can enter through **Bundle existing PDFs** in Docu
 ### Correct a saved customer document
 
 Document production can select individual invoices or reports from a saved set, edit their complete records and templates, and prepare a new source set containing only those replacements. An unchanged repeat preserves the selected rendered source. Both flows retain the original task reference and source relationship, then use the existing merchant quote, customer checkout, full PDF receiving and Collection export. See [Correct selected documents](COMPOSITION.md#correct-selected-documents-or-order-an-unchanged-repeat) for the browser and CLI workflow.
+
+## Agent-operated customer fulfillment
+
+The running Document production customer exposes the complete saved-source, correction, quote, explicitly approved execution, result receiving and Collection export workflow through its original authenticated MCP endpoint. The installed typed client and `document-merchant agent` CLI connect to that same host, retain the original operation IDs and receive complete verified files. Ordered composition volumes and existing PDF bundles use their original source and price selections. [AGENT.md](AGENT.md) covers client configuration, the complete paid workflow, whole-file downloads and continuation.
