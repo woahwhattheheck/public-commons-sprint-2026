@@ -49,3 +49,8 @@ node measurement_workspace/engine/intake-receiving.mjs \
 The programme operates raw preview with an intentionally unassigned station selector, saved/reloaded mapping, reviewed native import, exact request replay, a conflicting later copy edition, complete project/workspace export, source-byte verification and original empty-workspace receiving. Its browser course opens and uses the real component at1365px and390px, downloads full files, and cold-reopens the retained browser profile. It does not run a scientific model, send a message or alter a shared customer workspace. Source hashes, complete outputs and screenshots are retained in the separately owned output directory.
 
 A source review or syntax parse is not a rendered completion. Inspect the actual desktop,390px and cold-reopen screenshots after a completed run, and record that visual finding with the operation. If the host fails before process creation, report that exact outcome; do not call the UI operated.
+
+
+## Compare immutable interpretations of one original file
+
+The current Guided Intake includes full same-file preparation revision comparison, explicit existing WQP characteristic editions, paged before/after outcomes, complete offline HTML/JSON downloads and verified reopening. See [INTAKE_COMPARISON.md](INTAKE_COMPARISON.md) for the whole operator/CLI flow and additive continuation of this original receiving course. A historical comparison never imports a source or replaces unfinished inputs. Only the identical saved current after revision can open the original preview, followed by the existing explicit import confirmation.

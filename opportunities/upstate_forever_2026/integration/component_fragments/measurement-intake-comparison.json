@@ -1,0 +1,36 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "measurement-intake-comparison",
+  "source_reference": "ECO-INTAKE-INTERPRETATION-COMPARISON-9F05-20261013: same-original-file saved mappings, native unchanged normalisation and complete offline comparison",
+  "components": {
+    "measurement-intake-comparison": {
+      "title": "Saved original measurement interpretation comparison",
+      "paths": [
+        "measurement_workspace/engine/intake_comparison.mjs",
+        "measurement_workspace/engine/intake.mjs",
+        "measurement_workspace/engine/cli.mjs",
+        "measurement_workspace/engine/intake-comparison-receiving.mjs",
+        "measurement_workspace/web/intake_comparison.mjs",
+        "measurement_workspace/web/intake.mjs",
+        "operator/web/intake_comparison.mjs",
+        "operator/web/measured_intake.mjs",
+        "operator/extensions/measured-observations.json",
+        "measurement_workspace/operator.py",
+        "measurement_workspace/INTAKE_COMPARISON.md",
+        "measurement_workspace/GUIDED_INTAKE.md",
+        "measurement_workspace/engine/parse.mjs",
+        "measurement_workspace/engine/normalise.mjs",
+        "measurement_workspace/engine/characteristics.mjs",
+        "measurement_workspace/engine/source_lineage.mjs",
+        "measurement_workspace/engine/http.mjs"
+      ],
+      "requires": [
+        "core",
+        "measurement-collections"
+      ]
+    }
+  },
+  "required_components": [
+    "measurement-intake-comparison"
+  ]
+}
