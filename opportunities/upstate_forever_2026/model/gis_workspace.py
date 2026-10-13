@@ -528,27 +528,65 @@ def receive(workspace, archive: str | Path, *, source_upload_id: str | None=None
         return value
 
 
+def adoption_choices(project: dict) -> dict:
+    """Describe retained selections without opening every original table body."""
+    layers = [{'id': row['id'], 'title': row['title'],
+               'kind': row['data']['kind'], 'units': row['data']['units']}
+              for row in project['layers']]
+    attachments = []
+    for row in project.get('attachments', []):
+        metadata = gis.attachment_metadata(project, row)
+        source = row.get('source') or {}
+        attachments.append({'id': row['id'], 'title': row['title'],
+            'kind': metadata['kind'], 'units': metadata.get('units'),
+            'vintage': source.get('vintage'),
+            'geography_basis': source.get('geography_basis'),
+            'filename': row['files'][0]['path'].rsplit('/', 1)[-1],
+            'bytes': row['files'][0]['bytes'], 'companions': len(row['files']) - 1})
+    return {'layer_choices': layers, 'attachment_choices': attachments}
+
+
+def _adoption_selection(project: dict, selection: dict):
+    def selected(name, fallback):
+        value = selection.get(name, fallback)
+        if (not isinstance(value, list) or any(not isinstance(x, str) or not x for x in value)
+                or len(set(value)) != len(value)):
+            raise ValueError('Choose each received source identity once: ' + name)
+        return value
+    layers = {row['id']: row for row in project['layers']}
+    attachments = {row['id']: row for row in project.get('attachments', [])}
+    chosen = selected('layer_ids', [])
+    original = selected('attachment_ids', list(attachments) if chosen else [])
+    if set(chosen) - set(layers) or set(original) - set(attachments):
+        raise ValueError('Choose existing received layer and attachment identities')
+    if not chosen and not original:
+        raise ValueError('Choose at least one working layer, original table or document')
+    if chosen and set(original) != set(attachments):
+        raise ValueError('Working layers retain their complete original context. Select all attachments, '
+                         'or clear the working layers to adopt selected tables and documents only.')
+    return chosen, original, layers, attachments
+
+
 def adopt_sources(workspace, selection: dict) -> dict:
-    """Adopt selected received working layers through the ORIGINAL source importer.
+    """Adopt received layers or original tables/documents through the source importer.
 
     This appends an independent source edition; it does not edit any original
     source collection, grid, parameter profile, scenario, numerical run or receipt.
     """
+    if not isinstance(selection, dict):
+        raise ValueError('Select retained GIS sources for adoption')
     parent,receipt,result=received(workspace,selection['receipt_id'])
     root=parent/'project';project=gis.load(root/'project.json')
     reason=selection.get('reason','').strip()
     title=selection.get('title','').strip()
     if not reason or not title:
         raise ValueError('Name the new source edition and explain the adoption')
-    chosen=selection.get('layer_ids')
-    if not isinstance(chosen,list) or not chosen or len(set(chosen))!=len(chosen) or any(not isinstance(x,str) for x in chosen):
-        raise ValueError('Choose each received working layer once')
-    byid={l['id']:l for l in project['layers']}
-    if set(chosen)-set(byid):raise ValueError('Choose existing received layer identities')
+    chosen,attachments,byid,documents=_adoption_selection(project,selection)
     adopted={'schema':'upstate.gis-source-adoption-selection/v1','adopter_version':gis.VERSION,
+             'adoption_format_version':2,
              'project_id':workspace.project['id'],'receipt_id':receipt['id'],
              'received_edition_id':project['edition_id'],'fingerprint':result['fingerprint'],
-             'title':title,'reason':reason,'layer_ids':chosen}
+             'title':title,'reason':reason,'layer_ids':chosen,'attachment_ids':attachments}
     key=gis.fingerprint(adopted)
     directory=workspace.root/'gis-source-adoptions'/key
     directory.mkdir(parents=True,exist_ok=True)
@@ -593,6 +631,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
             if data['kind']=='vector':entry['layer']=data['layer']
             entries.append(entry)
         seen_context=set()
+        context_sources=[]
         def context(title, records, *, context_id, context_role, metadata=None, source=None):
             metadata = deepcopy(metadata or {"kind": "document"})
             source = deepcopy(source or {})
@@ -617,7 +656,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                    'companions':[{'path':'project/'+r['path'],'sha256':r['sha256']} for r in records[1:]],
                    'uri':source.get('uri') or 'urn:upstate:received-gis:'+receipt['id']+':context:'+code,
                    'vintage':source.get('vintage') or 'Received GIS edition '+project['edition_id'],
-                   'gis_context_group':key,'gis_required_context':True,
+                   'gis_context_group':key,'gis_required_context':bool(chosen) or context_role!='attachment',
                    'received_gis':{'receipt_id':receipt['id'],'edition_id':project['edition_id'],
                                    'context_id':context_id,'context_role':context_role,
                                    'originals':deepcopy(records),'source':source,
@@ -634,11 +673,15 @@ def adopt_sources(workspace, selection: dict) -> dict:
                 if 'units' in metadata:
                     entry['units'] = deepcopy(metadata['units'])
             entries.append(entry)
+            if context_role == 'attachment':
+                context_sources.append({'attachment_id':context_id,'source_id':entry['id'],
+                                        'title':title,'kind':kind})
         for layer_id in chosen:
             layer = byid[layer_id]
             context('Retained originals · '+layer['title'],layer['originals'],
                     context_id=layer_id,context_role='layer_originals',source=layer.get('source'))
-        for document in project.get('attachments',[]):
+        for attachment_id in attachments:
+            document=documents[attachment_id]
             context(document['title'],document['files'],
                     context_id=document['id'],context_role='attachment',
                     metadata=gis.attachment_metadata(project,document),source=document.get('source'))
@@ -647,7 +690,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                 [gis.record(root,root/'project.json'),*history],
                 context_id=project['edition_id'],context_role='edition_history')
         manifest={'schema':'upstate.sources/v1','title':title,'entries':entries,
-                  'notes':[reason,'Selected independently editable working layers adopted from a complete received GIS edition.'],
+                  'notes':[reason,'Selected working layers and/or complete original tables and documents adopted from a received GIS edition.'],
                   'scope':{'gis_source_adoption':adopted}}
         manifest_path=parent/('source-adoption-'+key+'.json')
         if manifest_path.exists() and gis.load(manifest_path)!=manifest:
@@ -659,6 +702,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                'source_collection_id':collection['id'],'title':title,
                'sources':[{'layer_id':layer_id,'source_id':'GIS_'+byid[layer_id]['key']}
                           for layer_id in chosen],
+               'context_sources':context_sources,
                'manifest':gis.record(workspace.root,manifest_path)}
         gis.save(state,value)
         return value
