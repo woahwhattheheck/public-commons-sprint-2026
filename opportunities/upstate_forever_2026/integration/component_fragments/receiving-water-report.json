@@ -14,7 +14,8 @@
       ],
       "requires": [
         "receiving-waters",
-        "observed-context"
+        "observed-context",
+        "scientific-report-editions"
       ]
     }
   },
