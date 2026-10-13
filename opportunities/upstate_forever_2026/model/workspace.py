@@ -59,6 +59,9 @@ class Workspace:
                 "community_tables": self._list("community-tables"),
                 "community_plans": self._list("community-plans"),
                 "community_reports": self._list("community-reports"),
+                "planning_inventories": self._list("planning-inventories"),
+                "portfolios": self._list("portfolios"),
+                "portfolio_reports": self._list("portfolio-reports"),
                 "spatial_reviews": self._list("spatial-reviews"),
                 "customer_reviews": self._list("reviews"),
                 "customer_review_responses": self._list("review-responses"),
@@ -225,9 +228,9 @@ class Workspace:
             raise ValueError("Specify the actual nonnegative model-context buffer in metres")
         if not model_core.buffer(1e-5).covers(reporting):
             raise ValueError("Model-domain source must cover the full selected reporting basin")
-        model_geometry = model_core.buffer(buffer_m)
+        model_geometry = model_core if buffer_m == 0 else model_core.buffer(buffer_m)
         grid = rasters.grid_definition(
-            reference, model_geometry, resolution=spec.get("resolution_m", rasters.RESOLUTION))
+            reference, model_geometry, resolution=spec.get("resolution_m"))
         key = digest({"spec": spec, "grid": grid})
         directory = self.root / "grids" / key
         directory.mkdir(parents=True, exist_ok=True)
@@ -387,6 +390,47 @@ class Workspace:
     def build_community_report(self, selection):
         from .community_reports import build
         return build(self, selection)
+
+    def build_planning_inventory(self, selection):
+        from .planning_inventory import build
+        return build(self, selection)
+
+    def preview_portfolio(self, selection):
+        from .portfolios import preview
+        return preview(self, selection)
+
+    def save_portfolio(self, selection):
+        from .portfolios import save_portfolio
+        return save_portfolio(self, selection)
+
+    def prepare_portfolio_scenario(self, selection):
+        from .portfolios import prepare_scenario
+        return prepare_scenario(self, selection)
+
+    def prepare_portfolio_run(self, selection):
+        portfolio = self._get("portfolios", selection["portfolio_id"])
+        context = portfolio["context"]
+        grid_id = selection.get("grid_id") or context["grid_id"]
+        if grid_id != context["grid_id"]:
+            raise ValueError("Use the portfolio's original reporting grid for its selected parcel scenario")
+        profile_id = selection.get("profile_id") or context["profile_id"]
+        baseline = self.inspect_run(context["baseline_run_id"])
+        active = selection.get("models", list(run_models(baseline)))
+        scenario = self.prepare_portfolio_scenario(selection)
+        return self.prepare_run({"grid_id": grid_id, "profile_id": profile_id,
+                                 "scenario_id": scenario["id"], "models": active})
+
+    def run_portfolio(self, selection):
+        prepared = self.prepare_portfolio_run(selection)
+        return self.run(prepared["id"])
+
+    def build_portfolio_report(self, selection):
+        from .portfolios import build_report
+        return build_report(self, selection)
+
+    def build_portfolio_decision(self, selection):
+        from .portfolios import build_decision_report
+        return build_decision_report(self, selection)
 
     def backup(self, destination, *, include_intermediates=True):
         """A complete self-contained project; native run caches can be selected."""
