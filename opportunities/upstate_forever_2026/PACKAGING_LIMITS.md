@@ -45,7 +45,9 @@ The inventory records the effective `captureLimits`, original
 `declaredReferenceCount` and `capturedSourceBytes`. Its original schema and
 artifact identities remain intact. Recorded limits are provenance; verification
 uses the selected caller budget, including when the file declares larger limits.
-Old package-v1 inventories remain readable.
+Verification also checks the captured manifest size and the retained declared
+reference count against the caller's selected budgets. Old package-v1 inventories
+without the new count field remain readable.
 
 The original CLI exposes the same options on both subcommands:
 

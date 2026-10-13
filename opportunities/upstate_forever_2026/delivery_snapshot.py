@@ -255,6 +255,11 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
     require(isinstance(artifacts, list) and artifacts, 'Package index has no captured artifacts')
     require(len(artifacts) <= limits['max_references'] + 2,
             'Captured artifact count exceeds the selected reference budget')
+    if 'declaredReferenceCount' in index:
+        count = index['declaredReferenceCount']
+        require(type(count) is int and 0 <= count <= limits['max_references'],
+                'Declared reference count exceeds the selected reference budget')
+    manifest = relative_path(index.get('manifestPath'))
     root = Path(out_dir).resolve(strict=True)
     seen = set()
     total = 0
@@ -268,6 +273,10 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
         require(type(size) is int and 0 <= size <= limits['max_file_bytes'] and
                 isinstance(digest, str) and len(digest) == 64 and all(c in '0123456789abcdef' for c in digest),
                 f'Invalid artifact size or digest: {relative}')
+        if relative == manifest:
+            require(size <= limits['max_manifest_bytes'],
+                    'Captured manifest exceeds max_manifest_bytes=' +
+                    str(limits['max_manifest_bytes']))
         total += size
         require(total <= limits['max_total_bytes'],
                 'Captured delivery exceeds max_total_bytes=' + str(limits['max_total_bytes']))
@@ -287,6 +296,5 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
                     f'Captured file changed while reading: {relative}')
         _unchanged(root, relative, info)
         require(read_bytes == size and actual.hexdigest() == digest, f'Captured bytes differ: {relative}')
-    manifest = relative_path(index.get('manifestPath'))
     require(any(artifact['path'] == manifest for artifact in artifacts),
             'Manifest is not included in the captured artifacts')
