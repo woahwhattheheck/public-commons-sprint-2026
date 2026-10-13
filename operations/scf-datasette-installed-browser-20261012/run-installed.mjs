@@ -194,9 +194,25 @@ export async function runInstalledDatasetteBrowser({
     sourceResolution:{kind:sourceResolution,commit:sourceRef},startedAt:stamp(),phase:'CREATED',checks:{},applications:{},runs:[],browserErrors:[],artifacts:[]};
   const save=async phase=>{state.phase=phase;state.updatedAt=stamp();await retain(stateFile,state);
     process.stderr.write(JSON.stringify({operation:'datasette-installed-browser',phase,at:state.updatedAt})+'\n');};
+  const internalCapturePaths=new Set(['desktop-source.png','mobile-received.png'].map(name=>join(outputDirectory,name)));
+  const isInternalCapture=file=>internalCapturePaths.has(file.file);
+  const retainInternalCapture=file=>{
+    state.internalCaptures??=[];
+    if(!state.internalCaptures.some(item=>item.file===file.file&&item.bytes===file.bytes&&item.sha256===file.sha256))
+      state.internalCaptures.push({...file,custody:'host-local-inspection',recordedAt:stamp()});
+  };
+  const deliveryArtifacts=()=>state.artifacts.filter(file=>!isInternalCapture(file));
   if(state.phase==='COMPLETE'){
-    for(const file of state.artifacts)need(sha(await readFile(file.file))===file.sha256,'DATASETTE_INSTALLED_ARTIFACT_CHANGED');
-    return {state:'COMPLETE',reused:true,report:stateFile,checks:state.checks,artifacts:state.artifacts};
+    // Earlier journals listed the two inspection PNGs with the customer products.
+    // Preserve their original textual identities; cold receiving validates the
+    // complete customer products without requiring host-local image bytes.
+    for(const file of state.artifacts){
+      if(isInternalCapture(file)){retainInternalCapture(file);continue;}
+      need(sha(await readFile(file.file))===file.sha256,'DATASETTE_INSTALLED_ARTIFACT_CHANGED');
+    }
+    await retain(stateFile,state);
+    return {state:'COMPLETE',reused:true,report:stateFile,checks:state.checks,
+      artifacts:deliveryArtifacts(),internalCaptures:state.internalCaptures??[]};
   }
   const fromRepo=path=>import(pathToFileURL(join(repository,path)).href);
   let apps,context,browserAttempt,activeApp=null,stopActive=null,failed=false;
@@ -619,7 +635,7 @@ export async function runInstalledDatasetteBrowser({
     await context.close();context=null;await stopApplication();
     for(const name of ['desktop-source.png','mobile-received.png']){
       const file=join(outputDirectory,name),raw=await readFile(file);
-      if(!state.artifacts.some(item=>item.file===file))state.artifacts.push({file,bytes:raw.length,sha256:sha(raw)});
+      retainInternalCapture({file,bytes:raw.length,sha256:sha(raw)});
     }
     const currentBrowserErrors=state.browserErrors.slice(browserAttempt.errorOffset);
     browserAttempt.endedAt=stamp();browserAttempt.errorCount=currentBrowserErrors.length;
@@ -629,7 +645,8 @@ export async function runInstalledDatasetteBrowser({
       receivedApplicationReopened:true,installedCommandReopened:true,mobileOperatorLayout:true};
     state.completedAt=stamp();await save('COMPLETE');
     return {state:'COMPLETE',report:stateFile,sourceCommit:sourceRef,workspaceId:input.workspaceId,
-      checks:state.checks,installedRuntime:runtimeDirectory,receivedWorkspace:browserReceivedDirectory,artifacts:state.artifacts};
+      checks:state.checks,installedRuntime:runtimeDirectory,receivedWorkspace:browserReceivedDirectory,
+      artifacts:deliveryArtifacts(),internalCaptures:state.internalCaptures??[]};
   }catch(error){
     failed=true;
     if(browserAttempt){browserAttempt.endedAt=stamp();browserAttempt.errorCount=state.browserErrors.length-browserAttempt.errorOffset;}

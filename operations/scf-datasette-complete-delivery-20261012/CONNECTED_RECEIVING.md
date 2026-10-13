@@ -1,6 +1,6 @@
 # Connected receiving for the original Datasette operation
 
-Continue the saved publisher → installed Applications/browser → Conapi supplier/workbook operation. The publisher is already complete. Keep installed journal `555b8d80-50d9-4e18-92bd-6cca3dab97de`, original root `/dev/datasette-publisher-a49aa-fq7r4j79`, selected runtime `a78709d02d323924446702a851e85bcf256f2437` and the original twelve-part checkpoint. The complete receiver is 263,551 bytes, SHA-256 `50df338daa104b46db5ed79ecb93368f2ccc504d846acab1d1e31b274cabf8ec`, from the checkpoint-restoration source merged at public `58a68dc4820e5c715388de2ed45ac9c364669104` / canonical `b889e8ab554c6d697a507113cbcfdbb9f5183715`.
+Continue the saved publisher → installed Applications/browser → Conapi supplier/workbook operation. The publisher is already complete. Keep installed journal `555b8d80-50d9-4e18-92bd-6cca3dab97de`, original root `/dev/datasette-publisher-a49aa-fq7r4j79`, selected runtime `a78709d02d323924446702a851e85bcf256f2437` and the original twelve-part checkpoint. The complete receiver is 320,135 bytes, SHA-256 `380abe4426b527fcbd1abb571185ba63a0196b688844df3140a03d3bf4eae03e`, from the checkpoint-restoration source merged at public `58a68dc4820e5c715388de2ed45ac9c364669104` / canonical `b889e8ab554c6d697a507113cbcfdbb9f5183715`.
 
 ## Receive with the current host's connected tools
 
@@ -142,3 +142,9 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 
+
+## Complete delivery and internal inspection captures
+
+The complete saved checkpoint preserves every customer workspace, source, report, workbook, data export and customer image asset. Sixteen exact programme-owned browser capture paths remain on the producing host. The full checkpoint manifest retains their paths, sizes and hashes as textual inspection history; it also retains the selected workbook output path and the original historical archive identity. The historical `Supplier_Workbook_Receiving.zip` stays on the host because it can embed those internal captures. The distinct complete `Supplier_Workbook_Delivery.zip` carries the customer workspace, exact source, returned workbooks and reports without those captures.
+
+The same completed installed and Conapi journals reopen their full customer artifacts after transport. Only the exact internally generated capture names are treated as host-local; this rule never filters customer images by extension. The original workbook checkout, source commit, driver and operation remain selected. A separately retained full `workbook_receiving.mjs` provides the custody correction and records its implementation hash alongside the unchanged original driver. Complete original receipts and textual capture history remain intact. This does not establish that an image was viewed: inspect the actual live images and outgoing files as required by the owner policy.

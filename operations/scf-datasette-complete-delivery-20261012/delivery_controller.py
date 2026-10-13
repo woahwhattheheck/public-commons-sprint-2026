@@ -153,6 +153,30 @@ def save_files(paths,label):
         if row.get("status")=="succeeded" and not succeeded(row):raise RuntimeError("The saved file identity is incomplete.")
     return rows
 
+# Exact programme-owned inspection images remain on their producing host.
+# Customer image assets at every other path remain complete archive members.
+def internal_capture_paths():
+    captures={root/P(name) for name in ["installed/desktop-source.png","installed/mobile-received.png","conapi-native/Conapi_Original_Supplier_Desktop.png","conapi-native/Conapi_Received_Final_Transport_Edition.png","conapi-native/Conapi_Received_Successor_Desktop.png","conapi-native/Conapi_Received_Successor_Mobile.png","conapi-native/Conapi_Installed_Applications.png","conapi-native/Conapi_Received_Analysis.png","conapi-native/Conapi_Received_Supplier_Review.png","conapi-native/Conapi_Received_Supplier_Edit.png"]}
+    workbook=root/"conapi-workbook-native"
+    selection_path=root/"conapi-workbook-selected-input.json"
+    if selection_path.exists():
+        selection=json.loads(selection_path.read_bytes())
+        if selection.get("operation")!="CONAPI-SUPPLIER-WORKBOOK-RECEIVING-7A2F-20261012":
+            raise RuntimeError("The saved workbook output belongs to another original operation.")
+        workbook=P(selection["outputDirectory"])
+        if not workbook.is_absolute() or workbook.resolve()!=workbook or root not in workbook.parents:
+            raise RuntimeError("Keep the original workbook output under its actual owned root.")
+    captures.update(workbook/name for name in ["01-original-workbook.png","02-offline-overlap.png","03-adopted-workspace.png","04-fresh-receiving.png","05-fresh-receiving-mobile.png","interrupted-browser.png"])
+    return captures,{workbook/"Supplier_Workbook_Receiving.zip"}
+def internal_capture_exclusion(path,rel,info,captures,private_carriers):
+    if path not in captures and path not in private_carriers:return None
+    item={"path":rel,"kind":"host-local-browser-inspection" if path in captures else "legacy-internal-capture-archive",
+          "custody":"retained-on-producing-host","mode":stat.S_IMODE(info.st_mode),"mtime_ns":info.st_mtime_ns}
+    if stat.S_ISREG(info.st_mode):item.update({"bytes":info.st_size,"sha256":digest(path)})
+    elif stat.S_ISLNK(info.st_mode):item["target"]=os.readlink(path)
+    else:item["member_type"]=stat.S_IFMT(info.st_mode)
+    return item
+
 def persist_complete_phase(original_outcome,phase):
     outcome=json.loads(json.dumps(original_outcome))
     outcome["checkpoint_phase"]=phase
@@ -207,6 +231,7 @@ def persist_complete_phase(original_outcome,phase):
     export=transfer_root/"export";export.mkdir(mode=0o700,exist_ok=True)
     archive_path=export/archive_name
     members=[];directories=[];excluded=[]
+    internal_captures,private_capture_carriers=internal_capture_paths()
     with zipfile.ZipFile(archive_path,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=6,allowZip64=True) as z:
         for folder,dirs,files in os.walk(root,followlinks=False):
             if P(folder)!=root:
@@ -224,6 +249,8 @@ def persist_complete_phase(original_outcome,phase):
                     members.append({"path":rel,"kind":"symlink","target":os.readlink(path)});dirs.remove(name)
             for name in files:
                 path=P(folder)/name;rel=path.relative_to(root).as_posix();info=path.lstat()
+                capture_exclusion=internal_capture_exclusion(path,rel,info,internal_captures,private_capture_carriers)
+                if capture_exclusion is not None:excluded.append(capture_exclusion);continue
                 if rel=="complete-checkpoint-manifest.json":excluded.append({"path":rel,"kind":"preceding-manifest-preserved-in-run-history"});continue
                 if stat.S_ISSOCK(info.st_mode):excluded.append({"path":rel,"kind":"runtime-socket"});continue
                 if stat.S_ISLNK(info.st_mode):

@@ -11,13 +11,13 @@
     },
     {
       "path": "run_conapi.mjs",
-      "bytes": 57141,
-      "sha256": "c1b1b5c42970d5ec8963ff550e1a19bc81d731984ad039f0117dc047e96edb6d"
+      "bytes": 57981,
+      "sha256": "fb2df93ccceda029f9faac7fa5251f007e4754db3510e487007f1e57456b1a4c"
     },
     {
       "path": "preserve_delivery.py",
-      "bytes": 13071,
-      "sha256": "5a637dea893af24144b7ceb570f2ffe8219e560fed739f00be203167d6229f3c"
+      "bytes": 15788,
+      "sha256": "443bd2e99d00fc1c22659daf2dd5370d5a4c8ad90d8617609e5793275f092ff2"
     },
     {
       "path": "continue_conapi.py",
@@ -26,13 +26,30 @@
     },
     {
       "path": "OPERATING.md",
-      "bytes": 29480,
-      "sha256": "fdf9f1766f1fb318da7bb3a30fd4a51a85dde4a7972234f41d340d685ba94712"
+      "bytes": 32992,
+      "sha256": "3b1f2e574237cbce2df1b673a2afb01f0b6b923d3b934eb010169625d4646dad"
     },
     {
       "path": "workbook_following.py",
-      "bytes": 12839,
-      "sha256": "7f3e426a094fb34881f8c2e40d540d6a5746905afd8410a05e4f5339a02001b6"
+      "bytes": 16402,
+      "sha256": "9b7fb1acb99cb4d4ff41e1ca13ab86d288f582c1f4e0e9417ad088c5e4a5edb9"
+    },
+    {
+      "path": "workbook_receiving.mjs",
+      "bytes": 65135,
+      "sha256": "9e805a59afa79d1be1d3e351e2109b298a3dd1337d53438010b2e39adaa85d9b"
     }
-  ]
+  ],
+  "workbookCustody": {
+    "originalCommit": "4d0eb4bba1704547a4c2ea3481b1f199eee2be98",
+    "originalDriver": {
+      "bytes": 53144,
+      "sha256": "2a0b3bf4af4eb278b987cb404fde97dfac5b56835474b0c109a935b06554dbd3"
+    },
+    "implementation": {
+      "path": "workbook_receiving.mjs",
+      "bytes": 65135,
+      "sha256": "9e805a59afa79d1be1d3e351e2109b298a3dd1337d53438010b2e39adaa85d9b"
+    }
+  }
 }

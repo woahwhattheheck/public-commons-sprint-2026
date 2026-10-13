@@ -14,6 +14,40 @@ import zipfile
 PART_BYTES = 10 * 1024 * 1024
 PART_BATCH = 20
 
+# Exact programme-generated inspection names only. Customer image assets and
+# report/workbook/data/source files retain ordinary whole-file custody.
+CONAPI_INTERNAL_CAPTURES = (
+    "Conapi_Original_Supplier_Desktop.png", "Conapi_Received_Final_Transport_Edition.png",
+    "Conapi_Received_Successor_Desktop.png", "Conapi_Received_Successor_Mobile.png",
+    "Conapi_Installed_Applications.png", "Conapi_Received_Analysis.png",
+    "Conapi_Received_Supplier_Review.png", "Conapi_Received_Supplier_Edit.png",
+)
+WORKBOOK_INTERNAL_CAPTURES = (
+    "01-original-workbook.png", "02-offline-overlap.png", "03-adopted-workspace.png",
+    "04-fresh-receiving.png", "05-fresh-receiving-mobile.png", "interrupted-browser.png",
+)
+
+
+def internal_inspection_paths(root):
+    root = Path(root)
+    captures = {root / "installed" / name for name in ("desktop-source.png", "mobile-received.png")}
+    captures.update(root / "conapi-native" / name for name in CONAPI_INTERNAL_CAPTURES)
+    workbook = root / "conapi-workbook-native"
+    selection_path = root / "conapi-workbook-selected-input.json"
+    if selection_path.exists():
+        selection = json.loads(selection_path.read_bytes())
+        if selection.get("operation") != "CONAPI-SUPPLIER-WORKBOOK-RECEIVING-7A2F-20261012":
+            raise ValueError("The saved workbook output belongs to another original operation.")
+        workbook = Path(selection["outputDirectory"])
+        if (not workbook.is_absolute() or workbook.resolve() != workbook or root not in workbook.parents):
+            raise ValueError("Keep the original workbook output under its actual owned root.")
+    captures.update(workbook / name for name in WORKBOOK_INTERNAL_CAPTURES)
+    # This historical package may contain those original inspection PNG bytes.
+    # The complete new Supplier_Workbook_Delivery.zip is independently retained.
+    private_carriers = {workbook / "Supplier_Workbook_Receiving.zip"}
+    return captures, private_carriers
+
+
 
 def digest(path):
     value = hashlib.sha256()
@@ -54,6 +88,7 @@ def save_complete_delivery(*, root, export, helpers, helper_state, report, opera
     export.mkdir(mode=0o700, parents=True, exist_ok=True)
     helper_state.mkdir(mode=0o700, parents=True, exist_ok=True)
     excluded_paths = {Path(value) for value in excluded} | {export, helper_state}
+    captures, private_carriers = internal_inspection_paths(root)
     raw_report = json.loads(report.read_bytes())
     archive = export / filename
     members, directories, skipped = [], [], []
@@ -84,6 +119,15 @@ def save_complete_delivery(*, root, export, helpers, helper_state, report, opera
             for name in files:
                 path = parent / name
                 relative = path.relative_to(root).as_posix()
+                if path in captures or path in private_carriers:
+                    info = path.lstat()
+                    if not stat.S_ISREG(info.st_mode):
+                        raise ValueError("An internal inspection path is not its original regular file: " + relative)
+                    skipped.append({"path": relative,
+                                    "kind": "internal-browser-inspection" if path in captures else "historical-internal-image-carrier",
+                                    "bytes": info.st_size, "sha256": digest(path),
+                                    "custody": "live-producing-host; original text identities preserved"})
+                    continue
                 if path in excluded_paths or relative == "complete-checkpoint-manifest.json":
                     skipped.append({"path": relative, "kind": "preceding-manifest-or-original-transfer"})
                     continue
