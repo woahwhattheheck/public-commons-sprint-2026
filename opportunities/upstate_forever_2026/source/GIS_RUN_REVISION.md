@@ -47,6 +47,25 @@ The maintained component fragment is `integration/component_fragments/gis-run-re
 
 Install the complete current source cohort through the existing cumulative assembler. The GIS installer carries the new native context and receiving files, forwards the optional revision catalogue request on its original legacy route, and permits the exact reviewed predecessor versions of the three shared browser files. A different shared predecessor requires composition with its owner. Preserve newer unrelated peer edits. The full original model/operator/source/source_tools capture includes this context and its receiving code when backing up the application.
 
+### Materialize the actual ten-file update
+
+The Parameter supervisor's named member list does not install unrelated GIS files. Do not append this bank to that list and assume the files appeared. Use the maintained application assembler through `source_tools/receive_run_revision_source.py`:
+
+```bash
+"$PY" "$SOURCE_RECEIVER" \
+  --application "$APP" \
+  --bank "$PR4322_BANK" \
+  --output "$NEXT_APPLICATION"
+```
+
+`PR4322_BANK` is the complete ten-file JSON carrier. The receiving helper verifies its original normalized identity (280,022 bytes, SHA-256 `251e805fe9486da340ad1065e14140d5c8d0b5b31f68c4237719826c8e685c72`) and every original source member's bytes, SHA-256 and Git blob. It accepts an absent member, an identical member or that member's exact reviewed predecessor. It explicitly retains the later reviewed generated-review provider `8866d4380e5d2c2da6b3132f6dd75665853570cc` when already installed. Any other differing source is reported for composition with its current owner.
+
+The helper supplies the assembler's real `file_metadata` and predecessor declarations, snapshots the complete original application, checks its authoritative component/import closure and publishes a separate full application directory. All ten selected source bodies are checked in the result. This uses the original `application_assembly.py` atomic receiver, not the Parameter installer's fixed member list. The running application, Workspace, native task journal and processes are untouched.
+
+The full original dependencies must actually be present: Run revisions includes its provider/descriptor/CSS and scenario-inputs/native-process-reports families; execution history includes its model/provider/descriptor/receiver, Native runs and Guided Journey; GIS retains its complete model/renderer/registry and source/report dependencies. A missing member produces the original structured `component_closure` result before publication. Receive those exact current original families through their existing owner and rerun the same materialization; do not fabricate an empty file, weaken the catalogue, or replace a newer shared file.
+
+At the sole existing owner's completed writer boundary, use the returned `application` path with the unchanged original Workspace and preserved receiving state. Then run the native course above. Source materialization reports `native_execution: not_started`; only the actual course result establishes export/receipt/reopen completion.
+
 ## Actual receiving and viewing
 
 Source checks and JavaScript controller exercises are separate from native execution and rendered viewing. The equipped receiving owner must return the real task/result paths from the original operation, open the current application at desktop and narrow widths, inspect the exact outgoing GIS HTML and QGIS project, and open **every** JSON, CSV, HTML, ZIP and original companion attachment. Follow the original numerical/source provenance and inspect the optional history’s actual elapsed intervals. Record an actual failure or missing dependency in that same operation; do not replace the engine or silently rerun the model.
