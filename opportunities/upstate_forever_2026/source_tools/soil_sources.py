@@ -450,6 +450,9 @@ def prepare(reference, domain, metadata_path, metadata_receipt, directory, *,
                 path = directory / item["path"]
                 if path.stat().st_size != item["bytes"] or file_digest(path) != item["sha256"]:
                     raise ValueError("Retained soil source or companion bytes changed")
+            atomic_json(directory / "source-manifest.json", {
+                "schema": "upstate.sources/v1", "title": entry["title"],
+                "entries": [entry]}, immutable=True)
             return entry
 
         client = Sda(directory, resume=resume)
