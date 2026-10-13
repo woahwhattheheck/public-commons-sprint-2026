@@ -258,13 +258,19 @@
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "kind": "blob",
       "path": "stellar-forge/mcp-merchant-operator/WORLDBANK_PROGRAMMES.md",
-      "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
+      "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
       "editions": [
         {
           "commit": "8baf462fb821f91c8fc2fc7f48db66a8be1c89ab",
           "git_blob": "1503114f204e0d44c15de849d152bbee80dcc2c0",
           "bytes": 15410,
           "sha256": "e8f4782f44d8aa4b5dacba6ed77a41480576fe5e5c41a35ab686fae90103aab6"
+        },
+        {
+          "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+          "git_blob": "bed1d80ef58361927757c3769d0b2c6552e59a03",
+          "bytes": 16147,
+          "sha256": "66e3a7a4bb3c86be9d862b7c0137de26fad99c45f1e327c2d59d6a74d25c8017"
         }
       ]
     },
@@ -274,13 +280,99 @@
       "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
       "kind": "blob",
       "path": "products/worldbank/CUSTOMER_DELIVERY.md",
-      "commit": "c8f0d4eae25b1138c3af3580bf2fd837162c977c",
+      "commit": "007b3427f4c9fe287b489b23f3deec61d9f9997b",
       "editions": [
         {
           "commit": "c8f0d4eae25b1138c3af3580bf2fd837162c977c",
           "git_blob": "e7d9fbba94d7abbec49a15ad9eedae5bad71090b",
           "bytes": 14204,
           "sha256": "e222c769e84b4a16dd7b07e235bf409a07a4a8489fdcefca48261e82533f3f2b"
+        },
+        {
+          "commit": "007b3427f4c9fe287b489b23f3deec61d9f9997b",
+          "git_blob": "8f78b96742c415829e564688554b84496897e2d5",
+          "bytes": 16846,
+          "sha256": "78f86e9f36283bf0b038143971dc0b0843beb4c570ebeff9246976e85956aa68"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-approved-source-agent-guide",
+      "label": "Complete approved source agent intake, registration and portable receiving",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/WORLDBANK_SOURCE_INTAKE.md",
+      "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+      "editions": [
+        {
+          "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+          "git_blob": "dbafe1d756b1e3e171280231ed63dac858eb747a",
+          "bytes": 10126,
+          "sha256": "ec31b03839a4cc1a94b0bf2e37ced86a2cbebdd333c0d578575c859c5cba70b0"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-approved-source-agent-client",
+      "label": "Durable source upload, exact native registration and programme preparation",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/worldbank-intake-client.mjs",
+      "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+      "editions": [
+        {
+          "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+          "git_blob": "b8253761cbbb2b1b77c5d070efac7bdde9309b05",
+          "bytes": 11860,
+          "sha256": "863776e6681a29da0ba35cd761d0ee5c4604cf4b2c5ec6fef59d0f5c5cf8493e"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-approved-source-agent-custody",
+      "label": "Original registered source and complete file custody on the existing provider",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/worldbank-intake-agent.mjs",
+      "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+      "editions": [
+        {
+          "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+          "git_blob": "8f2bfab8d290dd8ecf1df06f5e62d86707886521",
+          "bytes": 7573,
+          "sha256": "64e92b8641c6306adec65ea3af707f6b5a5f00c6ec57753199281e70544de16c"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-approved-source-agent-identity",
+      "label": "Registered source and full receiving identity contract",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/worldbank-intake-contracts.mjs",
+      "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+      "editions": [
+        {
+          "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+          "git_blob": "9e40d3b117ddbd837b086dcf42e9b1a600814270",
+          "bytes": 3735,
+          "sha256": "2e7ddf8f719a18666b1b667d3b5340fde66ba56d70d71c0954f516a0e2fc5160"
+        }
+      ]
+    },
+    {
+      "id": "worldbank-approved-source-agent-command",
+      "label": "Installed original source and programme command",
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "kind": "blob",
+      "path": "stellar-forge/mcp-merchant-operator/worldbank-programme-cli.mjs",
+      "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+      "editions": [
+        {
+          "commit": "b1b703de5a682e7b2fd186ef754fa386828f200d",
+          "git_blob": "49c0427bde8f648fdc0d9c7cfc17a2c51e8ccd0c",
+          "bytes": 6482,
+          "sha256": "fc0c0a530d73410cb1f2b2a6479d5ce2253f503c8e0a73336cee317b720dd31a"
         }
       ]
     }
