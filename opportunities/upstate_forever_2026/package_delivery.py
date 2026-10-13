@@ -229,7 +229,8 @@ def pack(manifest_path, output, *, limits=None):
     index['artifacts'].append({'roles': ['technical-audit'], 'path': 'audit.json',
                                'bytes': len(audit_raw), 'sha256': hashlib.sha256(audit_raw).hexdigest()})
     index['auditStatus'] = audit['status']
-    index['humanReview'] = 'PENDING_QUALIFIED_PRIME'
+    native_study = index.get('schema') == 'commons.native-study-package/v1'
+    index['humanReview'] = ('SCIENTIFIC_INTERPRETATION' if native_study else 'PENDING_QUALIFIED_PRIME')
     index['projectReferences'] = 'RELATIVE_LAYOUT_PRESERVED; application-internal absolute paths and undeclared dependencies remain operator review'
     index['companionCoverage'] = 'Known GeoTIFF masks, overviews and georeferencing companion names checked; not a full GIS dependency graph'
     if audit['status'] == 'AUDIT_UNAVAILABLE':
@@ -239,7 +240,7 @@ def pack(manifest_path, output, *, limits=None):
         index['disposition'] = 'PACKAGED_FOR_REMEDIATION'
         code = 2
     else:
-        index['disposition'] = 'PACKAGED_HUMAN_REVIEW_REQUIRED'
+        index['disposition'] = ('PACKAGED_NATIVE_STUDY' if native_study else 'PACKAGED_HUMAN_REVIEW_REQUIRED')
         code = 0
     index['packageSha256'] = fingerprint(index)
     verify_capture(output, index, limits=limits)
