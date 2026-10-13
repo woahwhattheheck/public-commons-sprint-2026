@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Install native programme controls into an existing Upper Savannah application.
+
+Use the complete source package as --source-root. Changes are additive and
+shared registrations are composed from current source, preserving other modules.
+"""
+from __future__ import annotations
+
+import argparse
+import ast
+import contextlib
+import fcntl
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import tempfile
+
+FILES = (
+    "model/compute_programme.py",
+    "model/compute_programme_cli.py",
+    "model/programme_experiments.py",
+    "source_tools/receive_gura.py",
+    "operator/programmes.py",
+    "operator/web/programmes.mjs",
+    "operator/web/programmes.css",
+    "PROGRAMMES.md",
+)
+
+
+PREVIOUS_EDITIONS = {
+    "model/compute_programme.py": [
+        "0d676a655f42427749a835706d139ce287bc8ea8f138970413652b6938a93e03"
+    ],
+    "model/compute_programme_cli.py": [
+        "2021af6d59f3a9f94849da50cbcd58eac987f9cbae52964582d1d090c461ff96"
+    ],
+    "operator/programmes.py": [
+        "67c0c1697b44f81763e21dbf3dd62e258886247707f72a408d2b6ecbf6a10a61"
+    ],
+    "operator/web/programmes.mjs": [
+        "0a334cf55eaa95a7c0347ad605adea170261495b3042fc33b6b051fbaad9d2d4"
+    ],
+    "operator/web/programmes.css": [
+        "939dea3c338775175b137239acfbc7d4cd1e2daef58060af2ed73ea98c484bdf"
+    ],
+    "install_programmes.py": [
+        "168d26a1792c2f1ade350d92130279e2710c2c4d4790b2f1cdf911b1007b21f0"
+    ],
+    "PROGRAMMES.md": [
+        "b0a9c33c09f4dddba47db5a677ddc135b5c4242630c255ab4c232d4f365a206f"
+    ]
+}
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def add(source, anchor, addition, label, *, after=True):
+    if addition in source:
+        return source
+    if source.count(anchor) != 1:
+        raise ValueError(label + ": current source needs one compatible registration anchor; found " + str(source.count(anchor)))
+    return source.replace(anchor, anchor + addition if after else addition + anchor, 1)
+
+
+def replace(source, old, new, label):
+    if new in source:
+        return source
+    if source.count(old) != 1:
+        raise ValueError(label + ": current source needs one compatible registration anchor; found " + str(source.count(old)))
+    return source.replace(old, new, 1)
+
+
+def patch_server(source):
+    source = add(source, "from model.spatial_exports import SpatialExports\n",
+                 "from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS\n", "programme import")
+    source = add(source, "ACTIONS.update(CUSTOMER_REVIEW_ACTIONS)\n",
+                 "ACTIONS.update(PROGRAMME_ACTIONS)\n", "programme action registry")
+    source = add(source, "        self.customer_reviews = CustomerReviews(self, Fault)\n",
+                 "        self.programmes = Programmes(self, Fault)\n", "programme operator")
+    source = add(source, "        if action in CUSTOMER_REVIEW_ACTIONS:\n",
+                 "        if action in PROGRAMME_ACTIONS:\n            return self.programmes.invoke(task)\n", "programme worker", after=False)
+    source = add(source, "        state = ws.overview()\n",
+                 '        state["compute_programmes"] = self.programmes.catalogue(workspace)["programmes"]\n', "programme state")
+    if "self.programmes.decorate_task(" not in source:
+        source = replace(source, "        return self.customer_reviews.decorate_task(task)\n",
+                         "        return self.programmes.decorate_task(self.customer_reviews.decorate_task(task))\n", "programme task view")
+    source = add(source, '                review_reads = {"/api/reviews/" + name: name for name in CUSTOMER_REVIEW_READS}\n',
+                 '                programme_reads = {"/api/programmes/" + name: name for name in PROGRAMME_READS}\n'
+                 '                if url.path in programme_reads:\n'
+                 '                    return self.send_json(200, self.app.programmes.read(workspace, programme_reads[url.path],\n'
+                 '                        {"programme_id": one("programme_id")}))\n',
+                 "programme read routes", after=False)
+    source = add(source, "            value = self.body()\n",
+                 '            if url.path == "/api/programmes/preview":\n'
+                 '                return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))\n'
+                 '            if url.path == "/api/programmes/pause":\n'
+                 '                return self.send_json(200, self.app.programmes.pause(value.get("workspace", self.app.primary), value))\n'
+                 '            if url.path == "/api/programmes/delivery-preview":\n'
+                 '                return self.send_json(200, self.app.programmes.delivery_preview(value.get("workspace", self.app.primary), value))\n',
+                 "programme immediate routes")
+    source = add(source,
+                 '                return self.send_json(200, self.app.programmes.preview(value.get("workspace", self.app.primary), value))\n',
+                 '            if url.path == "/api/programmes/experiment-preview":\n'
+                 '                return self.send_json(200, self.app.programmes.experiment_preview(value.get("workspace", self.app.primary), value))\n',
+                 "saved experiment preview")
+    matches = list(re.finditer(r"if selected not in (\(?)(\{[^}\n]+\})([^:\n]*):", source))
+    if len(matches) != 1:
+        raise ValueError("Static programme assets: current operator asset registry is ambiguous.")
+    match = matches[0]
+    members = ast.literal_eval(match.group(2))
+    if not isinstance(members, set) or not all(isinstance(item, str) for item in members):
+        raise ValueError("Static programme assets: expected the current literal file allowlist.")
+    members.update({"programmes.mjs", "programmes.css"})
+    literal = "{" + ", ".join(json.dumps(item) for item in sorted(members)) + "}"
+    source = (source[:match.start()] + "if selected not in " + match.group(1) +
+              literal + match.group(3) + ":" + source[match.end():])
+    ast.parse(source, filename="operator/server.py")
+    return source
+
+
+def patch_app(source):
+    source = add(source, "import {attachCustomerReviews} from './reviews.mjs';\n",
+                 "import {attachProgrammes} from './programmes.mjs';\n", "programme browser import")
+    source = add(source, "const viewLabels={", "programmes:'Run programmes',", "programme view")
+    source = add(source, "const actionLabels={",
+                 "'compute.programme.save':'Save run programme','compute.programme.run':'Continue run programme',"
+                 "'compute.programme.report':'Build result catalogue','compute.programme.delivery':'Build programme delivery',",
+                 "programme action labels")
+    source = add(source, "const actionLabels={",
+                 "'compute.programme.experiment':'Use saved experiment',",
+                 "saved experiment task label")
+    source = add(source, "function toast(message){",
+                 "const programmes=attachProgrammes({getState:()=>state,api,endpoint,openForm,submitAction,detail,fileList,showTask,toast,openItem,"
+                 "refreshState:refresh,navigate,closeDetail:()=>{detailDialog.close();detailContext=null;}});\n",
+                 "programme browser instance", after=False)
+    source = replace(source, "if(view==='spatial'){community.detach();customerReviews.detach();",
+                     "if(view==='spatial'){programmes.detach();community.detach();customerReviews.detach();", "programme spatial lifecycle")
+    source = add(source, "  const d=state.data;let html='';\n",
+                 "  if(view==='programmes'){community.detach();customerReviews.detach();programmes.mount($('#content'),state);return;}\n"
+                 "  programmes.detach();\n", "programme view mount", after=False)
+    source = add(source, "  $('#content').innerHTML=html;\n",
+                 "  if(view==='runs'){const actions=$('.page-actions',$('#content'));if(actions)actions.insertAdjacentHTML('beforeend',button('programme-open','Run programmes'));}\n",
+                 "programme native runs entry")
+    if "programmes.taskActions(row)" not in source:
+        source = replace(source, "customerReviews.taskActions(row)",
+                         "programmes.taskActions(row)+customerReviews.taskActions(row)", "programme task opening")
+    source = replace(source, "toast((actionLabels[task.action]||task.action)+' completed.')",
+                     "toast(programmes.completionMessage(task)||(actionLabels[task.action]||task.action)+' completed.')", "programme completion label")
+    if "spatialWorkspace.suspend();programmes.detach();" not in source:
+        source = replace(source, " spatialWorkspace.suspend();community.detach();customerReviews.detach();workspace=id;",
+                         " spatialWorkspace.suspend();programmes.detach();community.detach();customerReviews.detach();workspace=id;", "programme workspace switch")
+    source = add(source, " const action=button.dataset.action,id=button.dataset.id;\n",
+                 " if(action?.startsWith('programme-'))return programmes.dispatch(button);\n", "programme dispatch")
+    return source
+
+
+def patch_index(source):
+    source = add(source, '<link rel="stylesheet" href="/web/reviews.css">\n',
+               '<link rel="stylesheet" href="/web/programmes.css">\n', "programme stylesheet")
+    return add(source, '<button data-view="runs">Native model runs</button>\n',
+               '    <button data-view="programmes">Run programmes</button>\n', "programme navigation")
+
+
+def run(application, source_root, *, dry_run=False):
+    application = Path(application).resolve(strict=True)
+    source_root = Path(source_root).resolve(strict=True)
+    for name in ("model/workspace.py", "model/native.py", "model/common.py", "model/profiles.py"):
+        if not (application / name).is_file():
+            raise ValueError("Receive the existing full application first; missing " + name)
+    lock_root = application / ".locks"
+    lock_root.mkdir(exist_ok=True)
+    with (lock_root / "programme-install.lock").open("a+") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        pending = {}
+        original = {}
+        for name in FILES:
+            source_file = source_root / name
+            data = source_file.read_bytes()
+            if name.endswith(".py"):
+                ast.parse(data.decode("utf-8"), filename=name)
+            target = application / name
+            before = target.read_bytes() if target.exists() else None
+            if (before is not None and before != data
+                    and sha(before) not in PREVIOUS_EDITIONS.get(name, ())):
+                raise ValueError("Existing authored programme source differs: " + name +
+                                 ". Reconcile this file before installing the selected edition.")
+            original[name] = before
+            pending[name] = data
+        for name, patch in (
+            ("operator/server.py", patch_server),
+            ("operator/web/app.mjs", patch_app),
+            ("operator/web/index.html", patch_index),
+        ):
+            before = (application / name).read_bytes()
+            original[name] = before
+            pending[name] = patch(before.decode("utf-8")).encode("utf-8")
+        changed = [name for name, data in pending.items() if original[name] != data]
+        receipt = {
+            "schema": "upstate.programme-install/v1",
+            "application": str(application), "source_root": str(source_root),
+            "dry_run": dry_run, "changed": changed,
+            "files": [{"path": name, "bytes": len(data), "sha256": sha(data),
+                       "previous_sha256": sha(original[name]) if original[name] is not None else None}
+                      for name, data in sorted(pending.items())],
+            "opening_route": "/#programmes",
+        }
+        if dry_run:
+            return receipt
+        with tempfile.TemporaryDirectory(prefix=".upstate-programmes-", dir=application.parent) as scratch:
+            staging = Path(scratch)
+            for name in changed:
+                file = staging / name
+                file.parent.mkdir(parents=True, exist_ok=True)
+                file.write_bytes(pending[name])
+            # Compare the actual current source at each replacement boundary.
+            for name in changed:
+                target = application / name
+                current = target.read_bytes() if target.exists() else None
+                if current != original[name]:
+                    raise RuntimeError("Concurrent source change preserved at " + name +
+                                       "; reopen current source and rerun this same installation.")
+                target.parent.mkdir(parents=True, exist_ok=True)
+                os.replace(staging / name, target)
+        return receipt
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--application", required=True, help="Current complete Upper Savannah application directory")
+    parser.add_argument("--source-root", default=str(Path(__file__).resolve().parent))
+    parser.add_argument("--dry-run", action="store_true")
+    args = parser.parse_args(argv)
+    print(json.dumps(run(args.application, args.source_root, dry_run=args.dry_run), indent=2, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

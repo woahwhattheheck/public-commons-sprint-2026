@@ -115,3 +115,35 @@ Replace the UUID and SHA with actual values. Inspect with the destination worksp
 The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
 
 See [Decision deployment, evaluation and operating history](../../products/flowable-merchant/DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.
+
+## Adaptive case operations
+
+The merchant exposes twelve CMMN actions through the original declared
+workspace. Together with the existing process, decision and complete file
+receiving tools, the selected Flowable catalog has 47 tools.
+
+| Tool | Original workspace method |
+| --- | --- |
+| `merchant_flowable_case_portfolio` | `readCasePortfolio` |
+| `merchant_flowable_case_definition` | `readCaseDefinition` |
+| `merchant_flowable_case_instance` | `readCaseInstance` |
+| `merchant_flowable_capture_cases` | `captureCasePortfolio` |
+| `merchant_flowable_prepare_case_release` | `prepareCaseRelease` |
+| `merchant_flowable_dispatch_case_release` | `dispatchCaseRelease` |
+| `merchant_flowable_prepare_case_instance` | `prepareCaseInstance` |
+| `merchant_flowable_dispatch_case_instance` | `dispatchCaseInstance` |
+| `merchant_flowable_prepare_case_plan_item` | `prepareCasePlanItem` |
+| `merchant_flowable_dispatch_case_plan_item` | `dispatchCasePlanItem` |
+| `merchant_flowable_prepare_case_task` | `prepareCaseTask` |
+| `merchant_flowable_dispatch_case_task` | `dispatchCaseTask` |
+
+Save the actual CMMN REST service as its own connection. Each tool uses the
+same captured case, original source and typed request as the browser and
+installed SDK. Read/review/reconcile support all four case operation kinds;
+the common export and range receiver retain every original revision and byte.
+The shared action schemas advertise the exact input contract.
+
+The [case operating guide](../../products/flowable-merchant/CASES.md) covers
+native plan item semantics, human work, the eleven captured collections and
+the complete customer programme. Existing host workspace aliases and complete
+file declarations continue to select the original operating workspace.

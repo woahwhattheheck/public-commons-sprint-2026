@@ -91,18 +91,33 @@
     "nativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_receiving.py",
     "browserReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_browser.mjs",
     "connectedReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/connected/RECEIVING.mjs",
-    "installedApplicationsReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_installed_applications.mjs"
+    "installedApplicationsReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_installed_applications.mjs",
+    "conformanceCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-conformance-schema.json",
+    "conformanceOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/conformance.mjs",
+    "conformanceNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance.py",
+    "conformanceConnectedReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_conformance_clients.mjs",
+    "operatingPlansCatalogue": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory-operating-plans-schema.json",
+    "operatingPlansNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/directory_operating_plans.py",
+    "operatingPlansOperator": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/public/directory-operating-plans.mjs",
+    "operatingPlansNativeReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans.py",
+    "operatingPlansClientReceiving": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/operate_operating_plans_browser.mjs"
   },
   "limits": {
     "nativeArchiveBytes": 2147483648,
     "connectedFileBytes": 536870912,
     "sourceIndexBytes": 268435456,
-    "interactivePageBytes": 4194304
+    "interactivePageBytes": 4194304,
+    "operatingPlanDocumentBytes": 33554432,
+    "operatingPlanRequestBytes": 67108864,
+    "operatingPlanBasisBytes": 4194304
   },
   "guides": {
     "operating": "products/human-services-directory/OPERATING.md",
     "receiving": "products/human-services-directory/RECEIVING.md",
-    "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md"
+    "sourceNotice": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/SOURCE_NOTICE.md",
+    "conformance": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE.md",
+    "conformanceNative": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/CONFORMANCE_NATIVE.md",
+    "operatingPlans": "stellar/scf-starforge-20261009/sf30-seller-sdk/fhir_directory/OPERATING_PLANS.md"
   },
   "nativeReceivingOperation": {
     "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
@@ -142,5 +157,55 @@
     },
     "receivingBehavior": "Create missing private destination ancestors through the original directory guard before retaining connected inputs or exported files. Existing different source bytes remain a conflict. The source successor preserves all other 279 source files and every original source capsule.",
     "continuation": "Restore the original complete workspace and DIRECTORY_JOURNEY.json, retain its predecessor source manifests, and continue the same operation and workspace UUID. Completed original journal steps are read back and reused."
+  },
+  "operatingPlans": {
+    "schema": "stellar-forge.directory-operating-plans-source.v1",
+    "originalModel": {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "path": "stellar/scf-starforge-20261009/distribution/discovery/operating-plan.mjs",
+      "gitBlob": "4b533a926214e78811d02d94c7d8adf07a078be8",
+      "types": {
+        "path": "stellar/scf-starforge-20261009/distribution/discovery/operating-plan.d.mts",
+        "gitBlob": "05a6a6c388d3c62f5f796b051063c5b84a5fb460"
+      },
+      "adoption": "The complete original model and declarations are adopted unchanged."
+    },
+    "nativeBaseline": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "capsule": "bf2660cb4050576d6366bca5aa9cbea4208cd2bf",
+      "merge": "2c498420d3a5d2b84f7e6c44c52d22837726e4b1"
+    },
+    "companionBaseline": {
+      "capsule": "c8b7e205910457f949bc2318823e4d82c1d9724a",
+      "publicMerge": "02aca359b51d0f43c114cca9acccf3c86dd086da",
+      "productMerge": "61c9b93e9ab9e91b7c4442931db4ac1cf5c7c7cb"
+    },
+    "collection": "operatingPlans",
+    "stages": [
+      "prepared",
+      "saved"
+    ],
+    "retainedFiles": [
+      "document",
+      "basis",
+      "catalog",
+      "input"
+    ],
+    "recovery": "Reuse exact accepted request identities and the original saved-head chain. Complete original OperatingPlan prefix-history validation and Directory receiving verify every retained file and native basis.",
+    "nativeOperation": "SCF-DIRECTORY-OPERATING-PLANS-450E-20261012",
+    "clientOperation": "SCF-DIRECTORY-OPERATING-PLANS-CLIENTS-450E-20261012",
+    "basis": {
+      "operation": "SCF-HUMAN-SERVICES-DIRECTORY-RECEIVING-450E-20261012",
+      "workspaceId": "2c51f522-4852-463b-bdc0-59389d7bae83",
+      "nativeResult": {
+        "bytes": 103569,
+        "sha256": "0b0e08808ae3c1c62c512271dd6269cee2219b792d63d720ef67b8411e775fe0"
+      },
+      "completeEditable": {
+        "bytes": 28828941,
+        "sha256": "c00ad722ed19986a513e113b3a69c82cfae2aa4bdcddc6b7056187a3b1578064"
+      }
+    },
+    "meaning": "Procedure authoring and history/file receiving do not execute selected commands, acquire provider data or establish external service availability or customer acceptance."
   }
 }

@@ -13,11 +13,15 @@ export const LEGACY_DATASET_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb
 export const LEGACY_COMPLETE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_DATASET_RUBY_CLIENT_FILES,...["native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","NATIVE_DATASETS.md","examples/native_dataset_lifecycle.rb"]]);
 export const LEGACY_DATASET_OPERATOR_FILES = Object.freeze(["examples/rails_dataset/operator/workspace.rb","examples/rails_dataset/operator/jobs.rb","examples/rails_dataset/operator/controller.rb","examples/rails_dataset/operator/commission.rb","examples/rails_dataset/operator/README.md","examples/rails_dataset/operator/install.rb","examples/rails_dataset/operator/operator.css","examples/rails_dataset/operator/views/layouts/starforge_dataset_operator.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/index.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/show.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/changes.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/history.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/attachments.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/error.html.erb"]);
 export const DATASET_RECORD_FILES = Object.freeze(["examples/rails_dataset/operator/records.rb","examples/rails_dataset/operator/records_cli.rb","examples/rails_dataset/operator/records.md","examples/rails_dataset/operator/records_example.rb","examples/rails_dataset/operator/views/starforge_dataset_operator/records.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/record.html.erb"]);
-export const DATASET_OPERATOR_FILES = Object.freeze([...LEGACY_DATASET_OPERATOR_FILES,...DATASET_RECORD_FILES]);
+export const LEGACY_RECORD_DATASET_OPERATOR_FILES = Object.freeze([...LEGACY_DATASET_OPERATOR_FILES,...DATASET_RECORD_FILES]);
+export const DATASET_MAPPING_FILES = Object.freeze(["examples/rails_dataset/operator/source.rb","examples/rails_dataset/operator/mapping.rb","examples/rails_dataset/operator/source_cli.rb","examples/rails_dataset/operator/mapping_example.rb","examples/rails_dataset/operator/views/starforge_dataset_operator/mapping.html.erb","examples/rails_dataset/operator/views/starforge_dataset_operator/source_rows.html.erb"]);
+export const DATASET_OPERATOR_FILES = Object.freeze([...LEGACY_RECORD_DATASET_OPERATOR_FILES,...DATASET_MAPPING_FILES]);
 export const LEGACY_OPERATOR_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_COMPLETE_RUBY_CLIENT_FILES,...LEGACY_DATASET_OPERATOR_FILES]);
+export const LEGACY_RECORD_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_COMPLETE_RUBY_CLIENT_FILES,...LEGACY_RECORD_DATASET_OPERATOR_FILES]);
 export const RUBY_CLIENT_FILES = Object.freeze([...LEGACY_COMPLETE_RUBY_CLIENT_FILES,...DATASET_OPERATOR_FILES]);
 export const LEGACY_NATIVE_RUBY_CLIENT_FILES = Object.freeze(["seller_client.rb","seller_client.rbs","dataset_delivery.rb","native_dataset.rb","native_dataset_receiving.rb","native_dataset_customer.rb","rails_dataset.rb","NATIVE_DATASETS.md","DATASETS.md","examples/native_dataset_lifecycle.rb","examples/rails_dataset/create_dataset_import_tables.rb","examples/rails_dataset/models.rb","examples/rails_dataset/import_dataset_job.rb","examples/rails_dataset/commission.rb","examples/rails_dataset/mapping.json","examples/rails_dataset/README.md"]);
 export const LEGACY_OPERATOR_NATIVE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_NATIVE_RUBY_CLIENT_FILES,...LEGACY_DATASET_OPERATOR_FILES]);
+export const LEGACY_RECORD_NATIVE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_NATIVE_RUBY_CLIENT_FILES,...LEGACY_RECORD_DATASET_OPERATOR_FILES]);
 export const NATIVE_RUBY_CLIENT_FILES = Object.freeze([...LEGACY_NATIVE_RUBY_CLIENT_FILES,...DATASET_OPERATOR_FILES]);
 export const NATIVE_RUBY_CLIENT_MANIFEST = 'native-dataset-client.json';
 const NATIVE_SCHEMA = 'stellar-forge.ruby-native-dataset-client.v1';
@@ -44,7 +48,9 @@ Request construction delegates to the original exported JS runtime. The Ruby
 application delegates preparation, review, execution and recovery to the original
 Node Buyer. See RUBY.md for saved responses and DATASETS.md plus the delivered\nRails examples for complete dataset receiving and transactional application editions.
 The standalone native package receives an existing finalized SF100 room through
-its original receiver. See NATIVE_DATASETS.md for complete source/recipient use.`;
+its original receiver. See NATIVE_DATASETS.md for complete source/recipient use.
+The complete operator includes source_cli.rb for original source profiling,
+application mapping, full preview/import, and complete source/receipt receiving.`;
 
 async function directoryAt(value) {
   if (typeof value !== 'string' || !value || value.includes('\0')) throw error('DIRECTORY_REQUIRED', 'Select the original customer directory');
@@ -99,7 +105,7 @@ async function publishOnce(directory, name, bytes) {
 }
 function fileRecord(name, bytes) { return { name, bytes: bytes.length, sha256: sha(bytes) }; }
 function checkManifest(value, original) {
-  const expected = [LEGACY_RUBY_CLIENT_FILES,LEGACY_DATASET_RUBY_CLIENT_FILES,LEGACY_COMPLETE_RUBY_CLIENT_FILES,LEGACY_OPERATOR_RUBY_CLIENT_FILES,RUBY_CLIENT_FILES]
+  const expected = [LEGACY_RUBY_CLIENT_FILES,LEGACY_DATASET_RUBY_CLIENT_FILES,LEGACY_COMPLETE_RUBY_CLIENT_FILES,LEGACY_OPERATOR_RUBY_CLIENT_FILES,LEGACY_RECORD_RUBY_CLIENT_FILES,RUBY_CLIENT_FILES]
     .find(files => value?.files?.length === files.length);
   if (!value || value.schema !== SCHEMA || value.sourceSha256 !== original.sourceSha256 ||
       value.originalManifestSha256 !== original.manifestFile.sha256 || !Array.isArray(value.files) || !expected ||
@@ -366,7 +372,8 @@ export async function inspectRubySellerClient({ directory } = {}) {
     capabilities:manifest.files.length === LEGACY_RUBY_CLIENT_FILES.length ? ['single-response'] :
       ['single-response','dataset','rails-dataset-editions',...(manifest.files.some(item=>item.name==='native_dataset.rb')?['direct-sf100-dataset']:[]),
         ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[]),
-        ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/records.rb')?['committed-dataset-browse','complete-data-export']:[])],
+        ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/records.rb')?['committed-dataset-browse','complete-data-export']:[]),
+      ...(manifest.files.some(item=>item.name==='examples/rails_dataset/operator/mapping.rb')?['source-schema-browse','rails-mapping-authoring']:[])],
     manifest, manifestSha256: sha(await bytesAt(directory, RUBY_CLIENT_MANIFEST, 131072)),
     files: [...original.files, original.manifestFile, ...manifest.files] };
 }
@@ -444,7 +451,7 @@ function nativeManifest(files) {
   return {schema:NATIVE_SCHEMA,files:[...files].map(([name,bytes])=>fileRecord(name,bytes))};
 }
 function checkNativeManifest(value) {
-  const expected = [LEGACY_NATIVE_RUBY_CLIENT_FILES,LEGACY_OPERATOR_NATIVE_RUBY_CLIENT_FILES,NATIVE_RUBY_CLIENT_FILES]
+  const expected = [LEGACY_NATIVE_RUBY_CLIENT_FILES,LEGACY_OPERATOR_NATIVE_RUBY_CLIENT_FILES,LEGACY_RECORD_NATIVE_RUBY_CLIENT_FILES,NATIVE_RUBY_CLIENT_FILES]
     .find(files=>files.length===value?.files?.length);
   if (!value || value.schema !== NATIVE_SCHEMA || !Array.isArray(value.files) || !expected ||
       value.files.length !== expected.length || value.files.some((file,index)=>
@@ -473,7 +480,8 @@ export async function inspectNativeRubyClient({directory}={}) {
   return {state:'COMPLETE',directory,manifest,manifestSha256:sha(bytes),
     capabilities:['direct-sf100-dataset','offline-dataset-receiving','rails-dataset-editions',
       ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/controller.rb')?['rails-dataset-operator']:[]),
-      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/records.rb')?['committed-dataset-browse','complete-data-export']:[])],
+      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/records.rb')?['committed-dataset-browse','complete-data-export']:[]),
+      ...(manifest.files.some(file=>file.name==='examples/rails_dataset/operator/mapping.rb')?['source-schema-browse','rails-mapping-authoring']:[])],
     files:manifest.files};
 }
 

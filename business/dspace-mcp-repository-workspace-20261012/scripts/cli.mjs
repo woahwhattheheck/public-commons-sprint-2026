@@ -57,7 +57,7 @@ try{
   result=await workspace.dispatch('import-capture',{actor:required('actor'),operationId:required('operation-id'),revision:workspace.state().revision,filename:path.basename(filename),content_b64:content.toString('base64')});
  }else if(command==='export'){
   const file=await workspace.exportFile(required('kind'),options.id||'current'),target=path.resolve(required('output'));
-  if(file.path){try{fs.copyFileSync(file.path,target,fs.constants.COPYFILE_EXCL);fs.chmodSync(target,0o600);}finally{if(file.temporary)fs.rmSync(file.path,{force:true});}result={file:target,bytes:fs.statSync(target).size};}
+  if(file.path){try{fs.copyFileSync(file.path,target,fs.constants.COPYFILE_EXCL);fs.chmodSync(target,0o600);}finally{if(file.temporary){if(file.cleanup_directory)fs.rmSync(file.cleanup_directory,{recursive:true,force:true});else fs.rmSync(file.path,{force:true});}}result={file:target,bytes:fs.statSync(target).size};}
   else {fs.writeFileSync(target,file.bytes,{mode:0o600,flag:'wx'});result={file:target,bytes:file.bytes.length,sha256:digest(file.bytes)};}
  }else if(command==='restore')result=await workspace.restoreFile({actor:required('actor'),operationId:required('operation-id'),revision:workspace.state().revision,filename:path.basename(required('source'))},path.resolve(options.source));
  else throw new Error('Use assemble-source, state, read, action, import-source, export, or restore.');

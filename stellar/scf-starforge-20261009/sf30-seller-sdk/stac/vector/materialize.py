@@ -16,7 +16,7 @@ from .common import (CAPTURE, EXPORT, PROFILE, VectorError, need, require_id, ca
     claim, verify_manifest, verify_file, file_record, all_files, clone_capture,
     read_catalog, geometry_equal, safe_name, fsync_directory, parse_json, number_decimal)
 from .driver import (FORMATS, capabilities, vector_environment, crs, same_crs,
-                    transform_geometry, writer, reopen)
+                    transform_geometry, writer, reopen, native_records)
 from .capture import open_capture
 
 RESERVED = {"sf_key", "sf_part", "fid", "geom", "geometry", "rowid", "_rowid_", "oid"}
@@ -271,14 +271,31 @@ def native_type_family(value):
     if value in ("str", "string"): return "text"
     return value
 
+def exact_datetime(value):
+    """Compare exact fractional seconds without datetime's microsecond truncation."""
+    matched = re.fullmatch(
+        r"([0-9]{4}-[0-9]{2}-[0-9]{2})[Tt ]([0-9]{2}:[0-9]{2}:[0-9]{2})"
+        r"(?:[.,]([0-9]+))?([Zz]|[+-][0-9]{2}:[0-9]{2})?", str(value))
+    need(matched is not None, "VECTOR_NATIVE_DATETIME_INVALID", str(value))
+    date, clock, fraction, offset = matched.groups()
+    if offset and offset not in ("Z", "z"):
+        need(int(offset[1:3]) < 24 and int(offset[4:6]) < 60,
+             "VECTOR_NATIVE_DATETIME_INVALID", str(value))
+    zone = "+00:00" if offset in ("Z", "z") else (offset or "")
+    parsed = datetime.datetime.fromisoformat(date + "T" + clock + zone)
+    aware = parsed.tzinfo is not None
+    epoch = datetime.datetime(1970, 1, 1,
+                              tzinfo=datetime.timezone.utc if aware else None)
+    elapsed = parsed - epoch
+    return aware, elapsed.days * 86400 + elapsed.seconds, Decimal("0." + (fraction or "0"))
+
 def value_equal(left, right, codec):
     if left is None or right is None:
         return left is None and right is None
     if codec == "date":
         return datetime.date.fromisoformat(str(left)) == datetime.date.fromisoformat(str(right))
     if codec == "datetime":
-        parse = lambda value: datetime.datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        return parse(left) == parse(right)
+        return exact_datetime(left) == exact_datetime(right)
     if type(left) in (int, float, Decimal) and type(right) in (int, float, Decimal):
         return number_decimal(left) == number_decimal(right)
     return left == right and (not isinstance(left, str) or isinstance(right, str))
@@ -403,9 +420,7 @@ def _native_reopen(root, native_manifest, profile, source_catalog=None, native_i
                              "VECTOR_NATIVE_FIELD_TYPE_CHANGED",
                              {"layer": layer["id"], "field": name, "expected": field["physicalType"],
                               "actual": actual_schema[name]})
-                    from fiona.model import to_dict
-                    for feature in dataset:
-                        raw = to_dict(feature)
+                    for raw in native_records(path, layer["driver"], dataset):
                         values = raw["properties"]
                         row_key, part_key = values.get("sf_key"), values.get("sf_part")
                         original = conn.execute(
@@ -426,7 +441,7 @@ def _native_reopen(root, native_manifest, profile, source_catalog=None, native_i
                                      (layer["id"], row_key, part_key))
                         if ids:
                             write_json_line(ids, {"layerId": layer["id"], "rowKey": row_key,
-                                                  "partKey": part_key, "nativeFid": str(feature.id)})
+                                                  "partKey": part_key, "nativeFid": str(raw["id"])})
                         count += 1
                     need(count == layer["featureCount"], "VECTOR_NATIVE_FEATURE_COUNT_CHANGED", layer["id"])
                     checked.append({"layerId": layer["id"], "features": count,

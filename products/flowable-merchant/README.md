@@ -1,8 +1,8 @@
-# Flowable process and decision operations
+# Flowable process, case and decision operations
 
-Deploy original BPMN and DMN resources, operate human tasks, migrate running
-processes, evaluate native decisions and deliver the complete operating workspace
-to another operator.
+Deploy original BPMN, CMMN and DMN resources, operate cases and human tasks,
+migrate running processes, evaluate native decisions and deliver the complete
+operating workspace to another operator.
 
 The installed application opens one durable Flowable workspace. Its browser,
 typed client, command line and merchant MCP connection use the same engine
@@ -12,7 +12,7 @@ historic engine readback.
 
 The command is `starforge flowable-product`. The selected package also provides
 `flowable-merchant`. In the Runtime workspace, choose
-**Applications → Flowable process and decision operations**.
+**Applications → Flowable process, case and decision operations**.
 
 ## Open the application
 
@@ -83,3 +83,21 @@ completed receiving records.
 The same installed workspace includes original DMN deployment, native decision and decision-service evaluation, captured execution audits and full source/history receiving. Save the original DMN REST endpoint as a separate named connection. Use the **Decisions** page, `capture-decisions`, `decision-portfolio`, `decision-definition` and `decision-execution` commands, the typed client, or the eight native decision MCP actions.
 
 See [Decision deployment, evaluation and operating history](DECISIONS.md) for the complete operator workflow, typed numeric input and native result semantics.
+
+## Adaptive case operations
+
+The same installed workspace includes original CMMN deployment, versioned
+case starts and updates, criteria evaluation, case termination, stage and plan
+item actions, case human tasks, variables, milestones and complete native
+history. Save the actual CMMN REST endpoint as a named connection and open
+**Cases**.
+
+Use `capture-cases`, `case-portfolio`, `case-definition` and
+`case-instance` from the installed command line. The four saved operation
+kinds are `caseRelease`, `caseInstance`, `casePlanItem` and `caseTask`.
+The typed client and twelve case MCP actions use these same native reviews
+and original-request recovery.
+
+See [Adaptive case operations](CASES.md) for the complete case programme,
+all eleven native collections, the pinned engine's plan item semantics and
+customer receiving.

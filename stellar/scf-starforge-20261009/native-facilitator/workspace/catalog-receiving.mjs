@@ -29,11 +29,12 @@ export function nextCatalogQuery(value) {
 /**
  * Receive every matching original page at one runtime/resource revision.
  * The first actual page supplies profile/network/journal/queue observation.
- * No completed result is returned until every selected page has arrived.
+ * Await each page write before requesting the next page. The receiving owner
+ * publishes its file only after this function returns the complete result.
  */
-export async function receiveNativeCatalogView({readPage, runtimeId, query = '',
+export async function streamNativeCatalogView({readPage, write, runtimeId, query = '',
   expectedVersion = null, onProgress} = {}) {
-  need(typeof readPage === 'function' && typeof runtimeId === 'string' && runtimeId.length > 0 &&
+  need(typeof readPage === 'function' && typeof write === 'function' && typeof runtimeId === 'string' && runtimeId.length > 0 &&
     typeof query === 'string' && query.length <= 4096 &&
     (expectedVersion === null || Number.isSafeInteger(expectedVersion) && expectedVersion >= 0) &&
     (onProgress === undefined || typeof onProgress === 'function'),
@@ -43,7 +44,7 @@ export async function receiveNativeCatalogView({readPage, runtimeId, query = '',
   // A complete view begins at its first matching resource, even from a later retained page.
   start.delete('offset'); start.delete('cursor'); start.set('limit', '100');
   let selected = start.toString(), version = expectedVersion, metadata = null;
-  let resourceCount = 0, pages = 0, parts = [], total = null;
+  let resourceCount = 0, pages = 0, total = null;
   const visited = new Set();
   do {
     need(!visited.has(selected), 'FACILITATOR_CATALOG_CURSOR_REPEATED');
@@ -61,6 +62,7 @@ export async function receiveNativeCatalogView({readPage, runtimeId, query = '',
     'FACILITATOR_CATALOG_PAGE_INVALID');
     if (version === null) version = value.catalog.version;
     need(value.catalog.version === version, 'FACILITATOR_CATALOG_VERSION_CHANGED');
+    const parts = [];
     if (metadata === null) {
       metadata = {schema:EXPORT, runtimeId:value.runtimeId, profile:value.profile,
         network:value.network, observedAt:value.observedAt, catalog:value.catalog,
@@ -87,11 +89,19 @@ export async function receiveNativeCatalogView({readPage, runtimeId, query = '',
       if (resourceCount++) parts.push(',');
       parts.push(JSON.stringify(resource));
     }
+    if (parts.length) await write(parts.join(''));
     pages++;
     if (onProgress) await onProgress({runtimeId, version, resourceCount, pages});
     selected = next;
   } while (selected !== null);
   need(total === null || resourceCount === total, 'FACILITATOR_CATALOG_PAGE_INCOMPLETE');
-  parts.push('],"resourceCount":' + resourceCount + ',"pages":' + pages + '}\n');
-  return {metadata, resourceCount, pages, parts};
+  await write('],"resourceCount":' + resourceCount + ',"pages":' + pages + '}\n');
+  return {metadata, resourceCount, pages};
+}
+
+/** Collect the same complete original stream for the browser or a memory receiver. */
+export async function receiveNativeCatalogView(options = {}) {
+  const parts = [];
+  const completed = await streamNativeCatalogView({...options, write:part => {parts.push(part);}});
+  return {...completed, parts};
 }

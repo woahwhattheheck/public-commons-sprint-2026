@@ -8,6 +8,7 @@ import {startFlowableWorkspaceServer} from './workspace/server.mjs';
 import {FlowableWorkspaceHttpClient} from './workspace/http-client.mjs';
 import {normalizeFlowableConnection} from './native.mjs';
 import {runFlowableDmnNativeJourney} from './dmn-native-journey.mjs';
+import {runFlowableCmmnNativeJourney} from './cmmn-native-journey.mjs';
 import {operationLease} from '../../distribution/runtime-workspace/storage.mjs';
 
 const SCHEMA='stellar-forge.flowable-native-journey.v1';
@@ -47,8 +48,10 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
     'Retain the original engine and installed source revision.');
   need(typeof config.adminUserId==='string'&&typeof config.reviewerUserId==='string',
     'Use the actual native administrator and reviewer identities.');
-  const connection=normalizeFlowableConnection(config.connection),dmnConnection=normalizeFlowableConnection(config.dmnConnection),root=resolve(outputDirectory);
-  need(dmnConnection.id!==connection.id,'Keep the original process and DMN REST services as separate native connections.');
+  const connection=normalizeFlowableConnection(config.connection),dmnConnection=normalizeFlowableConnection(config.dmnConnection),
+    cmmnConnection=normalizeFlowableConnection(config.cmmnConnection),root=resolve(outputDirectory);
+  need(new Set([connection.id,dmnConnection.id,cmmnConnection.id]).size===3,
+    'Keep the original process, DMN and CMMN REST services as separate declared native connections.');
   await privateDirectory(root);await privateDirectory(join(root,'downloads'));await privateDirectory(join(root,'screenshots'));
   const lease=await operationLease(join(root,'operation.lock'));
   let sender,receiver,browser,terminalError,state,persistTail=Promise.resolve();
@@ -108,7 +111,7 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
       return response;
     };
     async function openHost(name){
-      const host=await startFlowableWorkspaceServer({directory:join(root,name),connections:name==='sender'?[connection,dmnConnection]:[],
+      const host=await startFlowableWorkspaceServer({directory:join(root,name),connections:name==='sender'?[connection,dmnConnection,cmmnConnection]:[],
         environment:process.env,fetch:nativeFetch,signal,timeoutMs:config.nativeTimeoutMs??120000,
         maximumResponseBytes:config.maximumResponseBytes??64*1024*1024});
       const client=new FlowableWorkspaceHttpClient({url:host.url,workspaceId:host.workspaceId,signal});
@@ -207,7 +210,10 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
     state.connectionRecordId=target.id;state.sourceWorkspaceId=view.workspaceId;
     const dmnTarget=view.connections.find(item=>item.connection.id===dmnConnection.id);
     need(dmnTarget&&dmnTarget.credentialAvailable,'Use the original native DMN service and its actual host credentials.');
-    state.dmnConnectionRecordId=dmnTarget.id;await persist();
+    state.dmnConnectionRecordId=dmnTarget.id;
+    const cmmnTarget=view.connections.find(item=>item.connection.id===cmmnConnection.id);
+    need(cmmnTarget&&cmmnTarget.credentialAvailable,'Use the original native CMMN service and its actual host credentials.');
+    state.cmmnConnectionRecordId=cmmnTarget.id;await persist();
     const catalog=JSON.parse(await readFile(new URL('./examples/process-catalog.json',import.meta.url),'utf8'));
     need(catalog.families.length===3&&catalog.resources.length===6,'Use the complete original three-family process catalog.');
     const initial=await step('original-engine-and-empty-portfolio',async()=>{
@@ -402,6 +408,12 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
     const decisions=await runFlowableDmnNativeJourney({configuration:config,directory:root,
       connectionId:state.dmnConnectionRecordId,call,source,operation,prepare,dispatch,retainReview,
       step,freeze,requestId,client:sender.client,browserUrl:sender.host.url,signal});
+    const cases=await runFlowableCmmnNativeJourney({configuration:config,directory:root,
+      connectionId:state.cmmnConnectionRecordId,call,source,operation,prepare,dispatch,retainReview,
+      step,freeze,requestId,client:sender.client,browserUrl:sender.host.url,signal});
+    need(cases?.state==='PASSED'&&cases.continuation?.connectionId===state.cmmnConnectionRecordId&&
+      typeof cases.continuation.caseInstanceId==='string'&&typeof cases.continuation.taskId==='string',
+      'Complete all original CMMN families and retain the exact active native task for installed customer continuation.');
     const complete=await step('complete-native-process-history-export-and-cold-receiving',async()=>{
       const finalPortfolio=await capture('complete original process history'),variables=await collection(finalPortfolio,'historicVariables');
       need(variables.some(item=>item.variable?.name==='caseNumber'||item.name==='caseNumber'),
@@ -433,7 +445,8 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
         manifestSha256:inspection.value.manifestSha256}));
       need(adoption.value.state==='ADOPTED','The complete native history must be adopted by the original receiving workspace.');
       await closeHost(receiver);receiver=null;receiver=await openHost('receiver');
-      for(const kind of ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation']){
+      for(const kind of ['connection','portfolio','release','process','task','migration','decisionPortfolio','decisionRelease','decisionEvaluation',
+        'casePortfolio','caseRelease','caseInstance','casePlanItem','caseTask']){
         let offset=0,total=0;
         do{
           const original=await call('listRecords',{kind,offset,limit:37});
@@ -467,17 +480,23 @@ export async function runFlowableNativeJourney(configPath,outputDirectory,{fetch
       const {runInstalledFlowableJourney}=await import('../../../../products/flowable-merchant/native-installed-journey.mjs');
       return runInstalledFlowableJourney({directory:join(root,'installed-product'),configuration:config,
         sourceWorkspaceDirectory:join(root,'sender'),sourceDelivery:{...complete.laterDownload,record:complete.second,
-          receiving:complete.laterReceiving},reviewerUserId:config.reviewerUserId,signal});
+          receiving:complete.laterReceiving},reviewerUserId:config.reviewerUserId,caseContinuation:cases.continuation,signal});
     });
-    need(installed?.state==='PASSED','The actual installed client, CLI, Applications and MCP receiving must complete.');
+    need(installed?.state==='PASSED'&&installed.completeWorkspace?.delivery?.kind==='delivery'&&
+      installed.completeWorkspace?.receiving?.kind==='receiving'&&installed.completeWorkspace?.file?.bytes>0,
+      'The actual installed client, CLI, Applications and MCP receiving must complete with its final whole workspace.');
+    const installedWorkspace=await hashFile(installed.completeWorkspace.file.path);
+    need(installedWorkspace.bytes===installed.completeWorkspace.file.bytes&&
+      installedWorkspace.sha256===installed.completeWorkspace.file.sha256,
+      'The final installed customer workspace bytes must match their original receiving receipt.');
     if(browser){await browser.close();browser=null;}
     await persistTail;
     state.state='PASSED';state.completedAt??=new Date().toISOString();state.currentPhase=null;
     state.result={installedVersion:config.installedVersion,sourceRevision:config.sourceRevision,
       processFamilies:3,releaseVersions:6,completedProcesses:browserResult.completedProcessIds,
       nativeMutations:state.nativeRequests.filter(item=>['POST','PUT','DELETE'].includes(item.method)&&
-        !item.path.endsWith('/validate-migration')).length,workspace:complete.laterDownload,
-      browser:browserResult,decisions,installed};await persist();
+        !item.path.endsWith('/validate-migration')).length,workspace:installed.completeWorkspace.file,
+      commissionedWorkspace:complete.laterDownload,browser:browserResult,decisions,cases,installed};await persist();
     return{schema:SCHEMA,state:state.state,scope:SCOPE,operation:config.operation,
       sourceRevision:config.sourceRevision,result:state.result,stateFile:await hashFile(statePath)};
   }catch(error){

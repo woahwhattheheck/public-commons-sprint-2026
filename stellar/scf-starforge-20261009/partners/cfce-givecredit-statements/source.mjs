@@ -88,9 +88,15 @@ export function validateSourceEdition(source){
   for(const [name,content] of Object.entries(source.files)){
     need(typeof name==='string'&&!name.includes('\0')&&typeof content==='string','SOURCE_FILE_REQUIRED','Retain complete original source files.');
   }
-  for(const row of source.responses)
-    need(plain(row)&&typeof row.content==='string'&&typeof row.retrievedAt==='string',
-      'SOURCE_RESPONSE_REQUIRED','Retain each original response and retrieval date.');
+  for(const row of source.responses){
+    const retainedImport=source.kind==='ledger'&&plain(row)&&row.transport==='retained-original-import';
+    const originalImport=retainedImport&&row.retrievedAt===null&&
+      typeof row.importedAt==='string'&&/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(?:\.\d+)?(?:Z|[+-]\d\d:\d\d)$/.test(row.importedAt)&&Number.isFinite(Date.parse(row.importedAt))&&
+      typeof row.url==='string'&&/^https?:\/\/[^\s]+$/i.test(row.url);
+    need(plain(row)&&typeof row.content==='string'&&
+      (originalImport||typeof row.retrievedAt==='string'),
+      'SOURCE_RESPONSE_REQUIRED','Retain each original response and its retrieval date, or an explicitly imported original ledger response with its source URL and separate import date.');
+  }
   if(source.kind==='registry')normalizeRegistryTables(source.tables);
   if(source.kind==='carbon'){
     network(source.metadata.network);

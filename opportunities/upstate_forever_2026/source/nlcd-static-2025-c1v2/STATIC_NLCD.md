@@ -1,0 +1,11 @@
+# Original Annual NLCD 2025 static product
+
+The retained public catalog's native row 2881 identifies Annual NLCD Land Cover, CONUS, 2025, Collection 1 Version 2. Its original archive is https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/data-bundles/Annual_NLCD_LndCov_2025_CU_C1V2.zip and original metadata is https://www.mrlc.gov/downloads/sciweb1/shared/mrlc/metadata/Annual_NLCD_LndCov_2025_CU_C1V2.xml. The XML in this folder is the exact retained UTF-8 body, 34,686 bytes, SHA256 abf071bc22e9e346433d8686c0b6f9c3107d491a57ee8ce6d46d9e4a4d362030.
+
+The publisher metadata identifies publication date 2026-06-30, DOI 10.5066/P94UXNTS, 30 metre cells, 105,000 rows and 160,000 columns, and Albers Equal Area on WGS 1984 with standard parallels 29.5/45.5, central meridian -96 and origin latitude 23. Keep this static-product definition separate from the earlier WCS EPSG:5070 description. Read the actual TIFF CRS, affine, band, class values and NoData before preparation; the published v1.2 guide identifies uint8/250, but these have not yet been observed from this archive.
+
+The archive has not been acquired and its compressed size is not observed. The last local HEAD attempt ended before process creation. Its original equipped source request remains UPSTATE-ORIGINAL-SOURCES-DBC61, update 1791813662.111069 in C0C1F274SGH / 1791760162.728339. An equipped receiving worker should first retain the actual public response length and validators, then download the full untargeted product when its capacity is established. Any selected 217-polygon model-domain clip is performed entirely on that worker. This source packet does not authorize or issue a coordinate-bearing remote clip request.
+
+The original project-domain Library carrier and the static national metadata are distinct retained sources. Previously rejected project ZIP/coordinate payloads remain unissued and are not retried through this source continuation. A full original static download can be reused for future local clips without a second national acquisition.
+
+The source manifest's absent acquisition time and archive bytes are intentional. File modification times, expected raw raster dimensions and a prepared request do not establish an actual HTTP retrieval time or compressed archive size.

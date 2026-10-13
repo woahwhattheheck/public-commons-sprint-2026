@@ -14,6 +14,36 @@ The first source edition remains in the draft. **Read current source** acquires 
 
 A source/index mismatch leaves the working draft open. Read the current source again after the original composer finishes publishing its same edition.
 
+## Receive a complete source package
+
+Open **Source editions → Open source package** to compare a complete received
+application, source index, budget and product/finance companion with the current
+draft. The same four-file package can come from another operator's existing
+Source editions screen or the maintained `grant-export` command.
+
+Choose **Receive source and keep edited answers** after reviewing the comparison.
+Untouched answers receive the selected source; edited answers keep their full
+text and original baseline. The original draft ID, saved browser binding, issuer
+map, native plan selections, reviews and versions remain in place. A matching
+application with a different bundle can be selected through **Use these four
+reviewer files**, retaining the previous working version.
+
+Each retained source displays **Review these source files** and **Download retained
+source package** for its exact complete bundles. **Download source package** on the
+incoming edition shares that same four-file source. **Download full draft**
+continues to carry all received sources and the application's editorial history.
+The existing Save version and Browser drafts controls persist the received
+edition in the same saved record.
+
+The package opens from complete retained bytes. When the host's application
+source cannot be read, the empty editor still offers **Open source package** and
+opens the existing nine-answer model from that edition. Source URLs, file dates
+and the original application/bundle identities remain visible for the operator.
+
+See [submission handover](GRANT_HANDOVER.md#receive-and-share-a-source-package)
+for the complete source-package API and [native export](GRANT_EXPORT.md#receive-source-into-the-same-saved-draft)
+for the same source receiving from the terminal.
+
 ## Edit the complete answers
 
 Choose one of the nine answers in the sidebar. Edit its full text and, if useful, add a working note. The preview shows the exact text selected for copying.

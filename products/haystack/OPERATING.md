@@ -135,3 +135,58 @@ flock -n /absolute/haystack-corrective-operation/programme.lock \
 ~~~
 
 Use the same original operation directory when continuing. It retains full original requests, operator browser drafts, complete useful reports and the editable receiving package.
+
+
+## Point-list modelling and contractor returns
+
+The same installation now includes the complete semantic workflow. Open **Point-list modelling** from the managed application's related links, or use `/semantic.html` on the already running original server. Native building grids and corrective work remain available from the same workspace.
+
+Import original CSV/TSV point lists or select retained native grids. Inspect every source row and choose column positions explicitly; repeated headings remain separate. Preview naming and class proposals, then retain a full model with stable entity identities, original row references, relationships, dictionary terms and review notes.
+
+A saved model is an immutable version over a retained source context. The browser keeps open entity/relationship/dictionary drafts and complete pending requests in its original IndexedDB stores. After a lost response, use **Requests → Read original receipt** or **Continue same request**. If a peer edits the model, **Compare draft with current saved head** preserves both contents. An unchanged model head can explicitly adopt the current workspace revision; a changed head requires deliberate review and a new save against that selected head.
+
+The [complete modelling guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_MODELLING.md) covers source mappings, full source references, model/dictionary editing, native reports and the returned-model choices.
+
+### Install the selected offline Brick engine
+
+The Node application retains its normal operator profile. Native Brick validation additionally uses the exact CPython 3.12 Linux x86_64 wheel archive and original ontology declared by `semantic-dependencies.json` and `semantic-standard.json`. Follow the complete [offline runtime guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_NATIVE.md):
+
+~~~sh
+python3.12 stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/install_semantic_runtime.py \
+  --manifest /absolute/selected-source/semantic-dependencies.json \
+  --archive /absolute/exact-semantic-offline-archive.zip \
+  --directory /absolute/private/semantic-runtime
+~~~
+
+The installer verifies the whole archive, closed member inventory, exact wheel set and requirements, then installs offline at the final virtual-environment path. Keep that destination and its original installation record when reopening an interrupted installation.
+
+Use the common Applications **environmentFile** field to select an owned private file containing:
+
+~~~json
+{
+  "HAYSTACK_SEMANTIC_PYTHON": "/absolute/private/semantic-runtime/bin/python"
+}
+~~~
+
+The original controller binds the file's exact hash to the reviewed launch. For a direct operator CLI, set that same variable in the process environment. No additional CLI or provider-specific launcher is introduced.
+
+Open a saved model, validate its exact head and read the actual native Boolean and every returned output file. The application retains original model JSON/Turtle, complete SHACL report text/Turtle, the original Brick wrapper report and expanded validation graph when supplied by the selected runtime. Source mappings, human review and field-observation status stay explicit; an ontology result does not establish live building telemetry.
+
+### Deliver and receive the complete work
+
+Prepare full model reports in JSON, CSV or HTML and dictionary reports in JSON or CSV. A complete workspace package also retains all original point files, model versions, contexts, relationships, dictionaries, reviews, native outputs, return decisions and portable application sources.
+
+Receive that package with the existing receiver and open its original workspace in the installed application. A contractor can edit a received model and export the whole workspace again. The original operator chooses **keep** or **adopt** for each returned model after reviewing the complete comparison. Keeping a local head still retains the incoming source and model history. New returned models become active only through an explicit adopt decision.
+
+The managed Merchant tools share these same actions. Host-pinned `point-list` and `workspace-return` aliases carry complete files above the request-body limit; SHA-bound JSON ranges preserve large catalogues/models/return comparisons. Read the full [Merchant guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/MERCHANT.md) for exact tools, file pins and original-request recovery.
+
+### Complete operating continuation
+
+`SEMANTIC_RECEIVING.mjs` and its `SEMANTIC_BROWSER.mjs` companion operate one retained point-modelling project. The native programme supplies the exact saved inputs and running server; the browser completes the source/mapping/model/review/return journey, desktop and 390 px views, all selected native downloads, and original request reconciliation. It returns only after its browser and borrowed merchant clients close.
+
+~~~sh
+node stellar/scf-starforge-20261009/sf30-seller-sdk/haystack-workspace/SEMANTIC_RECEIVING.mjs \
+  /absolute/original-semantic-input.json
+~~~
+
+Retain the original operation directory, request files, browser profile and selected inputs. The programme's full result records actual completed steps and complete output identities. Managed Applications Start/Stop receiving remains a separate actual READY-runtime input; source inclusion alone is not a successful installed launch.
