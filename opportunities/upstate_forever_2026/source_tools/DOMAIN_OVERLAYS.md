@@ -75,13 +75,21 @@ member is /dev/shm/dbc61-upstate-model-domain-20261012/model-domain.esri.json.gz
 domain archive is dbc61-upstate-model-domain-20261012.zip, 8,800,689 bytes, SHA256
 1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04.
 
+The same original archive is retained in the shared authenticated Library.
+Materialize that existing file on the receiving host and verify its archive
+hash before extracting. Its model-domain.esri.json.gz member has SHA256
+6f49c2f1dc10709d7957e38e92642a1de4cda44e67e4d70a8bc2ff51388e6af9.
+The decompressed original Esri JSON is 11,220,042 bytes with SHA256
+2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af.
+Reuse this exact selected 217-HUC geometry for the plan.
+
 Plan returns the exact original archive path, byte length and SHA256. The resulting ZIP carries
 plan.json, masks.json, plan-transfer.json and every original domain member. Its request masks
 use the full retained domain and original acquisition parameters. Transfer that actual ZIP
-through the existing artifact receiver to the connected host. The currently proven binary
-bridge is Google_Drive.upload_file(file_uri=<local mounted ZIP path>, file_name=<archive
-name>, mime_type='application/zip'), then the receiver uses Google_Drive.fetch(url=<stable
-Drive link>, download_raw_file=true, include_base64=false). Keep this transfer binary.
+through the same authenticated shared-artifact route to the connected host. Return the
+plan archive's actual file identity, byte count and SHA256 to the receiver, then
+materialize its original bytes there. Keep the transfer binary and reuse the
+authorized shared destination already serving the original source operation.
 
 On 405F, run from its maintained application root,
  /dev/shm/upstate-405f-20261012/application, with its existing Python interpreter:
