@@ -127,10 +127,11 @@ def _slides(report):
         })
 
     chapters.append({"id": "opening", "title": "Study and meeting purpose", "core": True})
+    baseline_title = ((report.get("quantity_provenance") or {}).get("baseline_scenario") or {}).get("title")
     opening = (
         '<p class="lead">' + _text(report.get("report_kind_label") or "Study assessment") +
         '</p><dl class="facts"><div><dt>Baseline</dt><dd>' +
-        _text(report["baseline_run_id"]) + '</dd></div><div><dt>Alternatives</dt><dd>' +
+        _text(baseline_title or "Retained baseline") + '</dd></div><div><dt>Alternatives</dt><dd>' +
         str(len(report["alternative_run_ids"])) + '</dd></div><div><dt>Map families</dt><dd>' +
         _text(report.get("map_families_present")) + ' of ' +
         _text(report.get("map_families_expected")) + '</dd></div></dl>'
@@ -203,7 +204,7 @@ a{color:inherit;text-underline-offset:3px}[hidden]{display:none!important}.toolb
 .sidebar .small{font-size:12px}.stage{min-width:0;padding:24px}.slide{background:#fff;padding:38px 44px;margin-bottom:24px;border:1px solid #c7c7c7;min-height:500px;overflow-wrap:anywhere}
 .slide h1{font-size:38px;line-height:1.18;margin:0 0 22px}.slide h2{font-size:27px;line-height:1.25;margin:0 0 22px}.slide p{max-width:100ch}.slide p:last-child{margin-bottom:0}.slide .kicker{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#555;margin-bottom:14px}
 .slide-footer{border-top:1px solid #ccc;margin-top:28px;padding-top:12px;font-size:11px;color:#555;display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px}.slide-footer a{font-size:12px}
-.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.facts dt{font-size:12px;color:#555}.facts dd{margin:5px 0;font-size:18px;overflow-wrap:anywhere}.facts div:first-child dd{font-size:12px}.lead{font-size:22px}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px}.facts dt{font-size:12px;color:#555}.facts dd{margin:5px 0;font-size:18px;overflow-wrap:anywhere}.lead{font-size:22px}
 .table-scroll{overflow:auto;max-width:100%}table{border-collapse:collapse;width:100%;font-size:13px;line-height:1.4}caption{text-align:left;font-weight:650;padding-bottom:10px}th,td{border:1px solid #c6c6c6;text-align:left;vertical-align:top;padding:10px;min-width:95px}th{background:#f0f0f0}tr:nth-child(even){background:#fafafa}td{white-space:pre-wrap}.assets li{margin:13px 0}
 .panel{position:fixed;z-index:5;inset:70px 24px 24px auto;width:min(620px,calc(100vw - 48px));overflow:auto;background:#fff;border:1px solid #777;box-shadow:0 5px 25px #0002;padding:24px}.panel h2{font-size:22px;margin-top:0}.panel h3{font-size:17px}
 .panel label{display:block;margin-top:13px;font-size:13px;font-weight:600}.panel input:not([type=checkbox]),.panel textarea,.panel select{display:block;width:100%;border:1px solid #888;background:#fff;padding:8px;margin-top:5px}.panel textarea{min-height:100px;resize:vertical}
@@ -211,7 +212,7 @@ a{color:inherit;text-underline-offset:3px}[hidden]{display:none!important}.toolb
 .deck .sidebar{display:none}.deck .layout{grid-template-columns:minmax(0,1fr)}.deck .stage{max-width:1440px;width:100%;margin:auto}.deck .slide{min-height:calc(100vh - 130px);font-size:20px}.deck table{font-size:15px}.deck .slide h2{font-size:34px}.deck .slide h1{font-size:46px}.deck .slide:not(.current){display:none}
 #status{margin:0 20px;font-size:12px;color:#444}.footer{font-size:12px;color:#555;padding:16px 24px;max-width:1400px;margin:auto}.print-notes{display:none}
 @media(max-width:800px){.layout{display:block}.sidebar{position:static;max-height:none;border-right:0}.sidebar ol{display:flex;flex-wrap:wrap;gap:4px 12px}.stage{padding:12px}.slide{padding:24px 20px}.slide h1{font-size:29px}.slide h2{font-size:23px}.facts{grid-template-columns:1fr}.deck .slide{font-size:17px}.deck .slide h1{font-size:34px}.deck .slide h2{font-size:27px}.panel{inset:80px 12px 12px auto;width:calc(100vw - 24px)}}
-@media print{@page{size:landscape;margin:14mm}body{background:#fff;font-size:12pt}.toolbar,.sidebar,.panel,#status,.footer,.slide-footer a{display:none!important}.layout{display:block}.stage{padding:0;max-width:none!important}.slide,.deck .slide,.deck .slide:not(.current){display:block;min-height:0;border:0;padding:0;margin:0;break-after:page;font-size:12pt}.slide.print-exclude{display:none!important}.slide h1,.deck .slide h1{font-size:28pt}.slide h2,.deck .slide h2{font-size:21pt}.table-scroll{overflow:visible}table,.deck table{font-size:9pt}th,td{min-width:0;padding:6px}tr{break-inside:avoid}thead{display:table-header-group}.slide-footer{font-size:8pt}.facts{grid-template-columns:repeat(3,minmax(0,1fr))}.print-notes{display:block;break-before:page}.print-notes pre{white-space:pre-wrap;font:11pt/1.5 system-ui,sans-serif}}
+@media print{@page{size:landscape;margin:14mm}body{background:#fff;font-size:12pt}.toolbar,.sidebar,.panel,#status,.footer,.slide-footer a{display:none!important}.layout{display:block}.stage{padding:0;max-width:none!important}.slide,.deck .slide,.deck .slide:not(.current){display:block;min-height:0;border:0;padding:0;margin:0;break-after:page;font-size:12pt}.slide.print-exclude{display:none!important}.slide h1,.deck .slide h1{font-size:28pt}.slide h2,.deck .slide h2{font-size:21pt}.table-scroll{overflow:visible}table,.deck table{font-size:9pt}th,td{min-width:0;padding:6px}tr{break-inside:avoid}thead{display:table-header-group}.slide-footer{font-size:8pt}.facts{grid-template-columns:repeat(3,minmax(0,1fr))}.print-with-notes .print-notes{display:block;break-before:page}.print-notes pre{white-space:pre-wrap;font:11pt/1.5 system-ui,sans-serif}}
 """
 
 
@@ -222,7 +223,7 @@ var model=JSON.parse(document.getElementById('briefing-data').textContent);
 var binding=model.binding,slides=Array.from(document.querySelectorAll('.slide'));
 var chapterById=new Map(model.chapters.map(function(c){return[c.id,c];}));
 var agenda=new Set(model.chapters.filter(function(c){return c.core;}).map(function(c){return c.id;}));
-var index=0,visible=[],presenting=false,scrollScheduled=false,notesKey='eco-client-briefing:'+binding.schema+':'+binding.report_sha256;
+var index=0,visible=[],presenting=false,printing=false,scrollScheduled=false,notesKey='eco-client-briefing:'+binding.schema+':'+binding.report_sha256;
 var status=document.getElementById('status'),notesPanel=document.getElementById('notes-panel'),agendaPanel=document.getElementById('agenda-panel');
 var notes={schema:model.notes_schema,binding:binding,meeting:{title:'',date:'',participants:'',purpose:''},entries:[],agenda:Array.from(agenda),updated_at:null};
 function message(text){status.textContent=text;}
@@ -260,7 +261,7 @@ function update(){
  document.getElementById('previous').disabled=index===0;document.getElementById('next').disabled=index>=visible.length-1;
  document.getElementById('page-counter').textContent=visible.length?(index+1)+' / '+visible.length:'No pages selected';
  document.getElementById('present').textContent=presenting?'Read report':'Present';
- document.querySelectorAll('[data-chapter-link]').forEach(function(a){var on=current()&&a.dataset.chapterLink===current().dataset.chapter;a.toggleAttribute('aria-current',!!on);a.parentElement.hidden=!agenda.has(a.dataset.chapterLink);});
+ document.querySelectorAll('[data-chapter-link]').forEach(function(a){var on=current()&&a.dataset.chapterLink===current().dataset.chapter;if(on)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');a.parentElement.hidden=!agenda.has(a.dataset.chapterLink);});
  var select=document.getElementById('chapter-select');select.value=current()?current().dataset.chapter:'';
  Array.from(select.options).forEach(function(o){o.disabled=!agenda.has(o.value);});
  var meta=currentMeta();document.getElementById('note-context').textContent=meta?meta.title+' · '+meta.id:'';
@@ -270,14 +271,14 @@ function chapter(id){var n=visible.findIndex(function(s){return s.dataset.chapte
 // Reading mode follows the actual page on screen, so meeting entries keep
 // the section the operator is looking at, including ordinary mouse scrolling.
 window.addEventListener('scroll',function(){
- if(presenting||!notesPanel.hidden||!agendaPanel.hidden||scrollScheduled)return;
- scrollScheduled=true;requestAnimationFrame(function(){scrollScheduled=false;if(presenting||!notesPanel.hidden||!agendaPanel.hidden)return;
+ if(printing||presenting||!notesPanel.hidden||!agendaPanel.hidden||scrollScheduled)return;
+ scrollScheduled=true;requestAnimationFrame(function(){scrollScheduled=false;if(printing||presenting||!notesPanel.hidden||!agendaPanel.hidden)return;
   var top=document.querySelector('.toolbar').getBoundingClientRect().bottom+24,best=0,distance=Infinity;
   visible.forEach(function(s,n){var box=s.getBoundingClientRect(),d=box.top<=top&&box.bottom>top?0:Math.abs(box.top-top);if(d<distance){best=n;distance=d;}});
   if(best!==index){index=best;update();}
  });
 },{passive:true});
-slides.forEach(function(slide){slide.addEventListener('focusin',function(){if(!presenting&&visible.includes(slide)){index=visible.indexOf(slide);update();}});});
+slides.forEach(function(slide){slide.addEventListener('focusin',function(){if(!printing&&!presenting&&visible.includes(slide)){index=visible.indexOf(slide);update();}});});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'){if(!notesPanel.hidden){close(notesPanel);e.preventDefault();}else if(!agendaPanel.hidden){close(agendaPanel);e.preventDefault();}}});
 document.getElementById('previous').onclick=function(){go(index-1);};document.getElementById('next').onclick=function(){go(index+1);};
 document.getElementById('present').onclick=function(){presenting=!presenting;update();go(index);};
@@ -320,9 +321,18 @@ function download(name,type,body){var url=URL.createObjectURL(new Blob([body],{t
 document.getElementById('export-json').onclick=function(){save();download('meeting-notes-'+binding.report_sha256.slice(0,12)+'.json','application/json',JSON.stringify(notes,null,2)+'\n');};
 document.getElementById('export-markdown').onclick=function(){save();download('meeting-notes-'+binding.report_sha256.slice(0,12)+'.md','text/markdown;charset=utf-8',markdown());};
 document.getElementById('import-notes').onchange=async function(e){
- var file=e.target.files[0];if(!file)return;try{if(file.size>8*1024*1024)throw Error('Choose a meeting file under 8 MiB.');var next=validate(JSON.parse(await file.text()));if(notes.entries.length||Object.values(notes.meeting).some(Boolean)){if(!window.confirm('Replace the notes open in this browser with the imported meeting? Export the current notes first if you want to keep both.'))return;}notes=next;agenda=new Set(notes.agenda);bindMeeting();renderNotes();setAgenda(notes.agenda);message('Meeting notes opened for this report edition.');}catch(error){message(error.message);}finally{e.target.value='';}
+ var file=e.target.files[0];if(!file)return;try{if(file.size>64*1024*1024)throw Error('Choose a meeting file under 64 MiB.');var next=validate(JSON.parse(await file.text()));if(notes.entries.length||Object.values(notes.meeting).some(Boolean)){if(!window.confirm('Replace the notes open in this browser with the imported meeting? Export the current notes first if you want to keep both.'))return;}notes=next;agenda=new Set(notes.agenda);bindMeeting();renderNotes();setAgenda(notes.agenda);message('Meeting notes opened for this report edition.');}catch(error){message(error.message);}finally{e.target.value='';}
 };
-document.getElementById('print').onclick=function(){slides.forEach(function(s){s.classList.toggle('print-exclude',!agenda.has(s.dataset.chapter));});document.getElementById('printed-notes').textContent=markdown();window.print();};
+function preparePrint(){
+ printing=true;
+ var scope=document.getElementById('print-scope').value,page=current();
+ slides.forEach(function(s){s.classList.toggle('print-exclude',scope==='current'?s!==page:!agenda.has(s.dataset.chapter));});
+ document.body.classList.toggle('print-with-notes',scope==='agenda-notes');
+ document.getElementById('printed-notes').textContent=markdown();
+}
+window.addEventListener('beforeprint',preparePrint);
+window.addEventListener('afterprint',function(){slides.forEach(function(s){s.classList.remove('print-exclude');});document.body.classList.remove('print-with-notes');printing=false;});
+document.getElementById('print').onclick=function(){preparePrint();window.print();};
 bindMeeting();renderNotes();update();document.querySelectorAll('[data-enhanced]').forEach(function(e){e.hidden=false;});
 })();
 """
@@ -375,7 +385,11 @@ def render(report, *, report_href, model_href, report_model_bytes=None):
         '<button id="notes" data-enhanced hidden>Meeting notes</button>'
         '<button id="present" data-enhanced hidden>Present</button>'
         '<button id="fullscreen" data-enhanced hidden>Fullscreen</button>'
-        '<button id="print" data-enhanced hidden>Print agenda and notes</button>'
+        '<label data-enhanced hidden>Print <select id="print-scope">'
+        '<option value="current">Current briefing page</option>'
+        '<option value="agenda">Selected agenda</option>'
+        '<option value="agenda-notes" selected>Agenda and meeting notes</option></select></label>'
+        '<button id="print" data-enhanced hidden>Print</button>'
         '<label data-enhanced hidden>Section <select id="chapter-select">' + ''.join(options) +
         '</select></label><button id="previous" aria-label="Previous briefing page" data-enhanced hidden>Previous</button>'
         '<span id="page-counter" aria-live="polite"></span>'
