@@ -65,14 +65,16 @@ function validateDraft(value,expectedWorkspace=null,withRecovery=true){
   for(const x of value.requests){
     need(object(x)&&/^client-source-[0-9a-f]{64}$/.test(x.id)&&typeof x.key==='string'&&
       ['client-source.inspect','client-source.commit'].includes(x.action)&&object(x.payload),'An original request identity is missing.');
-    need(x.key===canonical({workspace:value.workspace_key,action:x.action,payload:x.payload}),'An original request selection differs.');
+    const requestWorkspace=x.workspace_key??value.workspace_key;
+    need(typeof requestWorkspace==='string'&&requestWorkspace.length>0,'An original request Workspace is missing.');
+    need(x.key===canonical({workspace:requestWorkspace,action:x.action,payload:x.payload}),'An original request selection differs.');
   }
   if(withRecovery){
     need(Array.isArray(value.recovery),'The retained working-copy history is missing.');
     for(const item of value.recovery){
       need(object(item)&&typeof item.raw==='string'&&typeof item.reason==='string'&&typeof item.saved_at==='string','A retained original working copy is invalid.');
       const old=JSON.parse(item.raw);need(!Object.hasOwn(old,'recovery'),'A retained working copy must not recursively duplicate its history.');
-      validateDraft({...old,recovery:[]},expectedWorkspace,false);
+      validateDraft({...old,recovery:[]},old.workspace_key,false);
     }
   }
   encoded(value);
@@ -84,7 +86,7 @@ function preserveWorking(candidate,previous,reason){
   const raw=JSON.stringify(body,null,2)+'\n';
   if(!history.some(row=>row.raw===raw))history.push({raw,reason,saved_at:new Date().toISOString()});
   const unique=new Map(history.map(row=>[row.raw,row]));
-  return validateDraft({...candidate,recovery:[...unique.values()]},previous.workspace_key);
+  return validateDraft({...candidate,recovery:[...unique.values()]},candidate.workspace_key);
 }
 export function createClientSourceIntake(host){
   let root=null,workspace=null,state=null,generation=0,busy=false,notice='',problem='',storageProblem='';
@@ -446,8 +448,10 @@ export function createClientSourceIntake(host){
       await run(async()=>{
         if(file.size>64*1024*1024)throw Error('This working copy exceeds 64 MiB. Keep the original and open it with its producing application.');
         const expected=workspace,epoch=generation;
-        let candidate=validateDraft(JSON.parse(await file.text()),expected),opened=null;
+        let candidate=validateDraft(JSON.parse(await file.text())),opened=null;
+        const receiving=candidate.workspace_key!==expected;
         if(!current(expected,epoch))return;
+        if(receiving&&!candidate.inspection_id)throw Error('This unfinished copy has no saved inspection to verify here. Open it in its original Workspace, inspect the originals, then back up and restore that Workspace.');
         if(candidate.inspection_id){
           if(!catalog)await refreshCatalog();
           if(!current(expected,epoch))return;
@@ -455,11 +459,20 @@ export function createClientSourceIntake(host){
           if(!current(expected,epoch))return;
           boundInspection(candidate,opened);
         }
-        if(!confirm('Open this complete working copy? The current unfinished choices will remain in its retained history. Original native sources and operations stay saved.'))return;
+        if(!confirm(receiving?'Open these saved source choices against their verified restored inspection? The current and original working copies remain in history. Choose the original files again only when you need a new inspection.':'Open this complete working copy? The current unfinished choices will remain in its retained history. Original native sources and operations stay saved.'))return;
+        if(receiving){
+          const original=clone(candidate);
+          candidate.workspace_key=expected;
+          candidate.requests=candidate.requests.map(request=>({...request,workspace_key:request.workspace_key??original.workspace_key}));
+          // Upload handles belong to the producing operator; the verified native
+          // inspection already retains the complete originals for these choices.
+          candidate.uploads=[];
+          candidate=preserveWorking(candidate,original,'Received source choices against their original restored inspection');
+        }
         candidate=preserveWorking(candidate,draft,'Opened '+file.name);
         draft=candidate;inspection=opened;result=null;retain();q('[data-ci-field="title"]').value=draft.title;
         renderFiles();renderChoices();renderInspection();renderResult();
-        notice='Complete working copy opened against this original Workspace. Original request identities are retained.';messages();
+        notice=receiving?'Saved choices opened against the verified restored inspection. Originals remain there; choose files again only for a new inspection. Original request identities and working copies are retained.':'Complete working copy opened against this original Workspace. Original request identities are retained.';messages();
       });
     }
   }
