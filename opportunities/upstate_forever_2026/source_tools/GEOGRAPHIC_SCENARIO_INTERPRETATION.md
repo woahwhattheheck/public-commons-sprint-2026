@@ -21,7 +21,7 @@ A buffer distance of 90 m passed to LineString.buffer is 90 m on each side, appr
 
 ## Continue the same prepared case
 
-Use the actual geographic-headwaters/<prepared-id>/prepared.json, its inputs/input-receipt.json and inputs/biophysical.csv, plus the original matching summary referenced by prepared.input_summary.control.summary_path. If the Workspace moved after export, locate that retained summary beneath the imported input edition; its entire JSON must equal the summary embedded in prepared.input_summary.control.preparation.summary.
+Use the actual geographic-headwaters/<prepared-id>/prepared.json, its inputs/input-receipt.json and inputs/biophysical.csv, plus inputs/matched-control/matching-summary.json in the final frozen geographic producer. Its full JSON must equal prepared.input_summary.control. The earlier adapter-wrapped edition is also recognized through prepared.input_summary.control.preparation.summary; its original relocated summary must match that exact embedded object.
 
 Run at the existing source/report boundary, preserving any active solver and its original runtime:
 
@@ -29,7 +29,7 @@ Run at the existing source/report boundary, preserving any active solver and its
 node APP/source_tools/geographic_scenario_interpretation.mjs \
   --prepared WORKSPACE/geographic-headwaters/ID/prepared.json \
   --input-receipt WORKSPACE/geographic-headwaters/ID/inputs/input-receipt.json \
-  --matching-summary ACTUAL_RETAINED_MATCHING_SUMMARY \
+  --matching-summary WORKSPACE/geographic-headwaters/ID/inputs/matched-control/matching-summary.json \
   --biophysical WORKSPACE/geographic-headwaters/ID/inputs/biophysical.csv \
   --output OWNED_REPORT_OUTPUT
 ~~~
@@ -39,6 +39,10 @@ The helper verifies the original matching-summary equality, input-receipt geogra
 Import OWNED_REPORT_OUTPUT/sources.json through the maintained Sources selection or Workspace.import_sources. In Scientific Reports choose its OBSERVED_CONTEXT document together with the original native comparison. The report section is also exported as reportSection(report) for the existing geographic report producer. The pure calculation function interpretGeographicScenario can consume retained JSON/CSV rows in another JS host.
 
 The module uses Node built-ins only for the CLI; the calculation and report-section exports are independent of filesystem, network and Node. Existing exact output is reused; changed scientific input requires a distinct owned edition directory.
+
+## Original treatment allocation among HUCs
+
+The final producer records actual reporting, corridor and changed-cell counts by original reporting HUC. These counts are retained in an additional CSV and report table, with source-coefficient reductions calculated separately for each HUC. Matching holds class counts over the whole reporting support, not within every utility or HUC. The control area for a particular HUC remains unpopulated until its actual footprint is intersected; absent allocation is never converted to zero. The original utility/footprint service supplies that local control area and source-class distribution. Individual original HUC rows remain separate source selections.
 
 ## Use the completed native comparison
 
