@@ -17,6 +17,7 @@ import {operateGeographicProgramme} from './geographic_programme_browser.mjs';
 import {admitMatchedControlChapter,admitMatchedControlReceiving,admitMatchedControlOutcomeChapter,operateMatchedControl,operateMatchedControlOutcomes} from './multivariate_control_browser.mjs';
 import {operateDeliveryPreparation} from '../operator/delivery_preparation_receiving.mjs';
 import {operateStructuralStudy,receiveStructuralProjectNative,uploadStructuralArchive} from '../operator/structural_study_receiving.mjs';
+import {operateSourceWorkingDesk} from './source_working_desk_receiving.mjs';
 
 // Current direction .4 renews the full delivery. A caller may request its own deadline.
 let CUTOFF=Infinity;
@@ -408,6 +409,8 @@ async function main(argv){
   await screenshot(page,'source-intake-cold-reopen',1440);await screenshot(page,'source-intake-cold-reopen',390);
   await saveRecord('source-input-lifecycle',{original:originalWorking,late:retainedWorking,reopened:recoveredWorking,cold:coldWorking,upload:receipt,invalid_choice_left_selection_unchanged:true});
   action('source_input_lifecycle',{upload_id:uploaded.id,receipt_id:receipt.id,late_response_preserved_newer_choice:true,atomic_invalid_reopen:true,storage_failure_preserves_choice:true,history_reselected:true,cold_reopen:true});
+
+  await operateSourceWorkingDesk({page,workspaceKey:connection.workspace_key,download,readJSON,saveRecord,screenshot,waitFor,check,equal,requireValue,navigate,action});
 
   // Preview reads original geometry only. Do not click Prepare or Run in this receiving course.
   const [previewResponse]=await Promise.all([
