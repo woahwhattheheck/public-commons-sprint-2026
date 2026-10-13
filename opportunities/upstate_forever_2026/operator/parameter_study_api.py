@@ -9,7 +9,7 @@ from model.common import identifier, read_json, verify_file
 from model.model_selection import selected
 
 ACTIONS = {"parameter-study.prepare", "parameter-study.run", "parameter-study.summarize"}
-READS = {"catalog", "results", "calibration"}
+READS = {"catalog", "results", "calibration", "execution"}
 
 
 class ParameterStudyAPI:
@@ -24,7 +24,7 @@ class ParameterStudyAPI:
             return experiments.prepare(workspace, payload)
         experiment_id = identifier(payload.get("experiment_id"))
         if task["action"] == "parameter-study.run":
-            return experiments.execute(workspace, experiment_id)
+            return self.operator.native_jobs.execute_parameter_study(task, workspace, experiment_id)
         if task["action"] == "parameter-study.summarize":
             experiments.summarize(workspace, experiment_id)
             return experiments.inspect(workspace, experiment_id)
@@ -42,6 +42,13 @@ class ParameterStudyAPI:
 
     def read(self, workspace_id, operation, payload):
         workspace = self.operator.ws(workspace_id)
+        if operation == "execution":
+            from model.parameter_case_status import read
+            return read(workspace, identifier(payload.get("id")),
+                        identifier(payload.get("run_id")),
+                        **{name: payload[name] for name in (
+                            "attempt_id", "stream", "log_offset", "expected_attempt_id",
+                            "history_offset", "limit") if payload.get(name) not in (None, "")})
         if operation == "catalog":
             return experiments.catalog(workspace, identifier(payload.get("baseline_run_id")))
         if operation == "calibration":

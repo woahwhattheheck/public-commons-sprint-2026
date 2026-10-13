@@ -135,7 +135,8 @@
         "source_tools/application_assembly.py",
         "source_tools/application_components.py",
         "source_tools/install_cumulative_application.py",
-        "model/scientific_figures.py"
+        "model/scientific_figures.py",
+        "model/scientific_tables.py"
       ],
       "requires": []
     },
@@ -768,10 +769,15 @@
     "gis-projects": {
       "title": "gis projects",
       "paths": [
-        "operator/extensions/gis-projects.json"
+        "operator/extensions/gis-projects.json",
+        "model/gis_workspace.py",
+        "model/GIS_PROJECTS.md",
+        "operator/web/gis-projects.mjs",
+        "operator/web/delivery_inspection.mjs"
       ],
       "requires": [
-        "core"
+        "core",
+        "delivery-datasets"
       ]
     },
     "guided-journey": {
@@ -5454,7 +5460,12 @@
         "operator/web/observed_reports.mjs",
         "source_tools/prepare_scientific_briefing.py",
         "docs/SCIENTIFIC_REPORT_BRIEFING.md",
-        "docs/OBSERVED_REPORT_RENDERING.md"
+        "docs/OBSERVED_REPORT_RENDERING.md",
+        "source_tools/receive_scientific_report_review.py",
+        "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+        "source_tools/receive_observed_scientific_review.py",
+        "source_tools/RECEIVE_OBSERVED_SCIENTIFIC_REVIEW.md",
+        "observations/eighteenmile_2023/scientific-review.request.json"
       ],
       "requires": [
         "eco13",

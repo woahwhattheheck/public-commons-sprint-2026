@@ -345,12 +345,13 @@ export function validateCommunityView(value,state){
     utility_id:utility,watershed_id:watershed,query:string('query'),sort,compare_geoids:[...compare],plan_id:planId,report_id:reportId};
 }
 
-export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState,openDelivery,openScientificReport}){
+export function attachCommunity({getState,api,endpoint,openForm,submitAction,detail,fileList,sourceForm,toast,openItem,refreshState,openDelivery,openScientificReport,openStudyTransfer}){
   const cache=new Map(),pending=new Map();
   let activeWorkspace=null,container=null,mountController=null,loadError='',formTable=null,formWorkspace=null,validatedView=null;
   let formPlanPrevious=null,formCsvPreview=null,formInterventionImport=null,formCsvEpoch=0;
   let formWatershedCatalog=[],formWatershedReport=null,formWatershedError='',formWatershedCatalogError='';
   let formWatershedGeneration=0,formWatershedRequest=0,reportSourceRequest=0;
+  let studyTransferRequest=0;
   let local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[],plan:'',report:''};
   let retainedState=null;
   const current=()=>{const live=getState();return retainedState?.previous===live?retainedState.state:live;};
@@ -359,10 +360,11 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   const tables=()=>list(data().community_tables);
   const plans=()=>list(data().community_plans);
   const reports=()=>list(data().community_reports);
-  const revisions=attachCommunityRevisions({getState:current,api,endpoint,openForm,submitAction,detail,fileList,openPlan:id=>planDetail(id)});
+  const revisions=attachCommunityRevisions({getState:current,api,endpoint,openForm,submitAction,detail,fileList,openPlan:id=>planDetail(id),studyTransferButton});
   const key=(kind,id)=>workspace()+'|'+kind+'|'+id;
   function sync(){
     if(activeWorkspace!==workspace()){
+      studyTransferRequest++;
       activeWorkspace=workspace();loadError='';validatedView=null;
       local={table:'',tab:'explore',utility:'',watershed:'',query:'',sort:'geoid',compare:[],plan:'',report:''};
       let saved;try{saved=JSON.parse(sessionStorage.getItem('upstate-community-view:'+workspace())||'null');}catch{}
@@ -632,7 +634,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
   }
   async function tableDetail(id){
     const t=await get('community_tables',id,{fresh:true});
-    detail(t.title,sourceMetadata(t)+metrics(t.groups)+utilityCards(t)+groupTable(t.groups,t)+
+    detail(t.title,'<div class="community-detail-actions">'+studyTransferButton('community-tables',t.id)+'</div>'+sourceMetadata(t)+metrics(t.groups)+utilityCards(t)+groupTable(t.groups,t)+
       fileList(t._downloads||[])+'<details class="technical"><summary>Complete retained source rows and metadata</summary><pre class="json-view">'+e(JSON.stringify(t,null,2))+'</pre></details>',
       {kind:'community_tables',id});
   }
@@ -1015,7 +1017,8 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     selectRetainedTable(p.table_id);local.plan=p.id;local.tab='plans';if(row('community_reports',local.report)?.plan_id!==p.id)local.report='';persist();
     const related=reports().filter(r=>(r.plan_id||r.selection?.plan_id)===id);
     detail(p.title,
-      '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+revisions.planButton(p)+'</div>'+
+      '<p class="community-intro">'+e(p.purpose)+'</p><div class="community-detail-actions">'+button('plan-revise','Revise plan','data-id="'+e(p.id)+'"')+button('report-new','Build complete report','data-id="'+e(p.id)+'"','primary')+revisions.planButton(p)+
+      studyTransferButton('community-plans',p.id)+'</div>'+
       metrics(groups)+section('Selected communities',t.title,groupTable(groups,t))+
       section('Intervention work program','Retained priorities, work owners, intended benefits and costs.',interventionTable(p.interventions,t))+
       (p.intervention_import?section('Received intervention programme',p.intervention_import.source.filename,'<div class="section-body"><p>'+n(p.intervention_import.summary.row_count)+' original CSV rows retained with this revision. '+n(p.intervention_import.summary.added_ids.length)+' added, '+n(p.intervention_import.summary.changed_ids.length)+' changed and '+n(p.intervention_import.summary.removed_ids.length)+' removed from the preceding saved plan.</p><p class="note">Build the complete report to download the original received CSV beside the current editable programme.</p></div>'):'')+
@@ -1092,7 +1095,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     return openDelivery(JSON.parse(JSON.stringify(selection)));
   }
   function taskActions(task){
-    if(task?.action==='community.plan.compare')return revisions.taskActions(task);
+    if(['community.plan.compare','community.revision.receive'].includes(task?.action))return revisions.taskActions(task);
     if(task?.workspace!==workspace()||task.action!=='community.report.source.prepare'||task.state!=='complete'||!task.result?.source)return '';
     return '<div class="page-actions">'+
       (typeof openScientificReport==='function'?button('report-source-scientific','Open scientific report','data-id="'+e(task.id)+'"','primary'):'')+
@@ -1107,12 +1110,34 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     const title=r.title||r.selection?.title||'Community and utility report';
     const body='<div class="community-detail-actions">'+(planId?button('plan-open','Open original plan','data-id="'+e(planId)+'"'):'')+
       (html?button('report-preview',preview?'Hide report preview':'Preview full report','data-id="'+e(id)+'" data-preview="'+(!preview)+'"','primary'):'')+
-      button('report-source','Use in scientific report','data-id="'+e(id)+'"')+'</div>'+
+      button('report-source','Use in scientific report','data-id="'+e(id)+'"')+
+      studyTransferButton('community-reports',r.id)+'</div>'+
       '<p class="note">'+e(SCIENTIFIC_SCOPE_TEXT)+'</p>'+communityPlanRevisionMarkup(r.plan_revision)+
       (preview&&html?'<iframe class="community-report-preview" title="'+e(title)+'" src="'+e(html.url)+'" sandbox="" referrerpolicy="no-referrer"></iframe>':'')+
       (files.length?fileList(files):'<p class="notice">The report has no completed file tickets yet. Inspect its original operation for progress.</p>')+
       '<details class="technical"><summary>Complete retained report record</summary><pre class="json-view">'+e(JSON.stringify(r,null,2))+'</pre></details>';
     detail(title,body,{kind:'community_reports',id});
+  }
+  function studyTransferButton(kind,id){
+    return typeof openStudyTransfer==='function'?button('study-transfer','Transfer editable study',
+      'data-kind="'+e(kind)+'" data-id="'+e(id)+'" data-workspace="'+e(workspace())+'"'):'';
+  }
+  async function transferStudy(node){
+    sync();
+    const requestedWorkspace=node.dataset.workspace,kind=node.dataset.kind,id=node.dataset.id;
+    const nativeKind={'community-tables':'community_tables','community-plans':'community_plans','community-reports':'community_reports','community-plan-comparisons':'community_plan_comparisons'}[kind];
+    if(typeof openStudyTransfer!=='function'||!nativeKind||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose a saved Community study in the current workspace.');
+    if(!requestedWorkspace||requestedWorkspace!==workspace())
+      throw Error('Reopen this saved Community study in its original workspace.');
+    const request=++studyTransferRequest,selection=JSON.stringify(local);
+    const retained=kind==='community-plan-comparisons'?
+      await api(endpoint('/api/community-revisions/inspect',{id})):await get(nativeKind,id,{fresh:true});
+    if(request!==studyTransferRequest||workspace()!==requestedWorkspace||JSON.stringify(local)!==selection)return;
+    if(retained.id!==id||(kind==='community-plan-comparisons'&&retained.workspace_key!==requestedWorkspace))
+      throw Error('The saved Community study identity changed.');
+    document.getElementById('detail-dialog')?.close();
+    return openStudyTransfer({workspace_key:requestedWorkspace,roots:[{kind,id}]});
   }
   async function nativeItem(buttonNode){
     return openItem(buttonNode.dataset.kind,buttonNode.dataset.id);
@@ -1143,6 +1168,7 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     if(action==='report-source-edition')return openPreparedReport(node.dataset.id,{sourceOnly:true});
     if(action==='report-preview')return reportDetail(node.dataset.id,{preview:node.dataset.preview==='true'});
     if(action==='native-item')return nativeItem(node);
+    if(action==='study-transfer')return transferStudy(node);
     if(action==='intervention-import-preview')return previewInterventionImport();
     if(action==='intervention-import-apply')return applyInterventionImport();
     if(action==='intervention-add'){
@@ -1156,6 +1182,6 @@ export function attachCommunity({getState,api,endpoint,openForm,submitAction,det
     }
     throw Error('This community action is not available.');
   }
-  function detach(){mountController?.abort();container=null;}
+  function detach(){studyTransferRequest++;mountController?.abort();container=null;}
   return {render,mount,dispatch,detach,capture,validateView,restoreView,taskActions};
 }

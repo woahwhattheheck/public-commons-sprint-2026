@@ -129,7 +129,7 @@ Once the original child is selected, compute-programmes/PARENT/supervision/TASK.
 
 ### Receiving the current complete source
 
-The increment contains eight full files, including `model/native_execution.py`, which supplies the worker's resource observer. Assemble them together, then run the existing installer with the receiving native interpreter:
+The increment contains ten full files, including `model/native_execution.py`, the saved-study supervisor adapter and the parameter-study API. Use the complete current application as the receiving base, then run the existing installer with the receiving native interpreter:
 
     ACTUAL_PYTHON -B install_native_supervision.py --application ACTUAL_APPLICATION --retention
 
@@ -159,3 +159,16 @@ Existing revision 6 source is an accepted exact upgrade predecessor.
 
 Repeated installation recognizes the original console asset registration regardless
 of its Python quote style and preserves the same current host registration.
+
+
+## Completed output followed by an interrupted worker
+
+A native worker can save its complete result and then receive a signal while exiting. The calculation supervisor verifies and keeps that original completed result, retains the directly observed signal in `supervision/<execution_id>/completed-interruption.json`, and stops the current study or programme attempt before another case starts. A matching explicit Stop request retains the normal cancelled-task disposition.
+
+After reconciling the original host or stop request, resume the same saved study or programme. Reconnection verifies that result and advances without rerunning its native calculation. The interruption receipt remains in the original request directory even after successful reuse. A worker whose exit status is unavailable after reconnection does not acquire an inferred signal.
+
+### Saved-study dependency during installation
+
+The ten-member increment includes `operator/parameter_study_jobs.py` and `operator/parameter_study_api.py`. The installed `model/parameter_studies.py` remains the scientific authority: the installer checks its maintained `native_case_context(workspace, key, run_id)` and `record_interruption(workspace, key, error)` interfaces before creating backups or writing application files. A receiving copy with an older study engine first needs the complete current application source.
+
+The installer records that unchanged engine's exact byte length and hash under `retained_dependencies`, keeps its preimage, and checks that it has not changed before publishing the increment. Current source guards cover the exact maintained pre-supervision and supervised editions. Parameter selections, case IDs, numerical kernels and retained exports stay with that installed engine.

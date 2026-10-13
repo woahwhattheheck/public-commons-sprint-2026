@@ -2,11 +2,12 @@
   "schema": "upstate.operator-extension/v1",
   "id": "published-studies",
   "title": "Published studies",
-  "version": "2.3.0",
+  "version": "2.4.0",
   "order": 46,
   "assets": [
     "published_studies.mjs",
-    "published_studies.css"
+    "published_studies.css",
+    "published_review_reports.mjs"
   ],
   "backend": {
     "module": "published_study_operator",
@@ -24,7 +25,8 @@
       "published-study.report",
       "published-study.review.save",
       "published-study.review.export",
-      "published-study.review.import"
+      "published-study.review.import",
+      "published-study.review.prepare-source"
     ],
     "invoke": {
       "handler": "invoke",
@@ -105,6 +107,45 @@
         ],
         "path": "/api/published-studies/geographic-selection",
         "operation": "geographic-selection",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/review-source-preview",
+        "operation": "review-source-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/review-sources",
+        "operation": "review-sources",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/published-studies/review-source",
+        "operation": "review-source",
         "handler": "read",
         "args": [
           "workspace_key",

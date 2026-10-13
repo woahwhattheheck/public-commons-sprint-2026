@@ -1,0 +1,16 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receiving-water-study-navigation",
+  "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
+  "extend_components": {
+    "receiving-waters": {
+      "paths": [
+        "integration/component_fragments/receiving-water-study-navigation.json",
+        "operator/RECEIVING_WATER_STUDY_TRANSFER.md"
+      ],
+      "requires": [
+        "study-transfer"
+      ]
+    }
+  }
+}

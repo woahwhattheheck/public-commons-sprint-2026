@@ -1,3 +1,4 @@
+import {prepareWaterSourceBrief, renderWaterSourceBrief} from './water_source_brief.mjs';
 /** Full legal reach and native source context in the original operator. */
 const escape = value => String(value ?? '').replace(/[&<>"']/g, ch =>
   ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
@@ -243,6 +244,9 @@ export function attachWaterSourceReview(host) {
       '</div><div class="water-source-toolbar"><button type="button" data-water-action="refresh">Refresh imported sources</button>'+
       '<button type="button" data-water-action="export-json">Export matching rows as JSON</button>'+
       '<button type="button" data-water-action="export-csv">Export matching rows as CSV</button></div>'+
+      '<label>Briefing title<input name="water-brief-title" value="Classified-water source review" maxlength="300"></label>'+
+      '<div class="water-source-toolbar"><button type="button" data-water-action="export-brief">Download printable source briefing</button></div>'+
+      '<p class="small">The briefing retains every row in the current legal filter and, when loaded, the current captured-feature filter. Open the downloaded HTML to read, print, or download its complete CSV and JSON.</p>'+
       '<p data-water-status role="status" aria-live="polite">Opening imported source editions…</p></section>'+
       '<section class="section" data-water-summary></section>'+
       '<section class="section" data-water-inventory hidden></section>'+
@@ -697,6 +701,21 @@ export function attachWaterSourceReview(host) {
     }
     if(action==='previous'||action==='next'){filter.page+=action==='next'?1:-1;drawTable();return;}
     if(!snapshot||working)throw Error('Open the complete source register before exporting or selecting a feature.');
+    if(action==='export-brief'){
+      if(nativeLoading)throw Error('Wait for the complete native feature selection before preparing its briefing.');
+      if(sourceKey(snapshot.registry_source)!==registryChoice ||
+        (snapshot.crosswalk_source?sourceKey(snapshot.crosswalk_source):'')!==crosswalkChoice)
+        throw Error('Refresh the selected source editions before preparing their briefing.');
+      const selectedLegal=rows(),selectedNative=nativeCatalogue?nativeRows():[];
+      const prepared=prepareWaterSourceBrief({snapshot,records:selectedLegal,filter,
+        nativeCatalogue,nativeRecords:selectedNative,nativeFilter,
+        legalCsv:recordsCsv(selectedLegal),nativeCsv:nativeCatalogue?nativeFeaturesCsv(selectedNative):'',
+        title:node('[name="water-brief-title"]').value.trim()||'Classified-water source review'});
+      download('water-source-brief.html',renderWaterSourceBrief(prepared),'text/html;charset=utf-8');
+      status('Prepared '+prepared.payload.summary.legal_rows+' complete legal rows and '+
+        prepared.payload.summary.native_features+' original native features in the portable briefing.');
+      return;
+    }
     if(action==='export-json')return download('water-source-review.json',
       JSON.stringify(reviewExport(snapshot,rows(),filter),null,2)+'\n','application/json');
     if(action==='export-csv')return download('water-source-review.csv',recordsCsv(rows()),'text/csv;charset=utf-8');

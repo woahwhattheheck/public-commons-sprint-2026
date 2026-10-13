@@ -156,6 +156,42 @@ arguments and output directory. Its already completed tile/index and retained
 USDA responses remain reusable; the correction does not select a new domain,
 request another source edition, or change native rating values.
 
+## Overlap original page requests on the same capture
+
+The capture accepts `--page-workers 1` (the default) or
+`--page-workers 2`. With two workers, the next original geometry response can
+arrive while its predecessor is being received or indexed. The complete
+original polygon-ID list still determines every page, SQL request, source
+directory and row order. SQLite geometry ingestion stays on the caller's
+thread, and the existing whole-tile transaction commits only after every
+original page has passed the same validation.
+
+To use the two-page window, add `--page-workers 2` to the existing
+`capture --resume` command, retaining its original output directory,
+`--page-size 128`, domain manifest, source ID, vintage, buffer and all other
+source choices. This is an execution option, so it does not change
+`plan.json` or invalidate the original plan/index checkpoint. Progress records
+the selected worker count as `geometry_page_workers`.
+
+Only two original page responses can be in flight or waiting for ordered
+ingestion. A response still has the existing 64 MiB decoded-size ceiling;
+two workers increase the possible response-memory peak. Use the default one
+worker when the native host is under memory pressure. Completed tile indexes
+and cached responses remain reusable with either setting.
+
+If a provider response fails (including retained Retry-After) or a source
+geometry cannot be ingested, the caller stops admitting further pages once it
+observes the failure, cancels unstarted work, and lets already admitted
+responses finish into their existing source directories. The same tile's
+database transaction then rolls back. Resume reuses those original bodies and
+the already completed tiles; it does not create a second capture or silently
+replace the provider's source selection. The existing response timeout and
+Retry-After behavior remain in force.
+
+This option overlaps serial request waiting. It does not change the native
+soil interpretation, geometry correction, page size, null policy, units or
+raster preparation, and no measured runtime improvement is assumed.
+
 ## Prepare K on the actual NLCD grid
 
 The corrected native Annual NLCD 2025 region is available in the application's

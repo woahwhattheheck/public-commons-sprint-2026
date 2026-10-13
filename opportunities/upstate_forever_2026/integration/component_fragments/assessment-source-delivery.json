@@ -9,11 +9,16 @@
   },
   "components": {
     "assessment-source-delivery": {
-      "title": "Original assessment reports, scientific delivery and native station intake",
+      "title": "Original assessment reports, scientific delivery and selected native station studies",
       "paths": [
+        "examples/native-assessment-selection-20261013/utility-24-selection.json",
+        "model/native_assessment_review.py",
+        "operator/NATIVE_ASSESSMENT_REVIEW.md",
+        "operator/SELECTED_STUDY_TO_REPORT.md",
         "operator/SOURCE_REPORTS.md",
         "operator/extensions/source-reports.json",
         "operator/source_reports.py",
+        "operator/web/native_assessment_review.mjs",
         "operator/web/source_reports.css",
         "operator/web/source_reports.mjs",
         "results/assessment-association-review-20261013/observed-sources.json",
@@ -86,9 +91,11 @@
         "source_tools/station_assessment_identity_cli.mjs"
       ],
       "requires": [
+        "assessment-context",
         "core",
         "observed-context",
         "station-assessment",
+        "station-geography",
         "watershed-context"
       ],
       "source_manifests": [

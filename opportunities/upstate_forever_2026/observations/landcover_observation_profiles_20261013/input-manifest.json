@@ -1,0 +1,64 @@
+{
+  "schema": "upstate.landcover-observation-inputs/v1",
+  "operation": "ECO-SCI-ROOT-LANDCOVER-OBSERVATION-PROFILES-20261013",
+  "inputs": [
+    {
+      "path": "observations/wbd_station_join_20261013/query-plan.json",
+      "bytes": 813824,
+      "sha256": "498652d776ff4eef2fac4c94f0bf62742c8441b12beb9bebaaf08375f943aad7",
+      "source_commit": "88cc77e83721dbf1048e22cdb9f68b249c70dad2"
+    },
+    {
+      "path": "observations/wbd_station_join_20261013/derived/point_watersheds.csv",
+      "bytes": 254495,
+      "sha256": "4dae939207751422d63620d5fff17d0a6eb04e70743f8636e704db5363b5e8a4",
+      "source_commit": "88cc77e83721dbf1048e22cdb9f68b249c70dad2"
+    },
+    {
+      "path": "observations/landcover_2023_2025/annual-2023.json",
+      "bytes": 477495,
+      "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836",
+      "source_commit": "ea6a7579a98d7192861eb74a380952671c9154b5"
+    },
+    {
+      "path": "observations/landcover_2023_2025/annual-2025.json",
+      "bytes": 477860,
+      "sha256": "21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8",
+      "source_commit": "ea6a7579a98d7192861eb74a380952671c9154b5"
+    },
+    {
+      "path": "observations/landcover_2023_2025/huc12-change-summary.csv",
+      "bytes": 23193,
+      "sha256": "6d703c75b24eb9dc38a1d868bcd0b43e976e6e94bbb7a8eeef25bf69328c4bec",
+      "source_commit": "ea6a7579a98d7192861eb74a380952671c9154b5"
+    },
+    {
+      "path": "observations/landcover_2023_2025/huc12-transitions.csv",
+      "bytes": 2729737,
+      "sha256": "275fd764bc637f3f0b9dfc633438f078703eecf05f8b983476ccfa1152fdf815",
+      "source_commit": "ea6a7579a98d7192861eb74a380952671c9154b5"
+    }
+  ],
+  "outputs": [
+    {
+      "path": "observations/landcover_observation_profiles_20261013/watershed-profiles.csv",
+      "bytes": 115090,
+      "sha256": "9e999756fb01b84a4d88784dae5030e0658d5eef922e771825c5a40a6b925d62"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/landcover-groups.csv",
+      "bytes": 286138,
+      "sha256": "ddfdae193d347b4389aa71d4dfe586189e62346a13b131b42f455f9907315b1d"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/original-location-context.csv",
+      "bytes": 219832,
+      "sha256": "63fd8fb2de83c0f7f04b8ecbb1500037173851aebe0ca70432f1fc9cc776f92e"
+    },
+    {
+      "path": "observations/landcover_observation_profiles_20261013/summary.json",
+      "bytes": 230282,
+      "sha256": "8cdd9f1c3b9bd9eb9b4a331f1ade646f75bf3b81ca152840bb1cd833d9092471"
+    }
+  ]
+}

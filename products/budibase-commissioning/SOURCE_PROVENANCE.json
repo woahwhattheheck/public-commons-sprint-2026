@@ -1,0 +1,37 @@
+{
+  "schema": "tjlabs.budibase-source-provenance/v1",
+  "upstreamRepository": "Budibase/budibase",
+  "commit": "ce17c2e58d05dd8df4073826106445fa653fc7ea",
+  "fixtures": [
+    {
+      "name": "agency-client-portal.tar.gz",
+      "sourcePath": "packages/server/src/api/routes/tests/data/agency-client-portal.tar.gz",
+      "sourceUrl": "https://github.com/Budibase/budibase/blob/ce17c2e58d05dd8df4073826106445fa653fc7ea/packages/server/src/api/routes/tests/data/agency-client-portal.tar.gz",
+      "bytes": 37078,
+      "sha256": "2f383f9e47adef0309fb8ebb37def7d4c145d2b4a4da4ced9b3c3772ffe4aad1",
+      "gitBlob": "e839dc73eef9102b1c8847a633b3b394b91a363f",
+      "format": "legacy-template-gzip-tar"
+    },
+    {
+      "name": "expense-approval.tar.gz",
+      "sourcePath": "packages/server/src/api/routes/tests/data/expense-approval.tar.gz",
+      "sourceUrl": "https://github.com/Budibase/budibase/blob/ce17c2e58d05dd8df4073826106445fa653fc7ea/packages/server/src/api/routes/tests/data/expense-approval.tar.gz",
+      "bytes": 65397,
+      "sha256": "15530b0b6dd6c032a6be8653de51d653e4c28544d6a3e3433955faf033770e31",
+      "gitBlob": "aeaa608f18c84acde7813bc2b0755cfc68772c8f",
+      "format": "legacy-template-gzip-tar"
+    }
+  ],
+  "legacy": {
+    "sourcePath": "packages/server/src/api/routes/tests/data/old-app.txt",
+    "bytes": 8139,
+    "sha256": "3743abaa0543f9669c2de489a452925be3d391dcf084cdb7e98fada90d1e42a6"
+  },
+  "sourceReviewFiles": 45,
+  "documentation": [
+    "https://docs.budibase.com/docs/export-and-import-apps",
+    "https://budibase.com/partners/",
+    "https://budibase.com/partner-terms/"
+  ],
+  "receiving": "Original official archives parsed with the actual commissioning core in V8; target-native deployment and user operating cases are recorded separately by the commissioning operator."
+}

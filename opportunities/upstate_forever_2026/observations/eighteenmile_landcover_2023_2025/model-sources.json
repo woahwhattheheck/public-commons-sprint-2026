@@ -1,0 +1,83 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Eighteenmile whole-catchment observed land cover 2023–2025",
+  "entries": [
+    {
+      "id": "eighteenmile-whole-upstream-basin-097050d2",
+      "title": "Original Eighteenmile whole upstream catchment footprint",
+      "kind": "vector",
+      "role": "OBSERVED_CATCHMENT",
+      "source_crs": "EPSG:4326",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+      "vintage": "Original NLDI capture 2026-10-13; Annual NLCD 2023 and 2025",
+      "metadata": {
+        "basin_id": "USGS-02186702",
+        "footprint": "whole upstream catchments; includes downstream local-catchment portion",
+        "coordinate_operation_accuracy_m": 4,
+        "pixel_rule": "native pixel centre"
+      },
+      "path": "original-whole-basin.geojson",
+      "bytes": 13935,
+      "sha256": "097050d2b09e371feb2dbcf3fe1d2fba90730086db45d4a90be514706145dc88"
+    },
+    {
+      "id": "eighteenmile-whole-catchment-landcover-2023-2025",
+      "title": "Eighteenmile whole-catchment annual classes and transitions",
+      "kind": "table",
+      "role": "LANDCOVER_OBSERVED_CONTEXT",
+      "uri": "https://api.water.usgs.gov/nldi/linked-data/nwissite/USGS-02186702/basin?f=json&simplified=false&splitCatchment=false",
+      "vintage": "Original NLDI capture 2026-10-13; Annual NLCD 2023 and 2025",
+      "metadata": {
+        "basin_id": "USGS-02186702",
+        "footprint": "whole upstream catchments; includes downstream local-catchment portion",
+        "coordinate_operation_accuracy_m": 4,
+        "pixel_rule": "native pixel centre"
+      },
+      "path": "group-margins-2023-2025.csv",
+      "bytes": 553,
+      "sha256": "f52d42a0ae90da666b48dcec2dbc9dced050380a2c78c9b29c95ac8ef6e854e4",
+      "companions": [
+        {
+          "path": "annual-2023.json",
+          "bytes": 9531,
+          "sha256": "ac6cb62d0c266cc4b8cae0e10c23cad0604d5105e82cacb45e5fcde436e89804"
+        },
+        {
+          "path": "annual-2025.json",
+          "bytes": 9518,
+          "sha256": "0aa03e927b2043d47050c71d857e47846af569a004955676ced5bef64376bd65"
+        },
+        {
+          "path": "transitions-2023-2025.json",
+          "bytes": 148925,
+          "sha256": "6ca9485899269159f87bc6f76dea122a80748d2468d8ba1146dfdec6b2936986"
+        },
+        {
+          "path": "classes-2023-2025.csv",
+          "bytes": 1194,
+          "sha256": "ac73a776f7933adcf9c466e42e8f4502bfd74fc55ae0b58116e44fa63d099500"
+        },
+        {
+          "path": "transitions-2023-2025.csv",
+          "bytes": 4539,
+          "sha256": "f608c81aa776af3d4edbe4e7260023e950314bf8853a3f0ced26603318af42e0"
+        },
+        {
+          "path": "group-transitions-2023-2025.csv",
+          "bytes": 2493,
+          "sha256": "ae1af38c7f35a88b9a240611096121d410b6ffb44b25b6b8d6648a5bb4dc22cc"
+        },
+        {
+          "path": "analysis-recipe.json",
+          "bytes": 3881,
+          "sha256": "76c719a0adde1542128a9ccb5617ec5d8d7463b9528c723646f23fa6cb7aed94"
+        },
+        {
+          "path": "README.md",
+          "bytes": 3419,
+          "sha256": "3800e1653c514c19687170d811255783a1c35f7870fea84f8311002936a2280b"
+        }
+      ]
+    }
+  ]
+}

@@ -103,7 +103,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
       if(execution?.phase==='waiting_stage')return 'Waiting for the matching original stage';
       if(execution?.phase==='native')return 'Calculating original '+(execution.model||'native').toUpperCase()+' model';
       if(execution?.phase==='export')return 'Retaining physical export rasters';
-      return native.programme_context?'Programme native calculation running':'Native model calculation running';
+      return native.study_context?'Parameter-study native case running':native.programme_context?'Programme native calculation running':'Native model calculation running';
     }
     if(native.task_state==='queued')return 'Waiting in the operator queue';
     if(native.task_state==='interrupted')return 'Operator reopened — retained work available';
@@ -146,7 +146,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     node.querySelector('[data-native-stages]').innerHTML=stageRows(native);
     node.querySelector('[data-native-selection]').textContent=pretty({
       selection:native.selection,native_run_id:native.run_id,execution_id:native.execution_id,
-      programme:native.programme_context});
+      programme:native.programme_context,parameter_study:native.study_context});
     const reuse=node.querySelector('[data-native-reuse]');
     reuse.innerHTML=reuseMarkup(native);reuse.hidden=!reuse.innerHTML;
     const issue=native.run_error?.message||(task.error?.code==='NATIVE_DETACHED'?null:task.error?.message)||native.failure?.message;
@@ -221,7 +221,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     await update();
   }
   function taskActions(task){
-    const supported=task?.action==='run.start'||task?.action==='compute.programme.run'||
+    const supported=task?.action==='run.start'||task?.action==='compute.programme.run'||task?.action==='parameter-study.run'||
       (task?.action==='compute.programme.pair-completion'&&task.payload?.run===true);
     return supported?'<div class="page-actions">'+button('open','Open calculation console',task.id)+'</div>':'';
   }

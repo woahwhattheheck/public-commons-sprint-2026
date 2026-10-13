@@ -1,6 +1,7 @@
 import { initImageWorkspace, imageOperationRecovery } from './image.mjs';
 import { createRuntimeTransferView } from './transfer.mjs';
 import { createWorkspaceReceivingView } from './workspace-receiving.mjs';
+import { createOperatingProceduresView } from './operating-procedures.mjs';
 import { createManagedWorkspaceView } from './managed.mjs';
 import { createApplicationsWorkspaceView } from './applications.mjs';
 import { createPythonWorkspaceView } from './python.mjs';
@@ -44,6 +45,7 @@ function switchView(name) {
   if (name === 'applications') applications.refresh().catch(error);
   if (name === 'transfers') transfers.refresh().catch(error);
   if (name === 'workspace-backups') workspaceReceiving.refresh().catch(error);
+  if (name === 'operating-procedures') operatingProcedures.refresh().catch(error);
   if (name === 'python') python.refresh().catch(error);
   if (name === 'source-builds') sourceBuilds.refresh().catch(error);
 }
@@ -255,7 +257,7 @@ async function refresh({ quiet = false } = {}) {
         if (saved?.selectedId && value.runtimes.some(item => item.id === saved.selectedId)) {
           selectedId = saved.selectedId; value = await api(query('/api/state', { runtimeId: selectedId }));
         }
-        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python', 'source-builds', 'workspace-backups'].includes(saved?.view) && view === requestedView) view = saved.view;
+        if (['runtime', 'profile', 'operations', 'deployment', 'managed', 'images', 'applications', 'transfers', 'python', 'source-builds', 'workspace-backups', 'operating-procedures'].includes(saved?.view) && view === requestedView) view = saved.view;
         logSelection = saved?.logSelection ?? null;
       } catch {}
     }
@@ -512,6 +514,9 @@ const transfers = createRuntimeTransferView({ root: $('transfer-workspace'), api
   getToken: () => token, getView: () => view, operation, refreshWorkspace: refresh, openLog, switchView, message, error });
 const workspaceReceiving = createWorkspaceReceivingView({ root: $('workspace-receiving'), api,
   getState: () => state, getToken: () => token, getView: () => view, message, error });
+const operatingProcedures = createOperatingProceduresView({ root: $('operating-procedures-workspace'), api,
+  getState: () => state, getToken: () => token, getView: () => view, message, error,
+  openLog, chooseRuntime, switchView, openApplication: id => applications.choose(id) });
 const managed = createManagedWorkspaceView({ api, getState: () => state, operation, refreshWorkspace: refresh,
   refreshOperation, openLog, switchView, message, error });
 const applications = createApplicationsWorkspaceView({ root: $('applications-workspace'), api, getState: () => state,
@@ -537,6 +542,7 @@ window.addEventListener('hashchange', () => {
   applications.reset();
   transfers.reset();
   workspaceReceiving.reset();
+  operatingProcedures.reset();
   python.reset();
   sourceBuilds.reset();
   archiveSelectionGeneration++; logRequestGeneration++;

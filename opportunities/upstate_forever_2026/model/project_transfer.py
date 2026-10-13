@@ -858,6 +858,15 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
             staging.mkdir(mode=0o700, exist_ok=True)
             if staging.is_symlink():
                 raise TransferError("Receiving stage must be an owned directory")
+            # A killed process can leave mkstemp files before its finally block.
+            # Remove only unpublished receiver temporaries, never a declared
+            # original member or anything in the recipient's completed copy.
+            declared_names = set(snapshot["members"])
+            for pending in staging.rglob(".transfer-file-*"):
+                relative = pending.relative_to(staging).as_posix()
+                if relative not in declared_names and pending.is_file() and not pending.is_symlink():
+                    pending.unlink()
+                    _sync_dir(pending.parent)
             done = 0
             reused = 0
             for name, record in sorted(snapshot["members"].items()):
@@ -916,6 +925,14 @@ def verify_directory(store: TransferStore, identity: str, directory: str | Path)
     root = Path(directory).absolute()
     if root.is_symlink():
         raise TransferError("Receiving copy must not be a symlink")
+    received_names = set()
+    for path in root.rglob("*"):
+        if path.is_symlink():
+            raise TransferError("Received project contains a file alias")
+        if not path.is_dir():
+            received_names.add(path.relative_to(root).as_posix())
+    if received_names != set(snapshot["members"]):
+        raise TransferError("Received project member inventory differs from the original snapshot")
     for name, record in snapshot["members"].items():
         p = root.joinpath(*PurePosixPath(member_name(name)).parts)
         for parent in (p, *p.parents):

@@ -301,3 +301,54 @@ ordinary retained package asset. PDF drawings, Markdown links and report-data JS
 continue to use the original figure contract. The report version changes the
 normal delivery identity so a completed older report can be regenerated with this
 self-contained image representation through the existing selection workflow.
+
+
+## Original observation context, native footprints and readable PDF tables (v15)
+
+The annual-comparison chapter now displays the retained contextual source rows
+alongside its original admitted catchment comparisons. Point-source discharge
+periods, concentrations and other contextual quantities keep their original
+parameter/species, station/facility/reporting feature, units, dates, qualifiers,
+methods and temporal coverage. Missing or unquantified values remain
+unquantified. These original quantities do not become annual landscape loads and
+do not enter the catchment residual or fit calculations. Imported support counts
+describe the full source edition before catchment matching; the separately
+reported admitted comparisons retain their actual fit support.
+
+Context row labels C1, C2 and later labels follow the retained row order.
+Publisher links and selected original result IDs accompany the readable
+quantities. The complete original context records, including nested source
+objects and original input values, are retained under
+`retained_context_records` in the corresponding table blocks in
+report-data.json. PDF, HTML and Markdown display the same typed quantity,
+qualification, coverage and provenance tables. Original comparison metrics,
+diagnostic weights and eligible rows are unchanged.
+
+Scenario sections now read the maintained native footprint fields. Each declared
+patch shows eligible cells, cells already carrying its destination value,
+immediate actual changes and final changed cells owned by that patch. Every
+final-owned cell is assigned to the last value-changing patch, so those sets are
+disjoint. A final net count and area are shown only when every declared patch
+has complete retained accounting; eligible and immediate-change areas are never
+summed across overlapping patches. Ordered eligible assignments (including unchanged same-code rows), original mask support,
+cascades and reversions remain separate. Earlier records without the full
+footprint fields show their saved counter values without interpreting them as
+current actual changes or a net footprint. Full original edit records remain in
+the declaration table's `retained_native_edits` report-data member.
+
+The shared PDF layout uses `model/scientific_tables.py` to keep wide original
+tables readable at the original text size. Wide tables become consecutive column
+panels; a displayed positional row number reconnects each original record across
+panels. Identical displayed fields are labelled once with their scope explicitly
+covering all original rows. Source row/column order, values, typed links and
+qualifiers remain intact, and long cells can continue onto later pages. This
+presentation was exercised by the original 88-observation, revision-2 WQP course,
+which produced and visually inspected its complete 32-page report. HTML,
+Markdown, CSV and report data retain the original complete table structure.
+
+Upgrade with the complete maintained application so the formatter, shared table
+helper and source-closure definitions arrive together. The existing report
+selection creates a new formatter-bound edition; keep earlier captured reports
+with their original identities. Continue the original report/Workspace export
+and independent receiving operation using its retained source selections and
+task IDs.

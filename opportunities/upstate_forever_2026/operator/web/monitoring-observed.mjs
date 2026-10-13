@@ -1,8 +1,69 @@
 /* Original Monitoring desk: retained observation context and exact-date support. */
+export function reviewOriginalStationMappings(network, source, field, retained = {}) {
+  const stations = network?.stations || [], originals = source?.stations || [];
+  const sourceIds = new Set(originals.map(row => row.station_id));
+  const native = new Map(stations.map(row => [row.id, row]));
+  const errors = [];
+  if (!retained || Array.isArray(retained) || typeof retained !== 'object')
+    throw Error('Station mapping must be an object.');
+  for (const [key, target] of Object.entries(retained)) {
+    if (!sourceIds.has(key)) errors.push('Mapping names a station outside this source: ' + key);
+    if (typeof target !== 'string' || !native.has(target))
+      errors.push('Mapping names an unavailable network station: ' + String(target));
+  }
+  const occupied = new Map();
+  for (const key of sourceIds) {
+    const target = Object.hasOwn(retained, key) ? retained[key] : native.has(key) ? key : null;
+    if (typeof target !== 'string' || !native.has(target)) continue;
+    const prior = occupied.get(target);
+    if (prior && prior !== key) errors.push('Two source stations already use network station ' + target);
+    else occupied.set(target, key);
+  }
+  const fieldMatches = new Map();
+  for (const station of stations) {
+    for (const [name, value] of Object.entries(station.source_properties || {})) {
+      if (typeof value !== 'string' || !sourceIds.has(value)) continue;
+      if (!fieldMatches.has(name)) fieldMatches.set(name, new Map());
+      const index = fieldMatches.get(name);
+      if (!index.has(value)) index.set(value, []);
+      index.get(value).push(station.id);
+    }
+  }
+  const fields = [...fieldMatches].map(([name, values]) => ({name, matches: values.size}))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const index = fieldMatches.get(field) || new Map(), additions = Object.create(null), rows = [];
+  let automatic = 0, existing = 0, ambiguous = 0, conflicts = 0, unmatched = 0;
+  for (const key of sourceIds) {
+    const candidates = [...new Set(index.get(key) || [])];
+    let target = '', status = '';
+    if (Object.hasOwn(retained, key)) {
+      target = retained[key]; existing++;
+      status = candidates.includes(target) ? 'Existing explicit mapping agrees' : 'Existing explicit mapping retained';
+    } else if (native.has(key)) {
+      target = key; automatic++; status = 'Exact native station ID already matches';
+    } else if (!candidates.length) {
+      unmatched++; continue;
+    } else if (candidates.length > 1) {
+      ambiguous++; target = candidates.join('; '); status = 'Ambiguous original field; choose the station explicitly';
+    } else {
+      target = candidates[0];
+      if (occupied.has(target) && occupied.get(target) !== key) {
+        conflicts++; status = 'Network station already used by ' + occupied.get(target);
+      } else {
+        additions[key] = target; occupied.set(target, key); status = 'Unique exact original-field match';
+      }
+    }
+    rows.push({source_station_id: key, network_station_id: target, status});
+  }
+  return {field, fields, rows, additions: errors.length ? {} : additions, errors,
+    automatic, existing, ambiguous, conflicts, unmatched,
+    source_count: sourceIds.size, network_count: native.size};
+}
+
 export function attachObservedContext(host) {
   const panel=document.createElement('section');
   panel.className='observed-context-panel';
-  panel.innerHTML='<h3>Observed support for this network</h3><p class="small">Match original station records and historical flow to the selected network and unchanged saved calendar.</p><div class="row"><label>Original observational source<select data-source><option value="">Select a retained source edition</option></select></label><label>Saved context<select data-saved><option value="">Open saved observational context</option></select></label></div><details><summary>Explicit source station mapping</summary><p class="small">Exact station IDs match automatically. For a different native identifier, map each full original station ID to its exact saved network station ID. Activity IDs remain separate.</p><textarea data-mapping aria-label="Original station to native station mapping">{}</textarea><div data-source-stations></div></details><label>Context title<input data-title value="Observed support for the monitoring network"></label><div class="row"><button data-preview>Preview original support</button><button data-save>Save this context</button><button data-context-export>Download complete context</button></div><p data-status class="small" role="status"></p><div data-downloads class="downloads"></div><div data-result></div>';
+  panel.innerHTML='<h3>Observed support for this network</h3><p class="small">Match original station records and historical flow to the selected network and unchanged saved calendar.</p><div class="row"><label>Original observational source<select data-source><option value="">Select a retained source edition</option></select></label><label>Saved context<select data-saved><option value="">Open saved observational context</option></select></label></div><details data-identifier-review><summary>Match retained station identifiers</summary><p class="small">Choose an original field retained on the network stations. Review exact identifier matches before adding them to this context.</p><label>Original network station field<select data-identifier-field><option value="">Choose an original identifier field</option></select></label><div class="row"><button data-identifier-apply disabled>Apply reviewed matches</button><button data-identifier-clear>Clear explicit mapping</button></div><p data-identifier-status class="small" role="status"></p><div data-identifier-rows class="table-wrap"></div></details><details><summary>Explicit source station mapping</summary><p class="small">Exact station IDs match automatically. For a different native identifier, map each full original station ID to its exact saved network station ID. Activity IDs remain separate.</p><textarea data-mapping aria-label="Original station to native station mapping">{}</textarea><div data-source-stations></div></details><label>Context title<input data-title value="Observed support for the monitoring network"></label><div class="row"><button data-preview>Preview original support</button><button data-save>Save this context</button><button data-context-export>Download complete context</button></div><p data-status class="small" role="status"></p><div data-downloads class="downloads"></div><div data-result></div>';
   host.shadowRoot.querySelector('.output').append(panel);
   const q=s=>panel.querySelector(s);
   let sources=[],saved=[],current=null,sequence=0,lastKey=null;
@@ -34,6 +95,40 @@ export function attachObservedContext(host) {
     const details=q('[data-source-stations]');
     details.replaceChildren(row?host.table(['Original station ID','Name','Datum'],row.stations.map(s=>[s.station_id,s.station_name,s.datum||'Retained source'])):document.createTextNode('Import the existing monitoring-context source manifest to make its original station cohort selectable.'));
     if(row){const note=document.createElement('p');note.className='small';note.textContent=row.flow_scope?'Daily flow applies only to '+row.flow_scope.gauge_station_id+' under the original same-station scope. Other stations retain their observations independently.':'This source retains its original regional daily-flow date context.';details.append(note);}
+  }
+  let identifierReview = null, identifierInputs = null;
+  function renderIdentifierReview() {
+    const source = sources.find(row => row.source_collection_id + '::' + row.source_id === q('[data-source]').value);
+    const fieldNode = q('[data-identifier-field]'), status = q('[data-identifier-status]');
+    const inputs = {source, network:host.network, field:fieldNode.value, mapping:q('[data-mapping]').value};
+    if (identifierInputs && Object.keys(inputs).every(key => identifierInputs[key] === inputs[key])) return;
+    identifierInputs = inputs;
+    const table = q('[data-identifier-rows]'), apply = q('[data-identifier-apply]');
+    apply.disabled = true; table.replaceChildren(); identifierReview = null;
+    if (!source || !host.network) {
+      options(fieldNode, [], row => row.name, row => row.name, 'Choose an original identifier field');
+      status.textContent = 'Choose the retained network and original observational source.';
+      return;
+    }
+    try {
+      let result = reviewOriginalStationMappings(host.network, source, fieldNode.value, mapping());
+      options(fieldNode, result.fields, row => row.name, row => row.name + ' · ' + row.matches + ' original identifiers', 'Choose an original identifier field');
+      if (result.field !== fieldNode.value)
+        result = reviewOriginalStationMappings(host.network, source, fieldNode.value, mapping());
+      identifierReview = result; identifierInputs.field = fieldNode.value;
+      if (result.errors.length) {
+        status.textContent = result.errors.join(' ') + ' Review the explicit mapping below or clear it.';
+      } else if (!fieldNode.value) {
+        status.textContent = result.fields.length ? 'Choose a field to inspect its exact original identifier matches.' : 'No retained network property exactly matches an original source station ID. Exact native IDs and your explicit mapping remain available.';
+      } else {
+        const count = Object.keys(result.additions).length;
+        status.textContent = count + ' proposed additions · ' + result.automatic + ' exact native IDs · ' + result.existing + ' existing mappings · ' + result.ambiguous + ' ambiguous · ' + result.conflicts + ' conflicts · ' + result.unmatched + ' without a field match.';
+        apply.disabled = count === 0;
+        if (result.rows.length) table.append(host.table(['Original source station', 'Native network station', 'Review'], result.rows.map(row => [row.source_station_id, row.network_station_id, row.status])));
+      }
+    } catch (error) {
+      status.textContent = error.message + ' Review the explicit mapping below or clear it.';
+    }
   }
   function addTable(title,rows,fields,details=false){
     const wrapper=document.createElement(details?'details':'section'),heading=document.createElement(details?'summary':'h4');
@@ -93,6 +188,7 @@ export function attachObservedContext(host) {
   }
   function render(){
     const key=stateKey();if(key!==lastKey){lastKey=key;sequence++;current=null;q('[data-downloads]').replaceChildren();q('[data-result]').replaceChildren();q('[data-downloads]').replaceChildren();}
+    renderIdentifierReview();
     const selectedNetwork=host.network?.id;
     options(q('[data-saved]'),saved.filter(r=>!selectedNetwork||r.network_id===selectedNetwork),r=>r.id,r=>r.title+' · '+(r.plan_id?'saved calendar':'network context'),'Open saved observational context');
     q('[data-preview]').disabled=!selectedNetwork;
@@ -130,16 +226,43 @@ export function attachObservedContext(host) {
     render();if(result.id)q('[data-saved]').value=result.id;
   }
   for(const selector of ['[data-mapping]','[data-title]'])q(selector).oninput=()=>{sequence++;current=null;q('[data-downloads]').replaceChildren();q('[data-result]').replaceChildren();render();};
+  q('[data-identifier-field]').onchange=renderIdentifierReview;
+  q('[data-identifier-apply]').onclick=()=>{
+    renderIdentifierReview();
+    if (!identifierReview || identifierReview.errors.length || !Object.keys(identifierReview.additions).length) return;
+    const additions = identifierReview.additions, count = Object.keys(additions).length;
+    q('[data-mapping]').value = escapeJson({...mapping(), ...additions});
+    q('[data-mapping]').oninput();
+    q('[data-status]').textContent = 'Applied ' + count + ' reviewed original identifier matches. Preview the source and saved calendar before saving.';
+  };
+  q('[data-identifier-clear]').onclick=()=>{
+    q('[data-mapping]').value='{}'; q('[data-mapping]').oninput();
+    q('[data-status]').textContent='Cleared explicit mapping for this draft. Exact station IDs still match automatically.';
+  };
   q('[data-source]').onchange=()=>{sequence++;current=null;q('[data-downloads]').replaceChildren();q('[data-result]').replaceChildren();sourceDetails();render();};
   q('[data-preview]').onclick=()=>host.run(()=>calculate(false),'Reading the retained original station and daily-flow support…');
   q('[data-save]').onclick=()=>host.run(()=>calculate(true),'Saving original observational support…');
+  function showSavedContext(result) {
+    if (!result?.id || result.network_id !== host.network?.id)
+      throw Error('Open this saved context in its original monitoring network.');
+    sequence++; current=result; q('[data-downloads]').replaceChildren();
+    if (!saved.some(row=>row.id===result.id)) saved=saved.concat(result);
+    q('[data-status]').textContent='Opened the exact retained context, including its original calendar when present. Preview uses the network, design or campaign currently selected above.';
+    q('[data-title]').value=result.title;
+    q('[data-mapping]').value=escapeJson(result.station_mapping);
+    const sourceKey=result.source_binding.source_collection_id+'::'+result.source_binding.source_id;
+    const sourceNode=q('[data-source]');
+    if (![...sourceNode.options].some(option=>option.value===sourceKey))
+      sourceNode.add(new Option(result.source_binding.title||result.source_binding.source_id,sourceKey));
+    sourceNode.value=sourceKey;sourceDetails();render();q('[data-saved]').value=result.id;
+    return {context_id:result.id,network_id:result.network_id};
+  }
+  host.openSavedObservedContextRecord=showSavedContext;
   q('[data-saved]').onchange=()=>host.run(async()=>{
     const identity=q('[data-saved]').value;if(!identity)return;
     const ticket=++sequence,key=stateKey(),result=await host.api('context.get',{context_id:identity});
     if(ticket!==sequence||key!==stateKey())return;
-    current=result;q('[data-downloads]').replaceChildren();q('[data-status]').textContent='Opened the exact retained context. Its network and plan IDs remain visible in complete details.';
-    q('[data-title]').value=result.title;q('[data-mapping]').value=escapeJson(result.station_mapping);
-    q('[data-source]').value=result.source_binding.source_collection_id+'::'+result.source_binding.source_id;sourceDetails();render();q('[data-saved]').value=identity;
+    showSavedContext(result);
   });
   q('[data-context-export]').onclick=()=>host.run(async()=>{
     if(!current?.id)throw Error('Save or open an original context first.');

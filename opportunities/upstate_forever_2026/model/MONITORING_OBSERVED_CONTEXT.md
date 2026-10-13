@@ -44,6 +44,16 @@ The original field-package and HTML actions include the selected context only wh
 
 Station mapping is explicit. A source activity identifier is never accepted as a station identifier. The module reports every unmatched source station and every native station without observations. A coordinate difference above 100 metres is an inspection flag; the reported distance is a spherical point-to-point diagnostic and does not move either source point.
 
+## Review original station identifiers
+
+When a network uses an agency's short site code and the observational source uses its complete original station identifier, open **Match retained station identifiers** under Observed support. Choose an original network station field, review the proposed source-to-network pairs, then choose **Apply reviewed matches**. The field selector lists retained string properties containing exact source station identifiers; it does not remove prefixes, compare names or infer identity from distance.
+
+Existing explicit mappings are preserved. An exact native station ID already resolves automatically. A repeated field value, an occupied native target or an invalid existing mapping stays visible for review and is not silently replaced. **Clear explicit mapping** resets only the current editable selection; saved contexts retain their original mappings. The original JSON editor remains available for a documented explicit choice.
+
+Applying or clearing mappings invalidates the current preview and its download links. Choose **Preview original support**, inspect station assignments and the unchanged calendar, and **Save this context**. The same source and network digests preserve the original property values behind the mapping in the context's export.
+
+The original 87-station regional assessment edition demonstrates this path: its published `monitoring_location_id` properties match four full microbial WQP IDs, while the native IDs come from `site`: RS-21014, RS-24163, SV-111 and SV-344. These source-field matches cover 117 original observations. USGS-02177000 is absent from that station edition, so its daily flow remains outside this network's station scope. Other networks retain their own exact identifiers and source membership.
+
 ## Calendar and event meaning
 
 Calendar overlap uses the saved plan's unchanged absolute dates. It does not transplant a future programme into prior source years.
@@ -172,3 +182,9 @@ The source module parses original CSVs and resolves graph relations in the sourc
 - Original WQP station/result sources and complete source hashes: source/eighteenmile-stream-nutrients-20261013/source-manifest.json.
 - Existing paired source: observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv.
 - Original flow coverage: source/eighteenmile-stream-nutrients-20261013/flow-analysis/input-manifest.json.
+
+## Open an immutable context from Study transfer
+
+Use **Open in Monitoring** on an observational-context row in the original Study transfer catalogue. The desk reads that exact context and its bound network, then opens the existing Saved context controls. This supports both network-only contexts and contexts containing an earlier saved sampling calendar. The earlier calendar stays in the context; the current campaign is not substituted for it.
+
+The context opens with no new design or campaign selected. Its original observation filters, station matches, detailed source identity and complete package export work immediately. To calculate another preview, explicitly choose the desired retained design or campaign first. Switching networks clears old selection labels and download links. Pending openings are discarded if the Workspace or active Monitoring desk changes.

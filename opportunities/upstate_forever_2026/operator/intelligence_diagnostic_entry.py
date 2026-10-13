@@ -166,8 +166,24 @@ def _open_diagnostic(operator, engine, task):
 
     ws = operator.ws(workspace)
     root = ws.root.resolve()
-    path, source = engine.repo.source(workspace, reference)
     expected = root / "experiment-diagnostics" / diagnostic_id / "report.json"
+    original_report_member = expected.relative_to(root).as_posix()
+    requested_sha = value.get("report_sha256")
+    if requested_sha is not None:
+        try:
+            requested_sha = identifier(requested_sha)
+        except (TypeError, ValueError) as error:
+            raise IntelligenceError("Choose an original saved report revision.", 422) from error
+        retained = root / "intelligence" / "diagnostic-revisions" / diagnostic_id / requested_sha
+        if (retained / "manifest.json").is_file():
+            # Resume an already captured original operation even when its live
+            # diagnostic has advanced before the queue receipt was committed.
+            reference = {
+                "kind": "dataset",
+                "id": "es26:" + diagnostic_id + ":report_revision_" + requested_sha,
+            }
+            expected = retained / "report.json"
+    path, source = engine.repo.source(workspace, reference)
     metadata = source.get("metadata") or {}
     if (
         Path(path).resolve() != expected.resolve()
@@ -225,7 +241,7 @@ def _open_diagnostic(operator, engine, task):
             record = {
                 "schema": _SCHEMA, "project_id": ws.project["id"],
                 "diagnostic_id": diagnostic_id, "dataset_id": dataset_id,
-                "source_sha256": source_sha256, "report_member": expected.relative_to(root).as_posix(),
+                "source_sha256": source_sha256, "report_member": original_report_member,
                 "report_dataset_id": revision_reference["id"],
                 "session_id": sid, "evidence_id": None, "title": session["title"],
                 "created_at": task["created_at"], "original_task_id": task["id"],
