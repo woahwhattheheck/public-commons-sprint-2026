@@ -16,6 +16,8 @@ const ROOTS = [
   ['reviews', 'Customer reviews'],
   ['receiving-water-plans', 'Receiving-water source plans'],
   ['receiving-water-analyses', 'Receiving-water analyses'],
+  ['spatial-reviews', 'Saved map views'],
+  ['spatial-exports', 'Completed map packs'],
   ['community-tables', 'Community source tables'],
   ['community-plans', 'Editable Community plans'],
   ['community-reports', 'Saved Community reports'],
@@ -80,7 +82,7 @@ export function attachStudyTransfer(host) {
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
-  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0;
+  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0,spatialRequest=0;
   let pendingSubmission=null;
   let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
     typeof host.openExtension==='function'?
@@ -178,7 +180,7 @@ export function attachStudyTransfer(host) {
     root.querySelector('[data-study-action="preview"]').textContent=busy==='preview'?'Reading contents…':'Preview contents';
     for(const field of root.querySelectorAll('[data-study-field]'))field.disabled=Boolean(busy);
     for(const field of root.querySelectorAll('[data-study-root]'))field.disabled=Boolean(busy)||field.dataset.studyUnavailable==='true';
-    for(const field of root.querySelectorAll('[data-study-action="open-monitoring"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
+    for(const field of root.querySelectorAll('[data-study-action="open-spatial"],[data-study-action="open-monitoring"],[data-study-action="open-paired"],[data-study-action="open-report-comparison"]'))field.disabled=Boolean(busy);
   }
 
   function sourceWaterControl(row){
@@ -201,6 +203,33 @@ export function attachStudyTransfer(host) {
       throw Error('The source-water reply identifies another original study or workspace.');
     try{return await host.openDesk('receptors','openStudy',{workspace_key:captured.workspace,kind,id});}
     catch(error){if(workspaceNow()!==captured.workspace||serial!==sourceWaterRequest)return null;throw error;}
+  }
+  function spatialControl(row){
+    const method=row?.kind==='spatial-reviews'?'openMap':row?.kind==='spatial-exports'?'openItem':null;
+    if(!method||typeof host[method]!=='function'||!/^[0-9a-f]{64}$/.test(row?.id||'')||
+        row.state==='unreadable'||(row.kind==='spatial-exports'&&row.state!=='complete'))return '';
+    return button('open-spatial',row.kind==='spatial-reviews'?'Open saved map':'Open map pack',
+      'data-study-kind="'+escapeHTML(row.kind)+'" data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openSpatial(kind,id){
+    if(!['spatial-reviews','spatial-exports'].includes(kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original saved map or completed map pack.');
+    const available=[...visiblePage().items,...(plan?.nodes||[])].find(row=>row.kind===kind&&row.id===id);
+    if(!available||available.state==='unreadable')throw Error('Refresh the saved map before opening it.');
+    const review=kind==='spatial-reviews',method=review?'openMap':'openItem',nativeKind=review?'spatial_reviews':'spatial_exports';
+    if(typeof host[method]!=='function')throw Error('Open the map in the maintained scientific operator.');
+    const captured=stamp(),serial=++spatialRequest,projectID=host.getState()?.project?.id;
+    try{
+      const row=await request(endpoint('/api/item',{kind:nativeKind,id}));
+      if(!current(captured)||serial!==spatialRequest)return null;
+      if(row?.id!==id||row.schema!==(review?'upstate.spatial-reviews/v1':'upstate.spatial-export/v1')||
+          (projectID&&row.project_id!==projectID)||(!review&&row.state!=='complete'))
+        throw Error('The saved map reply differs from the selected original record.');
+      return await host[method](nativeKind,id);
+    }catch(error){
+      if(!current(captured)||serial!==spatialRequest)return null;
+      throw error;
+    }
   }
   function receivingControl(row){
     if(!['receiving-water-plans','receiving-water-analyses'].includes(row?.kind)||
@@ -240,7 +269,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+retainedStudyControl(host,row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
@@ -299,7 +328,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
@@ -500,6 +529,7 @@ export function attachStudyTransfer(host) {
       }
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-spatial'){await openSpatial(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-paired'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')
