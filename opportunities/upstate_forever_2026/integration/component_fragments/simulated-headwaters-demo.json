@@ -33,7 +33,8 @@
         "docs/SIMULATED_FIELDWORK.md",
         "source_tools/simulated_headwaters_receiving.py",
         "source_tools/adopt_simulated_headwaters_programme.py",
-        "source_tools/SIMULATED_PROGRAMME_ADOPTION.md"
+        "source_tools/SIMULATED_PROGRAMME_ADOPTION.md",
+        "source_tools/demo_deadline.py"
       ],
       "requires": [
         "core",
@@ -45,7 +46,11 @@
         "implementation",
         "headwaters-parameter-course",
         "programme-activity",
-        "simulated-customer-review"
+        "simulated-customer-review",
+        "ensembles",
+        "scientific-report-review",
+        "scientific-report-editions",
+        "study-transfer"
       ],
       "source_reference": {
         "operation": "UPSTATE-DEMO-SIMULATED-INPUTS-20261013T140000Z",

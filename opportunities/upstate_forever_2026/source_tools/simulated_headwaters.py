@@ -591,9 +591,16 @@ def operate_locked(args, output):
         selected_study=selected_identity))
     save(scientific_study_received=selected_restored, scientific_study_cold_receiving=selected_cold)
 
+    programme = phase("adopt_completed_programme", lambda: adopt_completed_programme(ws, receipt))
+    save(programme_id=programme["programme_id"], programme=programme)
+    atomic_json(output / "programme-receiving.json", read_json(ws.root / programme["adoption"]["path"]))
+
     from model import portable
     archive_selection = {
         "delivery_id": delivery["id"], "spatial_review_ids": spatial_reviews,
+        "programme_id": programme["programme_id"], "programme_report_id": programme["report_id"],
+        "programme_input_sha256": programme["input"]["sha256"],
+        "programme_adoption_sha256": programme["adoption"]["sha256"],
         "fieldwork_operation_id": campaign["operation_id"],
         "fieldwork_revision": campaign["current_revision"],
         "customer_review": customer_identity,
@@ -614,6 +621,13 @@ def operate_locked(args, output):
     record = records.setdefault(edition_id, {})
     required_members = [
         "application/source_tools/simulated_headwaters_receiving.py",
+        "application/source_tools/adopt_simulated_headwaters_programme.py",
+        "application/model/compute_programme.py",
+        "workspace/" + programme["input"]["path"],
+        "workspace/" + programme["adoption"]["path"],
+        "workspace/compute-programmes/" + programme["programme_id"] + "/programme.json",
+        "workspace/compute-programmes/" + programme["programme_id"] + "/progress.json",
+        *["workspace/" + item["path"] for item in programme["files"]],
         "application/model/simulated_customer_review.py",
         "workspace/workspace.json",
         *["workspace/runs/" + run["id"] + "/run.json" for run in runs],
@@ -724,6 +738,7 @@ def operate_locked(args, output):
     from source_tools.simulated_headwaters_receiving import cold_reopen
     cold_receiving = phase("cold_reopen", lambda: cold_reopen(
         restored, manifest, receipt, output / "cold-reopen", extra_checks=[
+            {"kind": "compute_programme", **programme},
             {"kind": "customer_review", "operation_id": customer["operation_id"],
              "expected": {**customer_identity, "project_id": ws.project["id"],
                           "field_operation_id": campaign["operation_id"]},
@@ -748,6 +763,64 @@ def operate_locked(args, output):
           alternative_run_ids=[run["id"] for run in runs[1:]], delivery_id=delivery["id"],
           archive=receipt["backup"])
     return receipt
+
+
+def adopt_completed_programme(ws, receipt):
+    """Retain the exact adoption input once; reopen the same completed Programme."""
+    from model.compute_programme import ComputeProgrammes
+    from source_tools.adopt_simulated_headwaters_programme import adopt
+    fields = ("schema", "operation", "demo_id", "classification", "project_id",
+              "recipe_sha256", "input_summary", "source_collection_id", "source_ids",
+              "grid_id", "profile_id", "baseline_run_id", "baseline_scenario_id",
+              "alternative_run_ids", "alternative_scenario_ids", "control", "delivery_id")
+    binding = {name: receipt[name] for name in fields}
+    key = hashlib.sha256(json.dumps(binding, sort_keys=True,
+        separators=(",", ":"), allow_nan=False).encode("utf-8")).hexdigest()
+    directory = ws.root / "simulated-headwaters" / DEMO_ID / "programme" / key
+    directory.mkdir(parents=True, exist_ok=True)
+    original = directory / "programme-input.json"
+    adopted = directory / "programme-receiving.json"
+    if original.exists():
+        saved_input = read_json(original)
+        if {name: saved_input.get(name) for name in fields} != binding:
+            raise ValueError("Retain the original Programme input and selected native identities")
+    else:
+        atomic_json(original, receipt)
+    if adopted.exists():
+        result = read_json(adopted)
+    else:
+        result = adopt(ws, original, output=adopted)
+    run_ids = [receipt["baseline_run_id"], *receipt["alternative_run_ids"]]
+    if (result.get("schema") != "upstate.simulated-programme-receiving/v1"
+            or result.get("operation") != OPERATION or result.get("demo_id") != DEMO_ID
+            or result.get("project_id") != ws.project["id"]
+            or result.get("recipe_sha256") != receipt["recipe_sha256"]
+            or result.get("source_collection_id") != receipt["source_collection_id"]
+            or result.get("existing_delivery_id") != receipt["delivery_id"]
+            or [row["run_id"] for row in result.get("native_runs", [])] != run_ids):
+        raise ValueError("The saved Programme adoption differs from the original case")
+    source = descriptor(ws.root, original)
+    if any(result["original_receipt"].get(name) != source[name] for name in ("bytes", "sha256")):
+        raise ValueError("The Programme's immutable original input bytes changed")
+    manager = ComputeProgrammes(ws)
+    status = manager.status(result["programme_id"], include_ensemble_candidates=False)
+    if (status["state"] != "complete"
+            or [row["run_id"] for row in status["runs"]] != run_ids
+            or any(not row.get("attempts") or row["attempts"][-1].get("reused") is not True
+                   for row in status["runs"])):
+        raise ValueError("Reopen the Programme's verified completed original native runs")
+    report = manager.read_report(result["programme_id"])
+    for name in ("schema", "rows", "files"):
+        if report.get(name) != result["report"].get(name):
+            raise ValueError("The retained Programme report changed: " + name)
+    preview = manager.delivery_preview(result["programme_id"], result["native_study_selection"])
+    if (not preview["ready"] or preview["selection"]["baseline_run_id"] != run_ids[0]
+            or preview["selection"]["scenario_run_ids"] != run_ids[1:]):
+        raise ValueError("The Programme map selection differs from the original three cases")
+    return {"programme_id": result["programme_id"], "programme_state": status["state"],
+            "report_id": report["id"], "input": source,
+            "adoption": descriptor(ws.root, adopted), "files": report["files"],
+            "run_ids": run_ids, "directory": directory.relative_to(ws.root).as_posix()}
 
 
 def main(argv=None):

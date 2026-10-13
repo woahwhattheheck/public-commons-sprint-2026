@@ -18,7 +18,7 @@ if str(APPLICATION) not in sys.path:
     sys.path.insert(0, str(APPLICATION))
 
 from model.common import atomic_json, digest, held, identifier, now, read_json, verify_file
-from model.compute_programme import ComputeProgrammes
+from model.compute_programme import ComputeProgrammes, POLLUTANTS
 from model.model_selection import run_models, validate_completed_run
 from model.native_study import retained_runtimes
 from model.workspace import Workspace
@@ -352,13 +352,32 @@ def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
     # The existing Programme still owns state, comparison and report production;
     # this receiving command has no route to execute missing native stages.
     started = time.perf_counter()
-    status = manager.execute(programme["id"])
+    status = manager.status(programme["id"])
+    report = manager.read_report(programme["id"]) if status["state"] == "complete" else None
+    reused_programme = report is not None and report.get("programme_state") == "complete"
+    if reused_programme:
+        expected_rows = {(run_id, pollutant) for run_id in ids for pollutant in POLLUTANTS}
+        actual_rows = [(row["run_id"], row["pollutant"]) for row in report["rows"]]
+        if (report.get("programme_id") != programme["id"]
+                or report.get("workspace_id") != ws.project["id"]
+                or report.get("grid_id") != grid["id"]
+                or report.get("source_reference") != selection["source_reference"]
+                or [row["run_id"] for row in status["runs"]] != ids
+                or len(actual_rows) != len(expected_rows) or set(actual_rows) != expected_rows
+                or any(row["state"] != "complete" or row["artifact"] is None
+                       for row in report["rows"])):
+            raise ValueError("Retained complete Programme report differs from the original native cases")
+        for item in report["files"]:
+            verify_file(ws.root, item)
+    else:
+        status = manager.execute(programme["id"])
     timings["completed_run_reconciliation_seconds"] = time.perf_counter() - started
     if status["state"] != "complete":
         raise ValueError("Open the retained Programme for its original comparison/report error: " + programme["id"])
     for row in status["runs"]:
         attempts = row.get("attempts", [])
-        if row["run_id"] not in ids or not attempts or attempts[-1].get("reused") is not True:
+        if (row["run_id"] not in ids or (not reused_programme
+                and (not attempts or attempts[-1].get("reused") is not True))):
             raise ValueError("Programme must retain verification of the already-completed native runs")
     report = manager.read_report(programme["id"])
     report_selection = {
@@ -388,7 +407,8 @@ def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
         "classification": recipe["classification"],
         "project_id": ws.project["id"], "workspace": str(ws.root),
         "application": str(APPLICATION), "programme_id": programme["id"],
-        "programme_state": status["state"], "native_runs": retained,
+        "programme_state": status["state"], "programme_reused": reused_programme,
+        "native_runs": retained,
         "source_collection_id": source_collection, "recipe_sha256": receipt["recipe_sha256"],
         "input_summary": recipe["input_summary"],
         "original_receipt": {"path": str(receipt_path), "bytes": len(receipt_bytes), "sha256": receipt_sha},
