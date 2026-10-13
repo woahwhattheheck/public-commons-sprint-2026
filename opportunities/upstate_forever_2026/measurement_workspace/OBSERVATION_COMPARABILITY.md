@@ -198,3 +198,77 @@ uses the maintained delivery-file index to retain that exact selection and
 complete report inventory, so archive-only receiving chooses the same report
 even if the Workspace's current report marker has advanced. Original older
 archives remain readable through their original saved marker.
+
+## Inspect the exact outgoing product
+
+Bryce's rendered-product requirement applies to this receiving course. Before
+calling a customer-facing desk, scientific report or export ready, the producing
+peer must open and render its exact outgoing edition, look at the real screen
+or actual screenshots, and operate the important controls. Exercise the real
+populated source, an empty filtered result, an unavailable input/error, original
+downloads, saved comparison/calendar selections and reopening at the intended
+screenshare width and a narrow/mobile width. Inspect the native PDF, HTML and
+portable receiving output as well as the source desk.
+
+Keep the industrial presentation: readable tables, clear hierarchy, consistent
+spacing and typography, restrained controls and complete useful source labels.
+Repair clipping, overflow, unreadable or unstyled content before presentation.
+Code review, DOM assertions, an HTTP success, captured-but-unviewed screenshots
+or another peer's approval do not replace seeing this exact rendered product.
+
+Continue this in the original 7C31 receiving operation and report the actual
+opened source edition, completed controls and rendered views alongside its
+existing native result. Preserve the original complete source and report
+editions. Follow through on any concrete display or source issue within this
+course; do not start a separate broad validation programme. Delegated producers
+carry this requirement into their own current receiving instructions.
+
+## Use comparable periods inside the application
+
+Open **Comparable observation periods** in the original operator. Choose the
+installed original SV-833 cohort or any complete comparable-period source already
+retained in Sources. The source reader verifies the original index, every
+publisher response, result-row selectors and all retained source companions
+before showing the data. It supports the original v1 SV-833 source and current
+source-aware editions.
+
+Choose an earlier and later observed year and a useful title. The page shows the
+unchanged common-month comparison, full nine-field analytical identities,
+month-by-month source support and complete original measurements. Station and
+exact-series filters keep unlike methods, units, fractions, specifications and
+projects separate. CSV downloads include every matched row across pages and
+all original fields; the complete source remains available in the saved ZIP.
+
+**Save complete comparison** uses the existing operation queue. The confirmation
+retains the exact source/binding and installed producer identities together with
+the years/title. A different installed producer requires reopening the source
+before starting a new generation. A completed original edition remains readable
+after updates; an interrupted import resumes the same fully retained output.
+The original numerical calculation is the same maintained
+`measurement_workspace.observation_comparability` producer.
+
+Open the saved result from its task or the saved-comparison selector. **Open in
+Scientific Reports** passes that exact retained source to the existing ordered
+composer. The complete source ZIP contains the generated offline desk, all
+original input responses, every comparison/support CSV, structured data, native
+source manifest, calculation/desk source, store module and this guide. Extract
+the whole ZIP before opening `index.html`, so its original source links resolve.
+The scientific recipe's own companion inventory retains its original declared
+calculation inputs; the full ZIP and ordinary Workspace archive additionally
+carry the native store and operating guide.
+
+The Workspace retains saved comparison selections and all result files under
+`observation-comparability-selections/<selection-id>/`. Ordinary portable
+backup/restore preserves them, and the original extension's Workspace
+verification checks every saved source/result identity on reopen. Its task
+downloads are regenerated through the existing verified file-ticket route.
+Browser drafts are scoped to the selected Workspace, while saved native results
+remain authoritative and portable.
+
+For the existing 7C31 receiving continuation, open the populated current operator
+at desktop and narrow width; select the original source and a real year pair,
+inspect exact-series calendar and original rows, save through Tasks, open every
+principal download, send the saved source to Scientific Reports, and reopen the
+comparison in the restored Workspace. View the actual resulting screens and
+native report. The original scalar/interval arithmetic and completed baseline
+source remain the reference for the same cohort.
