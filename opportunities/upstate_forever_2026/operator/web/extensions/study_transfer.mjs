@@ -7,6 +7,8 @@ const ROOTS = [
   ['runs', 'Native runs'],
   ['robust-decisions', 'Decision studies'],
   ['scientific-report-editions', 'Saved scientific reports'],
+  ['receiving-water-plans', 'Receiving-water source plans'],
+  ['receiving-water-analyses', 'Receiving-water analyses'],
   ['monitoring_networks', 'Monitoring networks'],
   ['monitoring_plans', 'Monitoring designs'],
   ['monitoring_frontiers', 'Monitoring budget comparisons'],

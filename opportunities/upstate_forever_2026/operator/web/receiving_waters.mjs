@@ -34,7 +34,7 @@ export function attachReceivingWaters(context){
     if(target)target.innerHTML=report.render();
   }});
   let host=null,version=0,controller=null,timer=null,selected=null,record=null,catalog=null,workspaceKey=null;
-  let nextReceptor=1,nextCatalogSource=1;
+  let nextReceptor=1,nextCatalogSource=1,studyRequest=0;
   const pageSize=75;
   let searchIndex=new WeakMap();
   let display={search:'',family:'',kind:'',run:'',quantity:'physical'};
@@ -60,6 +60,34 @@ export function attachReceivingWaters(context){
     workspaceKey=currentWorkspace();record=null;catalog=null;display={search:'',family:'',kind:'',run:'',quantity:'physical'};
     try{const saved=JSON.parse(sessionStorage.getItem(storageKey())||'null');selected=saved&&['plan','analysis','designation-catalog'].includes(saved.kind)&&/^[0-9a-f]{64}$/.test(saved.id)?saved:null;}catch{selected=null;}
   }
+  function studyControl(kind,row,workspace=currentWorkspace()){
+    if(!['plan','analysis'].includes(kind)||row?.state!=='complete'||
+        !/^[0-9a-f]{64}$/.test(row?.id||'')||!workspace||
+        (typeof context.openStudyTransfer!=='function'&&typeof context.openExtension!=='function'))return '';
+    return control('water-study-transfer','Transfer editable study',
+      'data-kind="'+esc(kind)+'" data-id="'+esc(row.id)+'" data-workspace="'+esc(workspace)+'"');
+  }
+  async function transferStudy(value){
+    const kind=value?.kind,id=value?.id,workspace=currentWorkspace(),marker=version,request=++studyRequest;
+    if(!workspace||!['plan','analysis'].includes(kind)||!/^[0-9a-f]{64}$/.test(id||''))
+      throw Error('Choose an original saved receiving-water plan or analysis.');
+    if(value.workspace_key!==undefined&&value.workspace_key!==workspace)
+      throw Error('Open this receiving-water study in its original workspace.');
+    if(typeof context.openStudyTransfer!=='function'&&typeof context.openExtension!=='function')
+      throw Error('Open the maintained Study transfer desk to transfer this saved study.');
+    const row=await api(endpoint('/api/receiving-waters/'+kind,{[kind+'_id']:id}));
+    if(workspace!==currentWorkspace()||marker!==version||request!==studyRequest)
+      throw Error('The workspace or Receiving view changed. Choose the saved study again.');
+    if(row?.id!==id||row?.schema!=='upstate.receiving-water-'+kind+'/v1'||row?.state!=='complete')
+      throw Error('Choose the complete original receiving-water '+kind+' before transferring it.');
+    const selection={workspace_key:workspace,roots:[{
+      kind:kind==='plan'?'receiving-water-plans':'receiving-water-analyses',
+      id:row.id,title:row.title,state:row.state
+    }]};
+    if(typeof context.closeDetail==='function')context.closeDetail();
+    return typeof context.openExtension==='function'?
+      context.openExtension('study-transfer','openForStudies',selection):context.openStudyTransfer(selection);
+  }
   function progress(row){
     if(row.state==='complete')return 'Complete';
     const done=row.completed_subjects,total=row.total_subjects;
@@ -72,8 +100,8 @@ export function attachReceivingWaters(context){
     html+='<div class="water-summary"><div><strong>'+fmt(planRows.length)+'</strong><span>Saved source plans</span></div><div><strong>'+fmt(analysisRows.filter(x=>x.state==='complete').length)+'</strong><span>Completed analyses</span></div><div><strong>'+fmt(runs().filter(x=>x.state==='complete').length)+'</strong><span>Available native runs</span></div></div>';
     if(tasks.length)html+=section('Operations',table(['Operation','State','Created',''],tasks.map(t=>'<tr><td>'+esc({'receiving.water.plan':'Prepare receiving areas','receiving.water.profile':'Prepare utility areas','receiving.water.catalog':'Compile published waters','receiving.water.analyze':'Analyze receiving waters','receiving.water.monitoring':'Prepare monitoring network','receiving.water.report.prepare':'Prepare scientific report source'}[t.action]||t.action)+(t.error?'<small class="water-error">'+esc(t.error.message||t.error)+'</small>':'')+'</td><td>'+badge(t.state)+'</td><td>'+esc(t.created_at?new Date(t.created_at).toLocaleString():'')+'</td><td>'+control('water-task','Inspect','data-id="'+esc(t.id)+'"')+'</td></tr>')),'Selections and completed work remain available when the operator reopens.');
     if(catalogs().length)html+=section('Published-water catalogs',table(['Catalog','Original records','Selected waters','As of',''],catalogs().map(row=>'<tr><td><strong>'+esc(row.title||'Published receiving waters')+'</strong><small>'+esc(human(row.state))+'</small></td><td>'+fmt(row.record_count)+'</td><td>'+fmt(row.selected_count)+'</td><td>'+esc(row.as_of||'')+'</td><td>'+control('water-open','Open','data-kind="designation-catalog" data-id="'+esc(row.id)+'"')+'</td></tr>')));
-    html+=section('Source plans',planRows.length?table(['Plan','Receiving waters','Families','Created',''],planRows.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.id))+'</small></td><td>'+fmt(row.receptor_count)+'</td><td>'+esc((row.families||[]).map(x=>families[x]||human(x)).join(', '))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'')+'</td><td class="water-row-actions">'+control('water-open','Open','data-kind="plan" data-id="'+esc(row.id)+'"')+control('water-analyze-new','Analyze','data-plan-id="'+esc(row.id)+'"')+'</td></tr>')):'<div class="water-empty"><p>Choose original published water features or an existing utility profile to prepare a source plan.</p><p>The plan saves its water features, contribution boundaries, source editions, and relationship methods.</p></div>');
-    html+=section('Model analyses',analysisRows.length?table(['Analysis','Baseline','Quantity domain','Progress',''],analysisRows.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(planTitle(row.plan_id))+'</small></td><td>'+esc(runTitle(row.baseline_run_id))+'</td><td>'+esc(row.quantity_scope==='model_domain'?'Full modeled domain':'Reporting area')+'</td><td>'+badge(progress(row))+'</td><td>'+control('water-open','Open','data-kind="analysis" data-id="'+esc(row.id)+'"')+(row.state==='failed'?control('water-analysis-resume','Resume selection','data-id="'+esc(row.id)+'"'):'')+'</td></tr>')):'<div class="water-empty"><p>Choose a source plan, completed baseline, and any compatible land-cover alternatives. Each analysis saves its physical quantities and map layers.</p></div>');
+    html+=section('Source plans',planRows.length?table(['Plan','Receiving waters','Families','Created',''],planRows.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(short(row.id))+'</small></td><td>'+fmt(row.receptor_count)+'</td><td>'+esc((row.families||[]).map(x=>families[x]||human(x)).join(', '))+'</td><td>'+esc(row.created_at?new Date(row.created_at).toLocaleString():'')+'</td><td class="water-row-actions">'+control('water-open','Open','data-kind="plan" data-id="'+esc(row.id)+'"')+control('water-analyze-new','Analyze','data-plan-id="'+esc(row.id)+'"')+studyControl('plan',row)+'</td></tr>')):'<div class="water-empty"><p>Choose original published water features or an existing utility profile to prepare a source plan.</p><p>The plan saves its water features, contribution boundaries, source editions, and relationship methods.</p></div>');
+    html+=section('Model analyses',analysisRows.length?table(['Analysis','Baseline','Quantity domain','Progress',''],analysisRows.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(planTitle(row.plan_id))+'</small></td><td>'+esc(runTitle(row.baseline_run_id))+'</td><td>'+esc(row.quantity_scope==='model_domain'?'Full modeled domain':'Reporting area')+'</td><td>'+badge(progress(row))+'</td><td>'+control('water-open','Open','data-kind="analysis" data-id="'+esc(row.id)+'"')+(row.state==='failed'?control('water-analysis-resume','Resume selection','data-id="'+esc(row.id)+'"'):'')+studyControl('analysis',row)+'</td></tr>')):'<div class="water-empty"><p>Choose a source plan, completed baseline, and any compatible land-cover alternatives. Each analysis saves its physical quantities and map layers.</p></div>');
     html+=monitoring.render();
     html+='<div id="water-report-sources">'+report.render()+'</div>';
     html+='<section class="water-section" id="water-selected" aria-live="polite">'+(selected?'<p class="water-loading">Opening saved '+esc(selected.kind)+'...</p>':'<p class="water-empty">Open a plan or analysis to inspect its receiving areas and results.</p>')+'</section></div>';
@@ -81,6 +109,7 @@ export function attachReceivingWaters(context){
   }
   function detach(){
     report.detach();
+    studyRequest++;
     version++;host?.removeEventListener('input',onInput);host?.removeEventListener('change',onChange);host?.removeEventListener('toggle',onToggle,true);host=null;clearTimeout(timer);timer=null;controller?.abort();controller=null;
   }
   function onInput(event){
@@ -180,7 +209,7 @@ export function attachReceivingWaters(context){
       (page.rows.length?fileList(page.rows):'<p class="water-empty">No downloads match this selection.</p>');
   }
   function planView(row){
-    return '<header class="water-section-heading"><div><p class="eyebrow">SAVED SOURCE PLAN</p><h2>'+esc(row.title)+'</h2><p>'+fmt(row.receptors?.length||0)+' receiving waters</p></div>'+control('water-analyze-new','Analyze this plan','data-plan-id="'+esc(row.id)+'"',true)+control('water-monitoring-new','Plan monitoring','data-kind="plan" data-id="'+esc(row.id)+'"')+control('water-report-new','Prepare scientific report source','data-kind="plan" data-id="'+esc(row.id)+'"')+'</header>'+
+    return '<header class="water-section-heading"><div><p class="eyebrow">SAVED SOURCE PLAN</p><h2>'+esc(row.title)+'</h2><p>'+fmt(row.receptors?.length||0)+' receiving waters</p></div>'+control('water-analyze-new','Analyze this plan','data-plan-id="'+esc(row.id)+'"',true)+control('water-monitoring-new','Plan monitoring','data-kind="plan" data-id="'+esc(row.id)+'"')+control('water-report-new','Prepare scientific report source','data-kind="plan" data-id="'+esc(row.id)+'"')+studyControl('plan',row)+'</header>'+
       '<div class="water-filters">'+field('Search receiving waters',input('water_search',display.search,'data-water-search placeholder="Name, exact native ID, or source"'))+
       field('Family',select('water_family',Object.entries(families),display.family,'data-water-filter="family"','All families'))+'</div>'+
       '<div id="water-plan-table"></div>'+downloadsView('Source geometries and plan downloads')+
@@ -202,7 +231,7 @@ export function attachReceivingWaters(context){
     const runOptions=(row.alternative_run_ids||[]).map(id=>[id,runTitle(id)]);
     if(display.run&&!runOptions.some(x=>x[0]===display.run))display.run='';
     return '<header class="water-section-heading"><div><p class="eyebrow">SAVED MODEL ANALYSIS</p><h2>'+esc(row.title)+'</h2><p>'+esc(runTitle(row.baseline_run_id))+' · '+esc(row.quantity_scope==='model_domain'?'Full modeled domain':'Reporting area')+' · '+esc(keys.map(k=>pollutants[k]||human(k)).join(', '))+'</p></div>'+badge(progress(row))+'</header>'+
-      (row.state==='complete'?'<div class="water-actions">'+spatialControl('Review receiving areas','analysis',row.id)+control('water-monitoring-new','Plan monitoring from priorities','data-kind="analysis" data-id="'+esc(row.id)+'"')+control('water-report-new','Prepare scientific report source','data-kind="analysis" data-id="'+esc(row.id)+'"')+'</div>':'')+
+      (row.state==='complete'?'<div class="water-actions">'+spatialControl('Review receiving areas','analysis',row.id)+control('water-monitoring-new','Plan monitoring from priorities','data-kind="analysis" data-id="'+esc(row.id)+'"')+control('water-report-new','Prepare scientific report source','data-kind="analysis" data-id="'+esc(row.id)+'"')+studyControl('analysis',row)+'</div>':'')+
       (row.state==='complete'&&typeof context.openDelivery==='function'&&Object.keys(pollutants).every(key=>keys.includes(key))?'<div class="water-actions">'+control('water-delivery','Add to maps and delivery','data-id="'+esc(row.id)+'"')+'</div>':'')+
       (active?'<p class="water-progress" role="status">Calculating receiving areas. Completed geometry results are saved as the analysis proceeds.</p>':'')+
       (row.error?'<div class="water-error" role="alert">'+esc(typeof row.error==='string'?row.error:row.error.message||pretty(row.error))+' '+control('water-analysis-resume','Resume saved selection','data-id="'+esc(row.id)+'"')+'</div>':'')+
@@ -521,7 +550,9 @@ export function attachReceivingWaters(context){
   }
   function taskActions(task){
     const item=task._receiving_water;
-    return report.taskActions(task)+(item?'<div class="water-actions">'+control('water-task-result','Open '+item.kind,'data-kind="'+esc(item.kind)+'" data-id="'+esc(item.id)+'"')+'</div>':'');
+    const transfer=item&&task.state==='complete'&&task.workspace===currentWorkspace()?
+      studyControl(item.kind,{id:item.id,state:'complete'},task.workspace):'';
+    return report.taskActions(task)+(item?'<div class="water-actions">'+control('water-task-result','Open '+item.kind,'data-kind="'+esc(item.kind)+'" data-id="'+esc(item.id)+'"')+transfer+'</div>':'');
   }
   async function inspectDeliveryPlan(id){
     if(!/^[0-9a-f]{64}$/.test(id||''))throw Error('Choose the original prepared receiving-water plan.');
@@ -578,6 +609,7 @@ export function attachReceivingWaters(context){
     if(action?.startsWith('water-monitoring-'))return monitoring.dispatch(button);
     if(action==='water-task-result'&&button.dataset.kind==='monitoring')return monitoring.open(id);
     if(action==='water-open')return openSelection(button.dataset.kind,id);
+    if(action==='water-study-transfer')return transferStudy({kind:button.dataset.kind,id,workspace_key:button.dataset.workspace});
     if(action==='water-open-prepared-plan')return inspectDeliveryPlan(id);
     if(action==='water-page'){
       const key=button.dataset.pageKey;if(!['page','downloadPage'].includes(key))throw Error('Choose a supported receiving-water page.');
@@ -611,5 +643,5 @@ export function attachReceivingWaters(context){
     openAnalysis:value=>openSaved('analysis',value),
     openCatalog:value=>openSaved('designation-catalog',value),
     createCatalog:catalogJsonForm,createPlan:planJsonForm,
-    analyze:analyzeForm,openDelivery:openDeliveryForAnalysis};
+    analyze:analyzeForm,openDelivery:openDeliveryForAnalysis,openStudyTransfer:transferStudy};
 }
