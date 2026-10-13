@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "chemistry",
   "title": "Reach chemistry",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "order": 84,
   "assets": [
     "chemistry.mjs",
@@ -30,7 +30,10 @@
       "chemistry.receive",
       "chemistry.report.prepare",
       "chemistry.report.get",
-      "chemistry.report.list"
+      "chemistry.report.list",
+      "chemistry.report.source.prepare",
+      "chemistry.report.source.get",
+      "chemistry.report.source.list"
     ],
     "invoke": {
       "handler": "invoke",
@@ -114,6 +117,19 @@
           "operation",
           "payload"
         ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/chemistry/report-source",
+        "operation": "report-source",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
       }
     ],
     "decorate_task": {
@@ -139,7 +155,9 @@
       "showTask",
       "toast",
       "fileList",
-      "navigate"
+      "navigate",
+      "getWorkspace",
+      "openScientificReport"
     ],
     "styles": [
       "/web/chemistry.css"
