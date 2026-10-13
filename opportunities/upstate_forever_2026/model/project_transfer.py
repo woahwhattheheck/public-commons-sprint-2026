@@ -765,6 +765,8 @@ class TransferStore:
                 "request": request,
                 **({"source_acquisitions": value["archive"]["source_acquisitions"]}
                    if "source_acquisitions" in value["archive"] else {}),
+                **({"parameter_studies": value["archive"]["parameter_studies"]}
+                   if "parameter_studies" in value["archive"] else {}),
                 **({"implementation": value["archive"]["implementation"]}
                    if "implementation" in value["archive"] else {}),
                 "files": [{"path": name, "bytes": item["bytes"], "sha256": item["sha256"],

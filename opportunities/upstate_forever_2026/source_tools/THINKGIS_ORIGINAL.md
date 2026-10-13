@@ -187,3 +187,67 @@ Outputs include a working queue CSV, a complete match-by-match CSV with all orig
 On the completed original McCormick source, 247 grouped forestry references match 249 native features across 246 references. Three references have two county FIDs; their recorded acreage values repeat and must not be added. Original reference `112-08-01-002.` remains unmatched in the complete index. These are observations of this retained source edition, not hardcoded expectations in the adapter.
 
 The source queue is immediately importable through the existing source manifest path. It can be regenerated on a receiving host without depending on the session that first calculated the screening join.
+
+
+## Materialize the existing source bank in one native operation
+
+The complete retained bank can be delivered with a private
+`upstate.thinkgis-original-index-transfer/v1` descriptor. It contains the
+exact original manifest text and its byte/hash identity, plus one current
+provider-issued HTTPS file URL for each original page. These URLs are temporary
+file capabilities. Keep the descriptor on the receiving host or the original
+private source operation; do not commit it or append it to source companions.
+
+```bash
+python -m source_tools.thinkgis_original receive-index \
+  --transfer /data/private/mccormick-original-transfer.json \
+  --output /data/mccormick/received-original
+
+python -m source_tools.thinkgis_original index \
+  --manifest /data/mccormick/received-original/mccormick-original-index-manifest.json \
+  --original-root /data/mccormick/received-original/original \
+  --output /data/mccormick/prepared-index \
+  --vintage 'Original county responses retained 2026-10-13 UTC'
+```
+
+The receiver reuses complete byte-matched files, admits exactly the retained page
+set, rejects any body that differs from its original hash/length, and validates
+all original records after receiving. Interrupted transfers retain completed
+files and can resume with the same command. Renew only expired download
+descriptors through the original file provider; the source manifest, filenames,
+bytes and hashes remain unchanged.
+
+The local receipt contains original file identities and progress, without signed
+download URLs. A transfer error reports its file/status and never prints the
+temporary capability. The original remote index is not queried during receiving.
+
+Descriptor structure:
+
+```json
+{
+  "schema": "upstate.thinkgis-original-index-transfer/v1",
+  "manifest": {
+    "content": "exact original UTF-8 manifest text",
+    "bytes": 32286,
+    "sha256": "original manifest hash"
+  },
+  "files": [
+    {
+      "filename": "original retained filename",
+      "bytes": 101374,
+      "sha256": "original page hash",
+      "url": "current provider-issued HTTPS download URL"
+    }
+  ]
+}
+```
+
+The actual descriptor includes all 50 original pages. The receiver requires exact
+set equality with the carried original manifest; the abbreviated structure above
+documents the format.
+
+## Recovery of unusable original overlay responses
+
+Capture admission decodes the original world-pixel commands for every fresh response, receipt-backed response and body left by an interrupted receive. A valid XML `<overlay/>` without usable boundary paths is a failed source attempt. Its full bytes and response provenance are retained under `rejected/FID/`, and the ledger references them. The successful immutable body path remains available for a later attempt.
+
+On resume, an older completed empty or malformed overlay is demoted to the ordinary failure list after its original body and receipt have been preserved. Reuse of valid complete sources does not fetch a new edition. `capture --retry-failed` retries the selected failed FIDs. Both successful source originals and retained rejected attempts are carried as prepared source companions.

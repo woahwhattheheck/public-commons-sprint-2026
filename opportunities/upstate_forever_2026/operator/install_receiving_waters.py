@@ -19,7 +19,7 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-monitoring-6"
+PREFIX = "waterlink-receiving-waters-monitoring-report-7"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_spatial.py",
@@ -62,6 +62,15 @@ MONITORING_REQUIRED = (
     "integrations/monitoring/install_native_monitoring.py",
     "operator/RECEIVING_WATER_MONITORING.md",
 )
+MONITORING_REPORT_REQUIRED = (
+    "model/monitoring_report_source.py",
+    "model/monitoring_report_cli.py",
+    "model/MONITORING_REPORT_SOURCE.md",
+    "operator/monitoring_report_native.py",
+    "operator/extensions/monitoring-report.json",
+    "operator/web/monitoring-report.mjs",
+    "model/observed_context.py",
+)
 MONITORING_ACTIONS = {
     "monitoring.network.import", "monitoring.design", "monitoring.frontier",
     "monitoring.campaign.create", "monitoring.campaign.revise",
@@ -78,6 +87,7 @@ TARGETS = (
     "model/portable.py",
     "model/spatial.py",
     "operator/web/spatial.mjs",
+    "operator/web/monitoring.mjs",
 )
 
 
@@ -454,13 +464,70 @@ def join_portable(text):
         '(root / "receiving-water-analyses").glob("*/.analysis.lock")',
     )
 
-    return replace_once(
+    text = replace_once(
         text,
         '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n',
         '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n'
         '            stack.enter_context(held(root / ".receiving-water-monitoring.lock", blocking=False))\n',
         'held(root / ".receiving-water-monitoring.lock", blocking=False)',
     )
+
+    return replace_once(
+        text,
+        '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n',
+        '            stack.enter_context(held(root / ".workspace.lock", blocking=False))\n'
+        '            stack.enter_context(held(root / ".monitoring-report-source.lock", blocking=False))\n',
+        'held(root / ".monitoring-report-source.lock", blocking=False)',
+    )
+
+
+def join_monitoring_report(text):
+    """Preserve current Monitoring and Fieldwork lifecycles when adding reports."""
+    text = replace_once(
+        text, '/* Native host adapter: original authorization, task queue and file tickets. */\n',
+        'import {attachMonitoringReport} from \'./monitoring-report.mjs\';\n'
+        '/* Native host adapter: original authorization, task queue and file tickets. */\n',
+        'import {attachMonitoringReport} from \'./monitoring-report.mjs\';',
+    )
+    legacy = 'export function attachMonitoring({getState, api, endpoint, showTask, toast}) {\n'
+    if legacy in text:
+        text = replace_once(
+            text, legacy,
+            'export function attachMonitoring(context) {\n'
+            '  const {getState, api, endpoint, showTask, toast}=context;\n',
+            'export function attachMonitoring(context) {',
+        )
+    scopes = re.findall(r"export function attachMonitoring\((host|context)\) \{", text)
+    if len(scopes) != 1:
+        raise ValueError("Compose the current Monitoring host/context adapter before report integration")
+    scope = scopes[0]
+    existing = re.findall(r"attachMonitoringReport\(node,(\w+),key\)", text)
+    if existing and existing != [scope]:
+        raise ValueError("The current Monitoring report helper uses another adapter context")
+    addition = ('    node.monitoringReport ||= attachMonitoringReport(node,' + scope + ',key);\n'
+                '    node.monitoringReport.update();\n')
+    marker = 'node.monitoringReport ||= attachMonitoringReport(node,' + scope + ',key);'
+    if '    await fieldwork.mount(root,key);\n' in text:
+        text = replace_once(
+            text, '    await fieldwork.mount(root,key);\n',
+            addition + '    await fieldwork.mount(root,key);\n', marker,
+        )
+    else:
+        text = replace_once(
+            text, '    await node.ready;\n',
+            '    await node.ready;\n' + addition, marker,
+        )
+    text = replace_once(
+        text, '  async function update() {\n',
+        '  async function update() {\n    active?.monitoringReport?.update();\n',
+        'active?.monitoringReport?.update();',
+    )
+    text = replace_once(
+        text, '  function detach(){generation++;networkOpening++;',
+        '  function detach(){generation++;networkOpening++;active?.monitoringReport?.detach();',
+        'active?.monitoringReport?.detach();',
+    )
+    return text
 
 
 def join_spatial(text):
@@ -545,6 +612,7 @@ JOINERS = {
     "model/portable.py": join_portable,
     "model/spatial.py": join_spatial,
     "operator/web/spatial.mjs": join_spatial_app,
+    "operator/web/monitoring.mjs": join_monitoring_report,
 }
 
 
@@ -580,7 +648,7 @@ def install(root, *, check=False):
         raise ValueError("Complete the existing shared extension host's server and browser join before composing receiving waters")
     if not registry:
         raise ValueError("Install the current shared extension host before the receiving-water monitoring workflow")
-    required = REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED
+    required = REQUIRED + EXTENSION_REQUIRED + MONITORING_REQUIRED + MONITORING_REPORT_REQUIRED
     for relative in required:
         path = root / relative
         if not path.is_file():
@@ -602,6 +670,25 @@ def install(root, *, check=False):
             or "await node.ready;" not in adapter
             or "this.ready=this.run(" not in component):
         raise ValueError("Receive Monitoring 1.3 or later compatible source with its complete network handoff")
+    report_descriptor = json.loads((root / "operator/extensions/monitoring-report.json").read_bytes())
+    report_backend = report_descriptor.get("backend") or {}
+    report_route = {"methods": ["GET"], "path": "/api/monitoring-report",
+                    "handler": "read", "args": ["operator", "workspace_key", "payload"]}
+    if (report_descriptor.get("schema") != "upstate.operator-extension/v1"
+            or report_descriptor.get("id") != "monitoring-report"
+            or report_descriptor.get("client")
+            or "monitoring.export" not in report_descriptor.get("requires_actions", [])
+            or "monitoring-report.mjs" not in report_descriptor.get("assets", [])
+            or report_backend.get("module") != "monitoring_report_native"
+            or "monitoring.report.prepare" not in report_backend.get("actions", [])
+            or report_backend.get("invoke") != {"handler": "perform", "args": ["operator", "task"]}
+            or report_route not in report_backend.get("routes", [])
+            or report_backend.get("decorate_task") != {"handler": "decorate_task", "args": ["operator", "task"]}
+            or report_backend.get("verify_workspace") != {"handler": "verify_workspace", "args": ["workspace"]}):
+        raise ValueError("Receive the complete registered Monitoring report provider and native file bindings")
+    report_client = (root / "operator/web/monitoring-report.mjs").read_text(encoding="utf-8")
+    if "export function attachMonitoringReport(node, context, workspaceKey)" not in report_client:
+        raise ValueError("Receive the current Monitoring scientific report browser helper")
     migration = runpy.run_path(str(root / "integrations/monitoring/install_native_monitoring.py"),
                               run_name="_original_monitoring_migration")
     removers = {"operator/server.py": migration["remove_server"],
