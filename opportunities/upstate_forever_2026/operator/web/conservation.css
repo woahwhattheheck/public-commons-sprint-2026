@@ -175,3 +175,15 @@
 
 .cons-source-choice { display: grid; align-content: start; gap: 7px; }
 .cons-source-choice > button { justify-self: start; font-size: 12px; }
+
+.cons-table thead .cons-metric-note { white-space: normal; max-width: 220px; font-weight: 400; }
+
+.cons-criterion-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:4px 24px;padding-left:20px}
+.cons-criterion-list code{overflow-wrap:anywhere}
+
+.cons-profile-choices { margin: 1rem 0; padding: .75rem; border: 1px solid var(--line, #c7c9cc); max-height: 18rem; overflow: auto; }
+.cons-profile-choices legend { padding: 0 .35rem; }
+.cons-scenario-bridges { margin-top: 1.5rem; }
+.cons-saved-experiment + .cons-saved-experiment { margin-top: .6rem; }
+
+.cons-criterion-term th[scope="row"] { padding-left: 1.6rem; font-weight: 400; }
