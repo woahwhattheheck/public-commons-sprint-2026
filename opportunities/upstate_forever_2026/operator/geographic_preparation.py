@@ -12,7 +12,7 @@ import importlib.metadata
 import json
 from pathlib import Path
 
-from model.common import atomic_json, describe_file, digest, file_digest, held, identifier, now, read_json, relative_file
+from model.common import atomic_json, describe_file, digest, file_digest, held, identifier, now, read_json, relative_file, verify_file
 from model import geographic_headwaters as native
 from source_preparation import SourcePreparation
 
@@ -211,18 +211,92 @@ class GeographyPreparation(SourcePreparation):
                 describe_file(workspace.root, directory / name), name)
                 for name in names if (directory / name).is_file()]
 
+    @staticmethod
+    def _allocation_editions(workspace, case):
+        """List completed saved companions without opening native raster outputs."""
+        result = []
+        for path in sorted((workspace.root / "geographic-scenario-allocations").glob("*/result.json")):
+            record = read_json(path)
+            if record.get("prepared_id") != case["id"]:
+                continue
+            if (record.get("schema") != "upstate.geographic-scenario-allocation/v1"
+                    or record.get("state") != "complete"
+                    or record.get("project_id") != workspace.project["id"]
+                    or record.get("id") != path.parent.name
+                    or digest(record["identity"]) != record["id"]):
+                raise ValueError("A saved allocation changed its original geographic identity")
+            descriptors = {item["path"]: item for item in record["files"]}
+            report = read_json(verify_file(path.parent, descriptors["allocation.json"]))
+            if (report["id"] != record["id"] or report["identity"] != record["identity"]
+                    or report["prepared_id"] != case["id"]):
+                raise ValueError("The saved allocation record differs from its source")
+            result.append({"id": record["id"], "title": report["title"],
+                           "created_at": report["created_at"],
+                           "region_count": len(report["regions"]),
+                           "quantity_scopes": list(dict.fromkeys(
+                               row["quantity_scope"] for row in report["regions"]))})
+        return sorted(result, key=lambda item: (item["created_at"], item["id"]), reverse=True)
+
+    def _allocation(self, workspace_key, workspace, case, key):
+        from model import geographic_scenario_allocation as allocation
+        record = allocation.inspect(workspace, identifier(key))
+        if record["prepared_id"] != case["id"]:
+            self._fail("GEOGRAPHY_ALLOCATION", "Choose an allocation from this saved geographic case.", 404)
+        directory = workspace.root / allocation.FOLDER / record["id"]
+        descriptors = {item["path"]: item for item in record["files"]}
+        report = read_json(verify_file(directory, descriptors["allocation.json"]))
+        if (report["identity"] != record["identity"] or report["id"] != record["id"]
+                or report["project_id"] != workspace.project["id"]):
+            raise ValueError("The allocation source differs from the selected original study")
+        expected_runs = dict(zip(("baseline", "restoration", "control"),
+                                 [case["baseline_run_id"], *case["alternative_run_ids"]]))
+        if report["run_ids"] != expected_runs:
+            raise ValueError("The allocation source belongs to different original scenarios")
+
+        def ticket(name, label=None):
+            descriptor = descriptors[name]
+            path = relative_file(directory, name)
+            retained = {**descriptor, "path": path.relative_to(workspace.root).as_posix()}
+            return self.operator._ticket(workspace_key, path, retained, label or name)
+
+        recipe = read_json(verify_file(directory, descriptors["report-source.json"]))
+        figures = []
+        if recipe.get("figures"):
+            specification = read_json(verify_file(directory, descriptors[recipe["figure_spec"]]))
+            original = {item["id"]: item for item in specification["figures"]}
+            region_ids = {row["id"] for row in report["regions"]}
+            for choice in recipe["figures"]:
+                figure = original[choice["id"]]
+                binding = figure["source_binding"]
+                if (binding["project_id"] != report["project_id"]
+                        or binding["allocation_id"] != report["id"]
+                        or not set(binding["region_ids"]).issubset(region_ids)):
+                    raise ValueError("A saved allocation figure changed its original region binding")
+                figures.append({"id": figure["id"], "title": figure["title"],
+                                "caption": figure["caption"], "alt": figure.get("alt", figure["title"]),
+                                "region_ids": binding["region_ids"],
+                                "download": ticket(choice["path"], figure["title"])})
+        files = [ticket(name) for name in descriptors
+                 if not name.startswith("figures/")]
+        return {"case_id": case["id"], "allocation_id": record["id"],
+                "report": report, "source": record["source"],
+                "figures": figures, "_downloads": files}
+
     def read(self, workspace, operation, value=None):
         ws, value = self.operator.ws(workspace), value or {}
         if operation == "catalog":
             return self.catalog(workspace)
         if operation == "preview":
             return self._preview(ws, value.get("payload", value))
-        if operation == "case":
+        if operation in {"case", "allocation"}:
             key = identifier(value.get("case_id"))
             found = next((item for item in self._cases(ws) if item["id"] == key), None)
             if found is None:
                 self._fail("GEOGRAPHY_CASE", "Choose a saved geographic case in this study.", 404)
-            return {"case": found, "_downloads": self._case_downloads(workspace, ws, found)}
+            if operation == "allocation":
+                return self._allocation(workspace, ws, found, value.get("allocation_id"))
+            return {"case": found, "_downloads": self._case_downloads(workspace, ws, found),
+                    "allocation_editions": self._allocation_editions(ws, found)}
         if operation not in {"progress", "result"}:
             self._fail("GEOGRAPHY_READ", "Choose the geographic catalogue, preview, saved case or operation.")
         task_id = identifier(value.get("task_id"))
