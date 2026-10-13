@@ -46,7 +46,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   }
   function render(){
     const all=rows(),latest=all.map(x=>outcome(responses(x.id)));
-    return '<header class="page-header"><div><p class="eyebrow">SCIENTIFIC DELIVERY REVIEW</p><h1>Customer reviews</h1><p>Select original source editions, completed saved maps, model runs and deliveries. Retain decisions for the stated purpose and carry their complete files into a portable review desk.</p></div><div class="page-actions">'+button('new','Create review','','',true)+button('compare','Compare selections')+button('packet-receive','Receive review package')+button('packets','Received packages')+'</div></header>'+
+    return '<header class="page-header"><div><p class="eyebrow">SCIENTIFIC DELIVERY REVIEW</p><h1>Customer reviews</h1><p>Select original source editions, completed saved maps, model runs and deliveries. Retain decisions for the stated purpose and carry their complete files into a portable review desk.</p></div><div class="page-actions">'+button('new','Create review','','',true)+button('compare','Compare selections')+button('packet-receive','Receive review package')+button('packets','Received packages')+button('worklist','Current requests')+'</div></header>'+
       '<div class="cards">'+[
         ['Retained selections',all.length,'Each selection keeps its original files and purpose.'],
         ['Responses received',all.reduce((n,x)=>n+responses(x.id).length,0),'Complete decisions and correction history.'],
@@ -173,7 +173,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   function reviewToolbar(packet){
     const id=packet.review.id;
     return '<div class="page-actions">'+button('export','Export current review',id,'',true)+button('import','Receive response',id)+
-      button('template','Response template',id)+button('new','New selection',id)+button('packet-receive','Receive review package',id)+'</div>';
+      button('template','Response template',id)+button('new','New selection',id)+button('packet-receive','Receive review package',id)+button('worklist','Current requests',id)+'</div>';
   }
   function summary(packet){
     const response=currentResponse(packet),review=packet.review;
@@ -532,6 +532,176 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
       });
   }
 
+
+  const worklists=new Map();
+  let activeWorklist=null;
+  const worklistKeys=['q','review_id','owner','owner_state','requested_assignee','disposition','priority'];
+  const worklistLabels={unrecorded:'No engineering edition',planned:'Planned',addressed:'Addressed',deferred:'Deferred'};
+  function worklistState(){
+    const workspace=current();
+    if(!worklists.has(workspace))worklists.set(workspace,{workspace,filters:Object.fromEntries(worklistKeys.map(k=>[k,''])),offset:0,limit:50,request:0,timer:null,result:null,viewGeneration:null});
+    return worklists.get(workspace);
+  }
+  function worklistAlive(s){return activeWorklist===s&&current()===s.workspace&&generation===s.viewGeneration&&!!$('#review-worklist-results');}
+  function worklistOptions(rows,value,empty){
+    const values=rows.map(row=>typeof row==='string'?[row,row]:[row.id,row.title]);
+    if(value&&!values.some(([key])=>key===value))values.push([value,value]);
+    return '<option value="">'+esc(empty)+'</option>'+values.map(([key,label])=>'<option value="'+esc(key)+'"'+(key===value?' selected':'')+'>'+esc(label)+'</option>').join('');
+  }
+  function worklistControls(s){
+    const choices=s.result?.options??{},reviews=s.result?.reviews??[];
+    return '<div id="review-worklist-controls" class="review-filters">'+
+      '<label><span>Find a request or original ID</span><input name="q" type="search" value="'+esc(s.filters.q)+'"></label>'+
+      '<label><span>Review selection</span><select name="review_id">'+worklistOptions(reviews,s.filters.review_id,'All reviews')+'</select></label>'+
+      '<label><span>Assigned engineer (exact name)</span><input name="owner" list="review-worklist-engineers" value="'+esc(s.filters.owner)+'"><datalist id="review-worklist-engineers">'+(choices.owners??[]).map(v=>'<option value="'+esc(v)+'"></option>').join('')+'</datalist></label>'+
+      '<label><span>Engineering assignment</span><select name="owner_state">'+[['','All assignments'],['assigned','Assigned'],['unassigned','Unassigned']].map(([v,l])=>'<option value="'+v+'"'+(v===s.filters.owner_state?' selected':'')+'>'+l+'</option>').join('')+'</select></label>'+
+      '<label><span>Customer-requested assignee (exact name)</span><input name="requested_assignee" list="review-worklist-customer-assignees" value="'+esc(s.filters.requested_assignee)+'"><datalist id="review-worklist-customer-assignees">'+(choices.requested_assignees??[]).map(v=>'<option value="'+esc(v)+'"></option>').join('')+'</datalist></label>'+
+      '<label><span>Engineering disposition</span><select name="disposition">'+worklistOptions(Object.entries(worklistLabels).map(([id,title])=>({id,title})),s.filters.disposition,'All dispositions')+'</select></label>'+
+      '<label><span>Customer priority</span><select name="priority">'+worklistOptions(choices.priorities??[],s.filters.priority,'All priorities')+'</select></label>'+
+      '<label><span>Rows per page</span><select name="limit">'+[25,50,100,250].map(n=>'<option value="'+n+'"'+(n===s.limit?' selected':'')+'>'+n+'</option>').join('')+'</select></label></div>';
+  }
+  function worklistPending(s,message='Loading the selected current requests…'){
+    s.result=null;
+    const summary=$('#review-worklist-summary');if(summary)summary.textContent='';
+    const target=$('#review-worklist-results');
+    if(target)target.innerHTML='<p role="status">'+esc(message)+'</p>';
+    const files=$('#review-worklist-downloads');if(files)files.replaceChildren();
+    const exportButton=$('[data-action="review-worklist-export"]');if(exportButton)exportButton.disabled=true;
+  }
+  async function openWorklist(reviewId=null){
+    const s=worklistState();
+    if(reviewId!==null){s.filters.review_id=reviewId;s.offset=0;}
+    if(s.timer)clearTimeout(s.timer);
+    activeWorklist=s;s.viewGeneration=++generation;
+    detail('Current customer requests','<div class="customer-review-detail"><div class="page-actions">'+
+      button('worklist-refresh','Refresh current requests')+button('worklist-clear','Clear filters')+
+      button('worklist-export','Export all matching requests','','disabled')+'</div>'+
+      '<p>Each row is an actual open correction, question or requested change in a review’s current customer response. The engineering disposition records the team’s treatment separately from the customer’s decision.</p>'+
+      worklistControls(s)+'<div id="review-worklist-summary" role="status"></div><div id="review-worklist-results"><p>Loading current requests…</p></div>'+
+      '<div id="review-worklist-downloads"></div></div>',{kind:'customer-review-worklist'});
+    const controls=$('#review-worklist-controls');
+    controls.addEventListener('input',event=>{
+      if(!worklistKeys.includes(event.target.name)||event.target.tagName==='SELECT')return;
+      s.filters[event.target.name]=event.target.value;s.offset=0;s.request++;
+      if(s.timer)clearTimeout(s.timer);
+      worklistPending(s,'The selected filters changed. Loading matching current requests…');
+      s.timer=setTimeout(()=>{s.timer=null;loadWorklist(s);},250);
+    });
+    controls.addEventListener('change',event=>{
+      if(event.target.tagName!=='SELECT')return;
+      if(event.target.name==='limit')s.limit=Number(event.target.value);
+      else if(worklistKeys.includes(event.target.name))s.filters[event.target.name]=event.target.value;
+      else return;
+      s.offset=0;if(s.timer)clearTimeout(s.timer);s.timer=null;loadWorklist(s);
+    });
+    return loadWorklist(s);
+  }
+  function worklistChoices(s,result){
+    const controls=$('#review-worklist-controls');if(!controls)return;
+    const review=controls.querySelector('[name="review_id"]'),priority=controls.querySelector('[name="priority"]');
+    if(review)review.innerHTML=worklistOptions(result.reviews,s.filters.review_id,'All reviews');
+    if(priority)priority.innerHTML=worklistOptions(result.options.priorities,s.filters.priority,'All priorities');
+    $('#review-worklist-engineers').innerHTML=result.options.owners.map(v=>'<option value="'+esc(v)+'"></option>').join('');
+    $('#review-worklist-customer-assignees').innerHTML=result.options.requested_assignees.map(v=>'<option value="'+esc(v)+'"></option>').join('');
+  }
+  async function loadWorklist(s){
+    if(!worklistAlive(s))return;
+    const turn=++s.request,selected={...s.filters},offset=s.offset,limit=s.limit;
+    worklistPending(s);
+    try{
+      const result=await read('worklist',{...selected,offset,limit});
+      if(!worklistAlive(s)||turn!==s.request)return;
+      if(result.workspace_key!==s.workspace||!result.snapshot_id||worklistKeys.some(k=>result.filters?.[k]!==selected[k]))throw Error('The returned worklist belongs to another workspace or filter selection.');
+      s.result=result;s.offset=result.offset;s.limit=result.limit;
+      worklistChoices(s,result);
+      const summary=result.summary;
+      $('#review-worklist-summary').innerHTML='<p><strong>'+esc(result.total)+' matching current request'+(result.total===1?'':'s')+'</strong> · '+esc(summary.customer_requests)+' across the project · '+esc(summary.reviews_with_requests)+' review selections with requests · '+esc(summary.unassigned_engineering_requests)+' unassigned engineering requests</p><p class="note">Read '+esc(date(result.read_at))+' · Snapshot <span class="mono" title="'+esc(result.snapshot_id)+'">'+esc(short(result.snapshot_id))+'</span> · Customer acceptance and engineering treatment remain separate. Export includes every matching row across all pages.</p>';
+      $('#review-worklist-results').innerHTML=worklistRows(result);
+      const exportButton=$('[data-action="review-worklist-export"]');if(exportButton)exportButton.disabled=false;
+    }catch(error){
+      if(!worklistAlive(s)||turn!==s.request)return;
+      s.result=null;
+      $('#review-worklist-results').innerHTML='<p class="notice error" role="alert">'+esc(error.message)+'</p>'+button('worklist-refresh','Retry current request selection');
+      $('#review-worklist-summary').textContent='The selected worklist could not be loaded.';
+    }
+  }
+  function worklistRows(result){
+    const rows=result.rows.map(row=>{
+      const note=row.description.length>190?row.description.slice(0,190)+'…':row.description;
+      return '<tr><td class="name-cell"><strong>'+esc(row.review_title)+'</strong><small>'+esc(row.review_purpose)+'</small><small>'+esc(row.reviewer.name)+' · '+esc(date(row.response_created_at))+'</small></td>'+
+        '<td class="name-cell"><strong>'+esc(row.title)+'</strong><small>'+esc(human(row.request_kind))+' · '+esc(row.priority)+'</small><p>'+esc(note)+'</p></td>'+
+        '<td>'+badge(row.customer_disposition)+'<small>Current customer response</small></td>'+
+        '<td>'+esc(row.requested_assignee||'Not specified')+'</td>'+
+        '<td>'+esc(row.engineering_owner||'Unassigned')+'<small>'+esc(worklistLabels[row.engineering_disposition]||row.engineering_disposition)+'</small>'+(row.handback_state?'<small>'+esc(row.handback_state==='ready'?'Ready for customer review':'Planning edition')+'</small>':'')+'</td>'+
+        '<td>'+esc(row.original_evidence.artifacts.length)+' original files · '+esc(row.original_evidence.requirements.length)+' requirements<br>'+esc(row.replacement_evidence.artifacts.length)+' replacement files · '+esc(row.replacement_evidence.requirements.length)+' requirements</td>'+
+        '<td class="actions-cell">'+button('worklist-item','Inspect request',row.request_id)+button('worklist-edit',row.handback_id?'Revise engineering response':'Prepare engineering response',row.request_id)+'</td></tr>';
+    });
+    const first=result.total?result.offset+1:0,last=Math.min(result.total,result.offset+result.rows.length);
+    return '<div class="page-actions"><span>'+first+'–'+last+' of '+result.total+'</span>'+button('worklist-previous','Previous','',''+(result.offset===0?'disabled':''))+button('worklist-next','Next','',''+(result.next_offset===null?'disabled':''))+'</div>'+
+      (rows.length?table(['Review and original response','Customer request','Customer disposition','Requested assignee','Engineering treatment','Selected evidence',''],rows):'<div class="empty"><h3>No current requests match these filters</h3><p>Accepted decisions and resolved corrections remain in each review’s original response history.</p></div>');
+  }
+  async function worklistExport(){
+    const s=activeWorklist;
+    if(!s||!worklistAlive(s)||!s.result)throw Error('Load the selected current worklist before exporting.');
+    const turn=s.request,snapshot=s.result.snapshot_id,filters={...s.filters};
+    const target=$('#review-worklist-downloads');target.innerHTML='<p role="status">Preparing every matching request…</p>';
+    try{
+      const result=await read('worklist-export',{...filters,snapshot_id:snapshot});
+      if(!worklistAlive(s)||turn!==s.request)return;
+      if(result.workspace_key!==s.workspace||result.snapshot_id!==snapshot||worklistKeys.some(k=>result.filters?.[k]!==filters[k]))throw Error('The export belongs to another original worklist selection.');
+      target.innerHTML='<h3>Complete matching worklist</h3><p>'+esc(result.total)+' original current requests with their source response, engineering edition and selected evidence. CSV text is spreadsheet-safe; JSON preserves original field values.</p>'+fileList(result._downloads);
+    }catch(error){if(worklistAlive(s)&&turn===s.request)target.innerHTML='<p class="notice error">'+esc(error.message)+'</p>'+button('worklist-refresh','Refresh current requests');}
+  }
+  function worklistEvidence(evidence,label){
+    return '<h3>'+esc(label)+'</h3>'+
+      (evidence.artifacts.length?table(['Original file','Source path','Bytes and SHA-256'],evidence.artifacts.map(row=>'<tr><td>'+esc(row.label)+'<small>'+esc(row.role)+'</small></td><td>'+esc(row.original_path)+'</td><td>'+esc(row.bytes)+'<small class="mono">'+esc(row.sha256)+'</small></td></tr>')):'<p>No files selected for this request.</p>')+
+      (evidence.requirements.length?table(['Requirement','Original detail'],evidence.requirements.map(row=>'<tr><td>'+esc(row.title)+'<small class="mono">'+esc(row.id)+'</small></td><td class="review-source-detail">'+esc(row.detail)+'</td></tr>')):'');
+  }
+  async function worklistItem(id){
+    const s=activeWorklist;
+    if(!s?.result)throw Error('Refresh the current worklist before opening this request.');
+    const snapshot=s.result.snapshot_id,serial=++generation,workspace=s.workspace;
+    detail('Current customer request','<p role="status">Opening the selected original request and evidence…</p>'+button('worklist-back','Back to current worklist'),{kind:'customer-review-request',id});
+    try{
+      const result=await read('worklist-item',{request_id:id,snapshot_id:snapshot});
+      if(serial!==generation||workspace!==current())return;
+      if(result.workspace_key!==workspace||result.snapshot_id!==snapshot||result.item.request_id!==id)throw Error('The returned request belongs to another original selection.');
+      const row=result.item;
+      detail(row.title,'<div class="customer-review-detail"><div class="page-actions">'+button('worklist-back','Back to current worklist')+button('open','Open original review',row.review_id,'data-tab="corrections"')+
+        button('worklist-edit',row.handback_id?'Revise engineering response':'Prepare engineering response',id)+
+        (row.handback_id?button('handback-open','Open engineering edition',row.handback_id):'')+
+        (row.revised_review_id?button('open','Open revised review',row.revised_review_id):'')+'</div>'+
+        '<h3>Original customer request</h3><p>'+esc(row.review_title)+' · '+esc(human(row.request_kind))+' · '+esc(row.priority)+'</p><p class="review-source-detail">'+esc(row.description)+'</p>'+
+        '<dl class="definition"><dt>Customer response</dt><dd>'+esc(row.reviewer.name)+' · '+esc(date(row.response_created_at))+' · '+badge(row.customer_disposition)+'</dd><dt>Customer-requested assignee</dt><dd>'+esc(row.requested_assignee||'Not specified')+'</dd><dt>Assigned engineer</dt><dd>'+esc(row.engineering_owner||'Unassigned')+'</dd><dt>Engineering treatment</dt><dd>'+esc(worklistLabels[row.engineering_disposition])+(row.handback_state?' · '+esc(row.handback_state==='ready'?'Ready for customer review':'Planning'):'')+'</dd></dl>'+
+        '<p class="review-source-detail">'+esc(row.engineering_note||'No engineering explanation is retained for this request.')+'</p>'+
+        worklistEvidence(row.original_evidence,'Original requested evidence')+worklistEvidence(row.replacement_evidence,'Selected replacement evidence')+
+        fileList(result._downloads)+fileList(result._document?[result._document]:[])+
+        '<details><summary>Complete request and original identities</summary><pre class="json-view">'+esc(pretty(row))+'</pre></details></div>',{kind:'customer-review-request',id});
+    }catch(error){if(serial===generation&&workspace===current())detail('Current customer request','<p class="notice error">'+esc(error.message)+'</p>'+button('worklist-back','Refresh current worklist'),{kind:'customer-review-request',id});}
+  }
+  async function worklistEdit(id){
+    const s=activeWorklist;
+    if(!s?.result||current()!==s.workspace)throw Error('Refresh the current worklist before assigning this request.');
+    const serial=generation,turn=s.request,snapshot=s.result.snapshot_id;
+    const result=await read('worklist-item',{request_id:id,snapshot_id:snapshot});
+    if(serial!==generation||turn!==s.request||current()!==s.workspace)return;
+    if(result.workspace_key!==s.workspace||result.snapshot_id!==snapshot||result.item.request_id!==id)throw Error('The selected original request changed.');
+    const row=result.item;
+    return newHandback(row.review_id,row.handback_id,row.response_id);
+  }
+  async function worklistAction(action,id){
+    const s=activeWorklist;
+    if(action==='worklist')return openWorklist(id||'');
+    if(action==='worklist-back'||action==='worklist-refresh')return openWorklist();
+    if(action==='worklist-item')return worklistItem(id);
+    if(action==='worklist-edit')return worklistEdit(id);
+    if(action==='worklist-export')return worklistExport();
+    if(!s||current()!==s.workspace)throw Error('Open the current project worklist.');
+    if(action==='worklist-clear'){s.filters=Object.fromEntries(worklistKeys.map(k=>[k,'']));s.offset=0;return openWorklist();}
+    if(action==='worklist-previous'){s.offset=Math.max(0,s.offset-s.limit);return loadWorklist(s);}
+    if(action==='worklist-next'&&s.result&&s.result.next_offset!==null){s.offset=s.result.next_offset;return loadWorklist(s);}
+  }
+
   function drawPacket(packet,tab='files'){
     activePacket=packet;activeTab=tab;
     const tabs=[['files','Files'],['requirements','Requirements'],['corrections','Corrections'],['history','Response history'],['handbacks','Engineering handbacks'],['exports','Exported desks'],['received','Received packages']];
@@ -653,6 +823,7 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
   }
   async function dispatch(node){
     const action=node.dataset.action.slice(7),id=node.dataset.id;
+    if(action==='worklist'||action.startsWith('worklist-'))return worklistAction(action,id);
     if(action==='packet-receive')return receivePackage(id||'');
     if(action==='packets')return openReceivedPackages(id||'');
     if(action==='packet-detail')return openReceivedPackage(id);
