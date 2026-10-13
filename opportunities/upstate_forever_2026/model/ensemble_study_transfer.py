@@ -14,6 +14,9 @@ BASIS = "saved_native_ensemble"
 SOURCE_ID = "saved-native-ensemble-study"
 DIRECTORY = "ensemble-study-sources"
 REPORT_SCHEMA = "upstate.observed-report/v1"
+# Source v2 adds visible case keys and original coverage tables. Its retained
+# numeric release, native snapshots and lineage fields are the original v1 contract.
+SUPPORTED_SOURCE_VERSIONS = (1, 2)
 
 
 def _relative(value):
@@ -110,7 +113,9 @@ def _captured(closure, entry):
         identifier(basis.get(name))
     project = basis.get("workspace_id")
     operation_id = digest(basis)
-    if (basis.get("version") != 1 or not isinstance(project, str) or not project
+    if (type(basis.get("version")) is not int
+            or basis["version"] not in SUPPORTED_SOURCE_VERSIONS
+            or not isinstance(project, str) or not project
             or metadata.get("workspace_id") != project
             or metadata.get("source_operation_id") != operation_id
             or metadata.get("ensemble_id") != basis["ensemble_id"]
