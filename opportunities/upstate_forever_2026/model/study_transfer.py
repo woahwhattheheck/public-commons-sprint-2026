@@ -1290,15 +1290,20 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind == "sources":
             for path in sorted((workspace.root / "sources").glob("*.json")):
-                key = identifier(path.stem)
-                value = read_json(_member(workspace.root, path.relative_to(workspace.root).as_posix()))
-                if value.get("schema") != "upstate.sources/v1" or digest(value) != key:
-                    raise ValueError("The retained source collection changed: " + key)
-                entries = value.get("entries", [])
-                row = {"kind": "sources", "id": key,
-                       "title": value.get("title") or (entries[0].get("title") if entries else None) or key[:12],
-                       "state": "complete", "updated_at": value.get("created_at", ""),
-                       "selection": {}, "counts": {"sources": len(entries)}}
+                key = path.stem
+                try:
+                    identifier(key)
+                    value = read_json(_member(workspace.root, path.relative_to(workspace.root).as_posix()))
+                    if value.get("schema") != "upstate.sources/v1" or digest(value) != key:
+                        raise ValueError("The retained source collection changed: " + key)
+                    entries = value.get("entries", [])
+                    row = {"kind": "sources", "id": key,
+                           "title": value.get("title") or (entries[0].get("title") if entries else None) or key[:12],
+                           "state": "complete", "updated_at": value.get("captured_at") or value.get("created_at") or "",
+                           "selection": {}, "counts": {"sources": len(entries)}}
+                except Exception as error:
+                    row = {"kind": "sources", "id": key, "title": key[:12], "state": "unreadable",
+                           "updated_at": "", "error": {"type": type(error).__name__, "message": str(error)}}
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue
