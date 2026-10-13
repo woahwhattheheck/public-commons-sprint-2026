@@ -21,7 +21,11 @@ If an accepted provider job is still running when the command exits:
 
     node capture.mjs capture --out captures/historical.json --resume yes
 
-The continuation file ends in .job.json and may contain temporary provider job URLs. Keep it local to the acquisition worker. Share the completed rainfall capture, which contains the source response, public endpoint, request parameters, retrieval timestamp, and response hash.
+The continuation file ends in .job.json. Resume first reopens an existing matching completed capture, without making another provider request. If a response was saved immediately before an interruption, resume verifies its sequence and exact body hash and recovers the same job continuation or already downloaded artifact. It does not overwrite a completed output. Restore a missing completed source from its original saved copy before continuing.
+
+The job and completed capture retain the original acquisition history: requests, complete response and error bodies, HTTP status, selected headers, retrieval timestamps, byte counts and SHA-256 values. Response bytes are the decoded body returned by fetch, not compressed HTTP wire bytes. The history can include temporary provider job, artifact and inline URLs. It travels with the completed capture and saved review project; retain that complete original packet when transferring the work. Transport failure before a usable provider response may leave the provider's acceptance unknown; the history records that actual failure and does not establish a completed job.
+
+The real source snapshot in source/20261013/publisher-selection.json contains the full availability and gauge responses retrieved on October 13, with exact byte identities. At that observation the native historical 15-minute gauge service covered April 1, 2000 through August 31, 2026, so the July command above was inside the returned bounds. Gauge query values are active properties.web_id: 1 is PWSA (Observatory Hill), and 2 is Alcosan. They are not the GeoJSON feature.id values. Check current bounds for a new selection. The snapshot qualifies the original request; it is not a completed rainfall result.
 
 For pixels, specify --sensor pixel and verified pixel IDs. Use --product realtime for a provisional source, historic15 for native historical 15-minute readings, or historic5 with --interval 5 when that service offers the requested window. The command supports 5, 15, and 60 minute review intervals. Daily/total products need calendar-specific comparison and are outside this first implementation.
 
@@ -63,7 +67,7 @@ The second capture is optional. Add --notes notes.txt to include working notes. 
 
 ## Capture format
 
-schema is rainfall-release/v1. metadata contains label, product, sensor_type, sensors, start, end, interval_minutes, units, timestamp_label, retrieved_at, and source_url. raw_text is the exact UTF-8 API response text. raw_sha256 binds that text.
+schema is rainfall-release/v1. metadata contains label, product, sensor_type, sensors, start, end, interval_minutes, units, timestamp_label, retrieved_at, and source_url. raw_text is the exact UTF-8 API response text. raw_sha256 binds that text. Optional request and acquisition fields retain the complete original selection and acquisition history through normalization, project save and reopening.
 
 Response data can contain sensor groups with row objects or equal-length columnar arrays, plus historic5 point rows using rainfall. A valid result has status=finished and an array-valued data field.
 
