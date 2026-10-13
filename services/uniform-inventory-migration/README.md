@@ -84,6 +84,12 @@ Use its actual returned sourceId in a mapping request:
 
 A correction request requires operationId, expectedRevision, sourceId, rowId, numeric column, full string value, reason, actor and actual ISO at. It changes the effective projection only. Invalid quantities or unresolved references can remain as reviewed work; reconciliation continues to report them until resolved.
 
+## Native target contracts and returned identifier crosswalks
+
+The complete [target-file operating guide](TARGET_CONTRACT.md) covers the additive `target-contract.mjs` and `target-cli.mjs` companion. Supply the prime's actual native specification, its complete original evidence and approved one-to-one key crosswalks. The companion binds the exact workspace/mappings, preserves every original column decision, and produces all scoped native CSVs with full cell ancestry. After the real native load, it reverses explicitly declared returned IDs only in a separate original-engine comparison.
+
+`target-cli.mjs template|project|compare|replay` retains the full original inputs, five-file executable application and manifest. A recipient can regenerate every saved output byte from the delivered complete directory. See the guide for actual input shapes, interruption recovery, source limits and recipient opening. Existing workspace mutations, browser course and real supplier load retain their original operations.
+
 ## Native publication and restart
 
 Mutating commands hold the original workspace's create-only lock, write a complete private temporary file, fsync, recheck original bytes, atomically replace the workspace and fsync its directory. A lost stdout reply is recovered by replaying the exact original operation.
