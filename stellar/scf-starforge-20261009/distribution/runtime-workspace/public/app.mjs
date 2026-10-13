@@ -15,13 +15,18 @@ let loading = false, refreshAgain = false, view = 'runtime', logSelection = null
 let archiveSelectionGeneration = 0;
 const pendingKey = () => 'starforge-runtime-pending-request-' + state?.workspaceId;
 function message(text = '') { $('message').textContent = text; $('message').hidden = !text; }
-function error(value) { if (!value.workspaceChanged) message((value.code ? value.code + ': ' : '') + value.message); }
+function error(value) {
+  if (!value.workspaceChanged) message((value.code ? value.code + ': ' : '') + value.message +
+    (value.flock ? '\nOriginal lock process diagnostics:\n' + JSON.stringify(value.flock, null, 2) : ''));
+}
+const failureFields = (value, status) => ({ code: value.error, ...(status === undefined ? {} : { status }),
+  ...(value.flock && typeof value.flock === 'object' && Array.isArray(value.flock.attempts) ? { flock: value.flock } : {}) });
 async function api(path, value) {
   const response = await fetch(path, { method: value === undefined ? 'GET' : 'POST',
     headers: { 'x-runtime-workspace-token': token, ...(value === undefined ? {} : { 'content-type': 'application/json' }) },
     ...(value === undefined ? {} : { body: JSON.stringify(value) }) });
   const result = await response.json();
-  if (!response.ok) throw Object.assign(new Error(result.message ?? result.error), { code: result.error, status: response.status });
+  if (!response.ok) throw Object.assign(new Error(result.message ?? result.error), failureFields(result, response.status));
   return result;
 }
 const query = (path, values) => path + '?' + new URLSearchParams(Object.entries(values).filter(([,v]) => v));
@@ -135,6 +140,10 @@ function renderOperations() {
       [job.cacheTransferId ? 'Runtime source transfer' : 'Image transfer', job.transferDirectory], ['Container output', job.containerDirectory], ['Product build', job.sourceBuildOutput]])
       if (path) article.append(make('p', label + ': ' + path));
     if (job.error) article.append(make('p', job.error.code + ': ' + job.error.message));
+    if (job.error?.flock) {
+      const receipt = make('details'); receipt.append(make('summary', 'Original lock process diagnostics'),
+        make('pre', JSON.stringify(job.error.flock, null, 2))); article.append(receipt);
+    }
     if (job.displayPhase === 'INTERRUPTED' && !job.homeId && !job.cacheTransferId && !job.sourceBuildId && !job.operation.startsWith('python-')) article.append(make('p', job.imageId || job.transferId
       ? imageOperationRecovery(job)
       : 'The workspace worker ended. Open its retained runtime and resume installation or recover into a new directory.', 'note'));
@@ -412,7 +421,7 @@ $('archive-form').addEventListener('submit', async event => {
       if (file.size > 64 * 1024 * 1024) throw new Error('Archive exceeds 64 MiB.');
       const response = await fetch(query('/api/archive-upload', { requestId: crypto.randomUUID(), sha256, label }),
         { method: 'POST', headers: { 'x-runtime-workspace-token': token, 'content-type': 'application/octet-stream' }, body: file });
-      const value = await response.json(); if (!response.ok) throw Object.assign(new Error(value.message ?? value.error), { code: value.error });
+      const value = await response.json(); if (!response.ok) throw Object.assign(new Error(value.message ?? value.error), failureFields(value));
       switchView('operations'); await refresh(); message('Original archive received. Its source catalog is being prepared.');
     } else await operation({ operation: 'import', archive: path, sha256, label });
   } catch (value) { error(value); }
@@ -466,7 +475,7 @@ const python = createPythonWorkspaceView({ api, getState: () => state, operation
       method: 'POST', headers: { 'x-runtime-workspace-token': token, 'content-type': 'application/octet-stream' }, body: file,
     });
     const value = await response.json();
-    if (!response.ok) throw Object.assign(new Error(value.message ?? value.error), { code: value.error, status: response.status });
+    if (!response.ok) throw Object.assign(new Error(value.message ?? value.error), failureFields(value, response.status));
     return value;
   },
 });
