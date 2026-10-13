@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "study-source-lineage-dependencies",
+  "extend_components": {
+    "study-transfer": {
+      "paths": [
+        "model/source_refresh_report_transfer.py",
+        "model/source_refresh_report_source.py",
+        "model/source_refresh_receiving.py",
+        "model/source_refresh.py",
+        "model/source_refresh_legacy.py",
+        "model/source_refresh_compat.py",
+        "model/observed_landcover_study_transfer.py",
+        "model/observed_landcover_local_copy.py",
+        "model/source_refresh_comparison.py",
+        "integration/component_fragments/study-source-lineage-dependencies.json"
+      ]
+    },
+    "source-updates": {
+      "paths": [
+        "model/source_refresh_report_transfer.py",
+        "model/source_refresh_report_source.py",
+        "model/source_refresh_receiving.py",
+        "model/source_refresh.py",
+        "model/source_refresh_legacy.py",
+        "model/source_refresh_compat.py"
+      ]
+    },
+    "landcover-ledger": {
+      "paths": [
+        "model/observed_landcover_study_transfer.py",
+        "model/observed_landcover_local_copy.py"
+      ]
+    }
+  },
+  "required_components": []
+}

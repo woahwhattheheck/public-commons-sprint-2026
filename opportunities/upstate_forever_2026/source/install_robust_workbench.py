@@ -21,6 +21,15 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/source_refresh_report_transfer.py",
+    "model/source_refresh_report_source.py",
+    "model/source_refresh_receiving.py",
+    "model/source_refresh.py",
+    "model/source_refresh_legacy.py",
+    "model/source_refresh_compat.py",
+    "model/observed_landcover_study_transfer.py",
+    "model/observed_landcover_local_copy.py",
+    "integration/component_fragments/study-source-lineage-dependencies.json",
     "model/source_refresh_comparison.py",
     "model/economic_comparison.py",
     "model/economic_comparison_render.py",
@@ -222,6 +231,15 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/source_refresh_report_transfer.py",
+    "model/source_refresh_report_source.py",
+    "model/source_refresh_receiving.py",
+    "model/source_refresh.py",
+    "model/source_refresh_legacy.py",
+    "model/source_refresh_compat.py",
+    "model/observed_landcover_study_transfer.py",
+    "model/observed_landcover_local_copy.py",
+    "integration/component_fragments/study-source-lineage-dependencies.json",
     "model/source_refresh_comparison.py",
     "model/economic_comparison.py",
     "model/economic_comparison_render.py",
@@ -848,6 +866,32 @@ def verify_composition(application, pending):
             monitoring = assembled_data(application, pending, "model/monitoring_study_transfer.py")
             if b"def include_calibration(" not in lineage or b"def include_source(" not in monitoring:
                 raise ValueError("Receive the matching original calibration and Monitoring report lineage helpers")
+    # Scoped report lineage uses the same original producers and native locks.
+    # Keep these optional modules together when an advancing shared reader imports them.
+    source_lineage_consumers = []
+    for name in ("model/study_transfer.py", "model/scientific_report_study_transfer.py"):
+        body = pending.get(name)
+        if body is None:
+            body = read_existing(application, name)
+        if body is not None:
+            source_lineage_consumers.append(body)
+    if any(b"source_refresh_report_transfer" in body for body in source_lineage_consumers):
+        for dependency in (
+                "model/source_refresh_report_transfer.py", "model/source_refresh_report_source.py",
+                "model/source_refresh_receiving.py", "model/source_refresh.py",
+                "model/source_refresh_legacy.py", "model/source_refresh_compat.py",
+                "model/source_refresh_comparison.py", "model/native_versions.py",
+                "model/model_selection.py", "model/observed_context.py"):
+            assembled_data(application, pending, dependency)
+    landcover_lineage = pending.get("model/landcover_study_transfer.py")
+    if landcover_lineage is None:
+        landcover_lineage = read_existing(application, "model/landcover_study_transfer.py")
+    if landcover_lineage is not None and b"observed_landcover_study_transfer" in landcover_lineage:
+        for dependency in (
+                "model/observed_landcover_study_transfer.py",
+                "model/observed_landcover_local_copy.py", "model/observed_landcover.py",
+                "model/study_receiving.py", "model/reuse.py"):
+            assembled_data(application, pending, dependency)
     # Optional original receiving companions travel through the same guarded
     # layer format. Verify their native sources before replacing any file.
     review_receiver = pending.get("source_tools/receive_scientific_report_review.py")
