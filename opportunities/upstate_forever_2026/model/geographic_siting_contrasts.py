@@ -201,7 +201,7 @@ def finish(state, region, area, binding):
         for role in ALTERNATIVES:
             changed_area = region["alternatives"][role]["changed_hectares"]
             whole = binding["whole_scenario_intervention"][role]
-            if whole["pixel_area_ha"] != area:
+            if not math.isclose(whole["pixel_area_ha"], area, rel_tol=1e-10, abs_tol=1e-12):
                 raise ValueError("Original intervention and native grid pixel areas differ")
             whole_area = whole["hectares"]
             common_area = support[role + "_changed_hectares"]
