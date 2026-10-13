@@ -40,7 +40,9 @@
         "source/landcover-change/METHOD.md",
         "source/run_source_updates_browser.mjs",
         "source/source-refresh-report-integration.json",
+        "source_tools/HEADWATERS_SOURCE_CLARIFICATION.md",
         "source_tools/landcover_change.py",
+        "source_tools/prepare_headwaters_source_clarification.py",
         "source_tools/receive_source_refresh_report.py"
       ],
       "requires": [
@@ -54,11 +56,10 @@
   ],
   "source_reference": {
     "repository": "woahwhattheheck/public-commons-sprint-2026",
-    "revision": "ad1685f7550c5cf52d139cce711f521b1ab27be9",
-    "pull_request": 3990,
-    "complete_component": "https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8VPYG02V",
+    "revision": "b0448c7b4306459fb380dce4ed2c63965c7e076b",
+    "pull_request": 4064,
     "installer": "install_source_refresh.py",
     "consumer_joins": "source/source-refresh-report-integration.json",
-    "purpose": "Retain the complete Source Updates report, original review and editable Study continuation in current application assembly."
+    "purpose": "Retain Source Updates, its report/review/Study continuation and the original completed-headwaters source-clarification receiving course in current application assembly."
   }
 }
