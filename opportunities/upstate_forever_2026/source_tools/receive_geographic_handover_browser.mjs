@@ -229,7 +229,7 @@ async function main(argv){
   const saved=await api('/api/geographic-headwaters/case',{case_id:prepared.id});
   requireValue(equal(saved.case,prepared),'The saved operator case differs from the delivered geographic source');
   requireValue(saved._downloads?.length>0,'The original saved case has no native file tickets');
-  await ticketDownloads('[data-geo-case-detail]',saved._downloads,'original-case-download');
+  await ticketDownloads('[data-geo-case-detail] > .geo-actions',saved._downloads,'original-case-download');
   requireValue(saved._downloads.every(x=>downloadedURLs.has(new URL(x.url,operatorURL).pathname)),'Not every original case download control was exercised');
   await screenshot(page,'geographic-saved-case',1440);await screenshot(page,'geographic-saved-case',390);
   await operateGeographicAllocation({page,workspace,prepared,saved,api,readJSON,regular,verified,equal,requireValue,check,waitFor,saveRecord,screenshot,action,ticketDownloads,downloadedURLs,context});
