@@ -99,6 +99,9 @@ def export_report(output: Path | str) -> dict:
     _csv(root / "coverage.csv", list(coverage[0]), coverage)
     _csv(root / "unknown-classes.csv", prefix + ["side", "code", "ha"], unknowns)
     _csv(root / "zone-extent.csv", list(report["zones"][0]), report["zones"])
+    if report.get("timeline") is not None:
+        from .landcover_temporal import export_csv
+        export_csv(root, report)
     template = Path(__file__).with_name("landcover_report.html").read_text(encoding="utf-8")
     # JSON is parsed as data; escapes prevent external names closing the script.
     payload = json.dumps(report, ensure_ascii=False, allow_nan=False).replace("<", "\\u003c").replace("\u2028", "\\u2028").replace("\u2029", "\\u2029")
