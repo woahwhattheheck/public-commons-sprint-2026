@@ -353,6 +353,18 @@ function economicSourceReports(plan, table) {
   return {ids,html:parts.length?'<section><h2>Selected economic scenarios</h2>'+parts.join('')+'</section>':''};
 }
 
+
+export function briefingFollowupReport(plan,table){
+ if(!plan.briefing_imports?.length)return '';
+ const rows=plan.tasks.filter(t=>t.briefing_entry).map(t=>{
+  const e=t.briefing_entry,c=e.source_context||{},b=c.report_binding||{},s=c.slide||{};
+  return [t.id,t.title,t.assignee,t.status,t.source_due_date||'',e.kind,b.title,s.title,s.id,b.report_sha256,e.source_link_id];
+ });
+ return '<section><h2>Report review follow-up</h2><p>Source due dates are deadlines recorded in the original meeting notes. They do not set working durations or move scientific report dates. Current task owners and status include subsequent edits.</p>'+
+ table(['Task ID','Work','Current owner','Current status','Source due date','Original entry kind','Original report','Report page','Page ID','Original report SHA256','Original notes source'],rows)+
+ '<details><summary>Received meetings and preserved local differences</summary><pre>'+esc(JSON.stringify(plan.briefing_imports,null,2))+'</pre></details></section>';
+}
+
 export function reportHtml(plan,asOf=today()){
   const summary=summarize(plan,asOf);
   const text=value=>value===null||value===undefined?'':typeof value==='object'?JSON.stringify(value):String(value);
@@ -375,6 +387,7 @@ export function reportHtml(plan,asOf=today()){
   let html='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(plan.title)+' — implementation report</title><style>'+css+'</style><body><h1>'+esc(plan.title)+'</h1><p class="meta">Implementation and field monitoring · '+esc(plan.id)+' · native revision '+esc(plan.revision)+' · as of '+esc(asOf)+'</p><p>'+esc(plan.description)+'</p><div class="stats"><span><b>'+summary.tasks.complete+' / '+summary.tasks.total+'</b>Tasks complete</span><span><b>'+money(summary.budget.budget)+'</b>Budget</span><span><b>'+money(summary.budget.commitment)+'</b>Commitments</span><span><b>'+money(summary.budget.actual)+'</b>Actual costs</span><span><b>'+summary.field.observations+'</b>Recorded results</span></div>';
   const economics=economicSourceReports(plan,table);
   html+=economics.html;
+  html+=briefingFollowupReport(plan,table);
   const otherCandidates=plan.candidates.filter(c=>!economics.ids.has(c.id));
   if(otherCandidates.length||!economics.ids.size)html+='<h2>Selected conservation and intervention records</h2>'+table(['ID','Candidate','Original candidate area (ha)','Reporting footprint (ha)','Area basis','Original source snapshot','Modeled quantities'],otherCandidates.map(c=>[c.id,c.label,c.area_ha??'',c.reporting_area_ha??'',c.area_basis||'',c.source,c.modeled_benefits||[]]));
   html+='<h2>Assigned implementation work</h2>'+table(['Task','Candidate','Owner','Status','Start','Last working date','Progress','Notes','Evidence references'],summary.schedule.tasks.map(s=>{const t=plan.tasks.find(t=>t.id===s.id);return [t.title,t.candidate_id||'',t.assignee||'',t.status,s.start||'',s.last_work_date||'',t.progress_pct+'%',t.notes||'',t.evidence_refs||[]];}));

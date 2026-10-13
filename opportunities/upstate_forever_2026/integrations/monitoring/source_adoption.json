@@ -22,12 +22,22 @@
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_actions.py",
       "path": "model/monitoring_actions.py",
-      "bytes": 3355,
-      "sha256": "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686",
+      "bytes": 3649,
+      "sha256": "1e1d64781a8b70b8c884bd2ddd5373d9bbdccae68584f17bcd8a49340061f84a",
       "original_bytes": 2595,
       "original_sha256": "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f",
-      "previous_bytes": 2595,
-      "previous_sha256": "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f"
+      "previous_bytes": 3355,
+      "previous_sha256": "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686",
+      "retained_installed_editions": [
+        {
+          "bytes": 2595,
+          "sha256": "e9bc8115891abb1a855c96c0007a93926049d0a1d4f208ef30fe462026b7b87f"
+        },
+        {
+          "bytes": 3355,
+          "sha256": "9bdecb178fc77025f26669d8428baa69066074d3c700e4a1535bc24e67b13686"
+        }
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_campaign.py",
@@ -72,20 +82,38 @@
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_sources.py",
       "path": "model/monitoring_sources.py",
-      "bytes": 7315,
-      "sha256": "b10e2927d0fd8265d6d36ce12f458ddcd5f2fe554951b0bb531d3e30e244145e",
+      "bytes": 9136,
+      "sha256": "832279605375c3dc2b2ac9d322d17b3c2556afceceb07e9dc62526317406c53b",
       "original_bytes": 5912,
-      "original_sha256": "16f988793211baee79f69de0e46c3e8b3a30cdac752ff7e4c8cbc957225c3ddb"
+      "original_sha256": "16f988793211baee79f69de0e46c3e8b3a30cdac752ff7e4c8cbc957225c3ddb",
+      "retained_installed_editions": [
+        {
+          "bytes": 7315,
+          "sha256": "b10e2927d0fd8265d6d36ce12f458ddcd5f2fe554951b0bb531d3e30e244145e"
+        }
+      ],
+      "previous_bytes": 7315,
+      "previous_sha256": "b10e2927d0fd8265d6d36ce12f458ddcd5f2fe554951b0bb531d3e30e244145e"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/model/monitoring_workspace.py",
       "path": "model/monitoring_workspace.py",
-      "bytes": 34010,
-      "sha256": "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340",
+      "bytes": 33882,
+      "sha256": "deed9680682b32f71131800c7d04dd06569ce380124643c88029f7a7fc784076",
       "original_bytes": 31904,
       "original_sha256": "bd5946b4f758bbe6ad1ecafb45bd0c04273092178451c16c9dbd3f529f790cbc",
-      "previous_bytes": 32727,
-      "previous_sha256": "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c"
+      "previous_bytes": 34010,
+      "previous_sha256": "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340",
+      "retained_installed_editions": [
+        {
+          "bytes": 32727,
+          "sha256": "3cbe9008882a748880c394a480a32c0b68beaf66be85599fb2061484cfff7d1c"
+        },
+        {
+          "bytes": 34010,
+          "sha256": "fe465c33f8a4faf95d01c8ac3e189306639614fb5ce9079031a3c6e6f7096340"
+        }
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/MONITORING_API.md",
@@ -98,30 +126,58 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/extensions/monitoring.json",
       "path": "operator/extensions/monitoring.json",
-      "bytes": 1669,
-      "sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+      "bytes": 1758,
+      "sha256": "f78a7bf1b38e057b04b65f03badbc89576930a152b4d3af7271803ec0500dd5c",
       "original_bytes": 1567,
       "original_sha256": "6f126ec8362be17ee17f70780f6d2b8ebc98b5f22fa03118f8100ff4cae0d3bf",
-      "previous_bytes": 1567,
-      "previous_sha256": "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+      "previous_bytes": 1669,
+      "previous_sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4",
+      "retained_installed_editions": [
+        {
+          "bytes": 1567,
+          "sha256": "8f562aeab5eb007c0bfbb1e9eb54274817d7d0cd093935f7a27647fe42fc007c"
+        },
+        {
+          "bytes": 1669,
+          "sha256": "224aa0281aa1047e804bcf7dcf6d34451ca9bb59cd5a18e06ff4dfdcc7b405b4"
+        }
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring.py",
       "path": "operator/monitoring.py",
-      "bytes": 216,
-      "sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea",
+      "bytes": 217,
+      "sha256": "5a03358a60f0ca0899499ffeb082fea556aca89d83a4b6b2230f5d3f5139d920",
       "original_bytes": 216,
-      "original_sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea"
+      "original_sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea",
+      "retained_installed_editions": [
+        {
+          "bytes": 216,
+          "sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea"
+        }
+      ],
+      "previous_bytes": 216,
+      "previous_sha256": "176ae016ff3f6c9ae91c010889d3920627563709b1b98f2d1d366cf41dec8bea"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_native.py",
       "path": "operator/monitoring_native.py",
-      "bytes": 6844,
-      "sha256": "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60",
+      "bytes": 7930,
+      "sha256": "3386288f6b86715e6bd941e94d85bea2637721e063599d90f4779dfc73c17ffd",
       "original_bytes": 3317,
       "original_sha256": "6f5ce1a12ee537c5963c198b99f3142055c7778f96df8d5b6aceae726e7a96c9",
-      "previous_bytes": 6628,
-      "previous_sha256": "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75"
+      "previous_bytes": 6844,
+      "previous_sha256": "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60",
+      "retained_installed_editions": [
+        {
+          "bytes": 6628,
+          "sha256": "f1db205c2240b65d15fbe6d44c357459b31caa82d348dc9b8a058135e6a91c75"
+        },
+        {
+          "bytes": 6844,
+          "sha256": "6e988dbba4730c08af0afe3fb242fa01ed407e6a801163965a12672d279a7d60"
+        }
+      ]
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_receiving.py",
@@ -194,8 +250,51 @@
       "source": "integrations/monitoring/RECEIVING.md",
       "source_role": "current_application_source",
       "path": "integrations/monitoring/RECEIVING.md",
-      "bytes": 12853,
-      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
+      "bytes": 15473,
+      "sha256": "1612f65c774b8ac1ddbd712500428441958f6e584d1317244660539329a691cd",
+      "retained_installed_editions": [
+        {
+          "bytes": 12853,
+          "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
+        }
+      ],
+      "previous_bytes": 12853,
+      "previous_sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
+    },
+    {
+      "source": "model/MONITORING_FIELDWORK.md",
+      "source_role": "current_application_source",
+      "path": "model/MONITORING_FIELDWORK.md",
+      "bytes": 5022,
+      "sha256": "c8b9819e114304822e60e0aeecd461a31f75293b4b5544000cf704dceb6c0c03"
+    },
+    {
+      "source": "model/monitoring_implementation.py",
+      "source_role": "current_application_source",
+      "path": "model/monitoring_implementation.py",
+      "bytes": 26097,
+      "sha256": "121c5bad60658a4c8c3407f4dc0e795657ed0361652a89b3b4abcdd195e4a840"
+    },
+    {
+      "source": "model/requirements-monitoring.txt",
+      "source_role": "current_application_source",
+      "path": "model/requirements-monitoring.txt",
+      "bytes": 181,
+      "sha256": "01b1d14a98a0e180a062ccaa19ea6d45bb9f70fa84c991eafbdf534427e8764d"
+    },
+    {
+      "source": "operator/web/monitoring_fieldwork.mjs",
+      "source_role": "current_application_source",
+      "path": "operator/web/monitoring_fieldwork.mjs",
+      "bytes": 4708,
+      "sha256": "3fd06327c4ba24ab45dac440d2c21a96c2ea7d4d2b792a6eb82c0614d4e7685b"
+    },
+    {
+      "source": "model/monitoring_packet.py",
+      "source_role": "current_application_source",
+      "path": "model/monitoring_packet.py",
+      "bytes": 6141,
+      "sha256": "855b0cccacabd605ff15511132394cdeedd80ac68eb187c91a77598e8a53cf95"
     }
   ],
   "host": "operator/extension_registry.py",
@@ -263,6 +362,17 @@
         "Verify complete source and record identities after native archive restore and independent receiving revision"
       ],
       "preserved": "Original network/design/campaign workflow, actual source station mapping and dates, native Workspace archive/restore, and current receiving-water/report owners"
+    },
+    {
+      "operation_id": "ECO13-MONITORING-CURRENT-SOURCE-RECEIVING-20261013",
+      "source_base": "bef8f145e9430a8181926c735a45c2ba7f3672c0",
+      "guide": "integrations/monitoring/RECEIVING.md",
+      "changes": [
+        "Resolve the compatibility route through the current top-level model namespace",
+        "Retain current native Workspace backup and outside-root archive behavior from PR3334",
+        "Reconcile full current application source and PR3366 streaming packet identities in the original adoption and observed-context manifests"
+      ],
+      "preserved": "Original solver, campaign revisions, shared registry, current fieldwork/report bridge, original source bodies and archived standalone bundle"
     }
   ],
   "observational_context": {

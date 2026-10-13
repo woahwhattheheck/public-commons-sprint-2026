@@ -33,6 +33,7 @@ CODE = (
     "source_tools/receive_implementation.py",
     "model/monitoring_implementation.py", "model/monitoring_workspace.py",
     "model/monitoring_campaign.py", "model/monitoring_sources.py",
+    "model/monitoring_packet.py",
     "model/portable_parameter_studies.py",
 )
 

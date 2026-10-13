@@ -337,10 +337,16 @@ def quality_sections(quality, *, prefix="field/quality/"):
     return [
         ["Original measurement definitions and numeric support", [
             quality["interpretation"]["comparison"], quality["interpretation"]["numeric_range"],
-            _table(["Site", "Parameter", "Unit", "Basis", "Fraction", "Laboratory method", "Collection method",
-                    "QA", "Qualifier", "Numeric", "Censored", "Text", "Missing", "Numeric minimum", "Numeric maximum"],
-                   [[row[key] for key in DIMENSIONS] +
-                    [row[key] for key in ("numeric", "censored", "text", "missing", "numeric_min", "numeric_max")]
+            _table(["Site", "Parameter", "Unit / basis / fraction", "Methods", "Original QA / qualifier",
+                    "Result counts / numeric range"],
+                   [[row["site_id"], row["parameter"],
+                     "\n".join(label + ": " + _text(row[key]) for key, label in
+                               (("unit", "Unit"), ("basis", "Basis"), ("fraction", "Fraction"))),
+                     "Laboratory: " + _text(row["method"]) + "\nCollection: " + _text(row["activity_method"]),
+                     "QA: " + _text(row["qa_status"]) + "\nQualifier: " + _text(row["qualifier"]),
+                     "\n".join(label + ": " + _text(row[key]) for key, label in
+                               (("numeric", "Numeric"), ("censored", "Censored"), ("text", "Text"),
+                                ("missing", "Missing"), ("numeric_min", "Minimum"), ("numeric_max", "Maximum")))]
                     for row in strata[:100]]),
             str(len(strata)) + " exact metadata strata; the first " + str(min(100, len(strata))) +
             " are shown. The complete table retains every original observation ID.",
@@ -365,10 +371,13 @@ def quality_sections(quality, *, prefix="field/quality/"):
         ]],
         ["Collection calendar and metadata availability", [
             quality["interpretation"]["calendar"], quality["interpretation"]["metadata"],
-            _table(["Site", "Parameter", "Original local month", "Numeric", "Censored", "Text", "Missing",
+            _table(["Site", "Parameter", "Original local month", "Result counts",
                     "Sample/measurement activities", "Distinct local dates"],
-                   [[row[key] for key in ("site_id", "parameter", "local_month", "numeric", "censored", "text",
-                                         "missing", "activity_count", "distinct_local_dates")]
+                   [[row["site_id"], row["parameter"], row["local_month"],
+                     "\n".join(label + ": " + _text(row[key]) for key, label in
+                               (("numeric", "Numeric"), ("censored", "Censored"),
+                                ("text", "Text"), ("missing", "Missing"))),
+                     row["activity_count"], row["distinct_local_dates"]]
                     for row in quality["sampling_calendar"][:100]]),
             _table(["Original field", "Recorded rows", "Unstated rows", "Meaning"],
                    [[row[key] for key in ("field", "recorded_rows", "unstated_rows", "meaning")]
@@ -379,11 +388,15 @@ def quality_sections(quality, *, prefix="field/quality/"):
         ]],
         ["Original detection, quantitation and source-labelled limits", [
             quality["interpretation"]["limits"],
-            _table(["Observation", "Site", "Parameter", "Result type", "Original result", "Result unit",
-                    "Limit origin", "Original limit type", "Original limit value", "Original limit unit", "CSV record"],
-                   [[row.get(key) for key in ("observation_id", "site_id", "parameter", "result_type",
-                    "original_result", "result_unit", "limit_origin", "limit_type", "limit_value",
-                    "limit_unit", "source_record")] for row in limits[:100]]),
+            _table(["Site / parameter", "Original result / type", "Limit origin", "Original limit type",
+                    "Original limit value / unit", "Original record"],
+                   [[_text(row.get("site_id")) + "\n" + _text(row.get("parameter")),
+                     _text(row.get("result_type")) + "\n" + _text(row.get("original_result")) +
+                     "\nUnit: " + _text(row.get("result_unit")),
+                     row.get("limit_origin"), row.get("limit_type"),
+                     _text(row.get("limit_value")) + "\nUnit: " + _text(row.get("limit_unit")),
+                     _text(row.get("observation_id")) + "\nCSV record: " + _text(row.get("source_record"))]
+                    for row in limits[:100]]),
             str(len(limits)) + " retained native or original labelled-limit rows; first " +
             str(min(100, len(limits))) + " shown.",
             {"kind": "links", "items": links},

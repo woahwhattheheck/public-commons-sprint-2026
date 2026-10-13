@@ -1,0 +1,635 @@
+{
+  "schema": "upstate.sources/v1",
+  "entries": [
+    {
+      "id": "scdes-eighteenmile-2023-figure-chlorophyll-series",
+      "title": "Measured chlorophyll by original sampling date",
+      "kind": "document",
+      "path": "chlorophyll_time_series.svg",
+      "bytes": 30745,
+      "sha256": "895f4cc0246535fa2280b9dfe2e98dfc69d51e923ccab7b5c7264f48b93244b0",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-figure-chlorophyll-distributions",
+      "title": "Observed chlorophyll distributions and all samples",
+      "kind": "document",
+      "path": "chlorophyll_distributions.svg",
+      "bytes": 23969,
+      "sha256": "c958f42af36013efceb018e53d8a62ec365db91f465a32b23f8f9076f1fc8ba4",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-figure-sampling-flow",
+      "title": "Original laboratory dates and preceding upstream flow",
+      "kind": "document",
+      "path": "sampling_flow_context.svg",
+      "bytes": 13003,
+      "sha256": "7840ea3d5d846801ed9bf7971c2ee405ac4af5a68bcde4083445051deb9f258b",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-figure-chlorophyll-antecedent",
+      "title": "Chlorophyll and preceding upstream-flow context",
+      "kind": "document",
+      "path": "chlorophyll_antecedent_context.svg",
+      "bytes": 30211,
+      "sha256": "435b67f3bc27fa4c6b4e047da0bc0b377acd481e26a5ad0b1a8117a5a721130c",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-figure-observed-points",
+      "title": "75 original selected chlorophyll observations with upstream-flow context",
+      "kind": "table",
+      "path": "plot-data.csv",
+      "bytes": 109654,
+      "sha256": "a4a39b47b16fb38709ea1057ddbc56c934d90f96c9f429695ca2767c68b3f66a",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-figure-distribution-statistics",
+      "title": "Original selected chlorophyll distribution statistics",
+      "kind": "table",
+      "path": "distribution-statistics.csv",
+      "bytes": 828,
+      "sha256": "f2a7fdb675a74f82985773e958b77d81835c1ea20ad5addd07d99f531c06866c",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    },
+    {
+      "id": "scdes-eighteenmile-2023-scientific-figure-spec",
+      "title": "Native scientific report figure specification",
+      "kind": "document",
+      "path": "figure-spec.json",
+      "bytes": 416117,
+      "sha256": "02adae24859bd08e785d235d3988b923beb6405bff59f9fc17ef7dc4e984bde8",
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf",
+      "vintage": "2023 original observations; source recovery and figures 2026-10-13",
+      "metadata": {
+        "component": "eighteenmile-measured-study-figures",
+        "source_observations": 75,
+        "source_flow_dates": 16,
+        "chlorophyll_unit": "ug/L",
+        "flow_unit": "ft3/s",
+        "native_report_spec": "figure-spec.json"
+      },
+      "companions": [
+        {
+          "path": "figure_core.mjs",
+          "bytes": 22714,
+          "sha256": "bc72e5744f1799d828dc8b6964ecd0c902b65f8574bf1719b1e4bea32dfc2bd0"
+        },
+        {
+          "path": "rebuild_figures.mjs",
+          "bytes": 3050,
+          "sha256": "dd7c99b782e766c8aa428f55e36179671081ee60123434816a96d5867a79aa5a"
+        },
+        {
+          "path": "vendor/d3-path.cjs",
+          "bytes": 2433,
+          "sha256": "28d70841c60f313c3e6411fe0831e539ed6cea51eaee951d62d88908c40619c2"
+        },
+        {
+          "path": "vendor/d3-path.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "a09b0d6d76e768fca2085fad05743ee81ddd11946bcda160a3cf5e1081a479aa"
+        },
+        {
+          "path": "vendor/d3-array.cjs",
+          "bytes": 17204,
+          "sha256": "80aa70d0cd17dabddf6d056494ea17926a45a69da8b7850220aace331bad671d"
+        },
+        {
+          "path": "vendor/d3-array.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "3e6849627f74ff73c257a3ae1efb574015d94fc1035c05ec3c15805165efcbc4"
+        },
+        {
+          "path": "vendor/d3-shape.cjs",
+          "bytes": 30898,
+          "sha256": "49236896e989f251dd36679ea4a879538e9ca2ece3a90a82740f953cac4a3fa5"
+        },
+        {
+          "path": "vendor/d3-shape.LICENSE.txt",
+          "bytes": 731,
+          "sha256": "faa682e3e430941f958d26180458f5934a62f58dac4d70ccdd15608c15d0f884"
+        },
+        {
+          "path": "figure-sources.json",
+          "bytes": 5064,
+          "sha256": "983baa0dd5f0f75edb50246bf5de11c3d3ebbcc1ad3def1a883abf7df4fd0d90"
+        },
+        {
+          "path": "README.md",
+          "bytes": 4468,
+          "sha256": "4db229474aa9be4beb7e2aecf6683d56d3b46f382ca0af849819c8602f54836a"
+        },
+        {
+          "path": "../wqp/derived/selected_chlorophyll.csv",
+          "bytes": 98672,
+          "sha256": "7f8f82328b3df2d939813e8a4666c1bdd1c0e93c913e64543849a05db2598e3d"
+        },
+        {
+          "path": "../wqp/derived/chlorophyll_summary.csv",
+          "bytes": 10709,
+          "sha256": "512a91643b24f0eef21a2b320267d2d3fc1a209b48ebe2119065e17e0c9c2e70"
+        },
+        {
+          "path": "../wqp/study_flow_dates.csv",
+          "bytes": 27050,
+          "sha256": "0ccb737025dc99a5534ccfc7ae0202451fd2b031e028f2eea0480e7d28c4df67"
+        },
+        {
+          "path": "../wqp/flow_context_methods.json",
+          "bytes": 3338,
+          "sha256": "17494a60c978952e8a2acf8128663df3c0364337384a203e78ef7fbfce491bda"
+        }
+      ]
+    }
+  ]
+}

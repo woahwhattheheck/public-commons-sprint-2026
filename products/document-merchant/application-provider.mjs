@@ -18,6 +18,7 @@ import {
 
 const SOURCE = 'products/document-merchant';
 const SELECTION = 'stellar-forge.document-service-selection.v1';
+const COMMISSIONING='stellar-forge.document-commissioning-application.v1';
 const STARTUP = 'stellar-forge.job-service-launch.v1';
 export const DOCUMENT_APPLICATION_ID = 'document-merchant';
 const PATHS = Object.freeze([
@@ -42,6 +43,8 @@ export function documentApplication(context) {
     fields: [
       context.field('directory', 'Private document merchant directory', 'path', true,
         'Reopen this merchant, or select one new directory inside an existing private parent. Its original setup and paid jobs remain here.'),
+      context.field('commissioningOptionsFile', 'Original account commissioning JSON', 'path', false,
+        'Optional complete commission options JSON selecting the actual original account or commerce setup, supplier and customer. First Start prepares this exact installation. It supplies ports and service settings; use the private environment field for original key values.'),
       context.field('configurationFile', 'Document setup JSON', 'path', false,
         'Required for a new merchant. Select the completed provider, plan, public HTTPS origin, native price and recipient from document-merchant template. A saved setup can reopen without this file.'),
       ...original.fields.filter(item => !['stateDirectory', 'configurationFile'].includes(item.name))
@@ -54,6 +57,14 @@ export function documentApplication(context) {
 
 export function validateDocumentApplicationSettings(settings) {
   validateJobMerchantSettings(settings);
+  if(settings.commissioningOptionsFile){
+    need(typeof settings.commissioningOptionsFile==='string'&&settings.commissioningOptionsFile.length>0,
+      'APPLICATION_DOCUMENT_COMMISSIONING_REQUIRED');
+    need(!PATHS.some(([key])=>settings[key])&&!PORTS.some(([key])=>settings[key])&&
+      !BOOLEANS.some(([key])=>settings[key])&&(settings.landing===undefined||settings.landing===''||settings.landing==='jobs'),
+      'APPLICATION_DOCUMENT_COMMISSIONING_OPTIONS_OWNED',
+      'Use ports, service and customer choices in the complete commissioning JSON. Keep the original environment field selected.');
+  }
   need(typeof settings.directory === 'string' && settings.directory.length > 0,
     'APPLICATION_DOCUMENT_DIRECTORY_REQUIRED');
 }
@@ -70,8 +81,66 @@ async function reader(directory) {
   return original;
 }
 
+async function commissioningReader(directory){
+  directory=absolute(directory);
+  const original=await import(pathToFileURL(join(directory,'commissioning-application.mjs')).href);
+  need(original.DOCUMENT_COMMISSIONING_APPLICATION_SCHEMA===COMMISSIONING&&
+    typeof original.readDocumentCommissioningApplicationSelection==='function'&&
+    typeof original.assertDocumentCommissioningApplicationSelection==='function'&&
+    typeof original.readDocumentCommissioningApplicationLaunch==='function',
+    'APPLICATION_DOCUMENT_COMMISSIONING_SOURCE_REQUIRED');
+  return original;
+}
+async function prepareCommissioningApplication(settings,{inputPath,runtimeDirectory}){
+  const state=await inputPath(settings.directory,'directory',true,true);
+  const configuration=await inputPath(settings.commissioningOptionsFile,'file',false,true),inputs=[state,configuration];
+  const runtime=await inspectMerchantRuntime(absolute(runtimeDirectory),{load:false,source:false});
+  const native=join(runtime.sourceRoot,SOURCE),original=await commissioningReader(native);
+  const selected=original.assertDocumentCommissioningApplicationSelection(
+    await original.readDocumentCommissioningApplicationSelection({optionsFile:configuration.path}));
+  need(selected.sourceDirectory===native&&selected.review.options.directory===state.path,
+    'APPLICATION_DOCUMENT_COMMISSIONING_DIRECTORY_CHANGED');
+  for(const file of [selected.optionsFile,...selected.sourceFiles,...selected.review.sourceFiles,
+    ...selected.review.configurationFiles]){
+    const current=await inputPath(file.path,'file');
+    need(current.bytes===file.bytes&&current.sha256===file.sha256,'APPLICATION_DOCUMENT_SOURCE_CHANGED');
+    if(!inputs.some(value=>value.path===current.path))inputs.push(current);
+  }
+  return {
+    args:['commission','launch','--options',configuration.path,'--managed-source',native,
+      '--expected-selection',selected.selectionSha256],inputs,createDirectories:[],
+    resourceKey:digest(JSON.stringify({family:JOB_MERCHANT_APPLICATION_ID,directory:selected.merchantState})),
+    documentMerchant:{schema:COMMISSIONING,directory:state.path,sourceDirectory:native,
+      selectionSha256:selected.selectionSha256,merchantState:selected.merchantState,
+      provider:selected.review.request.provider,publicOrigin:selected.review.original.publicOrigin,
+      payment:selected.review.request.payment,...(selected.review.request.assembly?
+        {assemblyPayment:selected.review.request.assembly.payment}:{}),originalOperator:selected.review.original.operatorWorkspace??
+        selected.review.original.operatorProfile?.path,
+      customerDirectory:selected.review.customer.directory,customerOptions:selected.review.paths.customerOptions,
+      consumerOptions:selected.review.paths.consumerOptions,ports:{
+        seller:selected.review.options.sellerPort,customer:selected.review.options.customerPort,
+        operator:selected.review.options.operatorPort,operations:selected.review.options.operationsPort}}
+  };
+}
+function commissioningRequest(request){
+  need(request.command==='document-merchant'&&request.args?.[0]==='commission'&&request.args?.[1]==='launch'&&
+    request.terminal!==true&&!request.pythonCommand,'APPLICATION_DOCUMENT_REQUEST_CHANGED');
+  const allowed=new Map([['--options','optionsFile'],['--managed-source','sourceDirectory'],
+    ['--expected-selection','expectedSelection']]),value=Object.create(null),seen=new Set();
+  for(let i=2;i<request.args.length;i++){
+    const flag=request.args[i],entry=request.args[++i];
+    need(allowed.has(flag)&&!seen.has(flag)&&typeof entry==='string'&&entry&&!entry.startsWith('--'),
+      'APPLICATION_DOCUMENT_REQUEST_CHANGED');seen.add(flag);value[allowed.get(flag)]=entry;
+  }
+  absolute(value.optionsFile);absolute(value.sourceDirectory);
+  need(/^[a-f0-9]{64}$/.test(value.expectedSelection??''),'APPLICATION_DOCUMENT_REQUEST_CHANGED');
+  return {commissioning:true,sourceDirectory:value.sourceDirectory,expectedSelection:value.expectedSelection,
+    options:{optionsFile:value.optionsFile}};
+}
+
 export async function prepareDocumentApplication(settings, {inputPath, runtimeDirectory}) {
   validateDocumentApplicationSettings(settings);
+  if(settings.commissioningOptionsFile)return prepareCommissioningApplication(settings,{inputPath,runtimeDirectory});
   const state = await inputPath(settings.directory, 'directory', Boolean(settings.configurationFile), true);
   const inputs = [state], options = {directory: state.path, landing: settings.landing ?? 'jobs'};
   for (const [setting, name] of PATHS) {
@@ -130,6 +199,7 @@ export async function prepareDocumentApplication(settings, {inputPath, runtimeDi
 }
 
 export function documentApplicationRequest(request) {
+  if(request.args?.[0]==='commission')return commissioningRequest(request);
   need(request.command === 'document-merchant' && Array.isArray(request.args) &&
     request.args[0] === 'launch' && request.terminal !== true && !request.pythonCommand,
   'APPLICATION_DOCUMENT_REQUEST_CHANGED');
@@ -161,7 +231,17 @@ export function documentApplicationRequest(request) {
 }
 
 export async function verifyDocumentApplicationLaunch(request) {
-  const requested = documentApplicationRequest(request), original = await reader(requested.sourceDirectory);
+  const requested = documentApplicationRequest(request);
+  if(requested.commissioning){
+    const original=await commissioningReader(requested.sourceDirectory);
+    const selected=original.assertDocumentCommissioningApplicationSelection(
+      await original.readDocumentCommissioningApplicationSelection(requested.options),requested.expectedSelection);
+    const service=await reader(requested.sourceDirectory);
+    await service.assertDocumentServiceSource(join(absolute(request.releaseDirectory),'source',SOURCE));
+    need(selected.sourceDirectory===requested.sourceDirectory,'APPLICATION_DOCUMENT_SOURCE_CHANGED');
+    return selected;
+  }
+  const original = await reader(requested.sourceDirectory);
   const selected = original.assertDocumentServiceSelection(
     await original.readDocumentServiceSelection(requested.options), requested.expectedSelection);
   need(selected.sourceDirectory === requested.sourceDirectory, 'APPLICATION_DOCUMENT_SOURCE_CHANGED');
@@ -183,29 +263,34 @@ export async function prepareDocumentApplicationChild(request, directory, origin
 }
 
 export async function documentApplicationStartup(request, text, directory) {
-  if (request.command !== 'document-merchant' || request.args?.[0] !== 'launch' ||
+  if (request.command !== 'document-merchant' || !['launch','commission'].includes(request.args?.[0]) ||
     typeof text !== 'string' || text.length > 16384 || !text.startsWith('{')) return null;
   let announcement; try {announcement = JSON.parse(text);} catch {return null;}
   if (!plain(announcement) || announcement.schema !== STARTUP || announcement.state !== 'LISTENING') return null;
-  const requested = documentApplicationRequest(request), original = await reader(requested.sourceDirectory);
+  const requested = documentApplicationRequest(request), original = requested.commissioning?
+    await commissioningReader(requested.sourceDirectory):await reader(requested.sourceDirectory);
   const privateLaunch = jobServiceLaunchPath(absolute(directory));
   need(announcement.privateLaunch === privateLaunch && Number.isSafeInteger(announcement.pid) &&
     announcement.pid > 0 && typeof announcement.instanceId === 'string',
   'APPLICATION_DOCUMENT_STARTUP_CHANGED');
-  const received = await original.readDocumentServiceLaunch({
-    options: requested.options, file: privateLaunch, expectedSelection: requested.expectedSelection,
-    expected: {pid: announcement.pid, instanceId: announcement.instanceId}
-  });
+  const receiving={file:privateLaunch,expectedSelection:requested.expectedSelection,
+    expected:{pid:announcement.pid,instanceId:announcement.instanceId}};
+  const received=requested.commissioning?
+    await original.readDocumentCommissioningApplicationLaunch({...requested.options,...receiving}):
+    await original.readDocumentServiceLaunch({options:requested.options,...receiving});
+  if(requested.commissioning)need(announcement.documentCommissioningSha256===received.applicationSelection.selectionSha256,
+    'APPLICATION_DOCUMENT_STARTUP_CHANGED');
   const {launch, nativeSelection, documentSelection} = received;
   need(announcement.selectionSha256 === nativeSelection.selectionSha256 &&
     announcement.entryUrl === launch.entryUrl &&
     ['seller', 'customer', 'operator', 'operations', 'intake', 'mode', 'inputReceiving',
       'resolution', 'deliveries', 'deliveryState', 'landing'].every(name => announcement[name] === launch[name]),
   'APPLICATION_DOCUMENT_STARTUP_CHANGED', 'Read this saved document merchant\'s original live service.');
+  const serviceOptions=requested.commissioning?received.commissioning.serviceOptions:requested.options;
   for (const [, name] of PORTS) {
     const key = {sellerPort: 'seller', customerPort: 'customer', operatorPort: 'operator',
       operationsPort: 'operations'}[name];
-    need(requested.options[name] === 0 || Number(new URL(launch[key]).port || 80) === requested.options[name],
+    need(serviceOptions[name] === 0 || Number(new URL(launch[key]).port || 80) === serviceOptions[name],
       'APPLICATION_DOCUMENT_PORT_CHANGED');
   }
   const links = [
@@ -221,7 +306,10 @@ export async function documentApplicationStartup(request, text, directory) {
       privateLaunch, landing: launch.landing, documentDirectory: documentSelection.directory,
       documentSelectionSha256: documentSelection.selectionSha256,
       setupInputSha256: documentSelection.setup.inputSha256,
-      provider: documentSelection.summary.provider.provider
+      provider: documentSelection.summary.provider.provider,
+      ...(requested.commissioning?{commissioningSelectionSha256:received.applicationSelection.selectionSha256,
+        commissioningDirectory:received.commissioning.directory,customerOptions:received.commissioning.customerOptions,
+        consumerOptions:received.commissioning.consumerOptions}:{})
     }
   };
 }
@@ -237,7 +325,8 @@ export default {
     return prepareDocumentApplicationChild(request, directory, args, environment);
   },
   matchRequest(request) {
-    return !request.pythonCommand && request.command === 'document-merchant' && request.args?.[0] === 'launch';
+    return !request.pythonCommand && request.command === 'document-merchant' && (request.args?.[0] === 'launch'||
+      request.args?.[0] === 'commission'&&request.args?.[1] === 'launch');
   },
   createObserver(request, directory) {
     return observeApplicationStartup(request, directory, text => {

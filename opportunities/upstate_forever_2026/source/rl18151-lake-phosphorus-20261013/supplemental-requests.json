@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.original-station-source-supplement/v1",
+  "original_plan_request_count": 13,
+  "requests": [
+    {
+      "id": "nutrient-narrow-results",
+      "path": "original/nutrient-narrow-results.csv",
+      "kind": "results",
+      "group": "Nutrient",
+      "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Nutrient&mimeType=csv&sorted=no&startDateLo=01-01-2018&startDateHi=10-13-2026&dataProfile=narrowResult",
+      "scope_extension": "Original ResultIdentifier and exact limit joins requested by ECO-GEO-0D0F at1791870662.923309; original13 requestplan unchanged."
+    },
+    {
+      "id": "physical-narrow-results",
+      "path": "original/physical-narrow-results.csv",
+      "kind": "results",
+      "group": "Physical",
+      "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Physical&mimeType=csv&sorted=no&startDateLo=01-01-2018&startDateHi=10-13-2026&dataProfile=narrowResult",
+      "scope_extension": "Original ResultIdentifier and exact Activity/Limit linkage; requested by AE11 parent after current SV833 maintained adapter review. Original13 requestplan unchanged."
+    },
+    {
+      "id": "microbiological-narrow-results",
+      "path": "original/microbiological-narrow-results.csv",
+      "kind": "results",
+      "group": "Microbiological",
+      "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Microbiological&mimeType=csv&sorted=no&startDateLo=01-01-2018&startDateHi=10-13-2026&dataProfile=narrowResult",
+      "scope_extension": "Original ResultIdentifier and exact Activity/Limit linkage; requested by AE11 parent after current SV833 maintained adapter review. Original13 requestplan unchanged."
+    }
+  ],
+  "purpose": "Retain native ResultIdentifier for exact original Activity and reporting-limit joins; all thirteen original planned responses remain unchanged."
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.retained-observed-source-edition/v1",
+  "source_commit": "00346db5fdf75684b4ea25c45d6b28d9d11a8eb2",
+  "source_manifest_sha256": "ebb5f63c95b77d7c5bfa32786871f70a93893d19b4fac7e4c96a74a38ba0c2d4",
+  "source_recipe_sha256": "78f1da75c53f038d5a65652576e29e11c37e9ca35dda6e1c0abae0221053bc4d",
+  "corrections": [
+    {
+      "path": "source/hydrology-huc05-07-20261013/README.md",
+      "original": {
+        "bytes": 5941,
+        "sha256": "d620a30d4cdef3af44beeae7e68871844fe8f860fb9513349d7b4ab5c0746115"
+      },
+      "retained": {
+        "bytes": 5914,
+        "sha256": "052fa891c97a0c8979f528dd90fd0100eec641ff6805405f1a48d785329a727e"
+      },
+      "reason": "Repair the stale documentation binding using the complete README from the source commit. All numerical inputs and results remain original."
+    }
+  ],
+  "source_file_count": 363,
+  "scope": "Preserve the original regional scientific source edition independently of later application and source revisions."
+}

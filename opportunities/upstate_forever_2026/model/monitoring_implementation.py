@@ -8,15 +8,14 @@ from __future__ import annotations
 
 from copy import deepcopy
 import hashlib
-import io
 import json
 from pathlib import Path
-import zipfile
 
 from .implementation import ImplementationStore
 from .implementation_schema import make_plan, validate_plan, document_digest
-from .monitoring_common import ContractError, canonical_bytes, digest, held
-from .monitoring_sources import export_source
+from .monitoring_common import ContractError, canonical_bytes, digest, file_sha256, held
+from .monitoring_sources import source_export_members
+from .monitoring_packet import add_member, bytes_member, retain_packet
 
 FORMAT = "upstate.monitoring-fieldwork/v1"
 MAPPED = ("sites", "monitoring_plans", "visits", "tasks", "activities", "budget_lines")
@@ -55,38 +54,27 @@ def _selection(service, campaign_id, revision_id):
 
 
 def _packet(workspace, selected):
-    """The same native source exporter retains publisher files and companions."""
-    files = {name + ".json": canonical_bytes(selected[name]) for name in
-             ("revision", "plan", "network", "events", "history")}
+    """Retain the complete original packet while keeping native bodies on disk."""
+    files = {}
+    for name in ("revision", "plan", "network", "events", "history"):
+        add_member(files, name + ".json", bytes_member(canonical_bytes(selected[name])))
     for key, original in selected["retained_plans"].items():
-        files["designs/" + key + ".json"] = canonical_bytes(original)
+        add_member(files, "designs/" + key + ".json", bytes_member(canonical_bytes(original)))
     for key, original in selected["retained_networks"].items():
-        files["networks/" + key + ".json"] = canonical_bytes(original)
+        add_member(files, "networks/" + key + ".json", bytes_member(canonical_bytes(original)))
         for label, binding in original["source_bindings"].items():
             if binding:
-                for name, body in export_source(workspace, label, binding).items():
-                    member = "network_sources/" + key + "/" + name
-                    if member in files and files[member] != body:
-                        raise ContractError("Original monitoring packet members conflict")
-                    files[member] = body
-    files["manifest.json"] = canonical_bytes({
+                for name, member in source_export_members(workspace, label, binding):
+                    add_member(files, "network_sources/" + key + "/" + name, member)
+    manifest = canonical_bytes({
         "schema": FORMAT, "campaign_id": selected["revision"]["campaign_id"],
         "source_revision_id": selected["revision"]["id"],
-        "files": [{"path": name, "bytes": len(body),
-                   "sha256": hashlib.sha256(body).hexdigest()}
-                  for name, body in sorted(files.items())]})
-    output = io.BytesIO()
-    with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-        for name, body in sorted(files.items()):
-            relative = Path(name)
-            if relative.is_absolute() or ".." in relative.parts or "\\" in name:
-                raise ContractError("The original source packet member leaves its directory")
-            entry = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-            entry.compress_type = zipfile.ZIP_DEFLATED
-            entry.external_attr = 0o100644 << 16
-            archive.writestr(entry, body)
-    return output.getvalue()
-
+        "files": [{"path": name, "bytes": member["bytes"], "sha256": member["sha256"]}
+                  for name, member in sorted(files.items())]})
+    add_member(files, "manifest.json", bytes_member(manifest))
+    packet = (workspace.root / "monitoring_fieldwork" / selected["revision"]["id"]
+              / "monitoring-field-package.zip")
+    return retain_packet(packet, files)
 
 def _rows(selected, source_id):
     revision, plan, network = (selected[name] for name in ("revision", "plan", "network"))
@@ -386,11 +374,8 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
             packet_sha = existing["snapshot"]["packet"]["sha256"]
             packet_bytes = existing["snapshot"]["packet"]["bytes"]
         else:
-            body = _packet(service.workspace, selected)
-            packet_sha, packet_bytes = hashlib.sha256(body).hexdigest(), len(body)
-            from .common import atomic_bytes
-            packet = service.root / "monitoring_fieldwork" / revision["id"] / "monitoring-field-package.zip"
-            atomic_bytes(packet, body, immutable=True)
+            packet = _packet(service.workspace, selected)
+            packet_sha, packet_bytes = packet["sha256"], packet["bytes"]
             calendar = source_plan["configuration"]["calendar"]
             document = deepcopy(current) if current else make_plan(
                 plan_id, revision["title"], calendar["start_date"],
@@ -428,7 +413,7 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
             packet = service.root / "monitoring_fieldwork" / revision["id"] / "monitoring-field-package.zip"
             if not packet.is_file() or packet.stat().st_size != packet_bytes:
                 raise ContractError("Resume with the original retained monitoring field package")
-            if hashlib.sha256(packet.read_bytes()).hexdigest() != packet_sha:
+            if file_sha256(packet) != packet_sha:
                 raise ContractError("The original monitoring field package changed")
             attached = store.attach_file(plan_id, packet, current["revision"], actor=actor,
                                          label="Original monitoring campaign revision " + str(revision["revision"]))
@@ -436,7 +421,7 @@ def receive(service, *, campaign_id, expected_revision_id, operation_id):
         attached_path = (service.root / attachment["reference"]).resolve(strict=True)
         if (not attached_path.is_relative_to((store.base / plan_id / "attachments").resolve())
                 or attached_path.stat().st_size != packet_bytes
-                or hashlib.sha256(attached_path.read_bytes()).hexdigest() != packet_sha):
+                or file_sha256(attached_path) != packet_sha):
             raise ContractError("The retained fieldwork source attachment changed")
         origin = current["monitoring_origin"]
         return {"schema": FORMAT, "plan_id": plan_id, "revision": current["revision"],

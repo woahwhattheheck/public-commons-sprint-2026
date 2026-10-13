@@ -1,0 +1,223 @@
+{
+  "schema": "upstate.station-acquisition/v1",
+  "operation": "A73C-RL18151-PHOSPHORUS-20261013",
+  "station": {
+    "site_id": "RL-18151",
+    "monitoring_location_identifier": "21SC60WQ_WQX-RL-18151",
+    "station_publisher_huc12": "030601010204",
+    "station_publisher_huc8": "03060101",
+    "assessment_records": [
+      {
+        "id": "5d50e961f2d6ea86619791dc",
+        "source_id": "scdes-303d-published-2024-pdf-table-text",
+        "source_vintage": "2024",
+        "cause_raw": "TP",
+        "cause_label": "Total phosphorus",
+        "huc12": "030601010204",
+        "original_record_locator": {
+          "path": "inputs/303d-2024-pdf-table-normalized.json",
+          "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+          "record_pointer": "/records/1361",
+          "record_index": 1361,
+          "record_id": "5d50e961f2d6ea86619791dc",
+          "original_source_row": 1124,
+          "original_source_page": 61
+        }
+      }
+    ],
+    "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
+    "page_text_sha256": "0e184277dd9716a11de74b5467def12ae0643c234c427b8d68295e678f799ad6",
+    "periods": [
+      {
+        "characteristic_group": "Biological, Algae, Phytoplankton",
+        "first_year": 2018,
+        "last_year": 2025,
+        "original_row": "Biological, Algae, Phytoplankton  | 2018 - 2025"
+      },
+      {
+        "characteristic_group": "Cyanotoxins, Phytotoxins",
+        "first_year": 2018,
+        "last_year": 2018,
+        "original_row": "Cyanotoxins, Phytotoxins  | 2018 - 2018"
+      },
+      {
+        "characteristic_group": "Information",
+        "first_year": 2018,
+        "last_year": 2026,
+        "original_row": "Information  | 2018 - 2026"
+      },
+      {
+        "characteristic_group": "Inorganics, Major, Metals",
+        "first_year": 2018,
+        "last_year": 2026,
+        "original_row": "Inorganics, Major, Metals  | 2018 - 2026"
+      },
+      {
+        "characteristic_group": "Inorganics, Minor, Metals",
+        "first_year": 2018,
+        "last_year": 2026,
+        "original_row": "Inorganics, Minor, Metals  | 2018 - 2026"
+      },
+      {
+        "characteristic_group": "Microbiological",
+        "first_year": 2018,
+        "last_year": 2026,
+        "original_row": "Microbiological  | 2018 - 2026"
+      },
+      {
+        "characteristic_group": "Nutrient",
+        "first_year": 2018,
+        "last_year": 2026,
+        "original_row": "Nutrient  | 2018 - 2026"
+      },
+      {
+        "characteristic_group": "Physical",
+        "first_year": 2018,
+        "last_year": 2026,
+        "original_row": "Physical  | 2018 - 2026"
+      }
+    ]
+  },
+  "start_date": "2018-01-01",
+  "end_date": "2026-10-13",
+  "requests": [
+    {
+      "site_id": "RL-18151",
+      "monitoring_location_identifier": "21SC60WQ_WQX-RL-18151",
+      "characteristic_group": "Microbiological",
+      "publisher_first_year": 2018,
+      "publisher_last_year": 2026,
+      "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
+      "page_text_sha256": "0e184277dd9716a11de74b5467def12ae0643c234c427b8d68295e678f799ad6",
+      "assessment_records": [
+        {
+          "id": "5d50e961f2d6ea86619791dc",
+          "source_id": "scdes-303d-published-2024-pdf-table-text",
+          "source_vintage": "2024",
+          "cause_raw": "TP",
+          "cause_label": "Total phosphorus",
+          "huc12": "030601010204",
+          "original_record_locator": {
+            "path": "inputs/303d-2024-pdf-table-normalized.json",
+            "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+            "record_pointer": "/records/1361",
+            "record_index": 1361,
+            "record_id": "5d50e961f2d6ea86619791dc",
+            "original_source_row": 1124,
+            "original_source_page": 61
+          }
+        }
+      ],
+      "summary": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/summary/monitoringLocation/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Microbiological&mimeType=csv&dataProfile=periodOfRecord&summaryYears=all"
+      },
+      "results": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Microbiological&mimeType=csv&sorted=no"
+      },
+      "activities": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Microbiological&mimeType=csv&sorted=no"
+      },
+      "detection_limits": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Microbiological&mimeType=csv&sorted=no"
+      }
+    },
+    {
+      "site_id": "RL-18151",
+      "monitoring_location_identifier": "21SC60WQ_WQX-RL-18151",
+      "characteristic_group": "Nutrient",
+      "publisher_first_year": 2018,
+      "publisher_last_year": 2026,
+      "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
+      "page_text_sha256": "0e184277dd9716a11de74b5467def12ae0643c234c427b8d68295e678f799ad6",
+      "assessment_records": [
+        {
+          "id": "5d50e961f2d6ea86619791dc",
+          "source_id": "scdes-303d-published-2024-pdf-table-text",
+          "source_vintage": "2024",
+          "cause_raw": "TP",
+          "cause_label": "Total phosphorus",
+          "huc12": "030601010204",
+          "original_record_locator": {
+            "path": "inputs/303d-2024-pdf-table-normalized.json",
+            "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+            "record_pointer": "/records/1361",
+            "record_index": 1361,
+            "record_id": "5d50e961f2d6ea86619791dc",
+            "original_source_row": 1124,
+            "original_source_page": 61
+          }
+        }
+      ],
+      "summary": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/summary/monitoringLocation/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Nutrient&mimeType=csv&dataProfile=periodOfRecord&summaryYears=all"
+      },
+      "results": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Nutrient&mimeType=csv&sorted=no"
+      },
+      "activities": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Nutrient&mimeType=csv&sorted=no"
+      },
+      "detection_limits": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Nutrient&mimeType=csv&sorted=no"
+      }
+    },
+    {
+      "site_id": "RL-18151",
+      "monitoring_location_identifier": "21SC60WQ_WQX-RL-18151",
+      "characteristic_group": "Physical",
+      "publisher_first_year": 2018,
+      "publisher_last_year": 2026,
+      "source_uri": "https://www.waterqualitydata.us/provider/STORET/21SC60WQ_WQX/21SC60WQ_WQX-RL-18151/",
+      "page_text_sha256": "0e184277dd9716a11de74b5467def12ae0643c234c427b8d68295e678f799ad6",
+      "assessment_records": [
+        {
+          "id": "5d50e961f2d6ea86619791dc",
+          "source_id": "scdes-303d-published-2024-pdf-table-text",
+          "source_vintage": "2024",
+          "cause_raw": "TP",
+          "cause_label": "Total phosphorus",
+          "huc12": "030601010204",
+          "original_record_locator": {
+            "path": "inputs/303d-2024-pdf-table-normalized.json",
+            "sha256": "69e6894001fdcfa0130d8be532a31655eda22486a4044079665e8ee614eb5b0c",
+            "record_pointer": "/records/1361",
+            "record_index": 1361,
+            "record_id": "5d50e961f2d6ea86619791dc",
+            "original_source_row": 1124,
+            "original_source_page": 61
+          }
+        }
+      ],
+      "summary": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/summary/monitoringLocation/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Physical&mimeType=csv&dataProfile=periodOfRecord&summaryYears=all"
+      },
+      "results": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/Result/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Physical&mimeType=csv&sorted=no"
+      },
+      "activities": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/Activity/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Physical&mimeType=csv&sorted=no"
+      },
+      "detection_limits": {
+        "method": "GET",
+        "uri": "https://waterqualitydata.us/data/ResultDetectionQuantitationLimit/search?siteid=21SC60WQ_WQX-RL-18151&characteristicType=Physical&mimeType=csv&sorted=no"
+      }
+    }
+  ],
+  "parent": {
+    "file": "acquisition-plan.json",
+    "sha256": "d96c3e9340e66db4ddd93798ca50c8d9c0f0acac6a05c6bc248897cf0e9402cd",
+    "bank_sha256": "c8e07035ae9ac68ff619ee3f48e128191eea2927d8055f34a76e1d2db2ce9836",
+    "slack_file_id": "F0C8TAWUZJ5"
+  }
+}

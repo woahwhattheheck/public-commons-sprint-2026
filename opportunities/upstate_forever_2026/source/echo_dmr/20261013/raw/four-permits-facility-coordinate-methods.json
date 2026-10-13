@@ -1,0 +1,115 @@
+{
+"Results":{
+"Message":"Success",
+"QueryID":"717",
+"QueryRows":"4",
+"IndianCountryRows":"0",
+"SVRows":"0",
+"CVRows":"4",
+"V3Rows":"4",
+"FEARows":"3",
+"InfFEARows":"4",
+"INSPRows":"4",
+"BioCVRows":"0",
+"BioV3Rows":"0",
+"VioLast4QRows":"4",
+"TotalPenalties":"$12,000",
+"BadSystemIDs":null,
+"IconBaseURL":"https://echo.epa.gov/themes/custom/echo/images/map/",
+"PopUpBaseURL":"https://echodata.epa.gov/echo/cwa_rest_services.pop_up?p_id=",
+"ServiceBaseURL":"https://ordsint.rtpnc.epa.gov/ords/echo/cwa_rest_services.get_facility_info",
+"QueryParameters":[
+{
+"QP":"output",
+"QV":"JSON"
+}
+,{
+"QP":"p_pid",
+"QV":"SC0042994,SC0047856,SC0000477,SC0035700"
+}
+,{
+"QP":"p_limit_addr",
+"QV":"Y"
+}
+,{
+"QP":"qcolumns",
+"QV":"1,2,9,26,27,163,164,166,167,229,230,231"
+}
+]
+,
+"Facilities":[
+{
+"ObjectId":"1",
+"CWPName":"MILLIKEN PENDLETON PLANT",
+"SourceID":"SC0000477",
+"RegistryID":"110000354811",
+"CWPSICDescs":"2262: Finishing Plants, Manmade",
+"CWPNAICSCodes":"313310",
+"FacLat":"34.65874",
+"FacLong":"-82.80247",
+"FacDerivedWBDHu8":"03060101",
+"FacDerivedWBDHu8Name":"Seneca",
+"FacDerivedWBD":"030601010602",
+"FacDerivedWBDName":"Lower Eighteenmile Creek",
+"CollectionMethod":"ADDRESS MATCHING-HOUSE NUMBER",
+"ReferencePoint":"CENTER OF A FACILITY OR STATION",
+"CalculatedAccuracyMeters":"30",
+"ElectrRptWaiverTypeCode":null
+}
+,{
+"ObjectId":"2",
+"CWPName":"PENDLETON-CLEMSON REG WWTF",
+"SourceID":"SC0035700",
+"RegistryID":"110002234779",
+"CWPSICDescs":"4952: Sewerage Systems",
+"CWPNAICSCodes":"221320",
+"FacLat":"34.6356",
+"FacLong":"-82.8014",
+"FacDerivedWBDHu8":"03060101",
+"FacDerivedWBDHu8Name":"Seneca",
+"FacDerivedWBD":"030601010602",
+"FacDerivedWBDName":"Lower Eighteenmile Creek",
+"CollectionMethod":"THE GEOGRAPHIC COORDINATE DETERMINATION METHOD BASED ON GPS",
+"ReferencePoint":"CENTER OF A FACILITY OR STATION",
+"CalculatedAccuracyMeters":"10",
+"ElectrRptWaiverTypeCode":null
+}
+,{
+"ObjectId":"3",
+"CWPName":"PICKENS CO 18 MILE CREEK UPPER WWTP",
+"SourceID":"SC0042994",
+"RegistryID":"110000762149",
+"CWPSICDescs":"4952: Sewerage Systems",
+"CWPNAICSCodes":"221320",
+"FacLat":"34.76083",
+"FacLong":"-82.68579",
+"FacDerivedWBDHu8":"03060101",
+"FacDerivedWBDHu8Name":"Seneca",
+"FacDerivedWBD":"030601010601",
+"FacDerivedWBDName":"Upper Eighteenmile Creek",
+"CollectionMethod":null,
+"ReferencePoint":null,
+"CalculatedAccuracyMeters":"17430",
+"ElectrRptWaiverTypeCode":null
+}
+,{
+"ObjectId":"4",
+"CWPName":"PICKENS CO 18-MILE CREEK MIDDLE  WWTF",
+"SourceID":"SC0047856",
+"RegistryID":"110002186777",
+"CWPSICDescs":"4952: Sewerage Systems",
+"CWPNAICSCodes":"221320",
+"FacLat":"34.69217",
+"FacLong":"-82.76706",
+"FacDerivedWBDHu8":"03060101",
+"FacDerivedWBDHu8Name":"Seneca",
+"FacDerivedWBD":"030601010602",
+"FacDerivedWBDName":"Lower Eighteenmile Creek",
+"CollectionMethod":null,
+"ReferencePoint":null,
+"CalculatedAccuracyMeters":"17430",
+"ElectrRptWaiverTypeCode":null
+}
+]
+}
+}

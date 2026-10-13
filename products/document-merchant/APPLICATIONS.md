@@ -10,6 +10,58 @@ worker and optional completed-result dispatcher. Its **Open**, **Stop** and
 continuation actions use the original managed service. The document directory
 contains the retained setup and original `merchant-state` directory.
 
+## Commission the existing account in Applications
+
+The same **Document merchant** application can own the complete account commissioning workflow. Prepare a private JSON file containing the exact existing `commission review` input. For a direct account, it selects `accountSourceFile`; for a retained commerce setup, it selects `commerceDirectory` and `intentId`. The [commissioning guide](COMMISSIONING.md) defines both original source contracts.
+
+A direct-account options file has this shape:
+
+~~~json
+{
+  "accountSourceFile": "/absolute/private/document-account.json",
+  "directory": "/absolute/private/document-commission",
+  "provider": "mintpdf",
+  "anonymous": true,
+  "customerOptionsFile": "/absolute/private/original-customer-options.json",
+  "sellerPort": 8431,
+  "customerPort": 8432,
+  "operatorPort": 8433,
+  "operationsPort": 8434
+}
+~~~
+
+Select actual existing account, customer and available listener settings. Choose the real provider and its existing private environment. The anonymous option applies to MintPDF's own account contract; other providers use their configured key. If the customer is selected by its original directory, use `customerDirectory` instead of `customerOptionsFile`.
+
+For a PDFMint merchant that also fulfills ordered PDF bundles, add `assemblyPaymentFile` to this complete options JSON. It selects the full original-account assembly price separately from the per-render price. Review shows both term sets; the same facilitator and managed service own both functions. See [combined rendering and assembly commissioning](COMMISSIONING.md#commission-rendering-and-ordered-pdf-assembly-together).
+
+In Runtime Workspace → **Applications**, choose **Document merchant**:
+
+1. Set **Private document merchant directory** to the commissioning JSON's exact `directory`.
+2. Set **Original account commissioning JSON** to that complete private options file.
+3. Set **Private environment JSON** to the original provider/facilitator environment. Keep its key values on the host.
+4. Leave the separate direct-setup/factory, intake/delivery, listener and worker fields at their empty/default values. The complete commissioning JSON supplies these service choices.
+5. Choose **Review**, inspect the selected original account, provider, native payment terms, customer directory and listeners, then **Save**.
+6. Use **Review Start** and **Start**. First Start prepares the exact reviewed installation; subsequent starts reopen it.
+7. **Open** receives the original authenticated Jobs operator. Its links open Document jobs, Input receiving and Job resolution. Use the generated customer settings for the existing Document production or Case Desk PDF workflow.
+
+The source selection includes the complete commissioning input, original profile/setup, facilitator, account policy, signer source, product source and native runtime. Materializing the first setup leaves this selection stable. A changed source or account configuration requires reviewing that changed selection before the application starts.
+
+The application owns the same paid-job resource as a direct Document merchant or generic Paid-job merchant selecting its generated `merchant/merchant-state`. The original managed Jobs launch supplies its process, instance, listener and authenticated workspace identity. Applications rereads that launch and checks the exact commissioning selection before exposing Open.
+
+**Stop** closes the original Jobs service, drains its work, then releases the native facilitator's signer ownership. The merchant setup, customer configuration, original ledger and completed requests remain in their original directories. Reopen the same saved application to continue customer work.
+
+The underlying installed command, used by the existing application manager, is:
+
+~~~sh
+document-merchant commission launch \
+  --options /absolute/private/document-commission-options.json \
+  --managed-source /absolute/installed/source/products/document-merchant \
+  --expected-selection ACTUAL_APPLICATION_SELECTION_SHA256
+~~~
+
+The original manager supplies its private managed launch path. Startup emits one original Jobs announcement with the selected commissioning identity. The source-owned Applications provider receives that same announcement; it adds no service record or payment journal.
+
+
 ## Prepare the supplier and native price
 
 Create the complete editable setup template:
