@@ -153,6 +153,9 @@ def _bundle(path, selection, *, target=None):
                 raise ValueError("Exported campaign history ends at another revision")
         elif events:
             raise ValueError("A saved design report cannot have campaign events")
+        from . import utility_monitoring_report
+        utility_contexts = utility_monitoring_report.read_bundle(
+            archive, manifest, plan, network, campaign, events)
         if target is not None:
             target.mkdir(parents=True, exist_ok=True)
             for name in sorted(names):
@@ -182,7 +185,8 @@ def _bundle(path, selection, *, target=None):
                 finally:
                     pending.unlink(missing_ok=True)
         return {"plan": plan, "network": network, "campaign": campaign,
-                "history": history, "events": events, "manifest": manifest}
+                "history": history, "events": events, "manifest": manifest,
+                "utility_contexts": utility_contexts}
 
 
 def _capture(workspace, directory, selection):
@@ -465,6 +469,8 @@ def _sections(context, bridges):
                 ["Declared method", json.dumps(bridge["method"], ensure_ascii=False, sort_keys=True)],
                 ["Original support summary", json.dumps(bridge["summary"], ensure_ascii=False, sort_keys=True)]]),
             _links([("Complete receiving-water provenance and retained inputs", bridge["path"])])]])
+    from . import utility_monitoring_report
+    sections.extend(utility_monitoring_report.scientific_sections(context.get("utility_contexts", [])))
     return sections
 
 
@@ -506,6 +512,9 @@ def prepare(workspace, selection, *, progress=None):
         from . import monitoring_comparison_report
         identity["comparison_producer_sha256"] = file_digest(Path(monitoring_comparison_report.__file__))
         identity["comparison_figure_sources"] = monitoring_comparison_report.figure_implementation()
+    if not selected.get("comparison_id"):
+        from . import utility_monitoring_report
+        identity["utility_report_producer_sha256"] = file_digest(utility_monitoring_report.__file__)
     key = digest(identity)
     directory = workspace.root / FOLDER / key
     def report(stage):
@@ -550,7 +559,8 @@ def prepare(workspace, selection, *, progress=None):
                            "stations": len(network["stations"]), "visits": len(plan["calendar"]["visits"]),
                            "events": len(context["events"]), "weight_basis": plan["weight_basis"],
                            "coverage": plan["coverage"], "cost": plan["cost"],
-                           "receiving_water_bridge_ids": [b["id"] for b in bridges]}
+                           "receiving_water_bridge_ids": [b["id"] for b in bridges],
+                           "utility_context_ids": [row["id"] for row in context["utility_contexts"]]}
                 edition, kind = EDITION, "monitoring-design-and-field-history"
                 sections = _sections(context, bridges)
                 source_links = ["native-monitoring-bundle.zip", "native/manifest.json",
@@ -558,6 +568,7 @@ def prepare(workspace, selection, *, progress=None):
                                 "native/calendar.csv", "native/catchments.geojson",
                                 "native/source-stations.geojson", "monitoring-map.svg",
                                 "history-records.json", "bridge-selection.json"]
+                source_links.extend(utility_monitoring_report.source_links(context["utility_contexts"]))
             companions = [describe_file(directory, path) for path in sorted(directory.rglob("*"))
                           if path.is_file() and not path.name.startswith(".")
                           and not (path.parent == directory and path.name in
