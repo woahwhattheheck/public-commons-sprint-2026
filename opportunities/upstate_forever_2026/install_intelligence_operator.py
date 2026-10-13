@@ -114,6 +114,12 @@ KNOWN_PREDECESSORS.setdefault("operator/install_diagnostic_investigations.py", [
 KNOWN_PREDECESSORS.setdefault("operator/diagnostic_investigations_patch.json", []).append("813d099e384821fec074088ece49c3a6d7f26c91fbd9fd590fd50429cc92a82e")
 KNOWN_PREDECESSORS.setdefault("install_intelligence_operator.py", []).append("dc4027036e3143979acc4713cdce3a37e38bbf3c5840adbc5b0d0e2a3b818dff")
 
+# ES26 independent Investigation reads retain every completed task and saved view
+KNOWN_PREDECESSORS.setdefault("operator/web/investigations.mjs", []).append("61f42d7fa3ad630d694c5eaa76ae5a565646ac467c2132c9dbcd5c4d3f595de6")
+KNOWN_PREDECESSORS.setdefault("operator/INTELLIGENCE_DIAGNOSTICS.md", []).append("c2927af494d5c215845ea9306aa197f69f115499fde3889b677585098898f4fc")
+KNOWN_PREDECESSORS.setdefault("operator/diagnostic_investigations_patch.json", []).append("fc96878501ee065e6c8b287c21a50c0f2414ad405cf6dee08ce39ce84ae18a6d")
+KNOWN_PREDECESSORS.setdefault("install_intelligence_operator.py", []).append("81d65dfe2e8b77492b0453be2baf9cd6a0dc1aa70ad687c372cc1346b13162dc")
+
 PORTABLE_MARKER = "# A66A complete Investigations and scientific catalog source"
 
 def sha(body):
