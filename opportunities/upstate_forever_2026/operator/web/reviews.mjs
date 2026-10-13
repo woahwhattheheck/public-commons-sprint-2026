@@ -258,10 +258,61 @@ export function attachCustomerReviews({getState,api,endpoint,openForm,submitActi
     if(!value)return '<span class="note">Unreviewed</span>';
     return badge(value.decision)+(value.comment?'<p>'+esc(value.comment)+'</p>':'')+(value.requested_change?'<p><strong>Requested change:</strong> '+esc(value.requested_change)+'</p>':'')+(value.assignee?'<small>Assigned to '+esc(value.assignee)+'</small>':'');
   }
+  function scientificReportFiles(packet, downloads) {
+    const sections=[];
+    for(const selected of packet.review.selections??[]){
+      if(selected.kind!=='sources')continue;
+      for(const entry of selected.source?.entries??[]){
+        const metadata=entry.metadata??{},identity=metadata.scientific_report_identity;
+        if(entry.role!=='SCIENTIFIC_REPORT_REVIEW'||
+            identity?.schema!=='upstate.scientific-report-review/v1'||
+            metadata.report_schema!=='upstate.scientific-report-edition/v1'||
+            identity.project_id!==packet.review.project.id||
+            !/^[0-9a-f]{64}$/.test(identity.scientific_report_edition_id??'')||
+            !Array.isArray(identity.members))continue;
+        // The original saved-edition renderer declares report.pdf at its root.
+        // Match that retained member, source part and ticket; do not select a
+        // PDF from the observed studies' unrelated companion documents.
+        const pdfs=identity.members.filter(item=>item.path==='report.pdf');
+        if(pdfs.length!==1)continue;
+        const pdf=pdfs[0],bodyPath=entry.body?.view_path??entry.body?.filename;
+        const prefix=bodyPath===identity.primary_path?'':bodyPath==='report/'+identity.primary_path?'report/':null;
+        if(prefix===null)continue;
+        const parts=[entry.body,...(entry.companions??[])];
+        const positions=parts.map((part,index)=>({part,index})).filter(({part})=>
+          (part?.view_path??part?.filename)===prefix+pdf.path&&part.bytes===pdf.bytes&&part.sha256===pdf.sha256);
+        if(positions.length!==1)continue;
+        const artifacts=packet.review.artifacts.filter(item=>
+          item.locator?.kind==='source-entry'&&item.locator.id===selected.id&&
+          item.locator.source_id===entry.id&&item.locator.part===positions[0].index&&
+          item.bytes===pdf.bytes&&item.sha256===pdf.sha256);
+        if(artifacts.length!==1)continue;
+        const file=downloads.get(artifacts[0].id);
+        if(!file?.url)continue;
+        const downloadURL=file.url+(file.url.includes('?')?'&':'?')+'download=1';
+        const counts=[
+          ...(Number.isInteger(metadata.original_study_count)?[metadata.original_study_count.toLocaleString()+' original studies']:[]),
+          ...(Number.isInteger(metadata.figure_count)?[metadata.figure_count.toLocaleString()+' figures']:[]),
+          identity.members.length+' retained report files'
+        ];
+        sections.push('<section class="review-intro" aria-label="Original saved scientific report">'+
+          '<h3>'+esc(entry.title)+'</h3><p>'+counts.join(' · ')+'</p>'+
+          '<p>Read the complete report PDF, then record decisions through the existing review desk. '+
+          'The full export includes the original HTML, linked figures, data and this review history.</p>'+
+          '<div class="page-actions"><a class="button primary" href="'+esc(file.url)+
+          '" target="_blank" rel="noopener">Read original PDF</a><a class="button" href="'+esc(downloadURL)+
+          '" download>Download original PDF</a>'+button('export','Export complete review',packet.review.id)+'</div>'+
+          '<details><summary>Saved scientific edition</summary><p class="mono">'+
+          esc(identity.scientific_report_edition_id)+'</p><p>PDF SHA-256 <span class="mono">'+
+          esc(pdf.sha256)+'</span></p></details></section>');
+      }
+    }
+    return sections.join('');
+  }
   function fileTab(packet){
     const response=currentResponse(packet),decisions=new Map((response?.artifact_decisions??[]).map(x=>[x.artifact_id,x]));
     const downloads=new Map(packet._downloads.map(x=>[x.artifact_id,x]));
-    return '<p class="note">These are the complete original files selected for this review. Their source attribution and native companion relationships stay in every export.</p>'+
+    return scientificReportFiles(packet,downloads)+'<p class="note">These are the complete original files selected for this review. Their source attribution and native companion relationships stay in every export.</p>'+
       table(['Original file','Source and selection','Latest decision',''],packet.review.artifacts.map(item=>{
         const file=downloads.get(item.id),source=item.origin??{};
         return '<tr><td class="name-cell"><strong>'+esc(item.label)+'</strong><small>'+esc(item.original_path)+'</small><small>'+esc(item.media_type)+' · '+item.bytes.toLocaleString()+' bytes</small></td><td><strong>'+esc(item.group)+'</strong>'+
