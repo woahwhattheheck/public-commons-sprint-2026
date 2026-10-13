@@ -7,7 +7,7 @@ import re
 from .common import digest, file_digest, identifier, read_json, relative_file
 from .native_execution import inspect_execution
 from .native_worker import identity_matches
-from .parameter_studies import _read, native_case_context
+from .parameter_views import DEFAULT_VIEWS, _study_active, _bind_case
 
 SCHEMA = "upstate.parameter-case-console/v1"
 
@@ -273,13 +273,18 @@ def read_run(workspace, run_id, *, attempt_id=None, stream="native",
 def read(workspace, study_id, run_id, **options):
     """Read one exact saved study case without changing its original state."""
     study_id, run_id = identifier(study_id), identifier(run_id)
-    context = native_case_context(workspace, study_id, run_id)
-    study = _read(workspace, study_id)
+    study, matches, context = DEFAULT_VIEWS.case_context(workspace, study_id, run_id)
     cases = [{name: case.get(name) for name in ("id", "label", "run_id", "profile_id", "overrides")}
-             for case in study["cases"] if case["run_id"] == run_id]
+             for case in matches]
     value = read_run(workspace, run_id, **options)
+    # The selected native receipt must still match the original case after reading.
+    for case in matches:
+        _bind_case(study, case, {"selection": value["native"]["selection"]})
+    active = _study_active(workspace.root / "experiments" / study_id)
+    visible = "interrupted" if study["state"] == "running" and not active else study["state"]
     return {**value, "schema": SCHEMA, "study_id": study_id,
-            "title": study["selection"]["title"], "study_state": study["state"],
+            "title": study["selection"]["title"], "study_state": visible,
+            "study_recorded_state": study["state"], "study_active": active,
             "case_bindings": cases, "context": context,
             "continuation": {"action": "parameter-study.run", "payload": {"experiment_id": study_id},
                              "scope": "The original saved study and its remaining cases",
