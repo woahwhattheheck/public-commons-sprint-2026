@@ -153,20 +153,26 @@ window.createCollectionAccessionPanel = function ({root, api, mutation, refreshS
     await refreshState();announce("The transfer is queued. Download its verified archive from Delivery when complete.");
   });
   const importFile=input("collection-review-import","file");
-  importFile.accept=".json,application/json";
-  const reopen=button("collection-review-reopen","Review imported JSON",async()=>{
-    const file=importFile.files?.[0];if(!file)throw new Error("Select the complete saved review JSON.");
-    if(file.size>4*1024*1024)throw new Error("The review JSON exceeds the 4 MiB metadata profile.");
+  importFile.accept=".json,.html,application/json,text/html";
+  const reopen=button("collection-review-reopen","Review imported working file",async()=>{
+    const file=importFile.files?.[0];if(!file)throw new Error("Select the complete review JSON or working HTML/JSON.");
+    if(file.size>128*1024*1024)throw new Error("The complete working file exceeds 128 MiB.");
     if(rowDirty)throw new Error("Apply the current file edit before comparing another complete review.");
-    const incoming=JSON.parse(await file.text());
-    await prepareMerge(incoming);
+    const portable=window.PreservationCollectionReview,id=selected,raw=await file.text();
+    let incoming=portable.parse(raw),reviewedSource=null;
+    if(incoming.schema===portable.WORKING){
+      const current=await api("/api/accession-review-source?id="+encodeURIComponent(id));
+      if(id!==selected)throw new Error("The selected accession changed while opening the return.");
+      incoming=await portable.returnReview(incoming,current);reviewedSource=current;
+    }else if(portable.bytes(raw)>4*1024*1024)throw new Error("The decisions-only JSON exceeds the original 4 MiB metadata profile.");
+    await prepareMerge(incoming,reviewedSource);
   });
   const reconcile=button("collection-review-reconcile","Reconcile this draft with saved review",async()=>{
     if(rowDirty)throw new Error("Apply the current file edit first.");
     await prepareMerge(copy(draft));
   });
   const imports=el("div",null,{class:"toolbar"});
-  imports.append(field("Complete original review JSON",importFile),reopen,reconcile);review.append(imports);
+  imports.append(field("Complete working HTML/JSON or original review JSON",importFile),reopen,reconcile);review.append(imports);
   const mergePanel=el("div",null,{class:"panel compact",hidden:"hidden"}),mergeHeading=el("h3","Review every difference");
   const mergeStatus=el("p","",{class:"muted"}),mergeRows=el("div"),mergeControls=el("div",null,{class:"toolbar"});
   let merging=null,mergeOffset=0;
@@ -223,10 +229,12 @@ window.createCollectionAccessionPanel = function ({root, api, mutation, refreshS
     }
     return {...copy(value),note:value.note||""};
   }
-  async function prepareMerge(value){
+  async function prepareMerge(value,reviewedSource=null){
     if(!saved)throw new Error("Choose the retained original collection first.");
     const id=selected,head=await api("/api/accession?id="+encodeURIComponent(id));
     if(id!==selected||head.inventory.sha256!==saved.inventory.sha256)throw new Error("The original accession changed during comparison.");
+    if(reviewedSource&&(reviewedSource.history.at(-1).revision!==head.revision||
+      reviewedSource.history.at(-1).reviewSha256!==head.reviewSha256))throw new Error("The saved review advanced while the full working return was checked. Retain the selected file and compare again.");
     const imported=validateImported(value,head.inventory),local=validateImported(copy(draft),head.inventory);
     const current=new Map(local.decisions.map(row=>[row.path,row]));
     const stored=new Map(head.review.decisions.map(row=>[row.path,row]));
@@ -254,7 +262,33 @@ window.createCollectionAccessionPanel = function ({root, api, mutation, refreshS
     mergeStatus.textContent=merging.rows.length+" differences · "+Object.values(merging.choices).filter(Boolean).length+" choices recorded. Saved r"+merging.head.revision+" remains the save precondition.";
     controls();
   }
-  const buttons=el("div",null,{class:"toolbar"});buttons.append(save,download,build);review.append(buttons);
+
+  async function portableWorking(){
+    if(!saved||!draft)throw new Error("Select the original retained accession.");
+    const id=selected,revision=saved.revision,reviewSha256=saved.reviewSha256;
+    const original=await api("/api/accession-review-source?id="+encodeURIComponent(id)+
+      "&revision="+revision+"&reviewSha256="+encodeURIComponent(reviewSha256));
+    if(id!==selected||revision!==saved.revision||reviewSha256!==saved.reviewSha256)throw new Error("The original review selection changed.");
+    const unfinished=rowDirty?{path:rowPath,include:include.checked,fieldsText:metadata.value,reason:reason.value}:null;
+    return window.PreservationCollectionReview.create(original,copy(draft),unfinished);
+  }
+  function downloadPortable(raw,extension,type){
+    const url=URL.createObjectURL(new Blob([raw],{type})),link=el("a","",{href:url,download:"Collection_"+selected+"_working."+extension});
+    link.click();setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  const workingHTML=button("collection-working-html","Download editable working HTML",async()=>{
+    const value=await portableWorking();
+    downloadPortable(window.PreservationCollectionReview.renderHTML(value),"html","text/html");
+    announce("Complete editable working HTML download requested. Open the saved file independently; the original accession remains unchanged.");
+  });
+  const workingJSON=button("collection-working-json","Download complete working JSON",async()=>{
+    const value=await portableWorking();
+    downloadPortable(window.PreservationCollectionReview.stringify(value),"json","application/json");
+    announce("Complete working JSON download requested, including any unfinished file edit. Open it in the editable HTML to continue.");
+  });
+
+  const buttons=el("div",null,{class:"toolbar"});buttons.append(save,download,workingHTML,workingJSON,build);review.append(buttons);
+  review.append(el("p","Portable working files contain the full original inventory, institutional settings and complete saved review history through the selected base, plus this draft and any unfinished file edit. Original binary files remain in the retained workspace and BagIt. Returned working files use the same explicit saved/local/imported comparison.",{class:"muted"}));
   review.append(el("p","Each saved review remains in the complete Workbench export. The transfer includes selected original file bytes, exact checksums and the full selection/inventory report. Excluded originals remain in the private complete workspace.",{class:"muted"}));
   const history=el("details"),historyTitle=el("summary","Saved review editions"),historyText=el("pre","");history.append(historyTitle,historyText);review.append(history);
   const message=el("p","",{id:"collection-message",role:"status","aria-live":"polite"});
@@ -330,7 +364,7 @@ window.createCollectionAccessionPanel = function ({root, api, mutation, refreshS
     for(const n of root.querySelectorAll("input,textarea,select,button"))n.disabled=busy||!connected;
     chooser.disabled=busy||!connected||!(state?.accessions?.length);
     initializeButton.disabled=busy||!connected||!inspection||inspection.requestedSource!==source.value.trim();
-    for(const n of [note,search,filter,reload,download])n.disabled=busy||!connected||!has;
+    for(const n of [note,search,filter,reload,download,workingHTML,workingJSON])n.disabled=busy||!connected||!has;
     save.disabled=busy||!connected||!has||rowDirty||!dirty()||external;
     build.disabled=busy||!connected||!has||dirty()||external;
     for(const n of [importFile,reopen,reconcile])n.disabled=busy||!connected||!has;
