@@ -1,0 +1,259 @@
+"""Native operator provider for complete published field-study context."""
+from __future__ import annotations
+
+import hashlib
+import json
+from pathlib import Path, PurePosixPath
+import re
+from typing import Any
+
+from model.common import describe_file
+from measurement_workspace.published_studies import PublishedStudyStore, TABLE_TITLES, COMPANION_SCHEMA
+
+ACTIONS = ("published-study.import", "published-study.export", "published-study.report")
+BUILTIN_ID = "scdes-eighteenmile-lake-2023"
+
+
+class PublishedStudyProvider:
+    def __init__(self, operator, fault, source_roots=()):
+        self.operator, self.Fault = operator, fault
+        self.roots = {}
+        candidates = [Path(value) for value in source_roots]
+        candidates.extend(Path(row["path"]).parent for row in operator.registered.values())
+        for candidate in candidates:
+            try:
+                path = candidate.expanduser().resolve(strict=True)
+            except OSError:
+                continue
+            if path.is_dir():
+                root_id = hashlib.sha256(str(path).encode("utf-8")).hexdigest()[:24]
+                self.roots[root_id] = path
+        self.builtin = Path(__file__).resolve().parent.parent / "observations" / "eighteenmile_2023"
+
+    def _builtin_source(self):
+        names = (
+            "study.json", "stations.csv", "stations.json", "seasonal_summaries.csv",
+            "surface_ranges.csv", "continuous_monthly_do.csv", "continuous_monthly_ph.csv",
+            "reported_npdes_permits.csv", "source_notes.json", "README.md",
+            "table7-visual-context.csv", "table7-visual-reading.json", "table7-page-render.json",
+        )
+        files = []
+        for name in names:
+            path = self.builtin / name
+            if not path.is_file():
+                if name.startswith("table7-"):
+                    continue
+                self._fail("STUDY_BUILTIN", "The installed study is missing " + name, 404)
+            raw = path.read_bytes()
+            files.append({
+                "path": name, "encoding": "utf-8", "bytes": len(raw),
+                "sha256": hashlib.sha256(raw).hexdigest(), "content": raw.decode("utf-8"),
+            })
+        evidence = {}
+        for name in (
+            "2023LakeProgramFinalReport.pdf", "scdes-2023-lake-program-original.pdf",
+            "table7-page21.png", "table7-crop.png",
+        ):
+            path = self.builtin / name
+            if path.is_file():
+                evidence[name] = path.read_bytes()
+        return json.dumps({"schema": COMPANION_SCHEMA, "files": files}, ensure_ascii=False).encode("utf-8"), evidence
+
+    def _fail(self, code, message, status=422):
+        raise self.Fault(code, message, status)
+
+    def _store(self, workspace_key):
+        ws = self.operator.ws(workspace_key)
+        return ws, PublishedStudyStore(ws, ws.root / "published_studies")
+
+    def _root_path(self, root_id, relative):
+        root = self.roots.get(root_id)
+        if root is None:
+            self._fail("STUDY_SOURCE_ROOT", "Choose an available study source folder.", 404)
+        if not isinstance(relative, str) or not relative or "\\" in relative or "\x00" in relative:
+            self._fail("STUDY_SOURCE_PATH", "Enter a relative source file or study directory.")
+        path = PurePosixPath(relative)
+        if path.is_absolute() or ".." in path.parts or str(path) != relative:
+            self._fail("STUDY_SOURCE_PATH", "The source must remain inside the selected folder.")
+        try:
+            resolved = root.joinpath(*path.parts).resolve(strict=True)
+        except OSError:
+            self._fail("STUDY_SOURCE_PATH", "That source path is unavailable.", 404)
+        if not resolved.is_relative_to(root) or not (resolved.is_file() or resolved.is_dir()):
+            self._fail("STUDY_SOURCE_PATH", "Choose a file or directory inside the selected source folder.")
+        return resolved
+
+    def _source_path(self, ws, selector):
+        if not isinstance(selector, dict):
+            self._fail("STUDY_SOURCE", "A retained source or source folder selection is required.")
+        collection_id = selector.get("source_collection_id") or selector.get("collection_id")
+        if collection_id:
+            source_id = selector.get("source_id")
+            if not isinstance(collection_id, str) or not isinstance(source_id, str):
+                self._fail("STUDY_SOURCE", "A retained source requires its collection and source identifiers.")
+            path, _ = ws.source_file(collection_id, source_id)
+            return path
+        return self._root_path(selector.get("root_id"), selector.get("relative_path"))
+
+    def _filters(self, payload):
+        selection = payload.get("selection") or {}
+        if not isinstance(selection, dict):
+            self._fail("STUDY_SELECTION", "Study selection must be an object.")
+        result = {}
+        for key in ("site_ids", "parameters", "strata"):
+            value = selection.get(key)
+            if value is not None:
+                if not isinstance(value, list) or any(not isinstance(item, str) for item in value):
+                    self._fail("STUDY_SELECTION", key + " must contain text values.")
+                result[key] = value
+        if selection.get("year") is not None:
+            year = selection["year"]
+            if isinstance(year, bool) or not isinstance(year, int) or not 1900 <= year <= 2200:
+                self._fail("STUDY_SELECTION", "Choose a valid year.")
+            result["year"] = year
+        if selection.get("months") is not None:
+            months = selection["months"]
+            if not isinstance(months, list) or any(
+                isinstance(month, bool) or not isinstance(month, int) or not 1 <= month <= 12
+                for month in months
+            ):
+                self._fail("STUDY_SELECTION", "Months must be whole numbers from 1 through 12.")
+            result["months"] = months
+        return result
+
+    def _selection(self, payload):
+        study_id = payload.get("study_id")
+        version_id = payload.get("version_id")
+        if not isinstance(study_id, str) or not study_id:
+            self._fail("STUDY_ID", "Choose a published study.")
+        if version_id is not None and not isinstance(version_id, str):
+            self._fail("STUDY_VERSION", "A study version must be text.")
+        return study_id, version_id
+
+    def _artifact(self, ws, path, label):
+        path = Path(path).resolve(strict=True)
+        if not path.is_relative_to(ws.root):
+            self._fail("STUDY_EXPORT_PATH", "A study export must remain in its workspace.", 500)
+        item = describe_file(ws.root, path)
+        return {**item, "path": str(path.relative_to(ws.root)), "filename": path.name, "label": label}
+
+    def _ticket(self, workspace_key, ws, path, label):
+        return self.operator._ticket(workspace_key, path, describe_file(ws.root, path), label)
+
+    def _source_links(self, workspace_key, ws, store, result):
+        record = result["record"]
+        for artifact in result.get("source_artifacts", []):
+            path, _ = store.source_file(record["study_id"], artifact["path"], record["version_id"])
+            artifact["download"] = self._ticket(workspace_key, ws, path, artifact["path"])
+        return result
+
+    def read(self, workspace_key, operation, payload):
+        payload = payload or {}
+        if not isinstance(payload, dict):
+            self._fail("STUDY_REQUEST", "Study request must be an object.")
+        ws, store = self._store(workspace_key)
+        try:
+            if operation == "catalog":
+                builtin = []
+                if (self.builtin / "study.json").is_file():
+                    metadata = json.loads((self.builtin / "study.json").read_text(encoding="utf-8-sig"))
+                    builtin.append({
+                        "id": BUILTIN_ID, "title": metadata["title"],
+                        "publication": metadata.get("publication"),
+                        "counts": metadata.get("content_counts", {}),
+                    })
+                return {
+                    **store.list_studies(),
+                    "builtin_studies": builtin,
+                    "source_roots": [{"id": key, "label": str(path)} for key, path in self.roots.items()],
+                    "table_titles": TABLE_TITLES,
+                }
+            study_id, version_id = self._selection(payload)
+            if operation == "study":
+                return self._source_links(workspace_key, ws, store, store.get_study(study_id, version_id))
+            if operation == "context":
+                result = store.context(study_id, version_id, **self._filters(payload))
+                return self._source_links(workspace_key, ws, store, result)
+            self._fail("STUDY_OPERATION", "Unknown published-study read operation.", 404)
+        except KeyError as error:
+            self._fail("STUDY_NOT_FOUND", str(error), 404)
+        except (ValueError, OSError) as error:
+            self._fail("STUDY_SOURCE", str(error))
+
+    def invoke(self, task):
+        workspace_key = task["workspace"]
+        ws, store = self._store(workspace_key)
+        payload = task.get("payload") or {}
+        action = task["action"]
+        if not isinstance(payload, dict):
+            self._fail("STUDY_REQUEST", "Study task payload must be an object.")
+        try:
+            if action == "published-study.import":
+                evidence = {}
+                builtin_id = payload.get("builtin_id")
+                if builtin_id is not None:
+                    if builtin_id != BUILTIN_ID or not (self.builtin / "study.json").is_file():
+                        self._fail("STUDY_BUILTIN", "The installed study source is unavailable.", 404)
+                    source, evidence = self._builtin_source()
+                elif isinstance(payload.get("source_json"), str):
+                    source = payload["source_json"].encode("utf-8")
+                else:
+                    source = self._source_path(ws, payload.get("source"))
+                for item in payload.get("evidence") or []:
+                    path = self._source_path(ws, item.get("source"))
+                    if not path.is_file():
+                        self._fail("STUDY_EVIDENCE", "Original report evidence must be a file.")
+                    name = item.get("filename") or path.name
+                    if name in evidence:
+                        self._fail("STUDY_EVIDENCE", "Each report evidence filename must be unique.")
+                    evidence[name] = path.read_bytes()
+                result = store.import_source(source, evidence=evidence, operation_id=task["operation_id"])
+                record = result["record"]
+                manifest_path = Path(record["source_manifest"]["path"])
+                return {
+                    **result,
+                    "study_id": record["study_id"], "version_id": record["version_id"],
+                    "view": "published-studies",
+                    "artifacts": [self._artifact(ws, manifest_path, "Study context source manifest")],
+                }
+            study_id, version_id = self._selection(payload)
+            task_id = task["id"]
+            if not isinstance(task_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]{1,120}", task_id):
+                self._fail("STUDY_TASK", "The queued task has an invalid identifier.", 500)
+            destination = ws.root / "published_study_exports" / task_id
+            if action == "published-study.export":
+                exported = store.export_study(study_id, destination / "published-study.zip", version_id)
+                return {
+                    "study_id": study_id, "version_id": exported["version_id"],
+                    "view": "published-studies",
+                    "artifacts": [self._artifact(ws, Path(exported["path"]), "Complete study and original sources")],
+                }
+            if action == "published-study.report":
+                report = store.export_context(study_id, destination, version_id, **self._filters(payload))
+                return {
+                    "study_id": study_id, "version_id": report["version_id"],
+                    "selection": report["selection"], "view": "published-studies",
+                    "artifacts": [
+                        self._artifact(ws, Path(item["path"]), item["filename"])
+                        for item in report["files"]
+                    ],
+                }
+            self._fail("STUDY_ACTION", "Unknown published-study task.", 404)
+        except KeyError as error:
+            self._fail("STUDY_NOT_FOUND", str(error), 404)
+        except (ValueError, OSError) as error:
+            self._fail("STUDY_SOURCE", str(error))
+
+    def decorate_task(self, task):
+        if task.get("action") not in ACTIONS or not isinstance(task.get("result"), dict):
+            return task
+        ws = self.operator.ws(task["workspace"])
+        downloads = list(task.get("_downloads") or [])
+        for item in task["result"].get("artifacts", []):
+            relative = item.get("path", "")
+            path = (ws.root / relative).resolve(strict=True)
+            if not path.is_relative_to(ws.root):
+                self._fail("STUDY_EXPORT_PATH", "A recorded study export is outside its workspace.", 500)
+            downloads.append(self.operator._ticket(task["workspace"], path, item, item.get("label")))
+        task["_downloads"] = downloads
+        return task
