@@ -18,11 +18,13 @@ import re
 from measurement_workspace import observation_comparability as comparison
 from .common import atomic_bytes, atomic_json, describe_file, digest, file_digest, read_json
 
-EDITION = "retained-cohort-interval-figures/1"
+EDITION = "retained-cohort-interval-figures/2"
 SPEC = "figures/paired-period-figures.json"
 DATA = "figures/paired-period-data.json"
 CSV = "figures/paired-period-data.csv"
 READER = "figures/index.html"
+CONTRIBUTIONS = "figures/activity-contributions.json"
+CONTRIBUTION_CSV = "figures/activity-contributions.csv"
 
 
 def implementation():
@@ -85,6 +87,217 @@ def _axis(values):
 def _table(columns, rows, caption):
     return {"kind": "table", "columns": columns,
             "rows": [[str(cell) for cell in row] for row in rows], "caption": caption}
+
+
+def _weighted(value, weight):
+    """Project an original interval through one exact nonzero signed weight."""
+    value = _interval(value)
+    _require(isinstance(weight, Fraction) and weight != 0, "Use a nonzero exact activity weight")
+    before = ("lower", "upper") if weight > 0 else ("upper", "lower")
+    result = {}
+    for side, original in zip(("lower", "upper"), before):
+        endpoint = value[original + "_exact"]
+        result[side] = None if endpoint is None else Fraction(endpoint) * weight
+        result[side + "_open"] = value[original + "_open"]
+    return comparison.encoded(result)
+
+
+def _sum_bounds(values):
+    values = list(values)
+    _require(bool(values), "Retain a nonempty original contribution sum")
+    result = {}
+    for side in ("lower", "upper"):
+        endpoints = [item[side + "_exact"] for item in values]
+        result[side] = None if any(value is None for value in endpoints) else sum(
+            (Fraction(value) for value in endpoints), Fraction())
+        result[side + "_open"] = any(item[side + "_open"] for item in values)
+    return comparison.encoded(result)
+
+
+def contribution_ledger(data, selected):
+    """Explain the existing mean exactly; do not select, filter or change it."""
+    measurements = {row["id"]: row for row in data["measurements"]}
+    originals = {row["result_id"]: row for row in data["original_rows"]}
+    _require(len(measurements) == len(data["measurements"])
+             and len(originals) == len(data["original_rows"]), "Retain unique original activity/result identities")
+    output = []
+    for pair in selected:
+        if not pair["common_months"]:
+            output.append({"comparison_id": pair["id"], "series_id": pair["series_id"],
+                           "series_identity": {field: pair[field] for field in comparison.SERIES_FIELDS},
+                           "year_a": pair["year_a"], "year_b": pair["year_b"],
+                           "common_months": [], "activities": [], "months": [],
+                           "reason": pair["direction"], "reconciled": False})
+            continue
+        count = len(pair["common_months"])
+        _require(count == pair["common_month_count"]
+                 and pair["common_months"] == sorted(set(pair["common_months"])),
+                 "Retain the original ordered common-month support")
+        month_weight = Fraction(1, count)
+        activities, months, quantified = [], [], []
+        for letter, sign in (("a", -1), ("b", 1)):
+            ids = pair["measurement_ids_" + letter]
+            _require(len(ids) == len(set(ids)) == pair["activities_" + letter],
+                     "Retain one weight per original analytical activity")
+            members = [measurements[mid] for mid in ids]
+            for month in pair["common_months"]:
+                mm = [row for row in members if row["month"] == month]
+                _require(bool(mm), "A common month needs its original admitted activities")
+                per_activity = Fraction(1, len(mm))
+                weight = month_weight * per_activity
+                for measurement in mm:
+                    _require(measurement["series_id"] == pair["series_id"]
+                             and measurement["year"] == pair["year_" + letter]
+                             and measurement["included"] and measurement["agreeing_results"],
+                             "Retain the original admitted analytical activity")
+                    sources = [originals[result_id] for result_id in measurement["original_result_ids"]]
+                    _require(len(sources) == measurement["original_rows"] and all(
+                        row["activity"] == measurement["activity"] and row["date"] == measurement["date"]
+                        and all(row[field] == pair[field] for field in comparison.SERIES_FIELDS)
+                        for row in sources), "Activity contribution changed an original row or analytical identity")
+                    original_interval = _interval(measurement["interval"])
+                    _require(all(comparison.encoded(comparison.interval(row)) == original_interval for row in sources),
+                             "Activity contribution no longer agrees with its original source intervals")
+                    item = {"comparison_id": pair["id"], "series_id": pair["series_id"],
+                            "period": "earlier" if letter == "a" else "later",
+                            "year": pair["year_" + letter], "month": month,
+                            "date": measurement["date"], "activity_id": measurement["activity"],
+                            "measurement_id": measurement["id"], "censoring": measurement["censoring"],
+                            "original_result_ids": deepcopy(measurement["original_result_ids"]),
+                            "original_row_count": measurement["original_rows"],
+                            "source_rows": deepcopy(sources), "original_interval": original_interval,
+                            "common_month_count": count, "activities_in_month": len(mm),
+                            "month_weight_exact": str(month_weight),
+                            "within_month_weight_exact": str(per_activity),
+                            "mean_weight_exact": str(weight),
+                            "signed_change_weight_exact": str(sign * weight),
+                            "mean_contribution": _weighted(original_interval, weight),
+                            "change_contribution": _weighted(original_interval, sign * weight)}
+                    activities.append(item)
+            year_items = [row for row in activities if row["year"] == pair["year_" + letter]]
+            _require(len(year_items) == len(members)
+                     and _sum_bounds(row["mean_contribution"] for row in year_items)
+                     == pair["matched_mean_" + letter],
+                     "Activity weights do not reproduce the retained original year mean")
+            points = [row for row in year_items if row["censoring"] == "none"
+                      and row["original_interval"]["lower_exact"] == row["original_interval"]["upper_exact"]]
+            if points:
+                largest = max(points, key=lambda row: abs(Fraction(row["change_contribution"]["lower_exact"])))
+                quantified.append({"year": pair["year_" + letter],
+                                   "measurement_id": largest["measurement_id"],
+                                   "absolute_change_contribution_exact": str(abs(Fraction(
+                                       largest["change_contribution"]["lower_exact"])))})
+        for original in pair["monthly"]:
+            month = original["month"]
+            _require(month in pair["common_months"], "Retain the original paired monthly interval")
+            grouped = {letter: [row for row in activities
+                                if row["year"] == pair["year_" + letter] and row["month"] == month]
+                       for letter in ("a", "b")}
+            for letter in ("a", "b"):
+                _require(len(grouped[letter]) == original["activities_" + letter]
+                         and _sum_bounds(row["mean_contribution"] for row in grouped[letter])
+                         == _weighted(original[letter], month_weight),
+                         "Activity contributions do not reproduce the original weighted month")
+            delta = _sum_bounds(row["change_contribution"] for row in grouped["a"] + grouped["b"])
+            _require(delta == _weighted(original["change"], month_weight),
+                     "Signed activity weights do not reproduce the original monthly difference")
+            months.append({"month": month, "month_weight_exact": str(month_weight),
+                           "activities_a": len(grouped["a"]), "activities_b": len(grouped["b"]),
+                           "original_a": deepcopy(original["a"]), "original_b": deepcopy(original["b"]),
+                           "original_change": deepcopy(original["change"]),
+                           "mean_contribution_a": _weighted(original["a"], month_weight),
+                           "mean_contribution_b": _weighted(original["b"], month_weight),
+                           "change_contribution": delta})
+        _require([row["month"] for row in months] == pair["common_months"]
+                 and _sum_bounds(row["change_contribution"] for row in activities) == pair["change"],
+                 "Complete signed contribution sum must equal the unchanged original B-minus-A interval")
+        output.append({"comparison_id": pair["id"], "series_id": pair["series_id"],
+                       "series_identity": {field: pair[field] for field in comparison.SERIES_FIELDS},
+                       "year_a": pair["year_a"], "year_b": pair["year_b"],
+                       "common_months": deepcopy(pair["common_months"]),
+                       "original_mean_a": deepcopy(pair["matched_mean_a"]),
+                       "original_mean_b": deepcopy(pair["matched_mean_b"]),
+                       "original_change": deepcopy(pair["change"]), "direction": pair["direction"],
+                       "activities": activities, "months": months,
+                       "largest_quantified_activity_by_year": quantified, "reconciled": True})
+    return {"schema": "upstate.cohort-activity-contributions/v1", "edition": EDITION,
+            "title": data["presentation"]["title"], "selection": deepcopy(data["default_comparison"]),
+            "series_fields": list(comparison.SERIES_FIELDS),
+            "method": "Each year gives every common complete month equal weight, then every agreeing analytical activity within that month equal weight. Earlier contributions are negated for B minus A. Agreement duplicates retain all result IDs with one activity weight.",
+            "interpretation": "Contribution explains arithmetic influence on the retained mean or difference; it is not a reliability score, removal criterion, causal effect, trend estimate or confidence interval. Unmatched months and excluded source measurements keep their original status and remain in comparability.json.",
+            "original_inputs": deepcopy(data["original_inputs"]), "comparisons": output}
+
+
+def _contribution_csv(ledger):
+    stream = io.StringIO(newline="")
+    fields = ["comparison_id", "series_id", *comparison.SERIES_FIELDS,
+              "period", "year", "month", "date", "activity_id", "measurement_id", "censoring",
+              "original_result_ids", "original_row_count", "common_month_count", "activities_in_month",
+              "month_weight_exact", "within_month_weight_exact", "mean_weight_exact", "signed_change_weight_exact",
+              "original_interval", "mean_contribution", "change_contribution", "source_rows"]
+    writer = csv.DictWriter(stream, fields, lineterminator="\n")
+    writer.writeheader()
+    for pair in ledger["comparisons"]:
+        for item in pair["activities"]:
+            row = {**pair["series_identity"], **{field: item[field] for field in fields if field in item}}
+            for field in ("original_result_ids", "original_interval", "mean_contribution", "change_contribution", "source_rows"):
+                row[field] = comparison.canonical(row[field]).decode("utf-8").strip()
+            writer.writerow(row)
+    return stream.getvalue().encode("utf-8")
+
+
+def _contribution_tables(pair):
+    tables = [_table(
+        ["Month", str(pair["year_a"]) + " activities", str(pair["year_b"]) + " activities",
+         str(pair["year_a"]) + " mean contribution", str(pair["year_b"]) + " mean contribution",
+         "Signed B minus A contribution"],
+        [[row["month"], row["activities_a"], row["activities_b"],
+          row["mean_contribution_a"]["text"], row["mean_contribution_b"]["text"],
+          row["change_contribution"]["text"]] for row in pair["months"]],
+        "Each retained month has weight 1/" + str(len(pair["common_months"])) +
+        ". Signed monthly intervals sum exactly to the unchanged original B-minus-A interval. Units remain " +
+        pair["series_identity"]["unit"] + ". Exact weights/endpoints and every activity are retained in figures/activity-contributions.json and CSV.")]
+    selected = {row["measurement_id"] for row in pair.get("largest_quantified_activity_by_year", [])}
+    rows = [row for row in pair["activities"] if row["measurement_id"] in selected]
+    if rows:
+        tables.append(_table(
+            ["Year / source date", "Original activity / result IDs", "Exact year-mean weight",
+             "Original interval", "Signed B minus A contribution"],
+            [[str(row["year"]) + " / " + row["date"],
+              row["activity_id"] + " / " + ", ".join(row["original_result_ids"]),
+              row["mean_weight_exact"], row["original_interval"]["text"],
+              row["change_contribution"]["text"]] for row in rows],
+            "Largest absolute quantified activity contribution in each year, among original point-valued activities only. "
+            "Censored/unbounded activities remain in the mean and full ledger; they are not assigned a midpoint for ranking. "
+            "This describes arithmetic influence, not reliability or grounds to remove a record. All activities and literal source rows are in the complete source ledger."))
+    return tables
+
+
+def _contribution_html(pair):
+    esc = lambda value: escape(str(value), quote=True)
+    if not pair or not pair["reconciled"]:
+        return ""
+    rows = []
+    for row in pair["activities"]:
+        source = "".join('<details><summary>' + esc(original["result_id"]) + ' — literal source fields</summary>' +
+                         '<dl>' + "".join("<dt>" + esc(key) + "</dt><dd>" + esc(value) + "</dd>"
+                                         for key, value in original.items()) + "</dl></details>"
+                         for original in row["source_rows"])
+        rows.append("<tr>" + "".join("<td>" + esc(value) + "</td>" for value in (
+            str(row["year"]) + " / " + row["date"], row["activity_id"],
+            ", ".join(row["original_result_ids"]), row["original_interval"]["text"],
+            row["month_weight_exact"] + " × " + row["within_month_weight_exact"] + " = " + row["mean_weight_exact"],
+            row["mean_contribution"]["text"], row["signed_change_weight_exact"],
+            row["change_contribution"]["text"])) + "<td>" + source + "</td></tr>")
+    return ('<details><summary>Every original activity contribution (' + str(len(rows)) + ')</summary>'
+            '<p>One row is one agreeing analytical activity. All original result IDs and literal fields remain expandable. '
+            'The signed contributions explain the original difference and do not remove observations.</p>'
+            '<div class="scroll" tabindex="0" role="region" aria-label="Complete original activity contribution ledger">'
+            '<table><thead><tr>' + "".join("<th>" + esc(value) + "</th>" for value in (
+                "Year / source date", "Activity", "Result IDs", "Original interval",
+                "Month × activity = year-mean weight", "Year-mean contribution", "Signed change weight",
+                "B minus A contribution", "Complete source rows")) + "</tr></thead><tbody>" +
+            "".join(rows) + "</tbody></table></div></details>")
 
 
 def figure(data, pair, source_file):
@@ -156,8 +369,8 @@ def figure(data, pair, source_file):
                 "x": {"label": "Selected year on the same retained calendar months", "unit": "",
                       "domain": [-.45, 1.45],
                       "ticks": [{"value": i, "label": str(year)} for i, year in enumerate(years)]},
-                "y": {"label": "Retained arithmetic mean" if len(unit) <= 18 else "Mean; unit in source table",
-                      "unit": unit if len(unit) <= 18 else "", "domain": [low, high], "ticks": ticks},
+                "y": {"label": "Retained arithmetic mean" if len(axis_unit) <= 18 else "Mean; unit in source table",
+                      "unit": axis_unit if len(axis_unit) <= 18 else "", "domain": [low, high], "ticks": ticks},
                 "series": lines + [
                     {"geometry": "scatter", "label": "Included endpoint", "marker": "circle", "points": closed},
                     {"geometry": "scatter", "label": "Excluded endpoint", "marker": "circle-open", "points": opened},
@@ -198,7 +411,8 @@ def _csv(data):
     return stream.getvalue().encode("utf-8")
 
 
-def _reader(data, figures, svgs):
+def _reader(data, figures, svgs, contributions):
+    by_comparison = {row['comparison_id']: row for row in contributions['comparisons']}
     esc = lambda value: escape(str(value), quote=True)
     sections = []
     for item in figures:
@@ -212,7 +426,7 @@ def _reader(data, figures, svgs):
                           "</tbody></table></div><p>" + esc(table["caption"]) + "</p>")
         sections.append('<section><h2>' + esc(item["title"]) + '</h2><div class="scroll figure" tabindex="0" role="region" aria-label="' + esc(item["title"]) + '">' +
                         svgs[item["id"]] + "</div><p>" + esc(item["caption"]) + "</p>" +
-                        "".join(tables) + '<p><a download href="' + esc(item["id"] + ".svg") +
+                        "".join(tables) + _contribution_html(by_comparison.get(item["comparison_id"])) + '<p><a download href="' + esc(item["id"] + ".svg") +
                         '">Download this original SVG</a></p></section>')
     unsupported = ""
     if data["unplotted"]:
@@ -237,6 +451,8 @@ def _reader(data, figures, svgs):
             '</p><nav><a href="../index.html">Complete original observation desk</a>'
             '<a download href="paired-period-data.json">Complete plotted source data</a>'
             '<a download href="paired-period-data.csv">Exact interval CSV</a>'
+            '<a download href="activity-contributions.json">Complete activity contributions</a>'
+            '<a download href="activity-contributions.csv">Activity contribution CSV</a>'
             '<a download href="paired-period-figures.json">Native figure specification</a>'
             '<a download href="../comparability.json">Every original comparison and source row</a></nav></header><main>' +
             "".join(sections) + unsupported + '</main></body></html>\n')
@@ -256,6 +472,10 @@ def prepare(directory, expected_implementation):
                 if (row["year_a"], row["year_b"]) == (selection["year_a"], selection["year_b"])]
     originals = {row["id"]: row for row in data["series"]}
     _require(len(originals) == len(data["series"]), "Retain distinct original analytical series")
+    contributions = contribution_ledger(data, selected)
+    by_comparison = {row['comparison_id']: row for row in contributions['comparisons']}
+    atomic_json(directory / CONTRIBUTIONS, contributions, immutable=True)
+    atomic_bytes(directory / CONTRIBUTION_CSV, _contribution_csv(contributions), immutable=True)
     figures, unplotted = [], []
     original_file = describe_file(directory, directory / "comparability.json")
     for pair in selected:
@@ -270,6 +490,7 @@ def prepare(directory, expected_implementation):
         if item is None:
             unplotted.append({"series_id": pair["series_id"], "reason": "Exact retained bounds exceed the finite drawing scale"})
         else:
+            item['detail_tables'].extend(_contribution_tables(by_comparison[pair['id']]))
             figures.append(item)
     figure_data = {"schema": "upstate.cohort-interval-figure-data/v1", "edition": EDITION,
                    "title": data["presentation"]["title"], "selection": deepcopy(selection),
@@ -296,7 +517,7 @@ def prepare(directory, expected_implementation):
         _require(start >= 0 and svg.rstrip().endswith("</svg>"), "Native figure is not a complete SVG")
         svgs[item["id"]] = svg[start:]
         choices.append({"id": item["id"], "path": name})
-    atomic_bytes(directory / READER, _reader(figure_data, figures, svgs).encode("utf-8"), immutable=True)
+    atomic_bytes(directory / READER, _reader(figure_data, figures, svgs, contributions).encode("utf-8"), immutable=True)
     for name, path, checksum in (
             ("observation_comparability_figures.py", Path(__file__), expected_implementation["figure_source_sha256"]),
             ("scientific_figures.py", Path(scientific_figures.__file__), expected_implementation["scientific_figures_sha256"])):
@@ -318,7 +539,7 @@ def prepare(directory, expected_implementation):
               not in ("observed-report.json", "model-sources.json")]
     fingerprint = digest({"inputs": inputs, "selection": selection, "implementation": expected_implementation})
     recipe.update(inputs=inputs, edition=EDITION + "/" + fingerprint[:20], figure_spec=SPEC, figures=choices)
-    recipe["source_links"] = list(dict.fromkeys([*recipe.get("source_links", []), READER, DATA, CSV, SPEC,
+    recipe["source_links"] = list(dict.fromkeys([*recipe.get("source_links", []), READER, DATA, CSV, SPEC, CONTRIBUTIONS, CONTRIBUTION_CSV,
                                                 *[row["path"] for row in choices]]))
     atomic_json(directory / "observed-report.json", recipe)
     entry = manifest["entries"][0]
@@ -330,4 +551,5 @@ def prepare(directory, expected_implementation):
     atomic_json(directory / "model-sources.json", manifest)
     _require(implementation() == expected_implementation,
              "Selected cohort figure implementation changed during publication")
-    return {"figure_spec": SPEC, "figures": choices, "data": DATA, "csv": CSV, "reader": READER}
+    return {"figure_spec": SPEC, "figures": choices, "data": DATA, "csv": CSV, "reader": READER,
+            "contributions": CONTRIBUTIONS, "contributions_csv": CONTRIBUTION_CSV}

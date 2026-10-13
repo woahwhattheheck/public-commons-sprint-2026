@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Reopen an actual received scientific report through its original Sources desk. */
 import { createRequire } from 'node:module';
-import { runAssessmentReceivingChapter } from './assessment_browser.mjs';
+import { runAssessmentReceivingChapter, runReceivedAssessmentChapter } from './assessment_browser.mjs';
 
 // The installed application can be separate from the runtime's Node packages.
 // Resolve the application's normal package first; use the explicit runtime-owned
@@ -223,6 +223,21 @@ async function main() {
   journal.action_requests = actionRequests.slice(reportActionStart);
   requireValue(journal.action_requests.length === 0,
     'Reopening the original report unexpectedly submitted a new queued operation.');
+  // Preserve the original report-only guarantee before the explicit editable
+  // source-receiving chapter may submit its separately journaled adoption action.
+  const receivedAssessmentStart = actionRequests.length;
+  if (receipt.selected_study_receiving) {
+    journal.received_assessment_chapter = await runReceivedAssessmentChapter({
+      page, receivingReceipt: receipt, outputDirectory: join(output, 'received-assessment'),
+      operatorURL: privateURL, redact,
+    });
+  }
+  journal.received_assessment_action_requests = actionRequests.slice(receivedAssessmentStart);
+  const receivedOperations = new Set(
+    (journal.received_assessment_chapter?.submitted_actions || []).map(row => row.operation_id));
+  requireValue(journal.received_assessment_action_requests.every(row =>
+    row.action === 'assessment.context.adopt_source' && receivedOperations.has(row.operation_id)),
+    'The editable assessment continuation submitted another queued operation.');
   requireValue(journal.browser_errors.length === 0,
     'The original Sources report journey returned a browser error.');
   journal.state = 'complete';

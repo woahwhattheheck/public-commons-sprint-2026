@@ -59,8 +59,11 @@ def application_binding(source_root):
     source_root = ordinary_directory(source_root)
     members = [file_description(source_root / name, "application/" + name) for name in APPLICATION_FILES]
     profile = application_selection(members, profile=APPLICATION_PROFILE)
-    require(profile == "commons.migration-workbench-application/v3" and len(members) == 39,
-            "PROPERTY_APPLICATION_SELECTION", "Use the complete maintained 39-file property application.")
+    required = {"property_domain.py", "property_workspace.py", "property_receiving.py",
+                "PROPERTY_CONTINUITY.md", "property_reference_example.py",
+                "public/property.html", "public/property.js", "public/property.css"}
+    require(profile == APPLICATION_PROFILE and required <= set(APPLICATION_FILES),
+            "PROPERTY_APPLICATION_SELECTION", "Use the current complete maintained application including every property leaf.")
     return {"profile": profile, "files": members, "sha256": identity(members)}
 
 

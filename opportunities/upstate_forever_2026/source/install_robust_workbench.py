@@ -21,6 +21,42 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/source_refresh_comparison.py",
+    "model/economic_comparison.py",
+    "model/economic_comparison_render.py",
+    "model/economic_comparison_source.py",
+    "model/economic_comparison_study_transfer.py",
+    "model/decision_analysis.py",
+    "model/decision_cli.py",
+    "model/decision_desk.html",
+    "model/model_selection.py",
+    "model/decision_receive.py",
+    "operator/economic_workbench.py",
+    "operator/economic_comparison.py",
+    "operator/economic_comparison_source.py",
+    "operator/economic_receive.py",
+    "operator/extensions/economic-desk.json",
+    "operator/extensions/economic-comparison.json",
+    "operator/extensions/economic-comparison-source.json",
+    "operator/web/economic_desk.mjs",
+    "operator/web/economic_desk.css",
+    "operator/web/economic_request_store.mjs",
+    "operator/web/economic_cost_worksheet.mjs",
+    "operator/web/economic_implementation.mjs",
+    "operator/web/economic_comparison.mjs",
+    "operator/web/economic_comparison_source.mjs",
+    "operator/web/economic_received_comparisons.mjs",
+    "operator/ECONOMIC_DESK.md",
+    "operator/ECONOMIC_COMPARISON.md",
+    "operator/ECONOMIC_COMPARISON_REPORT.md",
+    "operator/COST_WORKSHEETS.md",
+    "operator/ECONOMIC_IMPLEMENTATION.md",
+    "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
+    "docs/ECONOMIC_COMPARISON_STUDY_INTEGRATION.md",
+    "install_economic_desk.py",
+    "install_implementation.py",
+    "integration/component_fragments/economic-comparison.json",
+    "integration/component_fragments/economic-comparison-source.json",
     "model/report_changes_review.py",
     "model/report_review_study_receiving.py",
     "model/study_receiving.py",
@@ -186,6 +222,42 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/source_refresh_comparison.py",
+    "model/economic_comparison.py",
+    "model/economic_comparison_render.py",
+    "model/economic_comparison_source.py",
+    "model/economic_comparison_study_transfer.py",
+    "model/decision_analysis.py",
+    "model/decision_cli.py",
+    "model/decision_desk.html",
+    "model/model_selection.py",
+    "model/decision_receive.py",
+    "operator/economic_workbench.py",
+    "operator/economic_comparison.py",
+    "operator/economic_comparison_source.py",
+    "operator/economic_receive.py",
+    "operator/extensions/economic-desk.json",
+    "operator/extensions/economic-comparison.json",
+    "operator/extensions/economic-comparison-source.json",
+    "operator/web/economic_desk.mjs",
+    "operator/web/economic_desk.css",
+    "operator/web/economic_request_store.mjs",
+    "operator/web/economic_cost_worksheet.mjs",
+    "operator/web/economic_implementation.mjs",
+    "operator/web/economic_comparison.mjs",
+    "operator/web/economic_comparison_source.mjs",
+    "operator/web/economic_received_comparisons.mjs",
+    "operator/ECONOMIC_DESK.md",
+    "operator/ECONOMIC_COMPARISON.md",
+    "operator/ECONOMIC_COMPARISON_REPORT.md",
+    "operator/COST_WORKSHEETS.md",
+    "operator/ECONOMIC_IMPLEMENTATION.md",
+    "docs/ECONOMIC_COMPARISON_STUDY_TRANSFER.md",
+    "docs/ECONOMIC_COMPARISON_STUDY_INTEGRATION.md",
+    "install_economic_desk.py",
+    "install_implementation.py",
+    "integration/component_fragments/economic-comparison.json",
+    "integration/component_fragments/economic-comparison-source.json",
     "model/report_changes_review.py",
     "model/report_review_study_receiving.py",
     "model/study_receiving.py",
@@ -593,8 +665,82 @@ def verify_received_study_dependencies(application, pending):
                     require(names)
 
 
+def verify_economic_study_dependencies(application, pending):
+    """Keep saved Economic history and its original receiving desk complete."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    consumers = (
+        ("model/study_receiving.py", b"economic_comparison_study_transfer"),
+        ("model/scientific_report_study_transfer.py", b"economic_comparison_study_transfer"),
+        ("operator/web/received_studies.mjs", b"economic_received_comparisons.mjs"),
+        ("operator/web/extensions/study_transfer.mjs", b"economic_received_comparisons.mjs"),
+    )
+    active = source("model/economic_comparison_study_transfer.py") is not None
+    for name, marker in consumers:
+        body = source(name)
+        active = active or (body is not None and marker in body)
+    if not active:
+        return
+    dependencies = (
+        "model/common.py", "model/workspace.py", "model/observed_context.py",
+        "model/economic_comparison.py", "model/economic_comparison_render.py",
+        "model/economic_comparison_source.py", "model/economic_comparison_study_transfer.py",
+        "model/decision_analysis.py", "model/decision_cli.py", "model/decision_desk.html",
+        "model/model_selection.py", "model/native_versions.py",
+        "operator/economic_workbench.py", "operator/economic_comparison.py",
+        "operator/economic_comparison_source.py",
+        "operator/extensions/economic-desk.json", "operator/extensions/economic-comparison.json",
+        "operator/extensions/economic-comparison-source.json",
+        "operator/web/economic_desk.mjs", "operator/web/economic_desk.css",
+        "operator/web/economic_request_store.mjs", "operator/web/economic_cost_worksheet.mjs",
+        "operator/web/economic_implementation.mjs", "operator/web/economic_comparison.mjs",
+        "operator/web/economic_comparison_source.mjs",
+        "operator/web/economic_received_comparisons.mjs",
+        "integration/component_fragments/economic-comparison.json",
+        "integration/component_fragments/economic-comparison-source.json",
+    )
+    for name in dependencies:
+        assembled_data(application, pending, name)
+    native_versions = assembled_data(application, pending, "model/native_versions.py")
+    if b"source_refresh_comparison" in native_versions:
+        for dependency in ("model/source_refresh_comparison.py", "model/rasters.py"):
+            assembled_data(application, pending, dependency)
+    helper = assembled_data(application, pending, "model/economic_comparison_study_transfer.py")
+    if any(signature not in helper for signature in
+           (b"def include_source(", b"def summary(", b"def augment(")):
+        raise ValueError("Receive the original Economic source-history and restored-study reader together")
+    desk = assembled_data(application, pending, "operator/web/economic_desk.mjs")
+    if b"openSavedComparison" not in desk:
+        raise ValueError("Receive the original Economic desk's saved-comparison opener")
+    required_actions = {
+        "economic-desk": {"economic.edition.build", "economic.draft.save"},
+        "economic-comparison": {"economic.comparison.build"},
+        "economic-comparison-source": {"economic.comparison.report-source.import"},
+    }
+    for extension_id, actions in required_actions.items():
+        descriptor = json.loads(assembled_data(
+            application, pending, "operator/extensions/" + extension_id + ".json"))
+        if (descriptor.get("schema") != "upstate.operator-extension/v1"
+                or descriptor.get("id") != extension_id
+                or not actions.issubset(set(descriptor.get("backend", {}).get("actions", [])))):
+            raise ValueError("Receive the original complete Economic registration: " + extension_id)
+        for asset in descriptor.get("assets", []):
+            assembled_data(application, pending, "operator/web/" + asset)
+    reader = source("operator/web/received_studies.mjs")
+    if reader is not None and b"economic_received_comparisons.mjs" in reader:
+        descriptor = json.loads(assembled_data(
+            application, pending, "operator/extensions/study-transfer.json"))
+        if "economic_received_comparisons.mjs" not in descriptor.get("assets", []):
+            raise ValueError("Declare the original Economic receiving asset in the Study descriptor")
+    receiver = source("operator/economic_receive.py")
+    if receiver is not None and b"decision_receive" in receiver:
+        assembled_data(application, pending, "model/decision_receive.py")
+
+
 def verify_composition(application, pending):
     verify_received_study_dependencies(application, pending)
+    verify_economic_study_dependencies(application, pending)
     for name in REQUIRED:
         assembled_data(application, pending, name)
     for name in ("model/workspace.py", "model/experiments.py", "model/native_versions.py",
@@ -712,6 +858,10 @@ def verify_composition(application, pending):
                            "model/reviews.py", "model/scientific_report_editions.py",
                            "model/scientific_report_review.py"):
             assembled_data(application, pending, dependency)
+        if b"report_changes_review" in review_receiver:
+            for dependency in ("model/report_changes_review.py", "model/report_changes.py",
+                               "model/report_changes_study_transfer.py"):
+                assembled_data(application, pending, dependency)
         if b"def continue_selected_review(" in review_receiver:
             if transfer is None or b"customer_review_study_transfer" not in transfer:
                 raise ValueError("Receive the original Customer review Study transfer before its selected receiver")

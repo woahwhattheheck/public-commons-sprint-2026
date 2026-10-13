@@ -6,8 +6,8 @@ customer course. It first completes or reopens the original managed Applications
 customer. It then prepares one explicit review change through the original World
 Bank core and calls the maintained recurring and programme receiving engines.
 
-Use the READY World Bank source-selected installation from the final combined
-published source. Its manifest must include the original product receiver, the
+Build and install the desired complete source using [RECEIVING.md](RECEIVING.md),
+then use its READY World Bank source-selected installation. Its manifest must include the original product receiver, the
 programme manager, original recurring engines, live programme receiving extension,
 this entrypoint and the reviewed-reference helper. The installed receiver's
 Analysis digest must select that same complete reviewed engine. Do not overlay
@@ -15,8 +15,9 @@ new files into an already bound installation or change a saved receiving intent.
 
 ## Run
 
-The existing native operation owner supplies the original READY runtime and
-private receiving directory. Reuse that directory throughout this operation.
+Use an existing Linux host and the original READY runtime and private receiving
+directory. This full reference course has its own receiving directory; an active
+customer's normal Analysis workspace is a separate directory. Reuse that directory throughout this operation.
 Select the actual existing Python workbooks dependency, Playwright and Chromium.
 No runtime download or browser install is performed by this command.
 
@@ -30,6 +31,24 @@ starforge worldbank-product programme-receive \
   --chromium /absolute/chrome-headless-shell \
   --process-family /absolute/worldbank-ready-runtime/package/source/products/x402api-merchant-workspace/process_family.py
 ~~~
+
+If starforge is not on this host's PATH, use the runtime installer's existing
+run entrypoint from the same source checkout:
+
+~~~sh
+node stellar/scf-starforge-20261009/distribution/runtime-install-cli.mjs run \
+  --dir /absolute/worldbank-ready-runtime -- worldbank-product programme-receive \
+  --runtime /absolute/worldbank-ready-runtime \
+  --workspace /absolute/original-product-receiving \
+  --python /absolute/python \
+  --playwright-module /absolute/playwright/index.mjs \
+  --chromium /absolute/chrome-headless-shell \
+  --process-family /absolute/worldbank-ready-runtime/package/source/products/x402api-merchant-workspace/process_family.py
+~~~
+
+Add --python-dependencies /absolute/original-python-dependencies to this command
+only when selecting that existing dependency directory. This invokes the same
+installed command and preserves the runtime/source binding.
 
 Omit --python-dependencies when the original Python environment already provides
 openpyxl==3.1.5. The selected Node is the executable running the installed product

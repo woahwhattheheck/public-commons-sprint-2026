@@ -1,0 +1,66 @@
+{
+  "schema": "commons.original-five-customer-course.v1",
+  "operation_id": "FIVE-CUSTOMER-ORIGINAL-DOCUMENTS-379A-20261013",
+  "files": [
+    {
+      "path": "run-existing-browser.mjs",
+      "bytes": 13372,
+      "sha256": "6c1a021329481156ca6474b3e71580a67e0bdc720561eb17c72001c0396b2c7f"
+    },
+    {
+      "path": "originals.json",
+      "bytes": 113016,
+      "sha256": "27200410f93c9653803d55a8923e2090cc7accd05884133ca0553c42ffeacbe1"
+    },
+    {
+      "path": "README.md",
+      "bytes": 6695,
+      "sha256": "2fb959298a2afe68848159ffb4fe57930c15901e1e066966cd769c92eaee2cff"
+    }
+  ],
+  "cloud_source_canvas": "F0C8TC4L1EW",
+  "source_selections": {
+    "Unlost": {
+      "repository": "woahwhattheheck/Commons",
+      "commit": "651a3839dd2317efef24e2b6d56ff82d49a53046",
+      "folder": "revenue/unlost_europe_shopify_20261013",
+      "source_canvas": "F0C8T3Q42Q2",
+      "original_case": "C0BTTA66TK3/1791867144.473299",
+      "customerBodies": "Byte-preserved originals in the complete native package successor."
+    },
+    "MapRank": {
+      "repository": "woahwhattheheck/Commons",
+      "commit": "447b520ea9c559da358ebd38f4b08d54f015e728",
+      "folder": "revenue/maprank_local_seo_20261013",
+      "source_canvas": "F0C9KVC7N0Y",
+      "original_case": "C0BTTA66TK3/1791868496.616779"
+    },
+    "JSONSupport": {
+      "repository": "woahwhattheheck/commons",
+      "commit": "1d774079502b904642b2d47027c1ab46a099d2cf",
+      "folder": "revenue/jsonsupport_automation_partners_20261013",
+      "source_canvas": "F0C8SHRFBLJ",
+      "original_case": "C0BTTA66TK3/1791877916.462569"
+    },
+    "HoundStack": {
+      "repository": "woahwhattheheck/commons",
+      "commit": "02d40140279aff10f603ffc371cf202767c2e077",
+      "folder": "revenue/houndstack_pet_waste_20261012",
+      "source_canvas": "F0C8N61SU3X",
+      "original_case": "C0BTTA66TK3/1791841945.499989",
+      "customerBodies": "Exact original sample/paid HTML members preserved in current native file packages."
+    },
+    "PoolPro": {
+      "repository": "woahwhattheheck/commons",
+      "folder": "revenue/poolpro_pool_service_20261012",
+      "source_canvas": "F0C8VM2C4M7",
+      "original_case": "C0BTTA66TK3/1791835140.126069",
+      "customerBodies": "Exact original sample and first-paid HTMLs from the complete33-file successor. The distinct second-paid original HTML retains root's completed1440/390 inspection.",
+      "sourceIdentity": {
+        "bytes": 1178324,
+        "sha256": "b86558f0857a9f55a1f58803b520a8a1d6d8f7646f8b4528bd20a289b1e16f74"
+      },
+      "commit": "720f8efa04d71a555d24dc9c08e6c1e2bff119ca"
+    }
+  }
+}

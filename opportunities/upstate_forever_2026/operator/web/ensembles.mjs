@@ -318,7 +318,7 @@ export function attachEnsembles(context) {
         'With no extra parameter axes, the design compares the selected original profiles.')+
       '<div class="full">'+field('Purpose and comparison question','<textarea name="ensemble_reason" required rows="3"></textarea>')+'</div>'+
       '<fieldset class="full"><legend>Land-cover alternatives (optional)</legend>'+
-        '<p class="note">Leave these unselected to compare at least two distinct parameter cases on the observed baseline.</p>'+
+        '<p class="note">Leave these unselected to compare at least two distinct parameter cases on the retained baseline.</p>'+
         choices('ensemble_alternative',alternatives,'Parameter-only designs can use the retained baseline.')+'</fieldset>'+
       '<fieldset class="full"><legend>Scientific parameter profiles</legend>'+choices('ensemble_profile',profiles,'Prepare a profile first.')+'</fieldset>'+
       '<section class="full"><h3>Optional sourced parameter exploration</h3><p class="note">Add the values you want to evaluate and their source. '+
@@ -750,6 +750,53 @@ export function attachEnsembles(context) {
       });
   }
 
+  async function parameterStudies(id) {
+    const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
+    const response=await api(endpoint('/api/parameter-studies/ensemble-studies',{id}));
+    if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)return;
+    const preview=response.preview;
+    if(response.workspace_key!==workspace || preview?.ensemble_id!==id)
+      throw Error('Reopen the original ensemble in its saved Workspace.');
+    const studyLinks=(response.latest?.studies||[]).map(row=>{
+      const attrs=' data-id="'+escapeHTML(row.experiment_id)+'" data-workspace="'+escapeHTML(workspace)+'"';
+      return '<li><strong>'+escapeHTML(row.title)+'</strong> · '+escapeHTML(label(row.state))+
+        '<div class="page-actions"><button type="button" data-action="parameter-study-open"'+attrs+
+        '>Open scenario parameter study</button>'+
+        (row.source?.source?'<button type="button" data-action="parameter-study-source-open"'+attrs+
+          ' data-source-id="'+escapeHTML(row.source.id)+'">Compose scientific report</button>':'')+
+        '</div></li>';
+    }).join('');
+    const rows=preview.studies.map(row=>'<tr>'+cell(row.scenario_title)+cell(row.title)+
+      cell(numeric(row.cases))+cell(short(row.base_profile_id))+'</tr>');
+    const content='<p>'+escapeHTML(preview.method)+'</p>'+
+      '<p><strong>'+numeric(preview.counts.complete_native_runs)+' / '+numeric(preview.counts.native_runs)+
+      ' original native runs complete</strong> · '+numeric(preview.counts.study_count)+' parameter studies.</p>'+
+      table(['Original scenario','Retained parameter study','Cases','Reference profile'],rows)+
+      '<p class="note">Each study uses its original scenario, grid, coefficient source, run IDs and model arguments. '+
+      'The output includes annual quantities, signed parameter changes and pair-specific valid coverage. '+
+      'Its saved source retains the original ensemble plan and complete member mapping.</p>'+
+      (studyLinks?'<h3>Saved continuation</h3><ul>'+studyLinks+'</ul>':'')+
+      (!preview.ready?'<div class="notice">Continue the original ensemble first. '+
+        escapeHTML(preview.counts.pending.length)+' original runs remain unfinished.</div>':'')+
+      '<label class="check-row"><input type="checkbox" name="ensemble_parameter_reports" checked>'+
+      '<span>Prepare scientific sources, figures and reports for every scenario</span></label>'+
+      '<label class="check-row"><input type="checkbox" name="ensemble_parameter_maps">'+
+      '<span>Retain original pairwise difference rasters in each Parameter export</span></label>';
+    openForm('Parameter results by scenario','Continue completed original native runs into scenario-specific studies.',
+      content,'Prepare scenario parameter studies',async()=>{
+        if(workspace!==currentWorkspace() || version!==designVersion || mounted!==generation)
+          throw Error('Reopen this original ensemble before preparing its parameter studies.');
+        if(!preview.ready)throw Error('Complete the named original ensemble runs first.');
+        const selected=form();
+        const result=await submitAction('parameter-study.ensemble.continue',{
+          ensemble_id:id,
+          render_reports:!!selected?.elements.namedItem('ensemble_parameter_reports')?.checked,
+          difference_maps:!!selected?.elements.namedItem('ensemble_parameter_maps')?.checked});
+        toast('Original-run aggregation and reports are queued. Open each saved scenario study from the completed task.');
+        return result;
+      });
+  }
+
   async function inspect(id) {
     const workspace=currentWorkspace(), version=++designVersion, mounted=generation;
     const result=await api(endpoint('/api/ensembles/inspect',{ensemble_id:id}));
@@ -762,6 +809,7 @@ export function attachEnsembles(context) {
       (item.state!=='complete'?button('run',item.state==='prepared'?'Run saved design':'Continue saved design',id):'')+
       button('report','Generate report and exports',id)+
       button('study-source','Prepare scientific study report',id)+
+      button('parameter-studies','Parameter results by scenario',id)+
       button('consumer-decision','Physical decisions',id)+
       button('consumer-calibration','Evaluate annual loads',id)+'</div>'+
       '<div class="cards">'+[
@@ -786,7 +834,7 @@ export function attachEnsembles(context) {
         (error?.message||error?.error?.message||JSON.stringify(error)))+'</li>').join('')+
       '</ul><p>Completed stages stay available. Inspect the named run, correct its input or runtime problem and continue this same design.</p></div></section>';
     content+='<h3 class="subheading">Land-cover physical quantities</h3>'+pairTable(summary);
-    content+='<h3 class="subheading">Parameter sensitivity on the observed baseline</h3>'+pairTable(summary,'sensitivity');
+    content+='<h3 class="subheading">Parameter sensitivity on the retained baseline</h3>'+pairTable(summary,'sensitivity');
     content+='<h3 class="subheading">Report downloads</h3>';
     if(result.export_state==='stale')
       content+='<div class="notice">The downloadable report needs to be refreshed. '+
@@ -859,7 +907,7 @@ export function attachEnsembles(context) {
         escapeHTML(value)+'</strong></div>').join('')+'</div>'+
       '<p>'+escapeHTML(item.reason||'')+'</p>'+
       '<p class="note">Annual change is alternative minus baseline: a negative value means lower modeled export. '+
-      'Each land-cover contrast uses matching parameter choices; parameter contrasts retain the observed baseline. '+
+      'Each land-cover contrast uses matching parameter choices; parameter contrasts hold the retained baseline fixed. '+
       'The original annual units, common-cell coverage and undefined values remain unchanged.</p>';
     if(!local)html+='<p>This scientific source originated in another project. Its captured choices and results are available here.</p>';
     const errors=[...(summary.run_errors||[]),...(summary.errors||[])];
@@ -904,6 +952,7 @@ export function attachEnsembles(context) {
     if(action==='new')return newDesign();
     if(action==='reload')return root?mount(root):undefined;
     if(action==='inspect')return inspect(id);
+    if(action==='parameter-studies')return parameterStudies(id);
     if(action==='received-compose')return composeReceivedStudy(id);
     if(action==='consumer-decision')return consumerForm(id,'decision');
     if(action==='consumer-calibration')return consumerForm(id,'calibration',{annual_import_id:node.dataset.annualImport});

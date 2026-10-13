@@ -369,3 +369,7 @@ Read [Runtime operating procedures](RUNTIME_PROCEDURES.md) for complete source s
 ## Original application files
 
 Use the Applications **Original input files** shelf to retain complete device or CLI files, resume interrupted uploads, and prepare separate working copies for an application's existing file setting. The original bytes, selection requests and working copies stay in the same workspace and its complete backup. See [Application input files](APPLICATION_INPUTS.md) for browser, CLI and independent receiving instructions.
+
+## Search and reopen complete operation history
+
+The **Operations** desk now filters and pages retained work while preserving its original recovery controls. Open a selected operation for its full result, download the complete record, or continue through its existing workflow. Ordinary activity polling carries compact descriptors; views requiring historical result bodies retain them. See [Original operation history](OPERATION_HISTORY.md) for the browser journey, native/API paging, current observation semantics and the existing receiving continuation.
