@@ -44,6 +44,15 @@
         "git_blob": "be7d525d361313514060ab8cb70637534c6988b4",
         "sha256": "5577cc12e00ac6268a1257bf18df235f72a91c4650279ed46757198a2d5df2c6"
       }
+    },
+    {
+      "path": "install_report_changes.py",
+      "bytes": 2715,
+      "sha256": "335a4f6574e8225b0263b351b82306d0896b5352eb6a6d10edd30e0e39843d58",
+      "preimage": {
+        "git_blob": "77d9e17cfbfb305d89d1738519b3e4dbc5d607c2",
+        "sha256": "50bd053fcb99ed7d69e1acc04666ba90ab68859bdb508a5cd4468a0e5d1b76b1"
+      }
     }
   ],
   "guarded_joins": {
@@ -109,6 +118,20 @@
       {
         "before": "        result = task.get('result') or {}\n",
         "after": "        result = task.get('result') or {}\n        if task['action'] == 'report-changes.review':\n            return {**task, '_review': {\n                'kind': 'review', 'review_id': result['review_id'],\n                'comparison_id': result['comparison_id'],\n                'title': result['title'], 'artifact_count': result['artifact_count']}}\n"
+      }
+    ],
+    "install_report_changes.py": [
+      {
+        "before": " 'model/report_changes.py', 'operator/report_changes.py',",
+        "after": " 'model/report_changes.py', 'model/report_changes_review.py',\n 'model/scientific_report_review.py', 'operator/report_changes.py',"
+      },
+      {
+        "before": "for name in ('operator/source_report_editions.py','operator/extension_registry.py','model/common.py'):",
+        "after": "for name in ('operator/source_report_editions.py','operator/extension_registry.py','model/common.py',\n                 'model/workspace.py','model/reviews.py','model/scientific_report_editions.py'):"
+      },
+      {
+        "before": "'version':'1.0.0'",
+        "after": "'version':'1.2.0'"
       }
     ]
   },
