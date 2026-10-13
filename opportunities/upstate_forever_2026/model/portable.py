@@ -14,6 +14,7 @@ from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifi
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
 from .portable_acquisitions import capture_lock_paths, verify_acquisitions
 from .portable_implementation import locked_implementation, verify_implementation
+from .portable_parameter_studies import verify_parameter_studies
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -593,13 +594,15 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                 source_acquisitions = verify_acquisitions(
                     root, records, source_ids={row["id"] for row in workspace._list("sources")})
                 implementation = verify_implementation(root, records)
+                parameter_studies = verify_parameter_studies(workspace, records)
                 manifest = {"schema": FORMAT, "project": workspace.project, "created_at": now(),
                             "selection": selection, "members": records,
                             "database_snapshots": databases,
                             "receiving": "python application/model/cli.py restore ARCHIVE NEW_DIRECTORY",
                             "source_views": "Recreated from the original content-addressed objects on demand",
                             "source_acquisitions": source_acquisitions,
-                            "implementation": implementation}
+                            "implementation": implementation,
+                            "parameter_studies": parameter_studies}
                 if delivery:
                     expected_application = (delivery.get("record", {}).get("selection") or {}).get(
                         "application_sha256")
@@ -623,7 +626,8 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                       "sha256": archive_sha256, "members": len(records),
                       "selection": selection, "database_snapshots": databases,
                       "source_acquisitions": source_acquisitions,
-                      "implementation": implementation}
+                      "implementation": implementation,
+                      "parameter_studies": parameter_studies}
             # Publish without replacing an unrelated archive created meanwhile.
             os.link(pending, destination)
             pending.unlink()
@@ -871,6 +875,10 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         retained_implementation = manifest.get("implementation")
         if retained_implementation is not None and retained_implementation != implementation:
             raise ValueError("Receiving changed the original implementation plans or reports")
+        parameter_studies = verify_parameter_studies(restored, verified_members)
+        retained_studies = manifest.get("parameter_studies")
+        if retained_studies is not None and retained_studies != parameter_studies:
+            raise ValueError("Receiving changed the original parameter studies or exports")
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
         archive_sha256 = _archive_digest(archive_source, before)
@@ -887,6 +895,7 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
                   "database_snapshots": manifest.get("database_snapshots", {}),
                   "source_acquisitions": source_acquisitions,
                   "implementation": implementation,
+                  "parameter_studies": parameter_studies,
                   **received_delivery(manifest, destination, record=received_record)}
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():
