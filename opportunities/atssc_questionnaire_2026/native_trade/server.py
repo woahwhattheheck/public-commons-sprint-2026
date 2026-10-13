@@ -80,7 +80,7 @@ def main():
                     return self.send(200,(SOURCE/"RESPONDENT_OPERATIONS.md").read_bytes(),"text/plain; charset=utf-8")
                 if path in {"/respondent-operations","/respondent-operations/","/respondent-operations/contact"} or path.startswith("/public/entry/"):
                     return self.send(200,(SOURCE/"respondent-operations.html").read_bytes(),"text/html; charset=utf-8")
-                if path in {"/respondent-operations.mjs","/respondent-operations.css","/reporting-workbench.mjs","/locale.mjs"}:
+                if path in {"/respondent-operations.mjs","/respondent-operations.css","/reporting-workbench.mjs","/source_formula.mjs","/locale.mjs"}:
                     return self.send(200,(SOURCE/path[1:]).read_bytes(),"text/javascript; charset=utf-8" if path.endswith(".mjs") else "text/css; charset=utf-8")
                 if path == "/api/outreach/public":
                     token=parse_qs(parsed.query).get("token",[""])[0]

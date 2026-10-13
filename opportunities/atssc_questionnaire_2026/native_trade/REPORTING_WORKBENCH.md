@@ -26,7 +26,12 @@ customer workspace as the workbooks, published definitions and accepted response
 
 Public and protected filters are evaluated independently against their own
 projected answers. A filter on a protected-only variable selects no public
-responses and its literal is withheld in public metadata. Public alternatives
+responses and its literal is withheld in public metadata. A protected answer or
+cell also stays outside a public `missing` filter; withholding an answer does not
+turn it into an unanswered observation. Where a selected filter variable has
+protected responses or cells, the public layout retains its operator and source
+reference with `literal_withheld`, while the complete operand stays in the
+protected edition. Public alternatives
 remain readable text; they never enter sums, averages, ratios, groups or charts.
 Calculated answers dependent on protected inputs retain the original protected
 projection. Missing/withheld year cells remain gaps in charts and cross-tabs.
@@ -75,3 +80,55 @@ An absent year stays null, rather than becoming a zero or disappearing.
 These operations implement the original Annex A reporting requirements on
 pages 21-22, sections 7.3.6-7.3.11, alongside the application's original response,
 review, public release and document-download operations.
+
+## Native workbook calculations and retained views
+
+Report variables use the questionnaire core's original disclosure projection.
+This includes expression dependencies, native workbook dependencies, original
+source coordinates and native protected dependencies. A workbook-derived value
+whose source is protected receives the same classification in reporting as in
+the respondent's accepted revision. Filters, groups, year variables and ratio
+denominators all resolve through that one reference context.
+
+The definition context contains only the declared table shape and physical
+source-row ordering. It supplies reference classifications; the selected
+accepted responses remain the only source of report observations and numerical
+statistics. The context is built once for a complete template or saved view and
+is shared by its original variable references.
+
+Reopen an existing saved template or view through the normal reporting library.
+Its title, notes, sections, filters, selected questions and saved version remain
+retained. When preparing a new preview or report, both a reused section and its
+original saved view are resolved against the selected published definition
+before their binding is compared. Previously retained reference metadata is
+therefore updated for the original native-calculation contract without changing
+the stored view. An actual change to a view's authored specifications still
+requires its own saved version.
+
+An already frozen report remains its original complete edition. To receive the
+current native dependency interpretation, create a new preview from the selected
+template and publication, review both public and protected outputs, and save that
+new report. This preserves the earlier report and its original accepted revision,
+template, view, value and calculation history.
+
+## Public selection and complete report delivery
+
+A public response filter reads its selected public value together with the
+classification already returned by the core. For a table, all conditions must
+match the same original physical answer row. A withheld cell satisfies neither
+`answered` nor `missing`; its approved explanatory alternative remains text in
+the public response. Original public zero, false and empty input retain their
+normal value semantics.
+
+A public layout and every public view withhold a filter operand when its
+declared/native dependency or an original response classification makes that
+reference protected. The protected layout keeps the original complete filter.
+The same selected public rows feed the preview, frozen statistics, JSON, CSV,
+HTML, Word, PDF and the existing Office outputs.
+
+Use the original customer receiving operation to reopen a retained template,
+prepare the next public/protected editions from the same accepted responses,
+save the report, download its full outputs, and reopen the complete project
+export. The reporting extension uses the existing transaction and request-ID
+journal; the original saved versions and frozen reports stay part of that
+receiving case.

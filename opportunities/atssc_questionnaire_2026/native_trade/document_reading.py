@@ -293,7 +293,7 @@ def reading_context(payload, model):
         # existing grouped question context; retain the paired French wording
         # beside it without recovering any hidden definition or answer.
         text = question.get("original_french_text")
-        if isinstance(text, str) and text.strip() and text != question.get("label") and text != question.get("original_question_text"):
+        if language != "fr" and isinstance(text, str) and text.strip() and text != question.get("label") and text != question.get("original_question_text"):
             wordings.append((labels["original_french"], text))
         question_refs[qid] = {"notes": notes, "wordings": wordings}
 

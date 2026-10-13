@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import base64
 import csv
+import copy
 import hashlib
 import html
 import io
@@ -26,9 +27,9 @@ from workbooks import cell_parts, cell_value, col_letters, col_number, read_xlsx
 
 ID = re.compile(r"^[A-Za-z][A-Za-z0-9_.-]{0,79}$")
 KINDS = {"text","number","integer","date","boolean","choice","table"}
-DISPLAY_QUESTION_FIELDS = ("id","label","kind","unit","disclosure","original_question_text","original_row_label","section","original_question_heading","original_french_text")
+DISPLAY_QUESTION_FIELDS = ("id","label","kind","unit","disclosure","original_question_text","original_row_label","section","original_question_heading","original_french_text","original_row_french_label","original_context","original_period_context","original_answer_option","original_choice_labels","original_choice_french_labels")
 SOURCE = Path(__file__).resolve().parent
-EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake","questionnaire_locale")
+EXTENSION_MODULES = ("respondent_operations","reporting_workbench","workbook_calculation","workbook_intake","questionnaire_locale","source_formula")
 
 
 class OperationError(ValueError):
@@ -680,6 +681,27 @@ class Workspace:
             if row is None: raise OperationError("NOT_FOUND","The questionnaire has no saved definition at that version")
             return {"questionnaire_id":questionnaire["id"],"name":questionnaire["name"],"version":version,"definition":json.loads(row[0]),"created":row[1]}
 
+    def _display_definition(self,definition):
+        module = importlib.import_module("workbook_intake") if "workbook_intake" in self.extension_modules else None
+        renderer = getattr(module,"source_display_definition",None)
+        if renderer is None: return definition
+        display = renderer(self,copy.deepcopy(definition))
+        original_questions = definition["questions"]
+        if not isinstance(display,dict) or [q.get("id") for q in display.get("questions",[])] != [q["id"] for q in original_questions]:
+            raise OperationError("SOURCE_DISPLAY","Source display context must retain the published question identifiers and order")
+        metadata = {"label","original_question_text","original_row_label","section","original_question_heading","original_french_text","original_row_french_label","original_context","original_period_context","original_display_source","original_answer_option","original_choice_labels","original_choice_french_labels"}
+        for original,shown in zip(original_questions,display["questions"]):
+            before = {k:v for k,v in original.items() if k not in metadata|{"columns"}}
+            after = {k:v for k,v in shown.items() if k not in metadata|{"columns"}}
+            if before != after:
+                raise OperationError("SOURCE_DISPLAY","Source display context must retain the original answer and calculation contract")
+            original_columns,shown_columns = original.get("columns",[]),shown.get("columns",[])
+            if len(original_columns)!=len(shown_columns) or any({k:v for k,v in a.items() if k!="label"}!={k:v for k,v in b.items() if k!="label"} for a,b in zip(original_columns,shown_columns)):
+                raise OperationError("SOURCE_DISPLAY","Source display context must retain the original column bindings and answer types")
+        if {k:v for k,v in definition.items() if k not in {"questions","source_display_context"}} != {k:v for k,v in display.items() if k not in {"questions","source_display_context"}}:
+            raise OperationError("SOURCE_DISPLAY","Source display context must retain the original publication definition")
+        return display
+
     def op_publish(self,p):
         key = identifier()
         def action(db):
@@ -726,7 +748,7 @@ class Workspace:
             if draft:
                 draft["answers"] = json.loads(draft["answers"])
                 draft["validation"] = json.loads(draft["validation"])
-            return {"respondent":{k:v for k,v in respondent.items() if k != 'key_hash'},"publication":publication,"definition":definition,"revisions":revisions,"draft":draft,"source_values":self.source_values(definition)}
+            return {"respondent":{k:v for k,v in respondent.items() if k != 'key_hash'},"publication":publication,"definition":definition,"display_definition":self._display_definition(definition),"revisions":revisions,"draft":draft,"source_values":self.source_values(definition)}
 
     def op_save_progress(self,p):
         key = p["respondent_id"]
@@ -852,7 +874,8 @@ class Workspace:
         return self._write("review_revision",p["revision_id"],{"decision":decision},action)
 
     def compose_report(self,db,p,key):
-        publication,definition = self._definition(db,p["publication_id"])
+        publication,immutable_definition = self._definition(db,p["publication_id"])
+        definition = self._display_definition(immutable_definition) if p.get("refresh_source_context") else immutable_definition
         selected_questions = p.get("question_ids")
         known_questions = {q["id"]:q for q in definition["questions"]}
         if selected_questions is not None and (not isinstance(selected_questions,list) or not selected_questions or len(selected_questions)!=len(set(selected_questions)) or not set(selected_questions)<=set(known_questions)):
@@ -865,13 +888,13 @@ class Workspace:
         for row in db.execute("SELECT r.id,r.name,r.status,r.version,r.accepted_revision,v.number,v.validation,v.workbook_sha FROM respondents r JOIN revisions v ON v.id=r.accepted_revision WHERE r.publication_id=? AND r.status='accepted' AND r.version=v.number ORDER BY r.created",(publication["id"],)):
             if selected_respondents is not None and row["id"] not in selected_respondents: continue
             validation = json.loads(row["validation"])
-            projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
+            projection = validation if "public_values" in validation else disclosure_projection(immutable_definition,validation["values"],final=False)
             responses.append({"respondent_id":row["id"],"name":row["name"],"status":row["status"],"latest_version":row["version"],"revision_id":row["accepted_revision"],"accepted_number":row["number"],"workbook_sha256":row["workbook_sha"],"values":validation["values"],"disclosures":projection["disclosures"],"public_values":projection["public_values"],"public_alternatives":projection["public_alternatives"],"public_confirmed":projection["public_confirmed"],"formula_issues":validation.get("formula_issues",[]),"native_calculation":validation.get("native_calculation")})
         if selected_respondents is not None and set(selected_respondents)!={r["respondent_id"] for r in responses}:
             raise OperationError("REPORT_SELECTION","Every selected respondent needs an accepted revision in this publication")
         if not responses:
             raise OperationError("REPORT_EMPTY","Accept a respondent revision before consolidating a report")
-        protected = {"schema":"atssc.report.protected.v1","report_id":key,"publication":publication,"definition":definition,"questions":report_questions,"created":now(),"accepted_responses":responses}
+        protected = {"schema":"atssc.report.protected.v1","report_id":key,"publication":publication,"definition":immutable_definition,"questions":report_questions,"created":now(),"accepted_responses":responses}
         public_questions = []
         for q in report_questions:
             item = {k:q[k] for k in DISPLAY_QUESTION_FIELDS if k in q}
@@ -883,6 +906,9 @@ class Workspace:
             selected = {q["id"] for q in public_questions}
             public_responses.append({"response_number":index,"values":{k:v for k,v in response["public_values"].items() if k in selected},"public_alternatives":{k:v for k,v in response["public_alternatives"].items() if k in selected},"disclosures":{k:v for k,v in response["disclosures"].items() if k in selected}})
         public = {"schema":"atssc.report.public.v1","report_id":key,"created":protected["created"],"questionnaire_title":definition.get("title","Questionnaire"),"questions":public_questions,"accepted_responses":public_responses}
+        if "source_display_context" in definition:
+            protected["source_display_context"] = definition["source_display_context"]
+            public["source_display_context"] = definition["source_display_context"]
         for edition,questions,records in ((public,public_questions,public_responses),(protected,report_questions,responses)):
             totals = {}
             for field in questions:
@@ -925,10 +951,11 @@ class Workspace:
         if edition not in {"public","protected"}: raise OperationError("EDITION","Choose public or protected response edition")
         record = self.op_get_respondent({"respondent_id":respondent_id})
         current = record["draft"] or (record["revisions"][-1] if record["revisions"] else None)
-        definition = record["definition"]
+        immutable_definition = record["definition"]
+        definition = record["display_definition"]
         answers = {} if current is None else current["answers"]
-        validation = validate_answers(definition,answers) if current is None else current["validation"]
-        projection = validation if "public_values" in validation else disclosure_projection(definition,validation["values"],final=False)
+        validation = validate_answers(immutable_definition,answers) if current is None else current["validation"]
+        projection = validation if "public_values" in validation else disclosure_projection(immutable_definition,validation["values"],final=False)
         public = edition == "public"
         question_fields = (*DISPLAY_QUESTION_FIELDS,"columns") if public else (*DISPLAY_QUESTION_FIELDS,"columns","source","source_workbook_name")
         questions = [{k:q[k] for k in question_fields if k in q} for q in definition["questions"]]
