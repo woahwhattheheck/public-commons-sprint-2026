@@ -180,12 +180,12 @@
   "product": {
     "schema": "stellar-forge.merchant-product-package.v1",
     "description": "TJLabs Grant Analyst Workbench: complete original grant review, Learning, commissioned-study evidence/releases and independent customer receiving with private full source.",
-    "readme": "products/grant-analyst-workbench/OPERATING.md",
+    "readme": "products/grant-analyst-workbench/PACKAGE_README.md",
     "bin": {
       "starforge": "stellar/scf-starforge-20261009/distribution/cli.mjs"
     },
     "repository": {
-      "url": "https://github.com/woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "url": "https://github.com/woahwhattheheck/public-commons-sprint-2026",
       "directory": ""
     }
   }

@@ -1,0 +1,458 @@
+{
+  "schema": "commons.public-product-source.v1",
+  "product": "grant-analyst-workbench",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "original_source": {
+    "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+    "commit": "88529be406ee130a2bfdb949a4e4521b2b30e503",
+    "checkpoint": {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "git_blob": "307bddaa793c7c5fb51622fc86abcc93a76c48e0",
+      "bytes": 879197,
+      "sha256": "01ab97362dabebae133970fcf384cb6ae354965bb4076202991e087c08d3e7ca"
+    },
+    "files": [
+      {
+        "path": "products/grant-analyst-workbench/prepare.mjs",
+        "git_blob": "f8e04ef19a94c42fa3f2ac39645d6c0e394f40b7",
+        "bytes": 6761,
+        "sha256": "73f24babb02be809d968c58e0169d2d0d463acff0670e5ef630e99704a449a36"
+      },
+      {
+        "path": "products/grant-analyst-workbench/preparation.py",
+        "git_blob": "0c4ad67d454432a4b5ff11694044e1f58481bb2f",
+        "bytes": 43566,
+        "sha256": "53b6d3c6777886aebcdc2878350e40e0cb129b6f41b2ef90db0f51bc60cf3b29"
+      },
+      {
+        "path": "products/grant-analyst-workbench/PREPARING.md",
+        "git_blob": "7f6c46cd1d6ff6192eb136309486c1d4d987b921",
+        "bytes": 23408,
+        "sha256": "291ff997b2322de6b09fd204844b1418d4bc698a7977e4446023527b0f0396a3"
+      },
+      {
+        "path": "products/grant-analyst-workbench/connection.mjs",
+        "git_blob": "db77d209b89772af0c25016f762bcd2fc8188430",
+        "bytes": 19358,
+        "sha256": "5318350e762f6700a23a5fdcce28f2e45b57f5cc3920ce4de0d2031d5f36aa60"
+      },
+      {
+        "path": "products/grant-analyst-workbench/managed.mjs",
+        "git_blob": "644795fcf6cbe7ca9aef689cfc13bb16eb55d326",
+        "bytes": 15653,
+        "sha256": "6ddc0cc1b840b2a5de80bf8b7cf317e852968a92be070a3c144e9de2c7b5d8e1"
+      },
+      {
+        "path": "products/grant-analyst-workbench/managed_host.py",
+        "git_blob": "5d4aa6b4a128d25859e7faef99b68793a3515247",
+        "bytes": 33209,
+        "sha256": "f5632e9e88c1407add2c414762640b597db3e57f0de60e081fd9a83df132658b"
+      },
+      {
+        "path": "products/grant-analyst-workbench/application-provider.mjs",
+        "git_blob": "abb28c6e69f41f58e48fb934f600407d866cc986",
+        "bytes": 5973,
+        "sha256": "a70632443475a8f58898f8f8ee77bdd328d1095bc06dd556d92273e663bfb0ea"
+      },
+      {
+        "path": "products/grant-analyst-workbench/cli.mjs",
+        "git_blob": "e9dc74fc9a69325d52806d83f9fcfc48972ba600",
+        "bytes": 4783,
+        "sha256": "8a01df9424df377767d97a162642f88c8fb96fb256647484bb16489f201b53b6"
+      },
+      {
+        "path": "products/grant-analyst-workbench/receive.mjs",
+        "git_blob": "ba7a26032f68109e770bd43c52a61b499e553cba",
+        "bytes": 580,
+        "sha256": "93980c92726d707e3a50a9d8e7c3dcd1cf8e998f15aa4d97c31348fa4fb0bde9"
+      },
+      {
+        "path": "products/grant-analyst-workbench/tools.mjs",
+        "git_blob": "c57b1f6dbd5169d7b6fe53f81b4e9a69ccb1391e",
+        "bytes": 6334,
+        "sha256": "89bc25d8f198b90c2de878efc69c680eb2eaccacea6e89dfa45aa9ef3479b66e"
+      },
+      {
+        "path": "products/grant-analyst-workbench/mcp.mjs",
+        "git_blob": "17d2faf396ee869338d01fb803f0a4ea504db328",
+        "bytes": 23367,
+        "sha256": "3dbdfa407608d1cc2a7c8139fc2763c4db91f9faa56773dbcb3c7521f5cb048e"
+      },
+      {
+        "path": "products/grant-analyst-workbench/files.mjs",
+        "git_blob": "c790529a0d4a9c7c3812f85c47b864a75eb1ca08",
+        "bytes": 11536,
+        "sha256": "1b01a05088fccd325701b2c3a11789b820e898e716337dd7f56828af8770a453"
+      },
+      {
+        "path": "products/grant-analyst-workbench/requests.mjs",
+        "git_blob": "15c316a2ce8b79eeb01dd64141407677a742fa30",
+        "bytes": 6871,
+        "sha256": "7e668e3086aef7411152967ecb3649fa1af9d98cffe7a21e02ff8cfb447f7a87"
+      },
+      {
+        "path": "products/grant-analyst-workbench/merchant-provider.mjs",
+        "git_blob": "b74ded83b4e42a06013390cb228bd6b7f539376c",
+        "bytes": 3523,
+        "sha256": "3a9bc13dd85f381185f92a8667fa12aca101590b3daa36ac6a709c7604dec854"
+      },
+      {
+        "path": "products/grant-analyst-workbench/setup.mjs",
+        "git_blob": "2012dd9f6dcae82fd8f8b820f357f90ab152e231",
+        "bytes": 3597,
+        "sha256": "4c36b35d3845cfafd7182f13ef37ea40b2784566a69a0434160b14634c3eebdb"
+      },
+      {
+        "path": "products/grant-analyst-workbench/runtime-package.json",
+        "git_blob": "0fd6eaf86cb27fa76e976fc60c214a87be7b3478",
+        "bytes": 167,
+        "sha256": "72a0e54f1860787bf84b817e5a1beb296ee4ec3f135d7c34febbf3f5d6b164ac"
+      },
+      {
+        "path": "products/grant-analyst-workbench/source-manifest.schema.json",
+        "git_blob": "2a4e9280a187445bd2d75c74c346eb2491f5e04a",
+        "bytes": 925,
+        "sha256": "f162e51d8687a7fa2a17cd069f375e3b6ffc82c924bce3d56390ae59a733ad4d"
+      },
+      {
+        "path": "products/grant-analyst-workbench/OPERATING.md",
+        "git_blob": "1c21fbc3a54f9c139990e88e3a513e6c94f78b10",
+        "bytes": 27470,
+        "sha256": "cc24ea486c9d8b5fc564d159bbc87ac41ea5125d7115b0b5033cfb09ff0020ac"
+      },
+      {
+        "path": "stellar/scf_2026/sf49_data_commissioning/installation-workorders/grant-analyst-workbench.json",
+        "git_blob": "cb2e35be059f0ca42cc40a8da7391a9299f73296",
+        "bytes": 14522,
+        "sha256": "0e23e5c94539526c97a0847e8954d57edce7597d91ef90e7ea5b6117f3c00c95"
+      },
+      {
+        "path": "stellar-forge/developer-site/grant-products/grant-analyst-workbench.json",
+        "git_blob": "096273e79382dc358f77e64e52529c5bf1628968",
+        "bytes": 3556,
+        "sha256": "41c5bfa2901452237410fafab30dcfa85cc283ef014b91cce523398b50db746d"
+      },
+      {
+        "path": "stellar-forge/developer-site/GRANT_GRANT_ANALYST_WORKBENCH.md",
+        "git_blob": "6777055227e34d55b256e25a2b4f8f209591f136",
+        "bytes": 22200,
+        "sha256": "e34d5031b45ac2b13156c51666fda0b8bc8de5b525800f19482b10d2432acd57"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/grant-analyst-workbench.json",
+        "git_blob": "9a8a06fd3dd1d9aaa6e327da1257bcf7844cfd7b",
+        "bytes": 4785,
+        "sha256": "e576223e9921520ff584cafd829570ec12c99bd9eaa109272908d74cb452101a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/selections/grant-analyst-workbench.json",
+        "git_blob": "4c92ec0e42774fc3539b0f03772b5004bb049799",
+        "bytes": 11036,
+        "sha256": "94ad35409f684e666d3ba358357fdfbf520b2960992343a765c6e5717185b4a4"
+      },
+      {
+        "path": "products/grant-analyst-workbench/receiving.mjs",
+        "git_blob": "c366acbfc2e4389c8175ac8ce310a06b95933ae0",
+        "bytes": 53978,
+        "sha256": "4e11f5c5067add9a5d204c86ad97741a4228cdf87ae871abf90f55f3c02eaafb"
+      },
+      {
+        "path": "products/grant-analyst-workbench/receiving-original.py",
+        "git_blob": "7fa4fd0f362adf0304da7b0581ceb3b723772bd6",
+        "bytes": 43372,
+        "sha256": "126c364cd82fe64b6ebb439f0f32b0da6068f1d5751acc787dd70e4596927d33"
+      },
+      {
+        "path": "products/grant-analyst-workbench/receiving-browser.mjs",
+        "git_blob": "5b60b8fd7ce8ba30565e1fb6b1fbfe0a6586a45a",
+        "bytes": 36823,
+        "sha256": "471ddb746376ebb67009d30464e1e8a38ddf9e2c3bb1fcc661334a0d241f3e2e"
+      },
+      {
+        "path": "products/grant-analyst-workbench/RECEIVING.md",
+        "git_blob": "7a7b157fc6ee562ccfe5bdf6c269036d3a5adae5",
+        "bytes": 23220,
+        "sha256": "65dfccb1d7d48aca9d5e54962dcd178b2b0dc498fb11311683e27041d9fe727f"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-host.py",
+        "git_blob": "06fe07069014d7655dd4597335ef6e51492b8173",
+        "bytes": 7234,
+        "sha256": "4fb6354ede302e89b5e86ef92a92258c1640b1521e0a1e8c43865f7974b60828"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-host.mjs",
+        "git_blob": "aa3fc2c246bc82bb8573d7a7707ac554d28e8e25",
+        "bytes": 25674,
+        "sha256": "412afea65de036922617f321e7ff1fa41b6d81c46bca87202655bf2abcd51eb5"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-host.css",
+        "git_blob": "4f925712db9128efa073d96fc6e858c979d40483",
+        "bytes": 3507,
+        "sha256": "94f446272f75523ee2a50d440d951bd7e29c23b80a5866a0f592e61b5101ab2e"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange.mjs",
+        "git_blob": "b09a8c4608dfb4ce2f2c1194e58b738067aa4f06",
+        "bytes": 26916,
+        "sha256": "53a16c64424208acded09c5f16824d1af12ba9f3678892015493fb25151a9a74"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-offline.mjs",
+        "git_blob": "afb680fd2cfab882ace43844c72b66c2cbfeca99",
+        "bytes": 19246,
+        "sha256": "c911b871f174d8500723536060b6ed4140d34d9bd47dcdf6226b12bfd271bd3e"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-offline.css",
+        "git_blob": "a0c50ed5c0e1c274fbcca26113f680670d64d88a",
+        "bytes": 3590,
+        "sha256": "e74bbb5e981a13ca564cc6417720ab6bdc962ebd6c11ed84064710af816ad9b2"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-offline.html",
+        "git_blob": "48e41021b312fdaf076989152493259e6c1ecdc9",
+        "bytes": 3632,
+        "sha256": "33728d7df9cdc18b990f3322463cdcdb793e21fbd8af3741dae3201285dc3cbf"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-render.mjs",
+        "git_blob": "146f1e1d543a219430a0a6892e521d45c59fedb7",
+        "bytes": 2671,
+        "sha256": "c747cea7e54e20647af5a4812097e55f846356013fc6f887f378bfba79f73d68"
+      },
+      {
+        "path": "products/grant-analyst-workbench/LEARNING_EXCHANGE.md",
+        "git_blob": "167bfa9b490d8c082326bbc73cf1090d01ead5af",
+        "bytes": 17995,
+        "sha256": "dc09a7f9bb36a124c093b6d958d569e081b26d6b8a3f66f804c55b20d493ee57"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-browser.mjs",
+        "git_blob": "ec2861198bb1d5161a50dc0c10be75ecc009193d",
+        "bytes": 23848,
+        "sha256": "962d392a4d1239f6c57f2cf391935d3ecd027bf8df0f6f82fe04fd9b50ecfea6"
+      },
+      {
+        "path": "products/grant-analyst-workbench/learning-exchange-receiving.mjs",
+        "git_blob": "cc4e235325c7160b41c9d4f9a80f92f9716c9d44",
+        "bytes": 14615,
+        "sha256": "45b9e90303da330a49fcad3767a078f18d38fb04c53420ae98f9018232371550"
+      },
+      {
+        "path": "products/grant-analyst-workbench/LEARNING_EXCHANGE_RECEIVING.md",
+        "git_blob": "6522c2d76dc7b238acc413b495cd1d542fa526c3",
+        "bytes": 16709,
+        "sha256": "431c39aa0fc78b000ef986a2a4396336f3868b544b7b51ffe2d94ce3be102951"
+      }
+    ]
+  },
+  "authoring_successor": {
+    "commit": "69d7b270065268d9fd12176df33117613b94f2ba",
+    "checkpoint": {
+      "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+      "git_blob": "1a3419e0527a49f6607ae9f9df25bc6c32624834",
+      "bytes": 157861,
+      "sha256": "41353906787ec2557982e8c7eec7b204f8db8836cb9be63e631163d89dd97d81"
+    },
+    "files": [
+      {
+        "path": "stellar-forge/developer-site/grant-products/grant-analyst-workbench.json",
+        "git_blob": "5d6677ac9aa95fc0aa1c43f2858ee06224f6e36a",
+        "bytes": 30749,
+        "sha256": "3bb25d2cc4b3d36f8d5af99bddf6844a375be82bde4829d44aff395a41efbabb"
+      },
+      {
+        "path": "stellar-forge/developer-site/GRANT_GRANT_ANALYST_WORKBENCH.md",
+        "git_blob": "55306c469f8572b0d9a55b98d6181a6df2f5e136",
+        "bytes": 34249,
+        "sha256": "0370b50d89ca407868e2952fdf1ee27f6adfb85253b6a5b7ca84c784e1a767c8"
+      }
+    ],
+    "change": "Retain both complete newer original authoring files unchanged; they include the full Learning exchange source and current source-qualified authoring chapter."
+  },
+  "public_maintenance": {
+    "checkpoint": {
+      "repository": "woahwhattheheck/public-commons-sprint-2026",
+      "git_blob": "9d7e0d4dabb9c501b0011f054db4355039440785",
+      "bytes": 102671,
+      "sha256": "ffbe2f0ee5f85e2dd15488610a2841ae95744d655af6423bc3ff670b14e96b8b"
+    },
+    "files": [
+      {
+        "path": "products/grant-analyst-workbench/receiving.mjs",
+        "bytes": 56120,
+        "sha256": "71f64f73e9d36fdd6c943af6c89f6f8c91641d0b4a3e749c5b41a45f11cd73e3",
+        "original_sha256": "4e11f5c5067add9a5d204c86ad97741a4228cdf87ae871abf90f55f3c02eaafb",
+        "git_blob": "1fd304669231bb8105a99b1de06f5ce0e4eb7f7c"
+      },
+      {
+        "path": "products/grant-analyst-workbench/managed.mjs",
+        "bytes": 17741,
+        "sha256": "e57db1e1c1fefdae2b7fbc520989144f6f73e82390886ec80566badb16b4ac69",
+        "original_sha256": "6ddc0cc1b840b2a5de80bf8b7cf317e852968a92be070a3c144e9de2c7b5d8e1",
+        "git_blob": "8c5772f7f0583f83ccf8d4420d12041ff6f29736"
+      },
+      {
+        "path": "products/grant-analyst-workbench/RECEIVING.md",
+        "bytes": 24957,
+        "sha256": "9726fa8b4840113de3cbb767484c0665d1eabd25264f9357a8fe111cb11825ec",
+        "original_sha256": "65dfccb1d7d48aca9d5e54962dcd178b2b0dc498fb11311683e27041d9fe727f",
+        "git_blob": "c4dc452c1435fb0bfe5123a63032bbc3b2b36a08"
+      }
+    ],
+    "changes": [
+      "Preserve actual public release and connectionReady admission before Start.",
+      "Attempt all original application Stops before retrying a failing browser or manager close; retain errors without allowing stderr reporting to bypass cleanup.",
+      "Retain ownership of managed child and both log handles until cleanup completes; same-owner close can retry and repeated SIGTERM reaches the same pending child.",
+      "Capture native provider file ownership before local writes, preserve the primary failure, and independently close the local file, release the provider file and remove only the owned temporary.",
+      "Keep the complete original source and native receiving selection, donor, request and outcome; update the consumed receiving guide with actual source-level validation limits."
+    ]
+  },
+  "public_package": {
+    "selection": "stellar/scf-starforge-20261009/distribution/selections/grant-analyst-workbench.json",
+    "entry": "products/grant-analyst-workbench/PACKAGE_README.md",
+    "instructions": "products/grant-analyst-workbench/AGENTS.md",
+    "changes": [
+      "Use the complete original recipe with public repository identity and package entry guide.",
+      "Reuse current Grant/Installation/Runtime source-owned commands and complete managed source inventory without modifying shared loaders.",
+      "Keep original private application, commissioned sources, donor workspaces and customer outputs external under their complete source authority."
+    ],
+    "files": [
+      {
+        "path": "products/grant-analyst-workbench/PACKAGE_README.md",
+        "bytes": 10890,
+        "sha256": "6be5eceb5339e2b0a1aafd3840a47059f00cc97151204f5a762bd0cbd1adc0b1"
+      },
+      {
+        "path": "products/grant-analyst-workbench/AGENTS.md",
+        "bytes": 5225,
+        "sha256": "0b7ccf10c9ed8b437b0fd7acfa21f68ed1f7203f4ea414ea151dd9f96f18a661"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/selections/grant-analyst-workbench.json",
+        "bytes": 11034,
+        "sha256": "e815e5c8736be50d2740de55bd762e6c37379c86e813895a1430bafdfab71479"
+      }
+    ]
+  },
+  "shared_interfaces": {
+    "source_commit": "8e5cb23856eb6f141184c367954177e5722ec8ed",
+    "files": [
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/source-selection.mjs",
+        "git_blob": "b792444200a7d95d42d899bea846c0097e4becc3",
+        "bytes": 10353,
+        "sha256": "0e694a9aac52045689d56960ff2aadb9fece91c3f61e1ce120cd0a9e86ae24f7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/specification.mjs",
+        "git_blob": "a1eb20c79f2bd6486c9d01149ee8cf19605ac43f",
+        "bytes": 26279,
+        "sha256": "6f0232c5cd5ecc5a82670b6ce0116f0fa06e75bd5780d0054c38d84deaed3ed0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/build.mjs",
+        "git_blob": "ee1c91b0a7d65c7ceadcd855dc4dc3d830049d05",
+        "bytes": 32630,
+        "sha256": "a363b714c4c6715eb630e64b51d8861d6ab58fe80a5f3ef578f4da8b73634389"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/distribution.json",
+        "git_blob": "9015c2283f26710496509069313cfbe347e7060b",
+        "bytes": 79313,
+        "sha256": "d69e41fbefa5b37aab2644ffca147429e1e183c7550b92b590182b43a034285a"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/product-package.mjs",
+        "git_blob": "2c668933f214f201137ac6d3c6b7410525955c9b",
+        "bytes": 3764,
+        "sha256": "e1f33fd1940b62c7ede90288ff2ad36da529a197b06e059e8b3b6e27fba1e76d"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/browser-assets.mjs",
+        "git_blob": "aefe2df3b0c799a0b21b617c31ea64c4d8c33df5",
+        "bytes": 7009,
+        "sha256": "068fc68209fcc86b77c484376353e938751a029460fb2d6ebe48f226019fdf09"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-tools.json",
+        "git_blob": "ef9552d29cd899b60e5f9317bb0f8398cb8dd0da",
+        "bytes": 737,
+        "sha256": "64b29c1293acb077c3f318a0dee1b6dd17985d61de07755e49996d7d2673995c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-console-browser-assets.json",
+        "git_blob": "d4990d79b5da6803fe6f507cf0d119adf1c92581",
+        "bytes": 416,
+        "sha256": "380fe3b4eed9172b6e69fad28a275f4dcd1bb981b822358bf0551da423cde809"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/managed-source.mjs",
+        "git_blob": "3f26907e8c12919cabea1b653a167eb3a560f231",
+        "bytes": 2689,
+        "sha256": "c22586e7cd78122df9d922de6387ef8f30caa4e014f3ce3ade0f0062d8c75b89"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/grant-workspace.json",
+        "git_blob": "6bb8bfae3c5d7229d6725ad075a69c00c498a038",
+        "bytes": 8799,
+        "sha256": "2dffa5e43a2d5358d08a1100d084c06a70bececd7637339b2060a01bc6e53b82"
+      }
+    ]
+  },
+  "composition": {
+    "source_base": "8e5cb23856eb6f141184c367954177e5722ec8ed",
+    "initial_files": 1781,
+    "contributions": [
+      "grant-analyst-workbench",
+      "grant-workspace",
+      "merchant-console-browser-assets",
+      "merchant-provider-tools"
+    ],
+    "commands": [
+      "installation",
+      "runtime-profile",
+      "runtime-install",
+      "runtime-workspace",
+      "runtime-transfer",
+      "releases",
+      "merchant-mcp",
+      "merchant-mcp-stdio",
+      "merchant-mcp-client-config",
+      "grant-workspace",
+      "grant-analyst-workbench",
+      "grant-analyst-workbench-prepare",
+      "grant-analyst-workbench-managed",
+      "grant-analyst-workbench-receive",
+      "grant-installation-workorder",
+      "grant-installation-receive",
+      "grant-installation-source-desk",
+      "grant-source-collection",
+      "merchant-providers"
+    ],
+    "components": 15,
+    "supportFiles": 219,
+    "managed_inventories": [
+      {
+        "path": "stellar/scf_2026/sf47_budget_model/workspace/managed-source.json",
+        "members": 699,
+        "git_blob": "346657d5fc81028567771116b55e2727d26b0aa0",
+        "bytes": 38081,
+        "sha256": "984aa4350cab592dc24107cdd5abd3384b79864a4c3ec902654749983601cd84"
+      }
+    ],
+    "original_public_members_selected": 39,
+    "missing_required": [],
+    "missing_components": [],
+    "private_source_members_embedded": 0,
+    "scope": "Executed actual maintained pure composition and initial builder filter against the pinned public Git inventory plus complete selected public postimages. The original native builder owns final module/browser import closure, archive construction and installed receiving; no native or rendered acceptance is claimed."
+  },
+  "custody": {
+    "public": "Only generic product source and public integration guidance.",
+    "private": "The complete privately supplied application/commission source, donor handovers, evidence, credentials, private runtime state and customer outputs remain in their existing authorized custody; none is embedded by this adoption.",
+    "continuation": "Existing installed/native programmes preserve their exact source/runtime/actor/donor/request selection and owner. Any deliberate upgrade follows the maintained explicit selection; historical results are not relabeled.",
+    "acceptance": "Pure source composition is not native installation, completed grant review, scientific inference, rendered product acceptance or proof of customer delivery."
+  }
+}
