@@ -6,7 +6,7 @@ The source is prepared for execution; publication and source review do not estab
 
 ## 1. What is being continued
 
-The original application has 54 complete source files. Its source origin is the Altinity migration acceptance product at Commons source commit 4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623, merged as 67ed8a126bf56c8dafa4202a672f441498a6b1a6. The installed original-source.json preserves that origin and seven explicit maintenance preimages/postimages. The maintained edition totals 820,485 bytes. Its inner SOURCE_MANIFEST.json has 53 rows and is itself the 54th selected file.
+The original application has 54 complete source files. Its source origin is the Altinity migration acceptance product at Commons source commit 4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623, merged as 67ed8a126bf56c8dafa4202a672f441498a6b1a6. The installed original-source.json preserves that origin and ten explicit maintenance preimages/postimages. The maintained edition totals 820,805 bytes. Its inner SOURCE_MANIFEST.json has 53 rows and is itself the 54th selected file.
 
 The maintenance preserves the original API and native job semantics. It isolates the selected Python invocation, retains application owners until their actual listener/workspace closure, and gives the three original cutover/consumer stages separate durable completion records. The active original operator guide carries the current rendered-product instruction. The historical original sources and results remain distinguishable from this maintained observer edition.
 

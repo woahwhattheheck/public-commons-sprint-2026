@@ -4,7 +4,7 @@
   "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
   "prefix": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/",
   "installedDirectory": "workbench",
-  "edition": "clickhouse-acceptance-20261013-owner-closure",
+  "edition": "clickhouse-acceptance-20261013-public-intake-form",
   "origin": {
     "repository": "woahwhattheheck/commons",
     "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
@@ -133,6 +133,57 @@
         "sha256": "7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb",
         "gitBlob": "866c5d73b60673acf06f5e92509a2594ec571ba4"
       }
+    },
+    {
+      "path": "receiving/receive.mjs",
+      "reason": "Retain the complete original read-service source inside the original receiving intake before its path-bound upload; preserve original bytes, UUID and immutable replay.",
+      "source": "https://api.github.com/repos/woahwhattheheck/tjlabs-stellar-merchant-workspace/git/blobs/8721bedbad883d930ee9ae6377dd198bccbc9086",
+      "original": {
+        "path": "receiving/receive.mjs",
+        "bytes": 48971,
+        "sha256": "a2bd7a20fcdfdd180f660611c7b534fa42f2fac66e5a4d7aeff716a2f35d3694",
+        "gitBlob": "547683ee0f4bc0e06f8a118a382b271a526a95b5"
+      },
+      "selected": {
+        "path": "receiving/receive.mjs",
+        "bytes": 49104,
+        "sha256": "3393b6e6fd1c6b072e8e30629e7763a52b6a83a5160a42e84a18acf21bd20f6d",
+        "gitBlob": "8721bedbad883d930ee9ae6377dd198bccbc9086"
+      }
+    },
+    {
+      "path": "web/app.mjs",
+      "reason": "Require the current project revision and a current rather than historical view before dispatching a retained operation form; preserve the unfinished form on stale state.",
+      "source": "https://api.github.com/repos/woahwhattheheck/public-commons-sprint-2026/git/blobs/420e2e60cdfbac09846c49786b290b32da3c22f0",
+      "original": {
+        "path": "web/app.mjs",
+        "bytes": 41586,
+        "sha256": "20a779a78a5d9f096e702289a53dd770fa758d02f51d19bf0c6c22ea823361ef",
+        "gitBlob": "f6d7389be87da9e2d647b8c56baaad0850d395a1"
+      },
+      "selected": {
+        "path": "web/app.mjs",
+        "bytes": 41773,
+        "sha256": "925a9f46296f3690ede127996880a7e719f21f5ce9837bfda2204d8bf55a3032",
+        "gitBlob": "75c119162007257cc82b68f14c5b0f2afdb8c74a"
+      }
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "reason": "Receive the two complete maintained source corrections into the original 53-member source inventory, preserving all other source members and prior maintenance records.",
+      "source": "https://github.com/woahwhattheheck/public-commons-sprint-2026/pull/4519",
+      "original": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb",
+        "gitBlob": "866c5d73b60673acf06f5e92509a2594ec571ba4"
+      },
+      "selected": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0",
+        "gitBlob": "aac6bfa0b9febeb9eb224f9eb7ee49897cbac5a8"
+      }
     }
   ],
   "files": [
@@ -192,9 +243,9 @@
     },
     {
       "path": "web/app.mjs",
-      "bytes": 41586,
-      "sha256": "20a779a78a5d9f096e702289a53dd770fa758d02f51d19bf0c6c22ea823361ef",
-      "gitBlob": "f6d7389be87da9e2d647b8c56baaad0850d395a1"
+      "bytes": 41773,
+      "sha256": "925a9f46296f3690ede127996880a7e719f21f5ce9837bfda2204d8bf55a3032",
+      "gitBlob": "75c119162007257cc82b68f14c5b0f2afdb8c74a"
     },
     {
       "path": "reference/acceptance-input.example.json",
@@ -396,9 +447,9 @@
     },
     {
       "path": "receiving/receive.mjs",
-      "bytes": 48971,
-      "sha256": "a2bd7a20fcdfdd180f660611c7b534fa42f2fac66e5a4d7aeff716a2f35d3694",
-      "gitBlob": "547683ee0f4bc0e06f8a118a382b271a526a95b5"
+      "bytes": 49104,
+      "sha256": "3393b6e6fd1c6b072e8e30629e7763a52b6a83a5160a42e84a18acf21bd20f6d",
+      "gitBlob": "8721bedbad883d930ee9ae6377dd198bccbc9086"
     },
     {
       "path": "reference/fixture.py",
@@ -457,8 +508,8 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 8732,
-      "sha256": "7465743b33c7418e229f86452bc8c71cb83e4197f21068d87c5585b8b422d3eb",
-      "gitBlob": "866c5d73b60673acf06f5e92509a2594ec571ba4"
+      "sha256": "319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0",
+      "gitBlob": "aac6bfa0b9febeb9eb224f9eb7ee49897cbac5a8"
     }
   ]
 }
