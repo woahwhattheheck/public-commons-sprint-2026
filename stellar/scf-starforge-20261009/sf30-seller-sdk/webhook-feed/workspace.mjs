@@ -9,7 +9,7 @@ import { buildWebhookFeedService, prepareWebhookFeedRelease } from './merchant.m
 import { createSnapshot, listSnapshots, fileIdentity } from './snapshots.mjs';
 import { readRequestBody, sendJson } from './receiver.mjs';
 
-export async function startWebhookFeedWorkspace({ store, port = 8493 } = {}) {
+export async function startWebhookFeedWorkspace({ store, port = 8493, operation = null } = {}) {
   if (!store || !Number.isInteger(port) || port < 0 || port > 65535) throw new TypeError('Store and valid port required');
   const token = randomBytes(32).toString('base64url'), key = Buffer.from('Bearer ' + token);
   const assets = new Map(await Promise.all([
@@ -45,7 +45,7 @@ export async function startWebhookFeedWorkspace({ store, port = 8493 } = {}) {
       }
       let value;
       const route = request.method + ' ' + url.pathname;
-      if (route === 'GET /api/status') value = { ...store.status(), merchant: store.merchantPlan(), snapshots: await listSnapshots(resolve(store.directory, 'snapshots')) };
+      if (route === 'GET /api/status') value = { ...store.status(), ...(operation ? { operation } : {}), merchant: store.merchantPlan(), snapshots: await listSnapshots(resolve(store.directory, 'snapshots')) };
       else if (route === 'GET /api/events') value = store.listEvents({
         after: integer(query.after, 'after', 0, Number.MAX_SAFE_INTEGER, 0),
         limit: integer(query.limit, 'limit', 1, 200, 50), ...(query.sourceId ? { sourceId: query.sourceId } : {}),

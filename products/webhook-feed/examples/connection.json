@@ -1,0 +1,14 @@
+{
+  "schema": "stellar-forge.webhook-feed-operator-connection.v1",
+  "workspaces": {
+    "publisher": {
+      "label": "Publisher event store",
+      "directory": "./publisher"
+    }
+  },
+  "receivers": {
+    "customer": {
+      "directory": "./customer"
+    }
+  }
+}

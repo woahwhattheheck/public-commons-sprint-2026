@@ -146,6 +146,21 @@ The original SQLite file retains the complete subscription across reopen.
 The original buyer directory retains its payment attempts and responses.
 Keep both in the host's existing backup plan.
 
+## Receive complete windows in customer Analysis
+
+Use the [event Analysis programme](../python/EVENT_FEED_ANALYSIS.md) to receive
+these exact acquired files into the existing customer Analysis workspace. It
+retains complete source documents, explicit missing/null/value states, original
+event identities and every paid-page reference. Review a later cumulative
+window against the previous event/page history, select it through the original
+DatasetChanges review, and continue edited customer reports and worksheets.
+
+The result includes complete typed JSONL/CSV tables, an editable workbook,
+published reports and the original whole Analysis archive for independent
+receiving. The normal Python entrypoint is `stellar-forge-event-analysis`;
+`starforge buyer-event-analysis-source` exposes the same file-only source
+validator and projector.
+
 ## Module interface
 
     import {openSubscription} from './event-feed/index.mjs';
