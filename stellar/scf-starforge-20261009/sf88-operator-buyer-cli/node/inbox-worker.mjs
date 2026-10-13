@@ -104,6 +104,20 @@ async function main([runtimeDirectory, inputFile, resultFile, ...extra]) {
               native = {...await queue.show(intentId), lostOutputProof:exported};
             }
           } else if (input.command === 'show') native = await queue.show(intentId);
+          else if (input.command === 'rpc-responses' || input.command === 'rpc-response') {
+            const { readCommerceRpcResponse } = await original('../sf66-demo-launcher/commerce.mjs');
+            native = await readCommerceRpcResponse(absolute(input.commerceDirectory), {
+              intentId, expectedQueueRoot:root, environment:process.env,
+              node:process.execPath, signal:controller.signal,
+              ...(input.command === 'rpc-response' ? {
+                readId:input.readId, expectedResponseSha256:input.expectedResponseSha256,
+              } : {}),
+            });
+            const file = join(root, 'jobs', native.id, 'execution.json');
+            need(digest(await readBytes(file)) === native.configSha256, 'INBOX_CONFIG_CHANGED');
+            const config = await original('config.mjs');
+            responseFile = config.responseFile(await config.config(file));
+          }
           else if (input.command === 'response') {
             native = await queue.show(intentId);
             const file = join(root, 'jobs', native.id, 'execution.json');

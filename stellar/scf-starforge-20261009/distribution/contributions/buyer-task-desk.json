@@ -1,0 +1,82 @@
+{
+  "schema": "stellar-forge.merchant-distribution-contribution.v1",
+  "id": "buyer-task-desk",
+  "description": "Original caller-task desk, Merchant tools and complete reviewed customer/source delivery",
+  "commands": {
+    "buyer-task-desk": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/cli.mjs",
+    "merchant-task-desk": "stellar-forge/mcp-merchant-operator/task-desk-cli.mjs",
+    "buyer-task-desk-installation": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/installation.mjs"
+  },
+  "commandDescriptions": {
+    "buyer-task-desk": "Select, review, operate, receive and prepare complete customer task deliveries",
+    "merchant-task-desk": "Operate original tasks, prepare named customer deliveries and receive complete original archives",
+    "buyer-task-desk-installation": "Prepare original installation roots, launch the retained Task Desk and bind its existing Merchant connection"
+  },
+  "exports": {
+    "./buyer/node/agents/task-desk": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/client.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/client.mjs"
+    },
+    "./buyer/node/agents/task-desk/server": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/server.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/server.mjs"
+    },
+    "./merchant/task-desk": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/task-desk.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/task-desk.mjs"
+    },
+    "./merchant/task-desk/cli": {
+      "types": "./source/stellar-forge/mcp-merchant-operator/task-desk-cli.d.mts",
+      "import": "./source/stellar-forge/mcp-merchant-operator/task-desk-cli.mjs"
+    },
+    "./buyer/node/agents/task-desk/installation": {
+      "types": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/installation.d.mts",
+      "import": "./source/stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/installation.mjs"
+    }
+  },
+  "browserAssets": [
+    {
+      "server": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/server.mjs",
+      "manifest": "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/browser-assets.json"
+    }
+  ],
+  "supportFiles": [
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/browser-assets.json",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/OPERATING.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/OPERATOR.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/inbox-task.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/inbox-task.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/result.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/store.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/source.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/model.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/format.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/http.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/uploads.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/review.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/cli.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/public/index.html",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/public/app.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/public/style.css",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/delivery/receiving/receive.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/model.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/collections/server.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/initialization.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/queue.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/operations-handoff/capture.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/operations-handoff/contract.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/config.mjs",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/inbox.mjs",
+    "stellar-forge/mcp-merchant-operator/TASK_DESK.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/INSTALLATION.md",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/buyer-task-desk.json",
+    "stellar/scf_2026/sf49_data_commissioning/installation-workorders/TASK_DESK.md",
+    "stellar/scf-starforge-20261009/sf88-operator-buyer-cli/node/agents/task-desk/PUBLIC_SOURCE.md"
+  ],
+  "applicationProviders": {
+    "buyer-task-desk": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/buyer-task-desk.mjs"
+  },
+  "merchantProviders": {
+    "buyer-task-desk": "stellar-forge/mcp-merchant-operator/providers/task-desk.mjs"
+  }
+}

@@ -30,9 +30,13 @@ async function save(path, value) {
   const directory = await open(dirname(path), constants.O_RDONLY);
   try { await directory.sync(); } finally { await directory.close(); }
 }
-async function optionalJson(path) {
-  try { return parseJson(await readPrivateFile(path, 131072)); }
-  catch (error) { if (error.code === 'ENOENT') return null; throw error; }
+async function optionalDocument(path) {
+  try {
+    const bytes = await readPrivateFile(path, 131072);
+    return { value: parseJson(bytes), document: {
+      bytes: bytes.length, sha256: sha(bytes), text: new TextDecoder('utf-8', { fatal:true }).decode(bytes),
+    } };
+  } catch (error) { if (error.code === 'ENOENT') return null; throw error; }
 }
 function settlement(manual, job) {
   const result = manual?.result, facts = result?.verifiedFacts;
@@ -108,10 +112,12 @@ export function createJsonrpcCommerceRecovery({ saved, queue, application, avail
     catch (error) { if (error.code === 'ENOENT') return []; throw error; }
     const records = [];
     for (const name of names.filter(name => /^[a-f0-9-]{36}$/.test(name)).sort()) {
-      const folder = join(directory, name), read = await optionalJson(join(folder, 'read.json'));
-      if (!read) continue;
+      const folder = join(directory, name), source = await optionalDocument(join(folder, 'read.json'));
+      if (!source) continue;
+      const read = source.value;
       bound(read, expected, job.responseDestination);
-      const complete = await optionalJson(join(folder, 'completed.json'));
+      const publication = await optionalDocument(join(folder, 'completed.json'));
+      const complete = publication?.value ?? null;
       if (complete) {
         bound(complete, expected, job.responseDestination);
         need(isDeepStrictEqual(complete.response, read.response) &&
@@ -119,7 +125,8 @@ export function createJsonrpcCommerceRecovery({ saved, queue, application, avail
           complete.responseObservedAt === read.responseObservedAt,
           'COMMERCE_RPC_RECOVERY_BINDING_CHANGED');
       }
-      records.push({ folder, read, complete });
+      records.push({ folder, readId:name, read, complete,
+        readDocument:source.document, completedDocument:publication?.document ?? null });
     }
     return records;
   }
@@ -142,6 +149,47 @@ export function createJsonrpcCommerceRecovery({ saved, queue, application, avail
       responseFile: null, canVerify: false, canRecover: !route || route.state === 'selling',
       productState: route?.state ?? 'selling', localCaptureAvailable: records.length > 0 };
   }
+
+  /** Read an existing recovery edition through the original authenticated finality
+   * reader. This operation never opens the provider or writes a capture. */
+  async function read(job, { readId, expectedResponseSha256 } = {}) {
+    if (!eligible(job)) return null;
+    need((readId === undefined) === (expectedResponseSha256 === undefined) &&
+      (readId === undefined || /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(readId) &&
+        HASH.test(expectedResponseSha256)), 'COMMERCE_RPC_RECOVERY_EDITION_REQUIRED');
+    const original = await inspectMissingReceiptAttempt(options(job));
+    const recovered = await readMissingReceiptRecovery({ ...options(job),
+      expectedRequestSha256:original.expectedRequestSha256 });
+    if (!recovered) return { schema:'stellar-forge.commerce-rpc-saved-results.v1',
+      state:'PAYMENT_RECONCILIATION_REQUIRED', original, settlement:null, reads:[],
+      responseFile:null, providerReads:0 };
+    const paid = settlement(recovered, job), records = await captures(job, paid);
+    const reads = records.map(row => ({
+      readId:row.readId, complete:row.complete !== null,
+      readSha256:row.readDocument.sha256,
+      completedSha256:row.completedDocument?.sha256 ?? null,
+      recoveryReadStartedAt:row.read.recoveryReadStartedAt,
+      responseObservedAt:row.read.responseObservedAt,
+      publishedAt:row.complete?.publishedAt ?? null,
+      response:structuredClone(row.read.response),
+    }));
+    const result = { schema:'stellar-forge.commerce-rpc-saved-results.v1',
+      state:records.some(row => row.complete) ? 'SETTLED_RESULT_RECOVERED' : 'SETTLED_RESPONSE_RECOVERY_PENDING',
+      original, settlement:paid, reads, responseFile:null, providerReads:0 };
+    if (readId === undefined) return result;
+    const selected = records.find(row => row.readId === readId);
+    need(selected?.complete && selected.complete.response.sha256 === expectedResponseSha256,
+      'COMMERCE_RPC_RECOVERY_EDITION_CHANGED');
+    need(await fileMatches(selected.complete.response, { full:true }),
+      'COMMERCE_RPC_RECOVERY_FILE_MISSING');
+    return { ...result, readId:selected.readId,
+      readSha256:selected.readDocument.sha256, completedSha256:selected.completedDocument.sha256,
+      readDocument:selected.readDocument, completedDocument:selected.completedDocument,
+      responseFile:{ ...delivery(selected.complete), readId:selected.readId,
+        readSha256:selected.readDocument.sha256, completedSha256:selected.completedDocument.sha256,
+        httpStatus:200, httpStatusSource:'ORIGINAL_RPC_RECOVERY_HTTP_200_CONTRACT' } };
+  }
+
   async function verify(job, selected) {
     need(eligible(job), 'COMMERCE_RPC_MISSING_RECEIPT_REQUIRED');
     need(selected.expectedAttemptId === job.attempt.id && selected.expectedConfigSha256 === job.configSha256,
@@ -216,5 +264,5 @@ export function createJsonrpcCommerceRecovery({ saved, queue, application, avail
       } finally { await output.abort(); }
     } finally { await lease.close(); }
   }
-  return Object.freeze({ inspect, verify, recover });
+  return Object.freeze({ inspect, read, verify, recover });
 }

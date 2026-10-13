@@ -11,6 +11,7 @@ import { createNativeSellerServer } from '../sf30-seller-sdk/native-factory.mjs'
 import { startSellerOperations } from '../sf30-seller-sdk/operations/server.mjs';
 import { validateAvailabilityDirectory } from '../sf30-seller-sdk/availability/store.mjs';
 import { selectServiceRoute } from '../sf30-seller-sdk/route-path.mjs';
+import { compileSellerRoutes } from '../sf30-seller-sdk/resource-server.mjs';
 import { initializeQueue, openQueue } from '../sf88-operator-buyer-cli/queue.mjs';
 import { operatorApprovalEnvironment } from '../sf81-buyer-operator-bridge/bridge.mjs';
 import { acquireInitialization, initializationJson, retainInitializationFile,
@@ -279,7 +280,8 @@ export async function initializeCommerce({ planFile, directory }, { resume = fal
 
 async function readSession(directory) {
   await privateDirectory(directory);
-  const saved = parseJson(await readPrivateFile(join(directory, 'session.json')));
+  const sessionBytes = await readPrivateFile(join(directory, 'session.json'));
+  const saved = parseJson(sessionBytes);
   need(saved.schema === SESSION && saved.directory === directory && saved.queueRoot === join(directory, 'inbox') &&
     saved.seller?.config === join(directory, 'seller.json') && Array.isArray(saved.buyers), 'COMMERCE_SESSION_INVALID');
   const sellerBytes = await readPrivateFile(saved.seller.config, 1048576);
@@ -326,7 +328,7 @@ async function readSession(directory) {
       'COMMERCE_HANDOFF_PATH_CHANGED');
     await inspectCommercePurchase(entry, jobs.find(job => job.operation.intentId === entry.intentId));
   }
-  return { saved, queue, jobs, python, upstream, jsonrpc };
+  return { saved, queue, jobs, python, upstream, jsonrpc, sessionSha256:sha(sessionBytes) };
 }
 export async function inspectCommerce(directory) {
   const { saved, jobs, python, upstream, jsonrpc } = await readSession(directory);
@@ -339,6 +341,34 @@ export async function inspectCommerce(directory) {
     facilitator: saved.seller.facilitator ?? { config: saved.seller.facilitatorConfig },
     buyers: await Promise.all(jobs.map(async job => ({ ...job,
       paidFile: await inspectCommercePurchase(saved.buyers.find(entry => entry.intentId === job.operation.intentId), job) }))) };
+}
+
+
+/** Discover or receive one completed original RPC read without starting a service. */
+export async function readCommerceRpcResponse(directory, { intentId, expectedQueueRoot,
+  readId, expectedResponseSha256, environment = process.env, node = process.execPath, signal } = {}) {
+  const { saved, queue, jobs, jsonrpc, sessionSha256 } = await readSession(directory);
+  need(jsonrpc && typeof intentId === 'string', 'COMMERCE_JSONRPC_SESSION_REQUIRED');
+  if (expectedQueueRoot !== undefined)
+    need(absolute(expectedQueueRoot) === queue.root, 'COMMERCE_INBOX_BINDING_CHANGED');
+  const selected = jobs.find(job => job.operation?.intentId === intentId);
+  need(selected, 'COMMERCE_BUYER_INTENT_REQUIRED');
+  const config = await readSellerConfig(saved.seller.config);
+  need(typeof config.publicOrigin === 'string' &&
+    config.routes.every(route => !route.responseAsset), 'COMMERCE_JSONRPC_SAVED_ROUTES_REQUIRED');
+  const origin = new URL(config.publicOrigin).origin;
+  const compiled = compileSellerRoutes(config.routes.map(route => ({
+    id:route.id, maxRequestBytes:route.maxRequestBytes,
+    ...(route.offer ? { offer:route.offer } : { definition:{ ...route.definition, url:origin + route.path } }),
+    handler:async () => { need(false, 'COMMERCE_RPC_SAVED_READER_ONLY'); },
+  })));
+  const job = { ...selected, merchant:bindMerchantPurchase(compiled, selected) };
+  const recovery = createJsonrpcCommerceRecovery({ saved, queue, environment, node, signal });
+  const retained = await recovery.read(job, { readId, expectedResponseSha256 });
+  return { ...job, rpcRecovery:retained === null ? null : {
+    ...retained, commerceDirectory:directory, inboxDirectory:queue.root,
+    sessionSha256, sellerConfigSha256:saved.seller.configSha256, planSha256:saved.seller.jsonrpcSha256,
+  } };
 }
 
 /** Review the retained native RPC without opening signers or merchant listeners. */

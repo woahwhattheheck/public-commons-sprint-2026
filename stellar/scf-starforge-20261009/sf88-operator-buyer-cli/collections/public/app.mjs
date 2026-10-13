@@ -115,6 +115,7 @@ const actionIds = ['preview-button', 'save-collection', 'enqueue', 'export',
 function buttons() {
   for (const id of actionIds) $(id).disabled = state.busy || !state.connected;
   $('open-recovery').disabled = !state.connected;
+  $('open-customer-delivery').disabled = state.busy || state.recoveryBusy || !state.connected;
   $('new-collection').hidden = !state.status?.directory;
   $('empty-create').hidden = !state.status?.directory;
   const running = activeRunStates.has(state.execution?.state);
@@ -638,6 +639,10 @@ $('export').addEventListener('click', () => task('Saving results export…', asy
   $('export-panel').hidden = false;
   say('Results exported to the saved workspace location.');
 }));
+$('open-customer-delivery').addEventListener('click', () => {
+  if (!state.connected || state.busy || state.recoveryBusy) return;
+  window.open('/customer-delivery#' + encodeURIComponent(state.token), '_blank', 'noopener');
+});
 $('open-recovery').addEventListener('click', () => { showView('recovery'); buttons(); });
 $('lock').addEventListener('click', () => { locked(); say('Workspace locked in this tab.'); });
 $('connect-form').addEventListener('submit', event => {

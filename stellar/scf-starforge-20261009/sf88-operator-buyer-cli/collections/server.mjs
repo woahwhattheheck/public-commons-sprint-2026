@@ -9,6 +9,7 @@ import { readBrowserAssets } from '../../distribution/browser-assets.mjs';
 import { openCollections } from './model.mjs';
 import { openCollectionRecovery } from './recovery-jobs.mjs';
 import { collectionBundleFiles } from './recovery.mjs';
+import { customerDeliveryRoutes } from './delivery/http.mjs';
 import { createCollectionBrowserRunner } from './browser-run.mjs';
 import { sendCollectionFile } from './download.mjs';
 import { collectionsWorkspaceLaunch, collectionsRecoveryWorkspaceLaunch } from './launch.mjs';
@@ -52,14 +53,15 @@ function sameToken(header, token) {
   const supplied = Buffer.from(header), expected = Buffer.from('Bearer ' + token);
   return supplied.length === expected.length && timingSafeEqual(supplied, expected);
 }
-async function jsonBody(request) {
+async function jsonBody(request, limit = JSON_LIMIT) {
+  need(Number.isSafeInteger(limit) && limit > 0 && limit <= 2 * 1024 * 1024, 'REQUEST_LIMIT_INVALID');
   need((request.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase()
     === 'application/json', 'JSON_REQUIRED', 415);
   let size = 0;
   const chunks = [];
   for await (const chunk of request) {
     size += chunk.length;
-    need(size <= JSON_LIMIT, 'REQUEST_TOO_LARGE', 413);
+    need(size <= limit, 'REQUEST_TOO_LARGE', 413);
     chunks.push(chunk);
   }
   let result;
@@ -113,6 +115,7 @@ export async function serveCollections(collections, {
     directory: receivingDirectory ?? join(collections.directory, 'recovery'),
     getCollections: () => collections, environment,
   }); } catch (error) { await runner?.close(); await approvals?.close(); throw error; }
+  const customerDelivery = customerDeliveryRoutes({ getCollections: () => collections, receivingDirectory: recovery.directory, mutate, jsonBody, downloadFile });
   const token = randomBytes(32).toString('hex');
   const reviews = new Map(), exports = new Map(), work = new Set(), transfers = new Set();
   let origin, closing = false, mutation = false;
@@ -181,7 +184,13 @@ export async function serveCollections(collections, {
         || ['none', 'same-origin'].includes(request.headers['sec-fetch-site']),
         'CROSS_ORIGIN_REFUSED', 403);
       const url = new URL(request.url, origin);
-      need(url.origin === origin && !url.search, 'ROUTE_NOT_FOUND', 404);
+      const compactUploadProgress = url.searchParams.size === 1
+        && url.searchParams.get('progress') === 'compact'
+        && (request.method === 'POST'
+          && /^\/api\/customer-delivery\/uploads(?:\/[a-f0-9]{64}\/(?:chunk|chunks|finish))?$/.test(url.pathname)
+          || request.method === 'GET'
+          && /^\/api\/customer-delivery\/uploads\/[a-f0-9]{64}$/.test(url.pathname));
+      need(url.origin === origin && (!url.search || compactUploadProgress), 'ROUTE_NOT_FOUND', 404);
       const asset = assets.get(url.pathname);
       if (asset && ['GET', 'HEAD'].includes(request.method)) {
         const bytes = await readFile(asset.url);
@@ -203,7 +212,8 @@ export async function serveCollections(collections, {
           recoveryBusy: recovery.busy, busy: mutation || recovery.busy || Boolean(runner?.busy), paymentApproval:
             approvals ? 'original-browser' : 'original-terminal',
           command: 'buyer-collections', exportRoot: collections ? resolve(collections.directory, 'exports') : null,
-            agentApi: 1, recoveryApi: 1, connectionApi: 1 });
+            agentApi: 1, recoveryApi: 1, connectionApi: 1, customerDeliveryApi: 1, customerDeliveryPath: '/customer-delivery' });
+      if (await customerDelivery.route({ request, response, url, send })) return;
       if (request.method === 'GET' && url.pathname === '/api/run')
         return send({ run: runner ? await runner.inspect() : null });
       const originalRun = /^\/api\/runs\/([a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})$/.exec(url.pathname);
@@ -464,6 +474,7 @@ export async function serveCollections(collections, {
           server.close(done);
           server.closeAllConnections?.();
         });
+        await customerDelivery.close();
         for (const model of adopted) await model.close();
         reviews.clear(); exports.clear();
       })();
