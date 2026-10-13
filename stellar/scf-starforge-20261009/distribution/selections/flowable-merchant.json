@@ -12,7 +12,8 @@
       "runtime-transfer",
       "merchant-mcp",
       "merchant-mcp-stdio",
-      "merchant-mcp-client-config"
+      "merchant-mcp-client-config",
+      "grant-workspace"
     ],
     "exports": [
       "./runtime-profile",
@@ -43,7 +44,8 @@
   "contributions": [
     "flowable-workspaces",
     "merchant-provider-flowable-workspaces",
-    "flowable-product"
+    "flowable-product",
+    "grant-workspace"
   ],
   "components": [
     "products/flowable-merchant",
