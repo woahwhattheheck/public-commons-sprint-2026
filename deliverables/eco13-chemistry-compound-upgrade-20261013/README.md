@@ -4,17 +4,17 @@ This bank carries the full maintained Chemistry 0.3.0 component, explicit prepar
 
 ## Included source
 
-The 6 source parts contain **92 complete UTF-8 files / 1,724,148 source bytes**:
+The 7 source parts contain **92 complete UTF-8 files / 1,766,682 source bytes**:
 
-- All **75** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
+- All **86** paths used by `operator/install_chemistry.py`, including the complete numerical engine, saved-case/run provider, scientific HTML/source producers, current operator interface, registered descriptor, guides and original installation machinery.
 - The complete native receiving script and guide, the original Chemistry report browser course and guide, and the complete 27-member source bank linked by that browser guide. These five receiving files and 1 complete shared-source reference body are staged beside the complete component. The guarded installer composes only its explicit field-selection hook in the receiver's current Monitoring module; it preserves all other current Monitoring source.
-- The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 74 other installed paths in the maintained 0.3 source edition.
+- The original 0.1 source manifest remains byte-identical. `integration/reach_chemistry/COMPOUND_SOURCE.json` identifies all 85 other installed paths in the maintained 0.3 source edition.
 
 The separate bootstrap directory contains the complete unchanged original application source assembler, matching component reader and its required component-fragment helper from the same source edition. The stager verifies all three complete bodies, loads the fragment helper before the component reader and assembler as a private Python package, and delegates source decoding and publication to those original modules. Its imports do not depend on an assembler or component reader installed in the base application. Every source part and every complete member is verified before the first staged source file is published.
 
 The bank also carries the current owner instruction in `AGENTS.md`, verifies its declared identity and retains the complete file at the stage root. The installation command below preserves any existing application instructions while adding this exact current instruction when needed.
 
-Complete field-study source pin: `8869efd5092de7b89b71db16d3fba60fabcc6729`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
+Complete field-study source pin: `3136f75b8956a3bf410c4572a0dcbb045a6fc6d0`. Previous complete92 source remains at `082c5e2ade694f228152b2128087f31fd08293d6`. Previous completed Monitoring/Chemistry study source remains `5ee552982cfa2ffdd254032358d64c81064151ce` / merged4183. The prior native component source pin `326f0593b158251b03c371ed1a993de6e885b3a8` remains the provenance for unchanged source, including the maintained compound observations, explicit report selection, v1/v2 Study-source resolver and editor-lifetime repair. The complete native receiving script and guide are preserved from `2714cfca13fc4d0939ca9aa32834d0f3dfed9846`; their exact Git blob identities appear in `manifest.json`. This preserves the completed-archive and isolated delivered-application opening behavior.
 
 ## Complete saved Monitoring and Chemistry study
 
@@ -28,7 +28,7 @@ Use the received complete regional application's existing Monitoring source and 
 
 The installed `source/monitoring-field-study/INSTALLATION.md` connects the original eight-member field producer/template and native source receiver to its completed scientific package. The original desk preserves all 730 observation rows, 36 observation-station locations, 87 native assessment sites and 217 catchments. The saved area-maximizing budgets reach the same 234 historical results (233 routine plus one replicate), while selected draft-assessment site support changes 10/14/15. This is source support, with historical periods, censoring and original coordinate bases retained.
 
-Use the original 239-member field package for the unchanged two-entry native source import; the installed source-only directory intentionally does not substitute for its 223 companions per entry. The original manifest remains immutable provenance. The existing Sources document controls open the fully embedded desk and its downloads. Open Monitoring design → Saved field selections, choose the retained original source, review the exported selection JSON, and retain its exact edition through the existing queue. Reopen the exact JSON and selected working desk, then use the original whole Workspace backup/restore. These source-bound review choices remain separate from campaign station assignments. Follow operator/MONITORING_FIELD_SELECTION.md and the complete installed guide at the accepting host's same operation boundary.
+Use the original 239-member field package as input to the included independent-edition preparer below, then import its corrected two-entry manifest with 226 companions per entry. The historical 223-companion manifest and original collection remain unchanged; the installed source-only directory is not a replacement for the complete scientific package. The existing Sources document controls open the fully embedded desk and its downloads. Open Monitoring design → Saved field selections, choose the retained original source, review the exported selection JSON, and retain its exact edition through the existing queue. Reopen the exact JSON and selected working desk, then use the original whole Workspace backup/restore. These source-bound review choices remain separate from campaign station assignments. Follow operator/MONITORING_FIELD_SELECTION.md and the complete installed guide at the accepting host's same operation boundary.
 
 ## Existing application and project
 
@@ -153,7 +153,7 @@ The Ecosystem product requires plain industrial design: readable tables, clear h
 
 Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
 
-Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. This instruction does not extend or restart the Ecosystem sprint: the existing cutoff is October 13, 2026 at 10:00 a.m. America/Kentucky/Louisville, 14:00 UTC.
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. For Ecosystem Sciences, read `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4`. Bryce's direct instruction at October 13, 2026, 10:46 a.m. Eastern renewed the existing work toward his call and superseded the earlier 10 a.m. cutoff. Preserve active workers, completed scientific outputs and all other standing controls while finishing and integrating the actual application.
 
 Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
 
@@ -183,13 +183,19 @@ Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-pol
 
 ## Complete current owner direction
 
-Carried unchanged from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, Git `8cd1c1f3d371a2fb75471813844e31f489aa8272`:
+Carried unchanged from `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4`, SHA256 `ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609`:
 
 # Current owner direction: Ecosystem Sciences demonstration
 
-Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
 ## Direct owner instructions
+
+Latest direct instruction, October 13 at 10:46 a.m. Eastern:
+
+> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+
+This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
 
 > do the simulated model
 
@@ -227,7 +233,7 @@ If producing video, record the actual working application and use available natu
 
 ## Carry this direction with the work
 
-Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.4` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.
 
@@ -247,3 +253,7 @@ python -B STAGE/source/monitoring-field-study/source/receive_field_support.py --
 ```
 
 The preparer validates the exact original and corrected manifests, all original bodies and companion bytes, copies the complete original package independently, and changes only its root manifest. It never rewrites the historical source collection or original extracted directory. Use the actual new source collection ID returned by the existing importer for subsequent field-selection/assignment operations. Its complete unchanged data still carries the original geographic, station and plan identities.
+
+## Continue under current owner direction
+
+The complete version 2026-10-13.4 brief above supersedes the earlier Eco cutoff. Continue the existing receiving operation at its normal source boundary, preserving completed outputs and active native/browser processes. The field browser wrapper has no default cutoff; a caller's explicitly supplied cutoff is still enforced. A matching legacy admission retains its original selection and completed-task identity. The original runtime, engine, source inputs and archive APIs are unchanged. See the installed Field Assignments receiving guide for the exact optional-deadline contract.
