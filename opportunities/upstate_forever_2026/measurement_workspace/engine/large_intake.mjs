@@ -198,9 +198,11 @@ export function prepareIntake(w,id){
   }finally{db.close();}
  });
 }
-export function commitIntake(w,id,{expectedRevision,expectedSourceSha256,expectedNormalizerPin}={}){
+export function commitIntake(w,id,{expectedRevision,expectedSourceSha256,expectedNormalizerPin,expectedImportId,expectedSourceDefinitionSha256}={}){
  const root=intakeRoot(w,id);return withDirectoryLock(root,()=>{
   const value=descriptor(w,id),prepared=readJSON(path.join(root,'prepared.json'));
+  if(expectedImportId!==undefined&&prepared.importId!==expectedImportId)throw new InputError('The displayed collection belongs to another native import',409);
+  if(expectedSourceDefinitionSha256!==undefined&&hash(stable({kind:value.kind,label:value.label,mapping:prepared.mapping,origin:value.origin}))!==expectedSourceDefinitionSha256)throw new InputError('The original collection source definition changed',409);
   if(expectedSourceSha256!==undefined&&expectedSourceSha256!==prepared.sourceSha256)throw new InputError('The displayed source preview belongs to another original',409);
   if(expectedNormalizerPin!==undefined&&expectedNormalizerPin!==prepared.normalizerPin)throw new InputError('The displayed preview belongs to another normalizer edition',409);
   const digest=fileDigest(path.join(root,'original'));if(digest.bytes!==prepared.bytes||digest.sha256!==prepared.sourceSha256)throw new InputError('Reviewed original source changed',409);

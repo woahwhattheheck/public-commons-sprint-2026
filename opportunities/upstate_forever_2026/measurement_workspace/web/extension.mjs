@@ -16,7 +16,7 @@ export function createMeasuredObservations(capabilities){
   const beforeUnload=event=>{if(unsavedBenchmarks()||unsavedObservationEditions()){event.preventDefault();event.returnValue='';}};
   window.addEventListener('beforeunload',beforeUnload);
   const stale=()=>{const error=new Error('This Measurements view was closed or its workspace changed. Reopen the original workspace to inspect any submitted operation.');error.name='AbortError';return error;};
-  const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/chiques/preview','/provider-query','/handbacks/preview'].includes(path);
+  const writes=(path,method)=>method!=='GET'&&!['/preview','/collections/preview','/large/collections/preview','/chiques/preview','/provider-query','/handbacks/preview'].includes(path);
   function syncPerson(){const next=personIdentity();if(next===person)return false;person=next;lateResults.clear();handbackMemory.clear();observationEditionMemory.clear();return true;}
   function remember(workspace,owner,path,method,response,error){
     syncPerson();if(owner!==person)return;
@@ -81,7 +81,7 @@ export function createMeasuredObservations(capabilities){
     const chemistryHost=document.createElement('section');outer.append(chemistryHost);
     chemistry=mountMeasuredChemistry(chemistryHost,capabilities,{memory:chemistryMemory});
     const collectionHost=document.createElement('section');outer.append(collectionHost);
-    collections=mountCollectionPanel(collectionHost,{request,refresh});
+    collections=mountCollectionPanel(collectionHost,{request,refresh,workspaceKey:benchmarkKey(boundWorkspace,boundPerson)});
     const returnedHost=document.createElement('section');outer.append(returnedHost);
     returnedReviews=mountReturnedReviews(returnedHost,capabilities,{memory:returnedReviewMemory,openLargeFiles(){
       if(!active())return;largeHost.scrollIntoView({behavior:'smooth',block:'start'});largeHost.querySelector('[data-file]')?.focus({preventScroll:true});

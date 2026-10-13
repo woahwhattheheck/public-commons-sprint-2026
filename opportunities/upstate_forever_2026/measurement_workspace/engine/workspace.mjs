@@ -74,6 +74,7 @@ export class MeasurementWorkspace {
     const sha=hash(input.text), parsed=parseSource(input);
     if(input.contentSha && input.contentSha!==sha)throw new InputError('Source content differs from the reviewed preview',409);
     const id=hash(stable([input.kind,sha,parsed.mapping]));
+    if(input.expectedImportId!==undefined&&input.expectedImportId!==id)throw new InputError('Native source interpretation differs from the reviewed collection',409);
     const previous=this.db.prepare('SELECT summary FROM imports WHERE id=?').get(id);
     if(previous)return {id,duplicate:true,...JSON.parse(previous.summary),revision:this.revision()};
     if(!parsed.rows.length && parsed.rejected.length)throw new InputError('Every source row was rejected. Fix column mapping or input values before committing.');
@@ -92,7 +93,7 @@ export class MeasurementWorkspace {
         link.run(id,recordId,line);this.mergeStation(row.station,id);
       }
       this.event('import',id,{label,sha,inserted,existing,summary});
-    });
+    },input.expectedRevision);
     return {id,duplicate:false,...summary,inserted,existing,revision:this.revision()};
   }
   mergeStation(station,importId){
