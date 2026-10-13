@@ -15,7 +15,7 @@ The importer checks the supplied SHA-256 values and retains each body and compan
 - `nrcs-fy26-upper-savannah-domain217-20261013`, role `SOURCE_WATER_PRIORITY_CONTEXT`: the 240 selected state–HUC records.
 - `upper-savannah-water-context-domain217-20261013`, role `SOURCE_WATER_CONTEXT`: the full native context document.
 
-The manifest is one directory above this guide. All paths resolve from `source/water_context`, allowing the 20261012 raw captures and 20261013 domain files to travel together without parent traversal. Select this imported collection's `SOURCE_WATER_CONTEXT` entry in the decision-context workflow. Retain the existing SCDES geometry source entry for native receiving-water analysis and classified-water crosswalks.
+The manifest is one directory above this guide. All paths resolve from `source/water_context`, allowing the 20261012 raw captures and 20261013 domain files to travel together without parent traversal. Select this imported collection's `SOURCE_WATER_CONTEXT` entry in the decision-context workflow. The imported context now also retains the original SCDES geometry and domain-query bodies under their declared filenames, so the source-edition loader can validate and retain them with the report. The existing geometry source entry remains available for native receiving-water analysis and classified-water crosswalks.
 
 ## Actual domain and source coverage
 
@@ -47,10 +47,13 @@ The classified attributes retain 599 TPGT, 1,040 ORW and 247 TN features. The or
 | `20261012/raw/nrcs-fy26.json` | Complete original 337-row NRCS source capture |
 | `20261012/classified-reaches.csv` | Original 1,886 classified-feature attribute records |
 | `20261012/source-dictionary.json` | Original field definitions, source identities and acquisition metadata |
+| `20261013/scdes-classified-streams.esri.json` | Complete original 1,886-feature classified-stream geometry |
+| `20261013/scdes-original-domain217-classified-objectids.json` | Original full-domain query response with the 1,886 publisher object IDs |
+| `20261013/scdes-huc8-03060104-to-07-target-class-count.json` | Original zero-count response for selected classes in HUC8s 03060104–03060107 |
 
 The NRCS table entry includes the raw NRCS body, original IDs and source dictionary as companions. The context entry includes every file in this table and the original USGS network companion described below. Both use the same content identities, so the existing source store can reuse retained objects.
 
-The classified CSV contains attributes; the existing retained SCDES geometry source supplies coordinates for spatial operations. Historical response filenames inside the unchanged coverage record identify the original capture. Its associated query URLs and hashes remain available there, while the manifest explicitly enumerates the files supplied in this edition.
+The classified CSV contains attributes; the unchanged geometry companion supplies the original coordinates. The loader checks its feature IDs, class totals and publisher HUC/class rows against the domain query and context. Both original query responses use the exact historical filenames declared by the unchanged coverage record. Their URLs and hashes remain available there, and the import manifest supplies all three original bodies.
 
 ## Original watershed network
 
@@ -95,3 +98,46 @@ python -B -m model.cli --workspace /path/to/existing-workspace source-import sou
 The maintained `operator/receive_watershed_context.py` consumes `received/watershed-context-20261013/eco-watershed13-received.zip` to register that original result for the existing report, selection and export views. Its archive SHA-256 is `716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5`.
 
 This historical run selected Lower Tugaloo and preceded the later native-network enrichment documented above. Its source/output bytes and result identity stay together. The original seven-file edition's guide and manifest are preserved byte for byte as `original-source-README.md` and `original-sources.json`; the latter records the original filenames. Use `complete-sources.json` for the reconstructed receiving edition. The current network-enabled `../sources-20261013.json` remains available for the maintained loader.
+
+## Open the network edition and retain its original sources
+
+Inspect the source directory with the maintained native model and import the network-enabled manifest:
+
+```sh
+python -B source_tools/prepare_watershed_context.py inspect \
+  --source-dir source/water_context/20261013
+
+python -B -m model.cli --workspace /path/to/existing-workspace source-import \
+  source/water_context/sources-20261013.json
+```
+
+In **Regional watersheds**, choose **Upper Savannah original 217-HUC domain: FY26 source-water priorities** from the imported collection and run the regional analysis. Select **030601020507 — Lower Tugaloo River** to inspect its local attributes, downstream path and distinct upstream watersheds. Save the focal, upstream or downstream selection; its CSV/JSON downloads and source files remain available when reopening the same scientific Workspace.
+
+The network edition's core source fingerprint is `cb8ba9832d60fb47ae64b85d9e4e2c857cc2e25557572c7d251a908005bcd510`. It binds the exact context, coverage and native-network bytes. The three additional original query/geometry companions preserve the existing network report identity. Reanalyzing a retained same-source report augments its available original-source downloads under that identity. The earlier received report `watershed-4592eb077b7164d59ba4` retains its original two-input source identity.
+
+| Original supporting file | Bytes | SHA-256 |
+|---|---:|---|
+| `scdes-classified-streams.esri.json` | 4,978,867 | `daae1887ba6ac25affd85fc6e1094a81ec24130e1846bbb538cf21375bdbb394` |
+| `scdes-huc8-03060104-to-07-target-class-count.json` | 11 | `618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c` |
+| `scdes-original-domain217-classified-objectids.json` | 13,248 | `f30b8191b0fa0d044514dbe773e86fddf07192566e1c3c4714d477db2f4ceeab` |
+
+These are the exact original blobs already retained in `../20261013-prepared/`. The current manifest preserves its original two source entries, source-reference fields, NRCS captures and native-network provenance.
+
+## Retained connectivity results for this exact source
+
+[CLOUD's complete connectivity analysis](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8NMPGQ78) retains the 217-row CSV, summary JSON and report calculated from this unchanged 303-record publisher response and the original regional context. The selected model domain remains 217 HUC12s.
+
+| Measure | Retained result |
+|---|---:|
+| Selected domain HUCs with native network records | 217 |
+| Domain headwater HUCs | 119 |
+| Missing domain records / cycles | 0 / 0 |
+| Lower Tugaloo upstream HUCs, excluding the focal watershed | 31 |
+| Lower Tugaloo upstream acres | 573,633.44 |
+| Lower Tugaloo upstream priority HUCs | 1 |
+| Lower Tugaloo upstream selected SC classification records | 1,002 |
+| Lower Tugaloo focal plus upstream HUCs / acres | 32 / 633,323.13 |
+
+The traversal counts each distinct upstream HUC once. When combining receiving watersheds, use the union of their HUC12 memberships to avoid counting shared upstream land repeatedly. SCDES classification counts retain their South Carolina source scope.
+
+The retained CSV is 111,728 bytes, SHA-256 `3f25af3b660a0949d01218c7cfb1fcb48be7e5092641f35da3be2921c47debfc`; the summary is 36,440 bytes, SHA-256 `00a94474c5b24370b05b3c1dd22afd5313b84563b5da02d030b3979976212b44`. The source operation is `ECO13-CLOUD-INTEGRATION-WATERSHED-CONNECTIVITY-20261013`, continuing the existing `ECO-WATERSHED13-20261013` application workflow.
