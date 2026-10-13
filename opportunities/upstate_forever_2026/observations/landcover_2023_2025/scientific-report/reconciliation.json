@@ -14,6 +14,27 @@
   "original_polygon_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
   "before_raster_sha256": "d7db3a30d6595aa8da28b5e81dc5b84e7e0bf198b860543ac32c702328871fc5",
   "after_raster_sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
+  "native_binding": {
+    "analysis_source_id": "upstate-original-landcover-analysis-run-7fa7e17aa9b6",
+    "analysis_sha256": "7fa7e17aa9b622c3016f0f46b4a80767ea3087000a8e3f34617a61c7b69efe67",
+    "source_domain_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+    "rasters": {
+      "before": {
+        "year": 2023,
+        "epsg": 5070,
+        "sha256": "d7db3a30d6595aa8da28b5e81dc5b84e7e0bf198b860543ac32c702328871fc5",
+        "bytes": 8931261,
+        "nodata": 250
+      },
+      "after": {
+        "year": 2025,
+        "epsg": 5070,
+        "sha256": "3fa517b4cc3251b9e1bd31e51b54b036a875c09e5f1075511da7c8e951656670",
+        "bytes": 9443751,
+        "nodata": 250
+      }
+    }
+  },
   "source_members": [
     {
       "path": "annual-2023.json",

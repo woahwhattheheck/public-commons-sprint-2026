@@ -1,6 +1,7 @@
 """Bind recovered observations and their figures into the current scientific report."""
 from __future__ import annotations
 import json
+import math
 from hashlib import sha256
 from pathlib import Path, PurePosixPath
 import shutil
@@ -213,6 +214,40 @@ def _concentration_support(source):
         "observations": enrich_observation_context(observations),
     }
 
+def _figure_detail_tables(figure):
+    """Return ordinary case/support tables immediately after their figure."""
+    tables = figure.get("detail_tables", [])
+    if not isinstance(tables, list):
+        raise ValueError("Scientific figure detail tables must be a list")
+    result = []
+    for table in tables:
+        if (not isinstance(table, dict) or table.get("kind") != "table"
+                or set(table) - {"kind", "caption", "columns", "rows"}):
+            raise ValueError("Scientific figure details must be plain report tables")
+        columns, rows = table.get("columns"), table.get("rows")
+        if (not isinstance(columns, list) or not columns
+                or any(not isinstance(value, str) or not value.strip() for value in columns)
+                or not isinstance(rows, list)):
+            raise ValueError("Scientific figure detail tables need text columns and row lists")
+        if "caption" in table and not isinstance(table["caption"], str):
+            raise ValueError("Scientific figure detail table captions must be plain text")
+        for row in rows:
+            if not isinstance(row, list) or len(row) != len(columns):
+                raise ValueError("Scientific figure detail table rows must match their columns")
+            for value in row:
+                if value is None or isinstance(value, (str, bool, int)):
+                    continue
+                if isinstance(value, float) and math.isfinite(value):
+                    continue
+                raise ValueError("Scientific figure detail cells must be plain finite scalars")
+        copied = {"kind": "table", "columns": list(columns),
+                  "rows": [list(row) for row in rows]}
+        if "caption" in table:
+            copied["caption"] = table["caption"]
+        result.append(copied)
+    return result
+
+
 def _collect_source(source, directory, state, *, namespace=None):
     """Retain one original report and its independently bound study context."""
     binding = source["binding"]
@@ -288,6 +323,7 @@ def _collect_source(source, directory, state, *, namespace=None):
             blocks.append({"kind": "figure", "path": item["path"], "title": figure["title"],
                            "caption": figure.get("caption", ""), "alt": figure.get("caption", figure["title"]),
                            "bytes": item["bytes"], "sha256": item["sha256"], "spec": figure})
+            blocks.extend(_figure_detail_tables(figure))
         sections.append(["Scientific source figures", blocks])
     sections.append(["Selected scientific sources", [{"kind": "links", "items": [
         {"title": item.get("title", name), "path": item["path"]}

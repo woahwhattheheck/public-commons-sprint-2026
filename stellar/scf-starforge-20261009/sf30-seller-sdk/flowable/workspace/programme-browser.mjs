@@ -1,6 +1,7 @@
 // MIT. Commissioning programme controls in the original industrial Flowable browser.
+import {installProgrammeAuthoring} from './programme-authoring-browser.mjs';
 export function installProgrammeBrowser({api,write,busy,button,node,pre,keyValues,table,originalLink,notice,reload,openRecord,
- requireEngine,records,forEngine,detail}){
+ requireEngine,records,forEngine,detail,workspaceId}){
  const root=document.querySelector('[data-panel="programmes"]');
  const list=root.querySelector('#programme-records'),content=root.querySelector('#programme-current');
  let selected=null,current=null;
@@ -69,7 +70,10 @@ export function installProgrammeBrowser({api,write,busy,button,node,pre,keyValue
    const history=node('details');history.append(node('summary','Retained review history'),pre(value.reviewHistory));content.append(history);
   }
  }
+ const authoring=installProgrammeAuthoring({root:root.querySelector('#programme-authoring'),node,button,busy,notice,table,pre,
+  write,requireEngine,reload,openProgramme:open,workspaceId});
  async function render(){
+  await authoring.render();
   table(list,[{label:'Programme',key:'label'},{label:'Saved state',key:'state'},
    {label:'Steps',render:item=>item.summary?.steps??'—'},
    {label:'Open',render:item=>button('Open programme',()=>open(item.id))}],forEngine(records('programme')),

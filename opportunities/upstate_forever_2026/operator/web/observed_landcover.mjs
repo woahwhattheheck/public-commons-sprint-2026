@@ -1,3 +1,5 @@
+import {createObservedLandcoverSelectionContract} from "./observed_landcover_selection.mjs";
+import {renderOriginalLandcoverGroups} from "./observed_landcover_groups.mjs";
 /** Original completed NLCD matrices, selected HUC support, and retained scientific reports. */
 const rows=value=>Array.isArray(value)?value:[];
 const clone=value=>JSON.parse(JSON.stringify(value));
@@ -7,7 +9,7 @@ const choiceKey=value=>JSON.stringify([value.source_collection_id,value.analysis
 const number=(value,digits=3)=>value===null||value===undefined?'Not available':Number(value).toLocaleString(undefined,{maximumFractionDigits:digits});
 const changedShare=(value,paired)=>value===null||value===undefined?'Changed share unavailable · '+number(paired,0)+' paired-valid cells':number(value)+'% of paired-valid cells changed class';
 const cell=value=>'<td title="'+esc(value??'Not available')+'">'+esc(number(value))+'</td>';
-const table=(columns,body)=>'<div class="olc-scroll"><table><thead><tr>'+columns.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
+const table=(columns,body)=>'<div class="olc-scroll" tabindex="0" role="region" aria-label="Original comparison table, scroll horizontally"><table><thead><tr>'+columns.map(x=>'<th scope="col">'+esc(x)+'</th>').join('')+'</tr></thead><tbody>'+body+'</tbody></table></div>';
 const action=(id,title,extra='')=>'<button type="button" data-lc-action="'+esc(id)+'" '+extra+'>'+esc(title)+'</button>';
 const options=(values,current,label)=>'<option value="">'+esc(label)+'</option>'+values.map(row=>'<option value="'+esc(row.value)+'"'+(row.value===current?' selected':'')+'>'+esc(row.label)+'</option>').join('');
 
@@ -27,6 +29,7 @@ export function renderObservedLandcover(report,{huc='',unit='ha'}={}){
     ' · '+esc(number(view.changed_area_ha))+' ha.</p>'+
     '<div class="olc-metrics">'+support.map(([label,value])=>'<div><span>'+esc(label)+'</span><strong>'+esc(number(value,0))+'</strong></div>').join('')+'</div>'+
     '<p class="olc-note">'+esc(report.interpretation)+'</p>'+
+    renderOriginalLandcoverGroups(view,report.binding.method.cell_area_m2,{before,after,label:huc?(huc+' · '+(view.properties?.name||'')):'Selected watershed union'})+
     '<h3>Full directional matrix · '+esc(unitLabel)+'</h3><p>Rows are '+esc(before)+', columns are '+esc(after)+
     '. The diagonal is unchanged class. Percentages use each earlier class’s paired-valid cells; empty earlier classes remain Not available.</p>'+
     table([before+' / '+after,...classes.map(row=>row.code)],classes.map(left=>'<tr><th scope="row">'+esc(left.code+' '+left.label)+'</th>'+
@@ -53,8 +56,8 @@ export function renderObservedLandcover(report,{huc='',unit='ha'}={}){
 
 export function attachObservedLandcover(host){
   const {getState,api,endpoint,toast,openForm,submitAction,openScientificReport,openDesk}=host;
-  let root=null,workspace=null,epoch=0,catalogRead=0,inputRead=0,comparisonRead=0,events=null,catalog=null,inputs=null,preview=null,opened=null;
-  const contexts=new Map();
+  let root=null,workspace=null,epoch=0,catalogRead=0,inputRead=0,comparisonRead=0,portableRead=0,events=null,catalog=null,inputs=null,preview=null,opened=null;
+  const contexts=new Map(),portableSelection=createObservedLandcoverSelectionContract();
   const state=()=>getState()?.workspace_key||'';
   const find=s=>root?.querySelector(s);
   const field=name=>find('[name="'+name+'"]');
@@ -91,7 +94,7 @@ export function attachObservedLandcover(host){
       '<div class="olc-toolbar"><label>Find HUC12, name or state<input name="filter" type="search"></label>'+
       action('select-visible','Select visible')+action('clear','Clear selection')+'<span data-lc-count></span></div>'+
       '<div class="olc-watersheds" data-lc-watersheds></div><label>Comparison title<input name="title" maxlength="240" required></label>'+
-      '<div class="olc-toolbar">'+action('preview','Inspect selected watersheds')+action('save','Save comparison and report source')+'</div></section>'+
+      '<div class="olc-toolbar">'+action('preview','Inspect selected watersheds')+action('save','Save comparison and report source')+'</div><div class="olc-toolbar"><label>Open portable or saved comparison JSON<input name="portable_selection" type="file" accept=".json,application/json"></label><p>Matches the original analysis, raster years and polygon identity before replacing this draft.</p></div></section>'+
       '<section class="olc-panel"><h2>Saved comparisons</h2><label>Original saved selection<select name="edition"></select></label>'+
       action('open','Open saved comparison')+'</section><div data-lc-result-tools></div><div data-lc-result></div></div>';
   }
@@ -154,10 +157,10 @@ export function attachObservedLandcover(host){
     find('[data-lc-result-tools]').innerHTML='<section class="olc-panel"><div class="olc-toolbar"><label>Reporting area<select name="view_huc">'+
       '<option value="">All selected watersheds · unique union</option>'+rows(report.watersheds).map(row=>'<option value="'+esc(row.huc12)+'">'+esc(row.huc12+' · '+row.properties?.name)+'</option>').join('')+
       '</select></label><label>Matrix quantity<select name="unit">'+[['ha','Hectares'],['cells','Cells'],['percent','% of earlier paired class']].map(([value,title])=>'<option value="'+value+'"'+(c.draft.unit===value?' selected':'')+'>'+esc(title)+'</option>').join('')+'</select></label>'+
-      (opened?action('compose','Open in Scientific Reports'):'')+'</div><div class="olc-downloads">'+rows(downloads).map(row=>{
+      (opened?action('compose-replace','Open this report only')+action('compose-append','Add to current report'):'')+'</div><div class="olc-downloads">'+rows(downloads).map(row=>{
         if(typeof row.url!=='string'||!/^\/api\/file\//.test(row.url))throw Error('An original download ticket is missing.');
         return '<a href="'+esc(row.url+(row.url.includes('?')?'&':'?')+'download=1')+'">'+esc(row.label||row.filename)+'</a>';
-      }).join('')+'</div></section>';
+      }).join('')+'</div>'+(opened?'<p class="olc-note">To send an editable study, prepare and save the scientific report, then choose <strong>Transfer this report and its studies</strong>. The original watershed selection, complete source files and analysis collections travel with that saved report.</p>':'')+'</section>';
     renderValues(report);
   }
   function renderValues(report=opened?.report||preview?.report){
@@ -202,11 +205,18 @@ export function attachObservedLandcover(host){
         return result;
       });
   }
-  async function compose(){
+  async function compose(selectionMode){
     if(!opened)throw Error('Open a saved comparison before creating its scientific report.');
-    const w=workspace,source=clone(opened.edition.source),title=opened.edition.title;
-    if(state()!==w)throw Error('Open this report in its original Workspace.');
-    return openScientificReport({workspace_key:w,sources:[source],title});
+    if(!['replace','append'].includes(selectionMode))throw Error('Choose how to open the original report source.');
+    const w=workspace,g=epoch,original=opened,id=original.edition.id;
+    if(!alive(w,g))throw Error('Open this report in its original Workspace.');
+    const result=await api(endpoint('/api/observed-landcover/edition',{workspace:w,id}));
+    if(!alive(w,g)||opened!==original)return;
+    if(result.edition?.id!==id||result.edition.project_id!==getState()?.data?.project?.id||
+       result.edition.state!=='complete'||JSON.stringify(result.edition.source)!==JSON.stringify(original.edition.source))
+      throw Error('Reopen the original complete comparison before choosing its report source.');
+    const source=clone(result.edition.source),title=result.edition.title;
+    return openScientificReport({workspace_key:w,sources:[source],title,selection_mode:selectionMode});
   }
   async function click(actionName,button){
     if(actionName==='refresh')return refresh({load:!opened&&!preview});
@@ -214,7 +224,8 @@ export function attachObservedLandcover(host){
     if(actionName==='preview')return readPreview();
     if(actionName==='save')return saveSelection();
     if(actionName==='open')return openSaved(field('edition').value);
-    if(actionName==='compose')return compose();
+    if(actionName==='compose-replace')return compose('replace');
+    if(actionName==='compose-append')return compose('append');
     const c=context(workspace);
     if(actionName==='select-visible')c.draft.huc12s=[...new Set([...c.draft.huc12s,...filtered().map(row=>row.huc12)])].sort();
     else if(actionName==='clear')c.draft.huc12s=[];
@@ -246,8 +257,51 @@ export function attachObservedLandcover(host){
       return '<button type="button" data-action="observed-lc-source" data-collection="'+esc(task.result.source_collection_id)+'" data-source="'+esc(task.result.analysis_source_id)+'">Choose original watersheds</button>';
     return '';
   }
+
+  async function importSelection(file){
+    if(!file)return;
+    const w=workspace,g=epoch,c=context(w),ticket=++portableRead,edit=c.edit,snapshot=JSON.stringify(c.draft);
+    const current=()=>alive(w,g)&&ticket===portableRead&&c.edit===edit&&JSON.stringify(c.draft)===snapshot;
+    try{
+      if(file.size>32*1024*1024)throw Error('Choose an original saved selection JSON of at most 32 MiB.');
+      const text=await file.text();if(!current())return;
+      const request=portableSelection.parse(JSON.parse(text.replace(/^\uFEFF/,'')));
+      const catalogue=await api(endpoint('/api/observed-landcover/catalog',{workspace:w}));
+      if(!current())return;
+      const preferred=rows(catalogue.sources).find(row=>choiceKey(row)===c.draft.source);
+      const source=portableSelection.resolve(request,rows(catalogue.sources),preferred);
+      const result=await api(endpoint('/api/observed-landcover/inputs',{workspace:w}),{method:'POST',body:{selection:clone(source)}});
+      if(!current())return;
+      if(choiceKey(result.binding)!==choiceKey(source))throw Error('The current source returned another original analysis.');
+      portableSelection.assertBinding(request,result.binding);
+      const valid=new Set(rows(result.watersheds).map(row=>row.huc12));
+      if(request.selection.huc12s.some(id=>!valid.has(id)))throw Error('The saved selection contains a HUC12 outside this original analysis.');
+      // Commit after every source/selection check; any earlier failure keeps the whole draft.
+      ++catalogRead;++inputRead;clearPreview();
+      catalog=catalogue;inputs=result;
+      c.draft={...c.draft,source:choiceKey(source),huc12s:[...request.selection.huc12s].sort(),
+        title:request.selection.title,filter:'',comparisonView:clone(request.view)};
+      c.edit++;c.lastOpened='';persist(w);
+      field('source').innerHTML=options(rows(catalog.sources).map(row=>({value:choiceKey(row),label:row.title+' · '+row.analysis_sha256.slice(0,12)})),c.draft.source,'Choose original source');
+      field('edition').innerHTML=options(rows(catalog.selections).map(row=>({value:row.id,label:row.title+' · '+row.huc12s.length+' HUCs'})),'','Choose saved comparison');
+      field('title').value=c.draft.title;field('filter').value='';
+      find('[data-lc-action="import"]').disabled=!catalog.published_source_available;
+      const years=result.binding.rasters;
+      find('[data-lc-source]').textContent=years.before.year+' → '+years.after.year+' · '+result.watersheds.length+' original HUC12s · '+result.binding.method.pixel_rule;
+      renderWatersheds();
+      note('Opened '+c.draft.huc12s.length+' original HUC12s against the verified source edition. Inspect the selection, then save through the original comparison action.');
+      return {selection:selection(),view:clone(request.view)};
+    }catch(error){
+      if(current())note('Current comparison kept. '+(error.message||String(error)),true);
+      return null;
+    }finally{
+      if(alive(w,g)&&ticket===portableRead&&field('portable_selection'))field('portable_selection').value='';
+    }
+  }
+
   function changed(event){
     const target=event.target,c=context(workspace),name=target.name;
+    if(name==='portable_selection'){void importSelection(target.files?.[0]);return;}
     if(name==='source'){
       c.draft.source=target.value;c.draft.huc12s=[];c.edit++;persist(workspace);
       const w=workspace,g=epoch;loadInputs().catch(error=>{if(alive(w,g))note(error.message,true);});return;
@@ -261,7 +315,7 @@ export function attachObservedLandcover(host){
     else return;
     c.edit++;clearPreview();persist(workspace);
   }
-  function detach(){++epoch;++catalogRead;++inputRead;++comparisonRead;events?.abort();events=null;root=null;workspace=null;catalog=null;inputs=null;preview=null;opened=null;}
+  function detach(){++epoch;++catalogRead;++inputRead;++comparisonRead;++portableRead;events?.abort();events=null;root=null;workspace=null;catalog=null;inputs=null;preview=null;opened=null;}
   async function mount(container){
     if(root===container&&workspace===state())return update();
     detach();root=container;workspace=state();const w=workspace,g=epoch,c=context(w);
@@ -293,5 +347,5 @@ export function attachObservedLandcover(host){
       const w=workspace,g=epoch;refresh({load:false}).catch(error=>{if(alive(w,g))note('Operation retained. Catalogue refresh: '+error.message,true);});
     }
   }
-  return {mount,update,detach,dispatch,taskActions,openSaved,openImported};
+  return {mount,update,detach,dispatch,taskActions,openSaved,openImported,importSelection};
 }

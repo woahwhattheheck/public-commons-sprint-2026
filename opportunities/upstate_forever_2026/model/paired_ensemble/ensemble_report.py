@@ -15,7 +15,8 @@ from urllib.parse import quote
 import numpy as np
 import rasterio
 from PIL import Image
-from .ensemble_store import atomic, digest, fingerprint, held, read, verify
+from .ensemble_store import (atomic, digest, fingerprint, held, read, verify,
+                             native_provenance as read_native_provenance)
 
 LABELS = {'nitrogen_export': 'Nitrogen export', 'phosphorus_export': 'Phosphorus export',
           'sediment_export': 'Sediment export'}
@@ -142,7 +143,56 @@ def _input_identity_section(rows):
             '</tr></thead><tbody>' + ''.join(records) + '</tbody></table></div></details>')
 
 
-def export_reports(directory):
+
+def _native_version_section(directory, analysis, descriptor):
+    record = read_native_provenance(directory, analysis, descriptor)
+    e = lambda value: html.escape(str(value), quote=True)
+    if record is None:
+        if analysis['selection'].get('input_kind') != 'original Workspace native run artifacts':
+            return '', [], None
+        declared = analysis['selection'].get('source_references', {}).get('invest_version')
+        return ('<section><h2>Native model versions</h2><p>Original recorded version: ' +
+                e(declared or 'Unavailable') + '. This historical report edition does not retain '
+                'separate producing-stage runtime records.</p></section>'), [], None
+    rows = []
+    for run_id, versions in sorted(record['cohort']['runs'].items()):
+        for model, value in versions.items():
+            rows.append({
+                'run_id': run_id, 'model': model,
+                'comparison_version': value['comparison_version'],
+                'basis': value['basis'], 'requested_version': value.get('requested_version'),
+                'observed_stage_version': value.get('observed_stage_version'),
+                'observed_run_version': value.get('observed_run_version'),
+                'stage_completed_at': value.get('stage_completed_at'),
+                'reused_from': json.dumps(value.get('reused_from'), ensure_ascii=False, sort_keys=True),
+            })
+    text_file(directory / 'native-versions.csv', _csv(rows, [
+        'run_id', 'model', 'comparison_version', 'basis', 'requested_version',
+        'observed_stage_version', 'observed_run_version', 'stage_completed_at', 'reused_from']))
+    labels = {
+        'completed_stage_runtime': 'Completed producing stage',
+        'observed_run_fallback': 'Observed run; stage version unavailable',
+        'requested_legacy': 'Requested legacy version; execution version unavailable',
+        'unavailable': 'Unavailable',
+    }
+    body = ''.join(
+        '<tr><td><code>' + e(row['run_id']) + '</code></td><td>' + e(row['model'].upper()) +
+        '</td><td>' + e(row['comparison_version']) + '</td><td>' +
+        e(labels.get(row['basis'], row['basis'])) + '</td><td>' +
+        e(row['requested_version'] or 'Unavailable') + '</td></tr>' for row in rows)
+    section = ('<section><h2>Native model versions</h2>'
+        '<p>Each selected quantity is paired only with the same producing-model version. '
+        'Completed stage runtimes take precedence over the last observed run runtime; '
+        'original records without either retain an explicitly labeled requested-version fallback. '
+        'Different NDR and SDR versions remain separate.</p>'
+        '<div class="table-scroll"><table class="input-rasters"><thead><tr>'
+        '<th>Original run</th><th>Model</th><th>Compared version</th><th>Source</th>'
+        '<th>Requested version</th></tr></thead><tbody>' + body + '</tbody></table></div>'
+        '<p><a href="native-versions.csv">Complete native version CSV</a> · <a href="' +
+        quote(descriptor['path'], safe='/') + '">Original runtime and stage records</a></p></section>')
+    return section, [descriptor['path'], 'native-versions.csv'], record
+
+def export_reports(directory, *, native_provenance=None):
     directory = Path(directory).resolve(strict=True)
     state = read(directory / 'analysis.json')
     if state.get('state') != 'complete' or state['id'] != digest(state['selection']):
@@ -151,6 +201,10 @@ def export_reports(directory):
         for artifact in state['artifacts'].values():
             verify(directory, artifact)
         selection = state['selection']
+        if native_provenance is None and (directory / 'reports.json').is_file():
+            native_provenance = read(directory / 'reports.json').get('native_provenance')
+        native_section, native_names, native_record = _native_version_section(
+            directory, state, native_provenance)
         atomic(directory / 'summary.json', {
             'schema': 'upstate.ensemble-summary/v1', 'ensemble_id': state['id'],
             'effect_direction': state['effect_direction'],
@@ -247,12 +301,15 @@ def export_reports(directory):
         e(selection['grid']['width']) + ' × ' + e(selection['grid']['height']) + '</strong>Original raster grid</div></div><p><strong>Displayed support:</strong> ' +
         e(SUPPORT_LABELS[selection['support']]) + '</p><p>Quantiles describe the explicitly tested profiles. The improvement fraction divides improved pairs by valid pairs at each pixel. Read its valid-pair count to see where support varies. Missing pixels stay missing. Nutrient and sediment quantities are reported separately.</p>' +
         '<nav>' + ''.join('<a href="#' + p + '">' + LABELS[p] + '</a>' for p in selection['pollutants']) + '<a href="#files">Files and methods</a></nav><code>Analysis ' + e(state['id']) + '</code></header>' + ''.join(sections) +
-        '<section id="files"><h2>Files and methods</h2>' + input_section + '<nav><a href="input-rasters.csv">Original input raster CSV</a><a href="paired-members.csv">Complete paired-member CSV</a><a href="coverage.csv">Coverage CSV</a><a href="basin-quantiles.csv">Basin quantiles CSV</a><a href="summary.json">Quantitative JSON</a><a href="selection.json">Exact selection and sources</a><a href="analysis.json">Full analysis record</a></nav><p>Per-pixel quantiles use linear interpolation at (n−1)q. The improvement threshold is retained per pollutant in its native pixel-mass units. Common-support basin totals always use identical pixels for every member. A percentage reduction with zero baseline is unavailable; negative original values remain in the calculation and are counted in the complete CSV.</p><p>Projected-grid area is pixel determinant × coordinate-unit conversion; it is not a separate geodesic-area estimate. Raster overviews retain affine row orientation, without a cartographic north-arrow claim.</p><details><summary>All quantitative GeoTIFFs</summary><ul class="downloads">' + downloads + '</ul></details><details><summary>Original source, profile and scenario references</summary><pre>' + source_json + '</pre></details><p class="muted">Complete result files can be received offline. Use the original scientific Workspace backup to transfer model inputs and run caches as well. Full numeric precision is retained in JSON, CSV and GeoTIFF; displayed values are rounded for reading.</p></section></main></body></html>')
+        native_section + '<section id="files"><h2>Files and methods</h2>' + input_section + '<nav><a href="input-rasters.csv">Original input raster CSV</a><a href="paired-members.csv">Complete paired-member CSV</a><a href="coverage.csv">Coverage CSV</a><a href="basin-quantiles.csv">Basin quantiles CSV</a><a href="summary.json">Quantitative JSON</a><a href="selection.json">Exact selection and sources</a><a href="analysis.json">Full analysis record</a></nav><p>Per-pixel quantiles use linear interpolation at (n−1)q. The improvement threshold is retained per pollutant in its native pixel-mass units. Common-support basin totals always use identical pixels for every member. A percentage reduction with zero baseline is unavailable; negative original values remain in the calculation and are counted in the complete CSV.</p><p>Projected-grid area is pixel determinant × coordinate-unit conversion; it is not a separate geodesic-area estimate. Raster overviews retain affine row orientation, without a cartographic north-arrow claim.</p><details><summary>All quantitative GeoTIFFs</summary><ul class="downloads">' + downloads + '</ul></details><details><summary>Original source, profile and scenario references</summary><pre>' + source_json + '</pre></details><p class="muted">Complete result files can be received offline. Use the original scientific Workspace backup to transfer model inputs and run caches as well. Full numeric precision is retained in JSON, CSV and GeoTIFF; displayed values are rounded for reading.</p></section></main></body></html>')
         text_file(directory / 'index.html', page)
         atomic(directory / 'previews.json', previews)
         names = ['index.html', 'summary.json', 'selection.json', 'input-rasters.csv', 'paired-members.csv',
-                 'coverage.csv', 'basin-quantiles.csv', 'previews.json'] + [p['path'] for p in previews]
+                 'coverage.csv', 'basin-quantiles.csv', 'previews.json'] + [p['path'] for p in previews] + native_names
         report = {'schema': 'upstate.ensemble-reports/v1', 'ensemble_id': state['id'],
                   'entrypoint': 'index.html', 'files': [{'path': name, **fingerprint(directory / name)} for name in names]}
+        if native_record is not None:
+            report['native_provenance'] = native_provenance
+            report['native_versions'] = native_record['cohort']['versions']
         atomic(directory / 'reports.json', report)
         return report

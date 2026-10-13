@@ -1,9 +1,14 @@
+import {receivedObservedLandcoverHTML,openReceivedObservedLandcover} from './observed_landcover_received.mjs';
+import {retainedStudyControl,openRetainedStudyRecord,receivedReviewHTML,reportComparisonHTML} from './study_report_navigation.mjs';
+import {receivedGaugeHTML,openReceivedGauge} from './gauge_received_studies.mjs';
+import {receivedNativeEnsembleHTML,openReceivedNativeEnsemble} from './ensemble_received_studies.mjs';
+import {receivedComparabilityHTML,openReceivedComparability} from './comparability_received_studies.mjs';
 /** Original selected-study receiving, reports and editable Implementation lineage. */
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const list=v=>Array.isArray(v)?v:[];
 const button=(action,label,extra='')=>'<button type="button" data-received-action="'+action+'" '+extra+'>'+esc(label)+'</button>';
 const validID=v=>typeof v==='string'&&/^[0-9a-f]{64}$/.test(v);
-const families={report:'Implementation plan report',outcome:'Outcomes comparison',field:'Field observation context'};
+const families={report:'Implementation plan report',outcome:'Outcomes comparison',field:'Field observation context',laboratory:'Laboratory requests and returned results'};
 function files(rows,primary=null) {
   const links=list(rows).filter(row=>!primary||primary.has(row.filename||row.label))
     .filter(row=>/^\/api\/file\/[0-9a-f]{64}$/.test(row.url||''));
@@ -36,14 +41,14 @@ export function attachReceivedStudies(host) {
   function render() {
     if(!root)return;
     const disabled=busy?'disabled':'';
-    root.innerHTML='<div class="st-panel-heading"><div><h3>Received studies and original fieldwork</h3>'+
-      '<p>Open a saved study, its scientific reports, and the original editable plans behind them.</p></div>'+
+    root.innerHTML='<div class="st-panel-heading"><div><h3>Received studies and original sources</h3>'+
+      '<p>Open a saved study, its scientific reports, original editable plans, customer feedback, Gauge geography and selected watershed comparisons.</p></div>'+
       button('refresh','Refresh received studies')+'</div>'+
       (error?'<p class="st-row-error" role="alert">'+esc(error)+'</p>':'')+
-      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Editable plans</th><th>Open</th></tr></thead><tbody>'+
+      '<div class="st-table-scroll"><table class="st-table"><thead><tr><th>Study</th><th>Scientific reports</th><th>Report comparisons</th><th>Editable plans</th><th>Gauge studies</th><th>Model studies</th><th>Reviews</th><th>Watershed comparisons</th><th>Open</th></tr></thead><tbody>'+
       page.items.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small>'+esc(row.captured_at||'')+'</small>'+
         (row.error?'<p class="st-row-error">'+esc(row.error)+'</p>':'')+'</td><td>'+esc(row.report_count??'')+
-        '</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+
+        '</td><td>'+esc(row.report_comparison_count??0)+'</td><td>'+esc(row.editable_plan_count??'')+'</td><td>'+esc(row.editable_gauge_count??0)+'</td><td>'+esc(row.native_ensemble_source_count??0)+'</td><td>'+esc(row.customer_review_count??0)+'</td><td>'+esc(row.observed_landcover_source_count??0)+'</td><td>'+
         (row.state==='unreadable'?'Saved record needs repair':button('open',row.id===selected?'Reopen study':'Open study','data-id="'+esc(row.id)+'"'))+
         '</td></tr>').join('')+'</tbody></table></div>'+
       (!page.items.length?'<p class="st-empty">'+(loading?'Reading retained Study transfers…':'Receive a Study archive, switch to its restored Workspace, and open its saved study here.')+'</p>':'')+
@@ -57,10 +62,10 @@ export function attachReceivedStudies(host) {
     let html='<section class="st-received-detail" aria-label="Original received study"><h4>'+esc(value.title)+'</h4>'+
       '<p>'+esc(value.project.title||value.project.id)+' · '+esc(value.captured_at||'')+'</p>';
     for(const report of list(value.reports)){
-      const primary=new Set(['report.html','scientific-report.html','report-files.zip']);
+      const primary=new Set(['report.pdf','report.html','scientific-report.html','report-files.zip']);
       html+='<article class="st-export"><div><h4>'+esc(report.title)+'</h4><p>'+esc(report.section_count)+' sections · '+
         esc(report.figure_count)+' figures · '+esc(report.source_count)+' original sources</p>'+
-        files(report._downloads,primary)+allFiles(report._downloads)+'</div></article>';
+        '<div class="st-actions">'+retainedStudyControl(host,{kind:'scientific-report-editions',id:report.id},{prefix:'received',disabled:!!disabled})+'</div>'+files(report._downloads,primary)+allFiles(report._downloads)+'</div></article>';
     }
     if(!value.field_sources.length)html+='<p>This retained study records '+value.reports.length+' scientific reports. Its saved selection contains no linked editable Implementation plans.</p>';
     for(let index=0;index<value.field_sources.length;index++){
@@ -72,6 +77,16 @@ export function attachReceivedStudies(host) {
         '<div class="st-actions">'+button('plan','Open source revision','data-index="'+index+'" '+disabled)+
         (native.revision!==native.selected_revision?button('current','Open latest editable plan','data-index="'+index+'" '+disabled):'')+'</div>'+
         '<p>'+Object.entries(native.record_counts||{}).filter(([,n])=>n).map(([name,n])=>esc(n)+' '+esc(name.replaceAll('_',' '))).join(' · ')+'</p>';
+      if(source.laboratory){
+        const lab=source.laboratory;
+        html+='<section class="st-details"><h4>'+esc(lab.label||'Original laboratory request')+'</h4>'+
+          '<p>'+esc(lab.laboratory)+' · requested revision '+esc(lab.request_revision)+
+          ' · report/results revision '+esc(lab.result_revision)+'</p>'+
+          button('laboratory','Open laboratory request and results','data-index="'+index+'" '+disabled)+
+          files(lab._request_downloads,new Set(['laboratory-package.zip','lab-submission.csv','return-template.csv']))+
+          allFiles(lab._request_downloads,'Complete original laboratory package')+
+          allFiles(lab._report_downloads,'Retained laboratory report source and selection')+'</section>';
+      }
       for(const report of list(source.reports)){
         html+='<details class="st-details"'+(report.selected_source_report?' open':'')+'><summary>'+
           (report.selected_source_report?'Original source report':'Retained plan report')+' · revision '+esc(report.revision)+' · '+esc(report.as_of||'')+
@@ -89,6 +104,24 @@ export function attachReceivedStudies(host) {
       }
       html+='</article>';
     }
+    if(list(value.report_comparisons).length){
+      html+='<section aria-label="Retained scientific report comparisons"><h4>Original report comparisons</h4>';
+      for(const comparison of value.report_comparisons){
+        html+='<article class="st-export">'+reportComparisonHTML(host,comparison,{prefix:'received',disabled:!!disabled})+
+          '<div>'+files(comparison._downloads,new Set(['changes.csv','summary.json']))+
+          (list(comparison._archive_downloads).length?'<p>'+
+            (comparison.archive_captured?'Complete comparison ZIP retained with this Study.':'Complete comparison ZIP prepared after this Study was captured.')+'</p>'+files(comparison._archive_downloads):
+            '<p>Open the report comparison and choose Prepare full comparison ZIP for offline handover.</p>')+
+          '<p>For offline use, extract the complete ZIP and open index.html; it keeps both report folders and every change page together.</p>'+
+          allFiles(comparison._downloads,'Every original comparison and report member')+'</div></article>';
+      }
+      html+='</section>';
+    }
+    html+=receivedReviewHTML(host,value,!!disabled);
+    html+=receivedGaugeHTML(value,!!disabled);
+    html+=receivedNativeEnsembleHTML(value,!!disabled);
+    html+=receivedComparabilityHTML(value,!!disabled);
+    html+=receivedObservedLandcoverHTML(value,!!disabled);
     return html+'</section>';
   }
   async function loadPage(offset=0) {
@@ -115,7 +148,55 @@ export function attachReceivedStudies(host) {
     if(action==='previous')return loadPage(Math.max(0,page.offset-page.limit));
     if(action==='next'&&page.next_offset!==null)return loadPage(page.next_offset);
     if(action==='open')return open(target.dataset.id);
-    if(!['plan','current','packet-plan'].includes(action))return;
+    if(action?.startsWith('landcover-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedObservedLandcover(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action?.startsWith('cohort-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedComparability(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action==='open-retained-report-review'){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      const kind=target.dataset.recordKind,id=target.dataset.recordId;
+      const available=kind==='scientific-report-comparisons'?list(value.report_comparisons).some(row=>row.id===id):
+        kind==='reviews'?list(value.customer_reviews).some(row=>row.id===id):
+        kind==='scientific-report-editions'&&(list(value.reports).some(row=>row.id===id)||
+          list(value.report_comparisons).some(row=>list(row.edition_links).some(edition=>edition.id===id))||
+          list(value.customer_reviews).some(row=>list(row.scientific_reports).some(source=>
+            !source.external&&source.scientific_report_edition_id===id)));
+      if(!available)throw Error('Choose a report or review retained with this Study.');
+      return openRetainedStudyRecord(host,{kind,id,tab:target.dataset.recordTab},{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action?.startsWith('native-ensemble-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedNativeEnsemble(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(action?.startsWith('gauge-')){
+      const ws=workspace,e=epoch,value=opened;
+      if(!value||value.id!==selected||value.workspace_key!==ws)
+        throw Error('Reopen the original received Study.');
+      return await openReceivedGauge(host,value,target,{
+        workspace_key:ws,current:()=>current(ws,e)&&opened===value&&selected===value.id,
+      });
+    }
+    if(!['plan','current','packet-plan','laboratory'].includes(action))return;
     const ws=workspace,e=epoch,value=opened;
     if(!value||value.id!==selected||value.workspace_key!==ws)throw Error('Reopen the original received Study.');
     const index=Number(target.dataset.index),source=Number.isSafeInteger(index)?value.field_sources[index]:null;
@@ -130,7 +211,11 @@ export function attachReceivedStudies(host) {
     if(!Number.isSafeInteger(revision)||revision<1)throw Error('Choose an original saved revision.');
     if(!current(ws,e))return;
     if(typeof host.openExtension!=='function')throw Error('Reopen this Workspace in the maintained operator.');
-    await host.openExtension('implementation','openSavedPlan',{workspace_key:ws,plan_id:native.plan_id,revision});
+    const laboratory=action==='laboratory'?source.laboratory:null;
+    if(action==='laboratory'&&(!laboratory||!validID(laboratory.dispatch_id)||!validID(laboratory.operation_id)))
+      throw Error('Reopen the original retained laboratory source.');
+    await host.openExtension('implementation','openSavedPlan',{workspace_key:ws,plan_id:native.plan_id,revision,
+      ...(laboratory?{laboratory_dispatch_id:laboratory.dispatch_id,laboratory_report_operation:laboratory.operation_id}:{})});
   }
   function click(event){
     const target=event.target.closest('[data-received-action]');

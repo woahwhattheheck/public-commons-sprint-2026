@@ -1,7 +1,7 @@
 /**
  * Receiving mount for the original market-workbench host.
- * All actions use its retained operation/revision transport; original source
- * reads and complete JSON exports keep the server's receiving boundary.
+ * Business actions use its retained operation/revision transport. Source/field
+ * reads and exact native downloads are GET requests and preserve workspace revision.
  */
 export function mountReceivingBridge(element, {
   request, mutate, getState, refresh: refreshHost, onOpenAnalysis, note
@@ -70,6 +70,29 @@ export function mountReceivingBridge(element, {
     if (typeof note === 'function') note(message, true);
   }
 
+  async function readDownload(kind, identity, record) {
+    const window = document.defaultView;
+    const response = await window.fetch('/api/extensions/receiving/download/' +
+      encodeURIComponent(kind) + '/' + validId(identity, 'receiving document'),
+      {cache: 'no-store', credentials: 'same-origin'});
+    if (!response.ok) {
+      const value = await response.json().catch(() => ({}));
+      throw Object.assign(new Error(value.error || 'The original receiving export could not be read.'),
+        {code: value.code, status: response.status, details: value.details});
+    }
+    const raw = await response.arrayBuffer();
+    if (raw.byteLength > 32 * 1024 * 1024) throw new Error('The receiving export exceeds 32 MiB.');
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const filename = /filename="([^"]+)"/.exec(disposition)?.[1];
+    if (!filename) throw new Error('The original receiving export filename was not returned.');
+    const digest = await window.crypto.subtle.digest('SHA-256', raw);
+    return {schema: record.schema, kind: 'export', filename,
+      mime: response.headers.get('Content-Type') || 'application/octet-stream',
+      content: new window.TextDecoder('utf-8', {fatal: true, ignoreBOM: true}).decode(raw),
+      encoding: 'utf-8', bytes: raw.byteLength,
+      sha256: Array.from(new Uint8Array(digest), value => value.toString(16).padStart(2, '0')).join('')};
+  }
+
   async function api(action, payload = {}) {
     const id = mountedWorkspaceId;
     assertLive(id);
@@ -81,6 +104,33 @@ export function mountReceivingBridge(element, {
       if (!savedKinds.has(payload.kind)) throw new Error('Select a saved receiving document.');
       result = await request('/api/extensions/receiving/document/' +
         encodeURIComponent(payload.kind) + '/' + validId(payload.id, 'receiving document'));
+    } else if (action === 'inspectSnapshot') {
+      const selected = payload.snapshot ?? payload.snapshotId;
+      result = await request('/api/extensions/receiving/document/snapshot-fields/' +
+        validId(typeof selected === 'object' && selected ? selected.id : selected,
+          'reviewed pricing snapshot'));
+    } else if (action === 'exportHandoff') {
+      const selected = payload.handoff;
+      const identity = typeof selected === 'object' && selected ? selected.id : selected;
+      const record = await request('/api/extensions/receiving/document/handoff/' +
+        validId(identity, 'receiving handoff'));
+      if (record.id !== identity || record.kind !== 'handoff' ||
+          (selected?.sha256 && record.sha256 !== selected.sha256)) {
+        throw new Error('The requested handoff differs from the saved original edition.');
+      }
+      const format = payload.format || record.profile.format;
+      if (!['csv', 'tsv', 'json'].includes(format)) throw new Error('Choose CSV, TSV or JSON.');
+      assertLive(id);
+      result = await readDownload('handoff-' + format, identity, record);
+    } else if (action === 'exportRecord') {
+      if (!savedKinds.has(payload.kind)) throw new Error('Select a saved receiving document.');
+      const record = await request('/api/extensions/receiving/document/' +
+        encodeURIComponent(payload.kind) + '/' + validId(payload.id, 'receiving document'));
+      if (record.id !== payload.id || record.kind !== payload.kind) {
+        throw new Error('The selected original receiving record was not returned.');
+      }
+      assertLive(id);
+      result = await readDownload(payload.kind, payload.id, record);
     } else {
       if (!actions.has(action)) throw new Error('Unknown receiving workspace action.');
       const envelope = await mutate('/api/extensions/receiving/' + encodeURIComponent(action), payload);

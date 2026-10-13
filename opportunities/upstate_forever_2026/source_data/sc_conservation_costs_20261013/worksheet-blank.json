@@ -1,0 +1,108 @@
+{
+  "schema": "upstate.conservation-cost-worksheet/v1",
+  "catalogue_id": "sc-conservation-costs-20261013",
+  "catalogue_sha256": "3667d9d58f1933bcd0840073b05a0879bd2d25610a17c4dc2b6c7894d0ddfc29",
+  "title": "",
+  "currency": "USD",
+  "status": "no_project_quantities",
+  "model_binding": null,
+  "implementation_estimate_complete": false,
+  "annual_cost": null,
+  "planning_horizon_years": null,
+  "discount_rate": null,
+  "assistance_eligibility_confirmed": false,
+  "sources": [
+    {
+      "id": "nrcs-sc-eqip-fy26",
+      "title": "NRCS South Carolina FY26 payment schedule",
+      "publisher": "USDA NRCS",
+      "url": "https://www.nrcs.usda.gov/sites/default/files/2026-04/SC%20EQIP%20Payment%20Schedule%20-%20FY26.pdf",
+      "edition": "FY2026; PDF metadata March2026; URL April2026",
+      "effective_start": null,
+      "effective_end": null,
+      "pdf_pages": 12,
+      "status": "advertised on live SC page at retrieval; not represented as FY2027",
+      "capture": {
+        "status": "provider_timeout",
+        "http_status": 504,
+        "sha256": null
+      },
+      "extraction": {
+        "original_owner": "ES26",
+        "carrier": "F0C9KK56TNC",
+        "csv_sha256": "8dbf2049b3bafb4bf25055fdb4fb618862dfaafbd78dc3e8d911c63904b345fc"
+      }
+    },
+    {
+      "id": "scfc-services-fy2026-27",
+      "title": "SCFC fee/rental services and equipment",
+      "publisher": "South Carolina Forestry Commission",
+      "url": "https://www.scfc.gov/management/landowner-services/fee-rental-services/",
+      "download_url": "https://www.scfc.gov/wp-content/uploads/2026/07/ServicesFY2026-27.pdf",
+      "edition": "FY2026–27",
+      "effective_start": "2026-07-01",
+      "effective_end": "2027-06-30",
+      "capture": {
+        "status": "complete",
+        "filename": "SCFC-services-FY2026-27-original.html",
+        "bytes": 149575,
+        "sha256": "df0e7d8b99bd806370a007cb30185d9a0a1b6e69e743064152205a1ee68e0efa",
+        "file_upload_id": "3f8dd772-3100-815a-80a7-00b25e80c211"
+      },
+      "pdf_capture": {
+        "status": "source_file_too_large",
+        "provider_limit_bytes": 5242880
+      }
+    },
+    {
+      "id": "scfc-seedlings-20261013",
+      "title": "SCFC seedling preferential prices",
+      "publisher": "South Carolina Forestry Commission",
+      "url": "https://www.scfc.gov/management/seedlings/",
+      "edition": "Live page retrieved 2026-10-13; price-effective year unstated",
+      "effective_start": null,
+      "effective_end": null,
+      "capture": {
+        "status": "complete",
+        "filename": "SCFC-seedlings-original-20261013.html",
+        "bytes": 145092,
+        "sha256": "41c8123ce4518c966439ce34096ee00a4e5313cf298d20ac2f87d3ba9f104db9",
+        "file_upload_id": "3f8dd772-3100-816d-8e8c-00b266269913"
+      }
+    },
+    {
+      "id": "nrcs-sc-scenarios-fy25",
+      "title": "South Carolina practice scenarios — Fiscal Year2025",
+      "publisher": "USDA NRCS",
+      "url": "https://www.nrcs.usda.gov/sites/default/files/2024-11/fy25-sc-scenarios_0.pdf",
+      "edition": "FY2025; URL November2024",
+      "effective_start": null,
+      "effective_end": null,
+      "pdf_pages": 880,
+      "status": "historical planning benchmark; statewide averages; county costs vary",
+      "capture": {
+        "status": "provider_timeout",
+        "http_status": 504,
+        "sha256": null
+      },
+      "use_limit": "Publisher requires site-specific design/implementation requirements; this is not an implementation design."
+    },
+    {
+      "id": "scfc-assistance-fy2026-27",
+      "title": "SCFC FRP/SPB cost-share rates",
+      "publisher": "South Carolina Forestry Commission",
+      "url": "https://www.scfc.gov/wp-content/uploads/2026/07/FRP-SPBCost-ShareRates2026-27.pdf",
+      "edition": "FY2026–27",
+      "effective_start": "2026-07-01",
+      "effective_end": "2027-06-30",
+      "capture": {
+        "status": "provider_uploaded",
+        "bytes": 2983067,
+        "file_upload_id": "3f8dd772-3100-81f7-9905-00b2e0500d66",
+        "sha256": null
+      },
+      "use_limit": "Percent-of-actual-cost reimbursement with caps; not installed unit prices; no rows converted into implementation costs."
+    }
+  ],
+  "lines": []
+}

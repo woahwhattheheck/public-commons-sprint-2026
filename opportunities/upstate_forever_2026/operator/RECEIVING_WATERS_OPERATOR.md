@@ -427,3 +427,83 @@ source relationships, subject IDs by role, selected-cell counts and quantity
 closure rows. Accounting subjects use kind=accounting and preserve the existing
 metrics interface. Delivery requests that prepare an analysis from a plan can
 supply this same accounting object inside receiving_waters.
+
+
+## Original-feature selection and editable study receiving
+
+Use the original source's field names, native feature IDs and coordinate system when defining or revising receiving waters. The geographic reader preserves the source file; any clipped geometry shown while selecting is a display aid. Saving the plan resolves the chosen IDs against the original retained source again. A published source-area relationship uses its original polygon. An upstream HUC relationship also needs the complete retained catchment network and its actual catchment-ID and downstream fields.
+
+The existing native browser owner can now continue through the editable study controls in the same operation:
+
+```sh
+PYTHON -B operator/receiving_water_operate.py \
+  --preparation ACTUAL_PUBLIC_WATER_PREPARATION_JSON \
+  --output-dir OUTSIDE_WORKSPACE \
+  --node ACTUAL_NODE \
+  --node-modules ACTUAL_NODE_MODULES \
+  --chromium ACTUAL_CHROMIUM \
+  --editable-selection
+```
+
+For an already-running operator, set `"editable_selection": true` in its existing private browser-control JSON. The course opens the original saved plan in Study transfer, verifies its selected root, returns through **Open in Receiving waters**, opens **Revise source plan**, opens the original-feature chooser, operates its native-ID subset control and applies an actual source choice to a disposable form draft, discards that draft, reopens the exact original selection, visits every receiving-area edit page, operates the title control and restores it, then saves the unchanged complete selection through the original queue. The original plan remains unchanged. With the same scientific implementation, preparation can reuse its original identity. If the installed engine has advanced, the course records the actual new immutable result and the exact preserved original selection and engine identity; it never relabels that result as the older plan. If the command also selects an actual completed analysis, the same sequence retains its original run cohort, quantities, normalization and accounting choices. It performs the existing map/save/export course and then reopens those revision forms in a fresh browser context. Original native hydrology runs remain the same saved inputs.
+
+The browser records the actual queued task and complete request before submission and resumes an interrupted original task. Source editions and runtime choices remain in the existing operation identity. It captures the real Study, source chooser, applied draft, revision and reopened screens at 1440px and 390px. These screenshots and exact native results are written beside the original map downloads; they are part of the same operating course.
+
+### Render and inspect the outgoing product
+
+Before presenting this app, report, demo or export as ready for a client or prospect, the producing operator must run the exact outgoing edition, look at its actual screens or real screenshots, and operate its important controls. Check the populated Receiving plan and analysis, source chooser, selected records, loading and error messages, long tables, desktop/screenshare and narrow/phone widths, downloads and fresh reopening. Merely capturing screenshots, seeing HTTP200, counting DOM elements or passing source checks does not replace looking at the product.
+
+Use the retained screenshot paths to inspect the actual text, maps, table columns, clipping, overflow, typography and spacing. Repair observed problems in the maintained source, then reopen the corrected edition. Keep the interface plain and industrial: readable tables, consistent spacing, restrained controls and useful labels. Inspect the downloaded HTML/PDF as well as the app before delivering those files. Record the actual viewed artifact and any repaired problem in the existing operation handoff, while continuing source and native integration.
+
+## Compare saved source-plan editions in the same receiving workflow
+
+The original Receiving view can compare two retained plan records before the operator carries a source revision into an analysis. Select the reference and candidate explicitly. The comparison aligns only exact receiving-area identifiers and distinguishes the requested scientific selection from each plan’s retained compiled source/geometry/support information. A new original source body alone does not establish changed geometry. Added and removed identifiers remain explicit; titles never silently join different areas.
+
+The comparison keeps both original records available and downloads its original comparison register. Its analysis handoff changes only the selected plan in the existing retained analysis form; the native run cohort, pollutant selection, weights, normalization and complete accounting settings stay visible for deliberate review. Missing accounting references must be resolved in that original form. Saving continues through the existing queue with actual immutable output identities.
+
+The maintained --editable-selection browser course also opens the actual original/currently returned plan pair (the identical original is an explicitly labeled no-change comparison when no new plan was produced), operates the source comparison and download controls, and reopens the same pair in a fresh browser context. With a retained analysis, it checks the candidate-plan handoff as an unsaved draft before returning to the original numerical study. Exact populated desktop and narrow screenshots remain subject to the owner-directed visual inspection above.
+
+
+## Continue the original saved-plan report from a received project
+
+A source bank containing changed application files is an overlay, not a complete standalone installation. Start from the application and Workspace retained together in the original complete project archive. Keep the original archive and extracted application intact; apply the current owned source to a receiving copy, using its maintained installer when provided. Preserve a newer owner edition at an overlapping path and compose that exact source before starting the operator. Receiving the same verified source twice should reuse the same staged bytes. It must not overwrite an advancing application while its operator or native writer is active.
+
+Use the actual qualified scientific Python, application directory and restored Workspace paths from that receiving operation. A saved source plan can produce its scientific source and original-area maps without a new numerical hydrology run. From the received application directory, continue the original plan:
+
+```sh
+PYTHON -B model/receiving_water_report_cli.py \
+  --workspace ACTUAL_RESTORED_WORKSPACE \
+  --output OUTSIDE_WORKSPACE/source.json \
+  prepare --plan-id ACTUAL_SAVED_PLAN_ID
+```
+
+Read that actual command's result. If it fails, repair the reported source, dependency or input seam in the existing receiving copy and resume the same operation. Preserve an already-issued matching process and its output. The immutable source edition is then available to the original Scientific Reports workflow: explicitly open that report alone or add it to the current ordered report, build its PDF/HTML/data export, and reopen the complete delivered project. Current Receiving and Monitoring report controls make replace versus append explicit; the report composer retains the full selected source set.
+
+The editable-study course above follows this original report and restored project. It opens real saved plan and analysis identities, preserves the original scientific selections, and uses the existing preparation queue. Native model execution belongs to the deliberately selected numerical operation; report rendering, source-plan comparison and read-only source impact do not require a replacement numerical case.
+
+For a source refresh, open **Receiving source impact**, choose the saved Source Updates plan, and inspect its related original Receiving plans or analyses. Consumed geometry and catchment inputs are shown separately from retained context. Open the original study to revise its explicit selection; compare the saved plan editions before carrying the candidate into the original analysis form. A recorded successor run is checked against its current completion and saved dependency mappings. The Receiving analysis engine remains responsible for physical support and computation. Detailed interfaces and the read-only download are in `RECEIVING_SOURCE_IMPACT.md`.
+
+The source producer and receiving worker inspect the exact outgoing screens and attachments described by the standing rule below. Return real command results and opened artifact locations to the same operation so the responsible source owner can repair a concrete failure directly.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->

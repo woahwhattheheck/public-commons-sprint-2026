@@ -1,0 +1,135 @@
+{
+  "schema": "upstate.guarded-source-joins/v1",
+  "id": "scientific-report-capture",
+  "base_commit": "66d1d1063b4058a4b487df0074d2bbb41cd71ceb",
+  "new_paths": [
+    "model/scientific_report_capture.py",
+    "operator/SCIENTIFIC_REPORT_CAPTURE.md",
+    "integration/component_fragments/scientific-report-capture.json"
+  ],
+  "changes": [
+    {
+      "path": "model/scientific_report_editions.py",
+      "preimage_sha256": "86470bf7759335c3a4fb3e92ae9ec2443cb798ffd1caef7aa95e3f019112bdff",
+      "sha256": "7cbfe935d655c6ede34d5ddae3160fd412e3dd8154f56e3d27c011ca0f78a7d0",
+      "changes": [
+        {
+          "before": "    for item in result[\"files\"].values():\n        verify_file(selected, item)\n    return value, selected, result\n",
+          "after": "    for item in result[\"files\"].values():\n        verify_file(selected, item)\n    if value.get(\"capture_origin\") is not None:\n        from .scientific_report_capture import verify_origin\n        verify_origin(workspace, value, selected)\n    return value, selected, result\n"
+        },
+        {
+          "before": "    atomic_json(selected / \"edition.json\", value, immutable=True)\n    inspect(workspace, key)\n",
+          "after": "    if (selected / \"edition.json\").is_file():\n        previous = read_json(selected / \"edition.json\")\n        if previous.get(\"capture_origin\") is not None:\n            original = dict(previous)\n            original.pop(\"capture_origin\")\n            if original != value:\n                raise ValueError(\"The completed report differs from its adopted original edition.\")\n            value = previous\n    atomic_json(selected / \"edition.json\", value, immutable=True)\n    inspect(workspace, key)\n"
+        }
+      ]
+    },
+    {
+      "path": "operator/source_report_editions.py",
+      "preimage_sha256": "1f394c1ebe2282dc74ea9ea27e82ff39518175261b5bacaf5c2af7e346cc700e",
+      "sha256": "f291275fad9ef4064d718a48012a0601b4bd7b4f60d5ccb1186646aa4a4c4756",
+      "changes": [
+        {
+          "before": "from model import scientific_report_review\n",
+          "after": "from model import scientific_report_review\nfrom model import scientific_report_capture\n"
+        },
+        {
+          "before": "ACTIONS = frozenset({\"source-reports.render\", \"source-reports.export\", \"source-reports.briefing\", \"source-reports.review\"})",
+          "after": "ACTIONS = frozenset({\"source-reports.render\", \"source-reports.export\", \"source-reports.briefing\", \"source-reports.review\", \"source-reports.adopt\"})"
+        },
+        {
+          "before": "        return {\"workspace_key\": workspace, \"sources\": rows, \"editions\": self.saved(workspace)}",
+          "after": "        captures = scientific_report_capture.catalog(self.operator.ws(workspace))\n        return {\"workspace_key\": workspace, \"sources\": rows, \"editions\": self.saved(workspace),\n                \"captured_reports\": captures[\"reports\"], \"capture_issues\": captures[\"issues\"]}"
+        },
+        {
+          "before": "    def preview(self, workspace, payload):\n",
+          "after": "    def capture_preview(self, workspace, payload):\n        result = scientific_report_capture.preview(\n            self.operator.ws(workspace), identifier(payload.get(\"capture_id\")))\n        return {\"workspace_key\": workspace, **result}\n\n    def adopt(self, workspace, payload):\n        return scientific_report_capture.adopt(\n            self.operator.ws(workspace), identifier(payload.get(\"capture_id\")),\n            expected_capture_sha256=identifier(payload.get(\"capture_sha256\")),\n            expected_edition_id=identifier(payload.get(\"edition_id\")))\n\n    def preview(self, workspace, payload):\n"
+        },
+        {
+          "before": "    def read(self, workspace, operation, payload):\n",
+          "after": "    def read(self, workspace, operation, payload):\n        if operation == \"scientific-capture\":\n            return self.capture_preview(workspace, payload)\n"
+        },
+        {
+          "before": "    def invoke(self, task):\n",
+          "after": "    def invoke(self, task):\n        if task[\"action\"] == \"source-reports.adopt\":\n            return self.adopt(task[\"workspace\"], task[\"payload\"])\n"
+        }
+      ]
+    },
+    {
+      "path": "operator/web/source_report_editions.mjs",
+      "preimage_sha256": "da1aba279e78b9557303f66a0da0fa9cdfa5ee5069e1ad34c3b5ef5fa386f023",
+      "sha256": "9ab75d0a9b64d32087d74974d8d35af345dc3647a53146402e95a2832a50d302",
+      "changes": [
+        {
+          "before": "  let briefingPreview=null,briefingOpened=null;\n",
+          "after": "  let briefingPreview=null,briefingOpened=null;\n  let capturedReports=[],captureIssues=[],capturePreview=null,captureGeneration=0;\n"
+        },
+        {
+          "before": "['source-reports.render','source-reports.export','source-reports.briefing'].includes(retained.action)",
+          "after": "['source-reports.render','source-reports.export','source-reports.briefing','source-reports.adopt'].includes(retained.action)"
+        },
+        {
+          "before": "      '';\n    panel.querySelector('[data-scientific-report-detail]').hidden=!opened;",
+          "after": "      capturedReportsHTML(locked);\n    panel.querySelector('[data-scientific-report-detail]').hidden=!opened;"
+        },
+        {
+          "before": "  function previewHTML(){",
+          "after": "  function capturedReportsHTML(locked){\n    if(!capturedReports.length&&!captureIssues.length)return '';\n    return '<h3>Completed reports retained with this project</h3>'+\n      '<p>Reports prepared by the original command-line workflow keep their PDF, HTML, data and sources here. Add a completed report to the saved editions to review, compare or transfer it.</p>'+\n      (capturedReports.length?'<div class=\"table-scroll\"><table><thead><tr><th>Completed report</th><th>Original contents</th><th></th></tr></thead><tbody>'+\n        capturedReports.map(row=>'<tr><td><strong>'+esc(row.title)+'</strong><small class=\"mono\">'+esc(row.operation_id)+'</small></td><td>'+\n          esc(row.source_count)+' studies · '+esc(row.section_count)+' sections · '+esc(row.figure_count)+' figures'+\n          '<small>'+esc(row.file_count)+' files · '+esc(size(row.bytes))+'</small></td><td>'+\n          '<button type=\"button\" data-scientific-report-action=\"capture-preview\" data-id=\"'+esc(row.capture_id)+'\"'+(locked?' disabled':'')+'>Review completed report</button></td></tr>').join('')+\n        '</tbody></table></div>':'')+\n      (captureIssues.length?'<details><summary>Completed reports needing attention ('+captureIssues.length+')</summary><ul>'+\n        captureIssues.map(row=>'<li><code>'+esc(row.capture_id)+'</code> — '+esc(row.message)+'</li>').join('')+'</ul></details>':'')+\n      (capturePreview?'<section class=\"scientific-report-preview\"><h4>'+esc(capturePreview.title)+'</h4>'+\n        '<p>The original '+esc(capturePreview.file_count)+' files and ordered sources have been verified. Adding this report preserves its exact PDF, HTML, data and original rendering identity.</p><ol>'+\n        capturePreview.sources.map(row=>'<li>'+esc(row.title)+'<small>'+esc(row.vintage)+' · '+esc(row.source_id)+'</small></li>').join('')+\n        '</ol><div class=\"inline-actions\"><button type=\"button\" data-scientific-report-action=\"capture-adopt\"'+(locked?' disabled':'')+'>Add original saved edition</button>'+\n        '<button type=\"button\" data-scientific-report-action=\"capture-close\">Close completed report</button></div></section>':'');\n  }\n  async function previewCapture(id){\n    const chosen=capturedReports.find(row=>row.capture_id===id);\n    if(!chosen)throw Error('Refresh and choose an original completed report retained in this project.');\n    const ws=workspace,turn=generation,ticket=++captureGeneration;\n    const result=await request('/api/source-reports/scientific-capture',{capture_id:id});\n    if(!active||!valid(ws,turn)||ticket!==captureGeneration)return;\n    if(result.workspace_key!==ws||result.capture_id!==id||result.edition_id!==chosen.edition_id||\n        result.capture_sha256!==chosen.capture_sha256||result.state!=='complete')\n      throw Error('The completed report changed. Refresh and review its exact retained capture.');\n    capturePreview=result;error='';render();\n  }\n  function previewHTML(){"
+        },
+        {
+          "before": "    sources=result.sources||[];editions=result.editions||[];error='';render();",
+          "after": "    sources=result.sources||[];editions=result.editions||[];\n    capturedReports=result.captured_reports||[];captureIssues=result.capture_issues||[];\n    if(capturePreview&&!capturedReports.some(row=>row.capture_id===capturePreview.capture_id&&\n        row.capture_sha256===capturePreview.capture_sha256&&row.edition_id===capturePreview.edition_id)){\n      captureGeneration++;capturePreview=null;\n    }\n    error='';render();"
+        },
+        {
+          "before": "['add','up','down','remove','preview','render','revise','export','briefing-preview','briefing-prepare'].includes(action)",
+          "after": "['add','up','down','remove','preview','render','revise','export','briefing-preview','briefing-prepare','capture-preview','capture-adopt'].includes(action)"
+        },
+        {
+          "before": "    if(action==='refresh'){await refresh();if(opened)await open(opened.edition.id);return;}",
+          "after": "    if(action==='refresh'){await refresh();if(opened)await open(opened.edition.id);return;}\n    if(action==='capture-preview')return previewCapture(button.dataset.id);\n    if(action==='capture-close'){captureGeneration++;capturePreview=null;render();return;}\n    if(action==='capture-adopt'){\n      if(!capturePreview)throw Error('Review the completed report and its original source identity first.');\n      return submit('source-reports.adopt',{capture_id:capturePreview.capture_id,\n        capture_sha256:capturePreview.capture_sha256,edition_id:capturePreview.edition_id});\n    }"
+        },
+        {
+          "before": "  function detach(){active=false;detailGeneration++;if(panel)panel.hidden=true;}",
+          "after": "  function detach(){active=false;detailGeneration++;captureGeneration++;if(panel)panel.hidden=true;}"
+        },
+        {
+          "before": "    panel=null;workspace=null;sources=[];editions=[];selected=[];title='';",
+          "after": "    panel=null;workspace=null;sources=[];editions=[];selected=[];title='';\n    capturedReports=[];captureIssues=[];capturePreview=null;captureGeneration++;"
+        },
+        {
+          "before": "  async function open(id){\n    const ws=workspace,turn=generation,ticket=++detailGeneration;\n    const result=await request('/api/source-reports/scientific-edition',{id});\n    if(!valid(ws,turn)||ticket!==detailGeneration)return;\n    if(result.workspace_key!==ws||result.edition?.id!==id)throw Error('The saved report differs from the chosen edition.');\n    if(opened?.edition.id!==id){briefingPreview=null;briefingOpened=null;}\n    opened=result;error='';render();\n    panel.querySelector('[data-scientific-report-detail]').scrollIntoView({block:'start'});\n  }",
+          "after": "  async function open(id,{isCurrent}={}){\n    const ws=workspace,turn=generation,ticket=++detailGeneration;\n    const current=()=>active&&valid(ws,turn)&&ticket===detailGeneration&&\n      (typeof isCurrent!=='function'||isCurrent());\n    if(!current())return;\n    let result;\n    try{result=await request('/api/source-reports/scientific-edition',{id});}\n    catch(reason){if(!current())return;throw reason;}\n    if(!current())return;\n    if(result.workspace_key!==ws||result.edition?.id!==id||result.edition.state!=='complete')\n      throw Error('The saved report differs from the chosen complete edition.');\n    if(opened?.edition.id!==id){briefingPreview=null;briefingOpened=null;}\n    opened=result;error='';render();\n    panel.querySelector('[data-scientific-report-detail]').scrollIntoView({block:'start'});\n    return result;\n  }"
+        },
+        {
+          "before": "  async function mount(container){\n    const ws=host.getWorkspace();\n    if(workspace!==ws){reset();workspace=ws;restoreDraft();}\n    active=true;ensure(container);render();await refresh();\n  }",
+          "after": "  async function mount(container,{loadCatalog=true}={}){\n    const ws=host.getWorkspace();\n    if(workspace!==ws){reset();workspace=ws;restoreDraft();}\n    active=true;ensure(container);render();\n    if(loadCatalog)await refresh();\n  }\n  async function openForStudy(value){\n    if(!value||value.workspace_key!==host.getWorkspace()||value.workspace_key!==workspace)\n      throw Error('Open the saved scientific report in its receiving Workspace.');\n    if(typeof value.id!=='string'||!/^[0-9a-f]{64}$/.test(value.id))\n      throw Error('Choose an exact saved scientific report edition.');\n    if(!active||!panel)throw Error('Open Sources before reopening the saved report.');\n    if(typeof value.isCurrent==='function'&&!value.isCurrent())return;\n    return open(value.id,{isCurrent:value.isCurrent});\n  }"
+        },
+        {
+          "before": "  return {mount,detach,reset,refresh,openForSources};",
+          "after": "  return {mount,detach,reset,refresh,openForSources,openForStudy};"
+        }
+      ]
+    },
+    {
+      "path": "operator/web/source_reports.mjs",
+      "preimage_sha256": "61a5864bc04c453a86e8047a1effdee8498da99788b67947acf2f01c158b8a17",
+      "sha256": "4545c1d42ef606e7248eb2338ae995a338921a5342974b43c732998dc50f0151",
+      "changes": [
+        {
+          "before": "  return {mount,detach,reset,focus,openForSources};",
+          "after": "  async function openForStudy(value,content){\n    if(!value||value.workspace_key!==host.getWorkspace())\n      throw Error('Open the saved scientific report in its receiving Workspace.');\n    const navigationCurrent=()=>typeof value.isCurrent!=='function'||value.isCurrent();\n    if(!navigationCurrent())return;\n    const workspace=host.getWorkspace();\n    if(currentWorkspace!==workspace){reset();currentWorkspace=workspace;}\n    const ticket=generation;\n    active=true;ensurePanel(content);renderRegional();renderCatalog();\n    const current=()=>active&&valid(workspace,ticket)&&navigationCurrent();\n    try{\n      // A known edition opens independently of source discovery or a catalogue outage.\n      await scientific.mount(panel.querySelector('[data-scientific-reports]'),{loadCatalog:false});\n      if(!current())return;\n      return await scientific.openForStudy({...value,isCurrent:current});\n    }catch(error){if(!current())return;throw error;}\n  }\n  return {mount,detach,reset,focus,openForSources,openForStudy};"
+        }
+      ]
+    },
+    {
+      "path": "operator/extensions/source-reports.json",
+      "preimage_sha256": "cc41b95c34d0833b965fa820447f1409b3d04c93e5c2ca25ee04c72747932372",
+      "sha256": "a35cf0143f573ba820cef80d8e50324f98e354f8cb1375416b087ae03b906c84",
+      "changes": [
+        {
+          "before": "{\n  \"schema\": \"upstate.operator-extension/v1\",\n  \"id\": \"source-reports\",\n  \"title\": \"Retained source reports\",\n  \"version\": \"2.2.0\",\n  \"order\": 56,\n  \"assets\": [\n    \"source_reports.mjs\",\n    \"source_reports.css\",\n    \"source_report_editions.mjs\"\n  ],\n  \"backend\": {\n    \"module\": \"source_reports\",\n    \"factory\": {\n      \"handler\": \"SourceReports\",\n      \"args\": [\n        \"operator\",\n        \"fault\",\n        \"source_roots\"\n      ]\n    },\n    \"routes\": [\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/catalog\",\n        \"operation\": \"catalog\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/detail\",\n        \"operation\": \"detail\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/archive\",\n        \"operation\": \"archive\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-catalog\",\n        \"operation\": \"scientific-catalog\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/scientific-preview\",\n        \"operation\": \"scientific-preview\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-edition\",\n        \"operation\": \"scientific-edition\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/scientific-briefing-preview\",\n        \"operation\": \"scientific-briefing-preview\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-briefing\",\n        \"operation\": \"scientific-briefing\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/review-preview\",\n        \"operation\": \"scientific-review-preview\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      }\n    ],\n    \"file_routes\": [\n      {\n        \"path\": \"/api/file/source-reports/{workspace_key}/{collection_id}/{entry_key}/{member...}\",\n        \"response\": \"ticket_policy_pair\",\n        \"handler\": \"member\",\n        \"args\": [\n          \"route.workspace_key\",\n          \"route.collection_id\",\n          \"route.entry_key\",\n          \"route.member\"\n        ]\n      },\n      {\n        \"path\": \"/api/file/scientific-reports/{workspace_key}/{edition_id}/{member...}\",\n        \"response\": \"ticket_policy_pair\",\n        \"handler\": \"scientific_member\",\n        \"args\": [\n          \"route.workspace_key\",\n          \"route.edition_id\",\n          \"route.member\"\n        ]\n      },\n      {\n        \"path\": \"/api/file/scientific-briefings/{workspace_key}/{briefing_id}/{member...}\",\n        \"response\": \"ticket_policy_pair\",\n        \"handler\": \"briefing_member\",\n        \"args\": [\n          \"route.workspace_key\",\n          \"route.briefing_id\",\n          \"route.member\"\n        ]\n      }\n    ],\n    \"actions\": [\n      \"source-reports.render\",\n      \"source-reports.export\",\n      \"source-reports.briefing\",\n      \"source-reports.review\"\n    ],\n    \"invoke\": {\n      \"handler\": \"invoke\",\n      \"args\": [\n        \"task\"\n      ]\n    },\n    \"state\": {\n      \"key\": \"scientific_reports\",\n      \"handler\": \"state\",\n      \"args\": [\n        \"workspace_key\"\n      ]\n    },\n    \"items\": [\n      {\n        \"kind\": \"scientific-report-editions\",\n        \"operation\": \"scientific-edition\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      }\n    ],\n    \"decorate_task\": {\n      \"handler\": \"decorate_task\",\n      \"args\": [\n        \"task\"\n      ]\n    },\n    \"verify_workspace\": {\n      \"handler\": \"verify_workspace\",\n      \"args\": [\n        \"workspace\"\n      ]\n    }\n  }\n}\n",
+          "after": "{\n  \"schema\": \"upstate.operator-extension/v1\",\n  \"id\": \"source-reports\",\n  \"title\": \"Retained source reports\",\n  \"version\": \"2.3.0\",\n  \"order\": 56,\n  \"assets\": [\n    \"source_reports.mjs\",\n    \"source_reports.css\",\n    \"source_report_editions.mjs\"\n  ],\n  \"backend\": {\n    \"module\": \"source_reports\",\n    \"factory\": {\n      \"handler\": \"SourceReports\",\n      \"args\": [\n        \"operator\",\n        \"fault\",\n        \"source_roots\"\n      ]\n    },\n    \"routes\": [\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/catalog\",\n        \"operation\": \"catalog\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/detail\",\n        \"operation\": \"detail\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/archive\",\n        \"operation\": \"archive\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-catalog\",\n        \"operation\": \"scientific-catalog\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/scientific-preview\",\n        \"operation\": \"scientific-preview\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-edition\",\n        \"operation\": \"scientific-edition\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/scientific-briefing-preview\",\n        \"operation\": \"scientific-briefing-preview\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-briefing\",\n        \"operation\": \"scientific-briefing\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"POST\"\n        ],\n        \"path\": \"/api/source-reports/review-preview\",\n        \"operation\": \"scientific-review-preview\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      },\n      {\n        \"methods\": [\n          \"GET\"\n        ],\n        \"path\": \"/api/source-reports/scientific-capture\",\n        \"operation\": \"scientific-capture\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      }\n    ],\n    \"file_routes\": [\n      {\n        \"path\": \"/api/file/source-reports/{workspace_key}/{collection_id}/{entry_key}/{member...}\",\n        \"response\": \"ticket_policy_pair\",\n        \"handler\": \"member\",\n        \"args\": [\n          \"route.workspace_key\",\n          \"route.collection_id\",\n          \"route.entry_key\",\n          \"route.member\"\n        ]\n      },\n      {\n        \"path\": \"/api/file/scientific-reports/{workspace_key}/{edition_id}/{member...}\",\n        \"response\": \"ticket_policy_pair\",\n        \"handler\": \"scientific_member\",\n        \"args\": [\n          \"route.workspace_key\",\n          \"route.edition_id\",\n          \"route.member\"\n        ]\n      },\n      {\n        \"path\": \"/api/file/scientific-briefings/{workspace_key}/{briefing_id}/{member...}\",\n        \"response\": \"ticket_policy_pair\",\n        \"handler\": \"briefing_member\",\n        \"args\": [\n          \"route.workspace_key\",\n          \"route.briefing_id\",\n          \"route.member\"\n        ]\n      }\n    ],\n    \"actions\": [\n      \"source-reports.render\",\n      \"source-reports.export\",\n      \"source-reports.briefing\",\n      \"source-reports.review\",\n      \"source-reports.adopt\"\n    ],\n    \"invoke\": {\n      \"handler\": \"invoke\",\n      \"args\": [\n        \"task\"\n      ]\n    },\n    \"state\": {\n      \"key\": \"scientific_reports\",\n      \"handler\": \"state\",\n      \"args\": [\n        \"workspace_key\"\n      ]\n    },\n    \"items\": [\n      {\n        \"kind\": \"scientific-report-editions\",\n        \"operation\": \"scientific-edition\",\n        \"handler\": \"read\",\n        \"args\": [\n          \"workspace_key\",\n          \"operation\",\n          \"payload\"\n        ]\n      }\n    ],\n    \"decorate_task\": {\n      \"handler\": \"decorate_task\",\n      \"args\": [\n        \"task\"\n      ]\n    },\n    \"verify_workspace\": {\n      \"handler\": \"verify_workspace\",\n      \"args\": [\n        \"workspace\"\n      ]\n    }\n  }\n}\n"
+        }
+      ]
+    }
+  ]
+}

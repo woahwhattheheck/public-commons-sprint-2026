@@ -1,3 +1,4 @@
+import {installLargeFileReads} from './large_intake.mjs';
 import {DatabaseSync} from 'node:sqlite';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -143,13 +144,40 @@ export class MeasurementWorkspace {
     const{where,params}=this.filters(query);
     for(const row of this.db.prepare(this.selectSQL()+where+' ORDER BY r.sampled_date,r.id').iterate(...params))yield this.view(row);
   }
+  recordDetail(item){
+    // Both single-record reads and the complete snapshot use this original view.
+    const row=this.view(item);row.sources=this.recordSources(item.id);
+    this.variantStatement ||= this.db.prepare('SELECT id FROM records WHERE logical_key=?');
+    this.historyStatement ||= this.db.prepare('SELECT * FROM events WHERE entity=? ORDER BY id');
+    row.variants=this.variantStatement.all(item.logical_key).map(x=>x.id);
+    row.history=this.historyStatement.all(item.id).map(x=>({...x,data:JSON.parse(x.data)}));
+    return row;
+  }
   record(id){
     this.refreshNativeDomain();
     const item=this.db.prepare(this.selectSQL()+' WHERE r.id=?').get(id);if(!item)throw new InputError('Measurement not found',404);
-    const row=this.view(item);row.sources=this.recordSources(id);
-    row.variants=this.db.prepare('SELECT id FROM records WHERE logical_key=?').all(item.logical_key).map(x=>x.id);
-    row.history=this.db.prepare('SELECT * FROM events WHERE entity=? ORDER BY id').all(id).map(x=>({...x,data:JSON.parse(x.data)}));
-    return row;
+    return this.recordDetail(item);
+  }
+  fullSnapshot(query={}){
+    const supported=new Set(['stationId','parameter','fraction','unit','censor','from','to','q','expected_revision']);
+    for(const key of Object.keys(query))if(!supported.has(key))throw new InputError('Unknown full-snapshot filter: '+key);
+    let expected;
+    if(query.expected_revision!==undefined){
+      if(!/^(0|[1-9]\d*)$/.test(String(query.expected_revision)))throw new InputError('Expected measured revision must be a nonnegative integer');
+      expected=Number(query.expected_revision);
+      if(!Number.isSafeInteger(expected))throw new InputError('Expected measured revision exceeds the supported range');
+    }
+    // The original native domain is read once; the entire database view uses one
+    // read transaction. No portable export or revision is created by this read.
+    this.refreshNativeDomain();
+    return this.readConsistent(()=>{
+      const revision=this.revision();
+      if(expected!==undefined&&expected!==revision)throw new InputError('Measurements changed after inspection. Review the current source revision.',409);
+      const{where,params}=this.filters(query);
+      const records=this.db.prepare(this.selectSQL()+where+' ORDER BY r.sampled_date DESC,r.id').all(...params).map(item=>this.recordDetail(item));
+      const portable=this.portableDocument(),summary={...this.summary(),reaches:[...(this.nativeDomain?.values()||[])]};
+      return {revision,total:records.length,records,portable,summary};
+    });
   }
   summary(){
     const stations=this.db.prepare('SELECT s.data,m.data AS mapping_data,(SELECT COUNT(*) FROM records r WHERE r.station_id=s.id) AS n FROM stations s LEFT JOIN mappings m ON m.station_id=s.id ORDER BY s.id').all().map(x=>({...JSON.parse(x.data),mapping:x.mapping_data?JSON.parse(x.mapping_data):null,recordCount:x.n}));
@@ -187,13 +215,13 @@ export class MeasurementWorkspace {
     return csv(rows,fields);
   }
   snapshot(kind,content){const id=randomUUID();this.db.prepare('INSERT INTO exports VALUES(?,?,?,?,?)').run(id,new Date().toISOString(),content.workspaceRevision??this.revision(),kind,JSON.stringify(content));return id;}
-  portable(){
-    this.db.exec('BEGIN');try{
-      const value={format:'upper-savannah-measurements',version:1,createdAt:new Date().toISOString(),revision:this.revision(),tables:{}};
-      for(const name of ['imports','records','import_records','stations','mappings','reviews','selected_versions','events','exports'])value.tables[name]=this.db.prepare(`SELECT * FROM ${name}`).all();
-      this.db.exec('COMMIT');return value;
-    }catch(e){this.db.exec('ROLLBACK');throw e;}
+  portableDocument(){
+    // Caller owns the original consistent read transaction.
+    const value={format:'upper-savannah-measurements',version:1,createdAt:new Date().toISOString(),revision:this.revision(),tables:{}};
+    for(const name of ['imports','records','import_records','stations','mappings','reviews','selected_versions','events','exports'])value.tables[name]=this.db.prepare(`SELECT * FROM ${name}`).all();
+    return value;
   }
+  portable(){return this.readConsistent(()=>this.portableDocument());}
   receive(packageValue){
     if(packageValue?.format!=='upper-savannah-measurements'||packageValue.version!==1)throw new InputError('Unknown portable workspace format');
     const tables=packageValue.tables;
@@ -239,3 +267,5 @@ export class MeasurementWorkspace {
     return this.summary();
   }
 }
+
+installLargeFileReads(MeasurementWorkspace);

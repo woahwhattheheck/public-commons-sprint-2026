@@ -82,6 +82,18 @@ The same browser tab then edits both source and payment without saving. Applicat
 
 The whole workflow includes desktop and 390-pixel browser views. The original fixture, signed provider requests, merchant revisions, releases and customer bytes are the sources of its result.
 
+## Continue an interrupted merchant workflow
+
+The receiving journal keeps the selected fixture, source, payment terms, application and native request identities. It writes the complete initial configuration before publishing dependent import files. A resumed attempt reuses that configuration, including its original payee, and checks the fixture and installed runtime against the first selection.
+
+Before each browser Save or Start and each merchant Save, Review, Prepare or Stage request reaches its native writer, the receiving retains its complete original POST body. If the response or the following checkpoint is lost, continuation reads the saved request and its native result. It reopens the same application, revision, inspection, package or release through the original APIs. An application whose Save completed before its returned ID was checkpointed is recovered only when its original save identity, runtime and complete settings match.
+
+Each customer descriptor is published only after its full downloaded bytes match the selected release. Completed files and the first complete customer/provider observation are retained through later attempts. The same-tab restart proof records the two actual application lifetimes, stable authoring origin, unchanged saved review and the absence of provider reads during that observed reopen.
+
+A receiving process that stops before this browser proof finishes opens its ordinary browser and repeats that unfinished phase with the saved merchant. Once the proof is complete, continuation preserves it and reconciles the original final Save request. It does not turn a new browser into evidence of continuity with an ended tab.
+
+The final result becomes `COMPLETE` only after the owned application, browser, console, model and provider have drained. A cleanup failure stays recoverable in the same journal. Reopening a completed result verifies the original input, operation, fixture, installed runtime, source files and retained customer bytes without starting listeners.
+
 ## Resume the original record
 
 An undispatched operation resumes through the maintained foreground. Select the complete runtime's actual identity and the original input:

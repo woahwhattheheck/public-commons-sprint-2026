@@ -8,6 +8,7 @@ The Economic desk is an additive operator entry for completed native scenario re
 - operator/economic_workbench.py
 - operator/extensions/economic-desk.json
 - operator/web/economic_desk.mjs
+- operator/web/economic_request_store.mjs
 - operator/web/economic_cost_worksheet.mjs
 - operator/web/economic_desk.css
 - operator/ECONOMIC_DESK.md
@@ -39,7 +40,7 @@ Use the operator's existing startup command and registered workspace/source argu
 3. Enter the edition title and any actual budget or physical reduction targets. Blank criteria remain open. A target is always expressed in that pollutant's annual mass units.
 4. Expand each scenario whose full implementation estimate is available. Enter its explicit upfront/annual amounts, horizon and real discount rate, source title/reference/date, and actual cost footprint. A cost can cover the entire scenario or a defined implementation in the selected reporting zone. The zone's area never automatically prorates that estimate. Assistance and payment schedules are funding contributions; retain those references in notes instead of entering them as implementation cost.
 5. Calculate the preview. It calls the same authored decision analysis on this source's already integrated common masses and shows whole-scenario reductions, annualized costs, eligibility and Pareto status.
-6. Save inputs to the workspace, or build the complete edition. Both writes use the existing original task queue and request identity. Retried submissions reuse their original operation; interrupted builds recover their completed export before creating the missing saved-edition record.
+6. Save inputs to the workspace, or build the complete edition. The browser retains the complete original action, source-bound payload and operation ID before sending either write. Both use the existing task queue. If the response is uncertain, recover that same request; if a task ID is known, reopen that original task. Interrupted builds recover their completed export before creating the missing saved-edition record.
 7. A completed build opens the actual standalone desk in the panel. Use its physical table, cost/benefit chart, scenario selection, notes, saved HTML, CSV/JSON exports and print controls. Open the full desk in another tab or download the complete original package through the operator's verified file transport.
 8. Saved inputs and editions remain listed in the workspace. Reopen a draft or reuse an edition's original source-bound cost/budget selection. Unsaved form fields also persist in browser storage for that workspace.
 
@@ -48,6 +49,47 @@ Zone-scoped estimates retain their originating report and zone identity in the s
 A target for an output absent from the current report remains visible in a separate retained-target notice. Its clear control removes only that target when selected. The study header uses the actual native source/workspace title, including when an original example such as Gura is selected.
 
 Every unchecked cost remains unknown. A complete physical decision edition works with no costs entered. Exact source exceptions are shown per retained source or saved item while the other records remain available.
+
+## Recover an original save or build
+
+**Save inputs to workspace** and **Build and open complete edition** keep the complete original request before submission: selected Workspace, original action, operation ID, report/hash/zone and full decision selection. The **Original Economic operation** panel follows that request separately from the editable input draft.
+
+The complete request and browser draft are retained in IndexedDB, keyed by the original Workspace and operation. Local storage keeps only a compact pointer. Large source audits and cost worksheets therefore do not depend on the smaller local-storage quota. Recovery verifies the stored payload hash before joining or sending the original native request. If writing the compact pointer fails after the complete record is committed, reopening the same desk still finds its record through the original Workspace key.
+
+An uncertain network response does not create a replacement operation. **Recover original request** resends the same retained payload and operation ID through the existing queue. Once a native task ID is known, **Check original task** reads it directly and verifies its Workspace, action, operation ID and complete payload. A partial task summary from the ordinary state feed never replaces that source-bound request.
+
+The original pending request survives closing the desk, navigating elsewhere and reloading the browser. Inputs, report/zone selection, worksheet application and saved-input replacement remain fixed until its actual task outcome is known. The input draft stays retained. A restored older browser state with only a pending task ID uses that exact native task to recover its original payload; it does not invent a new operation or drop the task because it is absent from a shortened state list.
+
+Use **Open original task** for the existing native task controls and logs. An interrupted task exposes **Resume original interrupted task**, which resumes that same task. A definitively failed or cancelled task can be downloaded and retained with **Retain failed request and return to inputs**. Unknown or active tasks cannot be retired as though they had failed.
+
+A completed task is checked against its original full input before the pending request is cleared. The completion panel retains the exact original task and resulting saved input or edition:
+
+- **Open completed edition** reopens the actual complete Economic comparison.
+- **Reopen saved inputs** deliberately replaces the current form with that original saved input.
+- **Open completed original task** exposes its verified native files and logs.
+- **Refresh original completion** rechecks the same task and result.
+- **Download original completion** retains its complete original request and resulting record identity.
+
+Submitting the same action with the exact most recently completed input reopens that retained result. It does not issue another task. Native Economic draft and edition identities remain governed by the existing backend, including its original source and implementation checks.
+
+The request and completion controls are scoped to the original Workspace. A delayed response after a workspace switch cannot replace another workspace's draft. A build finishing after a page is closed is recovered through the original retained request or task when that workspace is reopened.
+
+If persistent browser storage cannot retain the complete request, the error is visible and the request is kept in the open desk without being sent. Use **Download exact recovery file**, retain that JSON, then choose **Open original recovery file** and select it. The file includes the full draft, original request, Workspace and source hash. Opening it verifies those bytes and identity; a changed file, another Workspace or a different unresolved request is rejected. After it opens, **Recover original request** may continue that exact operation even if browser storage remains unavailable. This explicit file-backed path cannot submit a new or changed request under the old identity.
+
+Keep the original recovery file until the native outcome is known. In file-backed mode, download the latest completion or exact recovery file before closing; reopening the earlier request safely rejoins its same original native task. **Download original request** is also available for inspection, while **Download exact recovery file** supplies the complete format accepted by the recovery picker. The picker accepts recovery JSON up to 128 MiB. A malformed retained state stays intact rather than being silently overwritten.
+
+## Open a retained Economic edition from fieldwork
+
+The existing host supports a source-preserving public opener:
+
+    await host.openExtension("economic-desk", "openSavedEdition", {
+      workspace_key: originalWorkspaceKey,
+      edition_id: completedEconomicEditionId
+    });
+
+This controller method navigates to the original desk, waits for its actual mount/catalog, and opens the retained edition. It checks the Workspace before and after the asynchronous handoff. The current Economic input draft remains intact; an unresolved original Economic task must be recovered first.
+
+In the saved field plan, **Costs → Review economic costs** reviews actual ledger allocations and explicit remaining/annual forecasts against one frozen Economic scenario. Its saved input and complete edition reopen through this same method. See [Review implementation costs](../docs/IMPLEMENTATION_COST_REVIEW.md) for the original ledger, forecast, evidence and complete-package workflow.
 
 ## Existing host bindings
 
@@ -166,3 +208,56 @@ In a completed edition, choose **Plan implementation**, explicitly select one or
 Add `--implementation` to the same `operator/economic_receive.py` command to continue the original completed Economic edition through **Plan implementation**. The receiver explicitly selects the original scenario, uses **Create a new plan for this scenario**, follows the original native plan-create and source-import tasks, and reopens the resulting saved revision. It checks the retained edition, native report, zone, signed outputs and original cost footprint against that selected source.
 
 The continuation exports the complete portable plan JSON and creates the native implementation report through the existing queue. It downloads every original report member against its manifest, opens the readable scenario report, and retains its screenshot and PDF alongside the original economic package. The final journey result includes the actual plan ID, revision, source binding and task IDs. Native planning and reporting use the already completed model results; work assignments, budgets and field observations remain available for the operator to enter in the new plan.
+
+## Inspect the actual received product
+
+The current application repository instructions require the producing worker to open and operate the exact outgoing client-facing product on the receiving host before calling it ready. Use the existing Economic receiving course with the actual retained native scenario and Workspace. View its rendered desktop and narrow layouts, operate the core controls and relevant empty/loading/error states, then download and reopen the actual outputs. Inspect the returned screenshots and pages, repair concrete visible faults, and retain the actual source, task and result identities with that same receiving course. Source-runtime checks or a receipt alone do not establish that the delivered product was viewed.
+
+## Receive an existing native plan and its recorded cost ledger
+
+The native operator receiver can reopen an actual saved FIELD12 plan and exercise its original cost-review workflow. Use the installed complete application, the original authenticated operator URL file, and the operator's actual workspace key. The input review is the explicit selection exported by **Review economic costs**, or the same original `upstate.implementation-cost-review-selection/v1` JSON with reviewed row decisions, forecast sources, scope and rationale.
+
+```sh
+python -B operator/economic_receive.py \
+  --operator-url-file /actual/operator-ready.json \
+  --application /actual/upstate_forever_2026 \
+  --workspace-key ACTUAL_WORKSPACE_KEY \
+  --cost-plan-id ACTUAL_SAVED_PLAN_ID \
+  --cost-candidate-id ACTUAL_ECONOMIC_CANDIDATE_ID \
+  --cost-review /actual/original-cost-review.json \
+  --output /actual/economic-existing-plan-receiving \
+  --browser-executable /usr/bin/chromium
+```
+
+Replace the example paths and identities with the actual receiving workspace. Omit `--browser-executable` when the selected Python Playwright installation already has its browser. The complete original native operator must already be running; this command does not start another model run or manufacture a plan, expense, allocation, forecast, or attachment.
+
+`--cost-plan-id` requires `--cost-review`. `--cost-candidate-id` requires both. The receiver reads the original native cost catalogue for the selected saved revision, which verifies the candidate's retained source snapshot. It derives the native report ID, source SHA, reporting-zone ID and modeled run from that candidate. Consequently, `--report-id`, `--zone-id` and `--run-id` are optional in this mode. When supplied, they are exact source filters and must match the candidate. If more than one valid candidate remains, receiving stops and prints their actual IDs and bindings; choose `--cost-candidate-id` explicitly. It never selects the first ambiguous candidate.
+
+The receiver pins the plan ID, current saved revision and document digest before the upstream Economic journey. It then opens **Implementation**, selects the saved plan, and uses **Reopen native**. It compares the reopened complete document to the pinned original and exports that document through the ordinary UI. A concurrent native plan change causes a clear mismatch before the cost action; select and review the new saved revision explicitly. Browser drafts remain subject to the original workbench's retained-draft behavior.
+
+The candidate may have been imported from an older completed Economic edition. The receiver opens that actual historical edition and verifies its original input, report and candidate snapshot. It does not require its economic edition ID to equal the new upstream receiving edition. It does require the same original native report bytes, report/zone/run identities, physical baseline, full alternative cohort, signed output quantities and spatial support. Costs and screening can legitimately differ between the two economic editions.
+
+### What the existing-plan course operates
+
+After the original Economic preview, save, build, embedded-desk save/reopen and complete-package receiving steps, the course:
+
+1. Reopens the actual saved plan and retains its complete original JSON, economic source snapshot and validated candidate catalogue.
+2. Exports the original implementation plan and its native report through the existing workbench.
+3. Opens **Costs → Review economic costs**, selects the bound candidate, and loads the supplied original review JSON. If the file contains a bound exported wrapper, its full binding must equal this saved revision and candidate.
+4. Confirms that the native context contains every original ledger row unchanged. Budget, commitment and actual counts and cents totals are reported separately; they are not summed into a fictitious combined cost.
+5. Previews the explicit row allocations and forecasts through the native provider, verifies unchanged physical outputs, and applies the reviewed operation through the original queue.
+6. Rejoins the exact original queued request, verifies the retained draft and completed economic edition, and confirms that the saved FIELD12 plan itself was not modified.
+7. Downloads and verifies the complete cost-review package, including the original plan, source audit, associated evidence and nested economic package. ZIP members are copied in bounded chunks and then checked against their retained lengths and SHA256 values.
+8. Opens the outgoing economic edition at desktop and narrow widths, prints its PDF, and opens the same completed edition again in the mounted native Economic desk.
+
+The supplied review decides which actual rows are capital, operating or excluded. Candidate-task attribution, shared allocations, dated or undated records, remaining capital, annual operating forecasts, horizon/rate and scope remain governed by the existing reviewed cost model. The receiver reports the rows that actually exist. An empty ledger is an empty-ledger receiving case, not evidence that recorded expenses were exercised. It does not automatically create a ledger from the forecast or from budget/commitment rows.
+
+Without `--cost-plan-id`, the existing `--implementation` and `--cost-review` journeys retain their original behavior: they create a new source-linked implementation plan from the explicitly selected scenario. This is useful for the source handoff and forecast workflow, but does not by itself exercise pre-existing recorded ledger expenses.
+
+### Retained receiving evidence and visual inspection
+
+Each invocation creates a separate timestamped receiving directory. `operator-journey.json` records the actual selected plan/revision/candidate, original economic edition, upstream receiving edition, native task IDs, cost-review operation, per-kind ledger counts, original source binding, actual timings and any first failure. Original plan/catalogue/source-edition JSON, the supplied review, native context/preview, completed receipt, verified packages, PDFs and screenshots travel in the receiving package. Authentication tokens are redacted from the journal.
+
+The producer must **open and inspect the actual outgoing desktop and narrow screenshots, PDF and retained product**, operate its core controls and download/reopen states, and repair any observed defect before calling the course client-ready. Capturing files alone is not visual inspection. Relevant outputs include `09-original-field-cost-preview-desktop.png`, `10-original-field-cost-preview-narrow.png`, `11-received-cost-edition-desktop.png`, `12-received-cost-edition-narrow.png`, `13-saved-field-cost-review-receipt.png`, `14-reopened-reviewed-economic-desk.png` and `field-cost-economic-report.pdf`. Preserve the original receiving directory and provide these actual files to the reviewing producer.
+
+The command reports native execution outcomes only when run in the accepting environment. Source inspection or JavaScript-only checks are not substitutes for that executed course. A failed or interrupted queued action remains in the original operator; inspect its recorded task and source before issuing another independent course.

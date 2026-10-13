@@ -177,3 +177,19 @@ receiving host, use the actual accepted native baseline and alternative with the
 adopt/run commands above, then open the retained native bindings and comparison
 report. Export and independently receive the resulting edition through the same
 original Workspace workflow.
+
+<!-- ecosystem-current-work-order:2026-10-13.3:begin -->
+## Current native Workspace and demonstration assignment
+
+Carry the complete [current owner brief](../../CURRENT_OWNER_DIRECTION.md), version `2026-10-13.3`, into current provider/cloud/child assignments and onward handoffs. Its full self-contained copy, including the four direct owner instructions, is in [AGENTS.md](AGENTS.md). Original brief Git blob: `8cd1c1f3d371a2fb75471813844e31f489aa8272`.
+
+The actual Upper Savannah simulated native model and connected usable product are the immediate hard priority. Keep actual geographic/source shapes, the 30 m grid, upstream model domain, South Carolina reporting mask and utility focus distinct. The existing execution owner runs the original baseline, realistic riparian restoration and matched control using clearly identified realistic simulated inputs and editable parameters/source editions. Use the actual native InVEST NDR/SDR outputs: annual nitrogen and phosphorus kg/year and sediment tonnes/year delivered to streams, with the matched support, model parameters and source identities retained. Stream loads are not intake concentrations.
+
+Preserve the already-running calculation and one writer per Workspace. This bridge consumes the current owner's exact native selections and completed outputs; existing stage reuse is not permission to duplicate a live programme. Runtime/source existence or another plan is not model execution. Use the current equipped runtime or an isolated actual execution environment through that execution owner when needed, while other builds and source/runtime/archive joins continue.
+
+Tim's team already provides GIS, watershed/environmental modeling, analysis, map/report publishing and natural-capital decision support. Show a specific production workshare it can compare with its own workflow, not a presumed tooling/capacity gap. The prime retains scientific direction, methods, review and the client relationship. Show choose inputs/assumptions → run → inspect maps/tables/differences → revise → hand over an editable package and cold-reopen it. Make speed visible with the actual elapsed run/build/package history; invent neither timings nor a guaranteed reaction.
+
+Open, LOOK at and use the exact outgoing product and ALL attachments as a recipient, including relevant desktop/narrow widths, meaningful states, controls, downloads and extracted archives/working projects. Repair concrete defects directly in the same plain industrial product. Video uses actual app recordings and natural generative TTS where available, followed by viewing/listening to the final export; generated frames cannot pretend execution. Inspection does not replace hard integration or authorize broad suites, review/test theatre or a new controller.
+
+Carry this complete direction onward at the next safe message boundary and return its durable path/version with the next substantive result. No bid/prime-yes gate or arbitrary product/feature cap. Preserve active computations, original source/run/receiver owners, owner-stopped/deleted work, existing attribution/contact/meeting/spend/source controls, no private GitHub/Actions and the October 13, 2026 10:00 a.m. Eastern / 14:00 UTC cutoff. Do not restart or pause work for this propagation.
+<!-- ecosystem-current-work-order:end -->

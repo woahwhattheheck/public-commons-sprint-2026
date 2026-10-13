@@ -11,12 +11,15 @@
         "operator/extensions/implementation-qc.json",
         "model/IMPLEMENTATION_QC.md",
         "integration/implementation_qc.json",
-        "integration/component_fragments/implementation-qc.json"
+        "integration/component_fragments/implementation-qc.json",
+        "model/implementation_qc_comparison.py",
+        "operator/web/implementation_qc_comparison.mjs",
+        "docs/SAMPLE_QC_COMPARISON.md"
       ]
     }
   },
   "required_components": [
     "implementation"
   ],
-  "source_reference": "Complete original saved-plan sample QC and reviewer decisions with native tasks, reports and portable receiving."
+  "source_reference": "Complete original saved-plan sample QC, explicit saved-review comparisons and reviewer decisions with native tasks, reports and portable receiving."
 }

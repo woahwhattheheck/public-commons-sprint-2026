@@ -56,7 +56,7 @@ import {attachObservedContext} from './monitoring-observed.mjs';
       controls.forEach(control=>control.disabled=true);this.$("status").textContent=label;this.$("status").dataset.error="false";
       try { await task(); this.$("status").textContent="Saved work is current."; }
       catch(error) { this.$("status").textContent=error.message;this.$("status").dataset.error="true"; }
-      finally { this.busy = false;controls.forEach((control,index)=>control.disabled=disabled[index]); }
+      finally { this.busy = false;controls.forEach((control,index)=>control.disabled=disabled[index]);this.render(); }
     }
     connectedCallback() {
       if (this.initialized) return;

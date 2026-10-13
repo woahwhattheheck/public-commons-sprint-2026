@@ -201,6 +201,28 @@ Before authoring a new phase, the consumer checks the current customer response 
 
 The worklist is a fresh view. Historical teaching IDs stay available after the current customer response changes. Native locks and content checks remain in place; the consumer adds an operation lock and independent export/receive destination ownership. Destination files are separate from the scientific Workspace.
 
+## Operate and inspect the exact outgoing edition
+
+Before describing a customer-facing application, review desk, report, presentation or export as ready, the producing author must open or run the exact outgoing version, look at its rendered screen or real screenshots, and operate the important controls. This applies to current and future local and cloud workers across providers. Inspect the actual screenshare width and a narrow/mobile width where relevant, populated and empty/loading/error states, downloads, exports and independent reopening. Capturing screenshots without looking at them is insufficient. Source review, DOM counts, HTTP success, unit checks and another author's approval do not replace seeing the actual product.
+
+Use plain industrial design: readable tables, clear hierarchy, consistent typography and spacing, restrained controls, useful labels and responsive layouts. Repair clipped, overflowing, cramped, unstyled, unreadable or broken output in the current authorized source before presenting it. Preserve the real workflow, computation and source records. Inspect the affected controls again after a repair; keep focused validation within the existing product course instead of creating a separate review application or broad test suite.
+
+Every delegation of this receiving course carries this instruction. Keep it in the active owner-controlled policy, instruction and receiving-guide surfaces that the workers actually read, preserving existing owner controls and historical records. Continue through the existing source, native and browser owners, respect the active project cutoff, and keep customer records bound to their original project and edition.
+
+For this simulated case, use the original field and customer IDs returned in the retained case receipt. Open the initial review, the two complete customer requests, the assigned planning handback, the actual revised source artifacts and the ready engineering handback. Confirm on screen that original customer wording, current engineering disposition and a separate customer acceptance remain distinguishable. Inspect long source labels, full request wording, original laboratory context and the replacement-evidence links at both useful widths.
+
+Operate the retained review and worklist filters, full detail, history, package downloads, response/handback receiving and local-desk reopening through their existing controls. Save and reopen an unfinished response or engineering draft without losing its wording. Perform any authored teaching mutation only in this explicitly simulated case, retaining the original predecessor and operation IDs. Open the actual downloaded HTML and received package, follow its original/revised evidence, and inspect the complete exported CSV/JSON beyond the visible page. Record the exact application source, saved case IDs, output file identities and viewed screenshots in the same receiving operation so a source defect can be repaired directly.
+
+## Recorded response import and recovery
+
+The existing customer recording chapter operates the original review desk with the six saved case identities. After downloading its explicitly simulated local response, it opens that exact JSON through **Import response**, inspects the matching imported reviewer and wording, and uses **Undo draft replacement** to restore the local notes that preceded the import.
+
+The same chapter then imports the actual downloaded original response record. Because that record belongs to the earlier predecessor, the desk presents it as an **Imported response reference** in **Responses** and keeps the current local draft. **Download full record** must return that unchanged original record. The chapter also selects the retained case manifest as an invalid response file, inspects the real error, and confirms that the current draft remains intact. Finally, it reimports and reopens the original downloaded teaching draft.
+
+These interactions use the existing case files and browser-local teaching response. The native original review, recorded customer response and engineering handback keep their existing identities. The parent continues to own the recording page, browser, stop callback, output and video; this chapter runs within that same recording.
+
+An interrupted chapter retains its completed source phases, downloaded files, screenshots and failed action. Its original response-file identities are checked again before continuation. The producing worker must look at the actual matching-import, Undo, historical-reference, invalid-file and reopened-draft screenshots, operate the controls and inspect the re-downloaded full record as part of the current desktop and narrow customer course. Capturing those files alone does not establish readiness.
+
 ## Integration, source and validation
 
 The additive fragment defines the simulated-customer-review component and requires the existing eco13 and implementation families. It carries this module and guide while preserving the shared catalogue, original review UI, field engine and case driver. The cumulative installer reads fragments through its maintained loader.

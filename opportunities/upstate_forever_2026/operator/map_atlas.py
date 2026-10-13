@@ -7,6 +7,19 @@ from model.atlas_reviews import attach
 
 
 def read(operator, workspace_key, operation, payload, fault=None):
+    if operation == "coefficient-evidence-catalog":
+        from model.client_biophysical_evidence import catalog
+        from model.common import identifier
+        value = payload or {}
+        if not isinstance(value, dict) or set(value) - {"workspace", "baseline_run_id"}:
+            raise ValueError("Choose the original baseline run for coefficient sources")
+        workspace = operator.ws(workspace_key)
+        run_id = identifier(value.get("baseline_run_id"))
+        run = workspace.inspect_run(run_id)
+        profile_id = run["selection"]["profile_id"]
+        return {"workspace_key": workspace_key, "baseline_run_id": run_id,
+                "profile_id": profile_id, "catalog": catalog(workspace, [profile_id])}
+
     if operation in {"reviews", "review"}:
         from model.atlas_reviews import collection, open_review
         workspace = operator.ws(workspace_key)

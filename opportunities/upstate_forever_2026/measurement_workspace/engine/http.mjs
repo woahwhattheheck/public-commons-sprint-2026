@@ -1,3 +1,4 @@
+import {largeOperation} from './large_http.mjs';
 import {previewCollection,receiveCollection,listCollections,publishCollection,readEdition,editionMember,editionBundle} from './collections.mjs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -34,6 +35,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
     }
     const parts=url.pathname.slice(base.length).split('/').filter(Boolean).map(decodeURIComponent),method=request.method,query=Object.fromEntries(url.searchParams);
       const s=get();
+      if(parts[0]==='large'){send(response,200,await largeOperation(s,method,parts.slice(1),query,['POST','PUT'].includes(method)?await readBody(request):{}));return;}
       const reaches=async()=>reachProvider?await reachProvider():await baseData(s.directory,'reaches.json');
       if(parts[0]==='collections'){
         if(method==='GET'&&parts.length===1){send(response,200,{collections:listCollections(s)});return;}
@@ -48,6 +50,7 @@ export function createMeasurementHandler({directory,base=DEFAULT_BASE,fetcher=gl
         }
       }
       if(method==='GET'&&!parts.length){send(response,200,{...s.summary(),reaches:await reaches()});return;}
+      if(method==='GET'&&parts.length===1&&parts[0]==='snapshot'){send(response,200,s.fullSnapshot(query));return;}
       if(method==='GET'&&parts[0]==='records'){send(response,200,parts[1]?s.record(parts[1]):s.records(query));return;}
       if(method==='POST'&&parts[0]==='preview'){send(response,200,s.preview(await readBody(request)));return;}
       if(method==='POST'&&parts[0]==='imports'){send(response,201,s.import(await readBody(request)));return;}

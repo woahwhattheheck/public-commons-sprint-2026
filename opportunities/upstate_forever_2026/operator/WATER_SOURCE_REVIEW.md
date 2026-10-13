@@ -288,3 +288,8 @@ and `renderWaterSourceBrief(prepared)` for the maintained browser.
 The preparation function rejects repeated/absent/changed source rows and
 crosswalk/workspace mismatches. It freezes a portable copy without mutating the
 live source records. Pure rendering returns the whole standalone document.
+
+
+## Original jurisdiction-qualified classifications
+
+The maintained desk now reads explicit NC/GA registry v2 editions while preserving existing SC v1 bodies. Jurisdiction/component filters, full index/date/marker detail, CSV export and standalone briefings retain each state's original semantics. See [WATER_CLASSIFICATION_JURISDICTIONS.md](WATER_CLASSIFICATION_JURISDICTIONS.md) for the complete adoption, crosswalk, source and receiving course. Descriptor version 1.6.0 includes source-published/historical/superseded edition labels where declared.

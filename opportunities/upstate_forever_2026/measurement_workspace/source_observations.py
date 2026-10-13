@@ -5,6 +5,8 @@ the existing native observation parser; no replacement concentration is assigned
 """
 from __future__ import annotations
 import hashlib
+import csv
+import io
 import json
 from pathlib import PurePosixPath
 
@@ -126,7 +128,213 @@ def load_observations(files, parser):
                   for row in selected}
     if len(activities) != index.get("activity_count"):
         raise ValueError("Original observation activity count changed.")
-    return selected
+    if RESULT_SELECTION_INDEX in files:
+        if SELECTION_INDEX in files:
+            raise ValueError("Choose one original result or microbial selection per study.")
+        return _result_selection_records(files, selected)
+    return _selection_records(files, selected)
+
+
+
+RESULT_SELECTION_INDEX = "result-selection.json"
+RESULT_SELECTION_SCHEMA = "upstate.original-result-selection/v1"
+
+
+def _result_selection_records(files, complete):
+    """Select exact original results after verifying every retained source row."""
+    selector = json.loads(files[RESULT_SELECTION_INDEX].decode("utf-8-sig"))
+    if (not isinstance(selector, dict) or selector.get("schema") != RESULT_SELECTION_SCHEMA
+            or selector.get("observation_index_sha256") != hashlib.sha256(files[INDEX]).hexdigest()):
+        raise ValueError("The result selection must bind its complete original observation index.")
+    for key in ("original_record_count", "record_count", "activity_count"):
+        value = selector.get(key)
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError("Result selection counts must be positive integers.")
+    if selector["original_record_count"] != len(complete):
+        raise ValueError("The result selection changes the complete original cohort count.")
+    from datetime import date
+    bounds = []
+    for key in ("date_start", "date_end"):
+        value = selector.get(key)
+        if not isinstance(value, str):
+            raise ValueError("The result selection must declare its original sampling interval.")
+        try:
+            parsed = date.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("Result selection dates must be YYYY-MM-DD.") from exc
+        if parsed.isoformat() != value:
+            raise ValueError("Result selection dates must be YYYY-MM-DD.")
+        bounds.append(value)
+    first, last = bounds
+    if first > last:
+        raise ValueError("The result selection sampling interval is reversed.")
+    available, source_rows = {}, set()
+    for row in complete:
+        identifier = row.get("original_result_identifier")
+        key = (row["original_source_path"], row["source_csv_row"])
+        if (not isinstance(identifier, str) or not identifier
+                or identifier in available or key in source_rows):
+            raise ValueError("Result selection requires distinct original result and source-row identities.")
+        available[identifier] = row
+        source_rows.add(key)
+    declared = selector.get("records")
+    if not isinstance(declared, list) or not declared:
+        raise ValueError("Choose at least one original result.")
+    identity_fields = ("original_source_path", "original_source_sha256", "source_csv_row",
+                       "monitoring_location_id", "activity_id", "original_result_identifier")
+    chosen = set()
+    for reference in declared:
+        if not isinstance(reference, dict):
+            raise ValueError("Retain exact original result selectors.")
+        identifier = reference.get("original_result_identifier")
+        row = available.get(identifier) if isinstance(identifier, str) else None
+        number = reference.get("source_csv_row")
+        if (row is None or identifier in chosen or isinstance(number, bool)
+                or not isinstance(number, int) or number < 2
+                or any(reference.get(key) != row.get(key) for key in identity_fields)):
+            raise ValueError("The selected result differs from its original source row.")
+        if not first <= row["date"] <= last:
+            raise ValueError("A selected original result lies outside the sampling interval.")
+        chosen.add(identifier)
+    result = [row for row in complete if row["original_result_identifier"] in chosen]
+    activities = {(row["monitoring_location_id"], row.get("project_id", ""), row["activity_id"])
+                  for row in result}
+    if len(result) != selector["record_count"] or len(activities) != selector["activity_count"]:
+        raise ValueError("Selected original result or activity counts differ.")
+    return result
+
+SELECTION_INDEX = "observation-selection.json"
+SELECTION_SCHEMA = "upstate.original-observation-selection/v1"
+
+
+def _same_source(left, right):
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, (int, float)) and isinstance(right, (int, float)):
+        return left == right
+    if type(left) is not type(right):
+        return False
+    if isinstance(left, dict):
+        return left.keys() == right.keys() and all(_same_source(left[key], right[key]) for key in left)
+    if isinstance(left, list):
+        return len(left) == len(right) and all(_same_source(a, b) for a, b in zip(left, right))
+    return left == right
+
+
+def _selection_member(files, descriptor):
+    if not isinstance(descriptor, dict):
+        raise ValueError("Retain every source-bound observation selection companion.")
+    name = _path(descriptor.get("path"))
+    body = files[name]
+    if descriptor.get("bytes") != len(body) or descriptor.get("sha256") != hashlib.sha256(body).hexdigest():
+        raise ValueError("An original observation selection companion changed: " + name)
+    return body
+
+
+def _selection_records(files, complete):
+    """Apply a retained original-record selection after the whole index is verified."""
+    if SELECTION_INDEX not in files:
+        return complete
+    selector = json.loads(files[SELECTION_INDEX].decode("utf-8-sig"))
+    if (not isinstance(selector, dict) or selector.get("schema") != SELECTION_SCHEMA
+            or selector.get("observation_index_sha256") != hashlib.sha256(files[INDEX]).hexdigest()
+            or selector.get("original_record_count") != len(complete)):
+        raise ValueError("The selected study must bind its complete original observation index.")
+    source = selector.get("selection_source")
+    if not isinstance(source, dict):
+        raise ValueError("Retain the exported microbial selection as an original source.")
+    name = _path(source.get("path"))
+    body = files[name]
+    if source.get("bytes") != len(body) or source.get("sha256") != hashlib.sha256(body).hexdigest():
+        raise ValueError("The exported microbial selection bytes changed.")
+    exported = json.loads(body.decode("utf-8-sig"))
+    joined_source, context_source = selector.get("joined_source"), selector.get("context_source")
+    joined_body = _selection_member(files, joined_source)
+    context_body = _selection_member(files, context_source)
+    if selector.get("report_binding") != context_source["sha256"] + ":" + joined_source["sha256"]:
+        raise ValueError("The selection must bind its exact original joined observations and context.")
+    reader = csv.DictReader(io.StringIO(joined_body.decode("utf-8-sig"), newline=""))
+    fields = reader.fieldnames or []
+    joined_rows = list(reader)
+    if (not fields or len(fields) != len(set(fields)) or len(joined_rows) != len(complete)
+            or any(None in row or any(value is None for value in row.values()) for row in joined_rows)):
+        raise ValueError("Retain the complete original joined observation CSV.")
+    joined_by_id = {row.get("activity_id"): row for row in joined_rows}
+    if len(joined_by_id) != len(joined_rows) or set(joined_by_id) != {row["activity_id"] for row in complete}:
+        raise ValueError("Joined observations differ from the complete original activity cohort.")
+    coverage = json.loads(context_body.decode("utf-8-sig"))
+    if (not isinstance(exported, dict) or exported.get("schema") != "upstate.microbial-source-selection/v1"
+            or exported.get("binding") != selector.get("report_binding")
+            or exported.get("review", {}).get("schema") != "upstate.microbial-source-review/v1"
+            or exported.get("review", {}).get("binding") != selector.get("report_binding")):
+        raise ValueError("The original observation selection and retained report binding differ.")
+    declared = selector.get("records")
+    if not isinstance(declared, list) or not declared:
+        raise ValueError("Choose at least one distinct original observation record.")
+    fields = ("original_source_path", "original_source_sha256", "source_csv_row",
+              "monitoring_location_id", "activity_id", "original_record_id")
+    available = {}
+    for row in complete:
+        key = (row["original_source_path"], row["source_csv_row"])
+        if key in available:
+            raise ValueError("Original observation source row identities must be unique.")
+        available[key] = row
+    chosen = {}
+    for reference in declared:
+        if not isinstance(reference, dict):
+            raise ValueError("Retain exact original observation row selectors.")
+        path = _path(reference.get("original_source_path"))
+        number = reference.get("source_csv_row")
+        if isinstance(number, bool) or not isinstance(number, int) or number < 2:
+            raise ValueError("Original CSV row selectors are header-inclusive integers.")
+        key = (path, number)
+        row = available.get(key)
+        if key in chosen or row is None or any(reference.get(field) != row.get(field) for field in fields):
+            raise ValueError("The selected original source row differs from the complete cohort.")
+        chosen[key] = row
+    result = [row for row in complete if (row["original_source_path"], row["source_csv_row"]) in chosen]
+    activities = [row["activity_id"] for row in result]
+    exported_ids = exported.get("review", {}).get("selected_activity_ids")
+    exported_rows = exported.get("observations")
+    if (not isinstance(exported_ids, list) or not exported_ids
+            or any(not isinstance(value, str) or not value for value in exported_ids)
+            or len(exported_ids) != len(set(exported_ids))
+            or set(exported_ids) != set(activities)
+            or not isinstance(exported_rows, list)
+            or len(exported_rows) != len(result)
+            or any(not isinstance(row, dict) for row in exported_rows)
+            or {row.get("activity_id") for row in exported_rows} != set(activities)
+            or selector.get("record_count") != len(result)
+            or selector.get("activity_count") != len(set(activities))):
+        raise ValueError("Selected observations differ from the retained exported activities.")
+    expected_rows = [row for row in joined_rows if row["activity_id"] in set(exported_ids)]
+    stations = {row["station_id"] for row in expected_rows}
+    if (exported_ids != [row["activity_id"] for row in expected_rows]
+            or not _same_source(exported_rows, expected_rows)
+            or not isinstance(coverage, dict)
+            or not _same_source(exported.get("station_context"),
+                [row for row in coverage["observed_station_context"] if row["observation_station_id"] in stations])
+            or not _same_source(exported.get("assessment_context"),
+                [row for row in coverage["matched_assessment_records"] if row["observation_station_id"] in stations])
+            or not _same_source(exported.get("original_provenance"), coverage["provenance"])
+            or not _same_source(exported.get("method"), coverage["method"])):
+        raise ValueError("The retained selection changes original joined cells or source context.")
+    exported_by_id = {row["activity_id"]: row for row in exported_rows}
+    if len(exported_by_id) != len(exported_rows):
+        raise ValueError("Exported activity rows must retain distinct original identities.")
+    native_fields = {"activity_type": "ActivityTypeCode", "date": "ActivityStartDate",
+                     "result_value": "ResultMeasureValue",
+                     "limit_value": "DetectionQuantitationLimitMeasure/MeasureValue",
+                     "source_result_unit": "ResultMeasure/MeasureUnitCode",
+                     "source_limit_unit": "DetectionQuantitationLimitMeasure/MeasureUnitCode"}
+    for row in result:
+        exported_row = exported_by_id[row["activity_id"]]
+        if (row["original_source_path"] != "original/" + _path(exported_row.get("source_file"))
+                or str(row["source_csv_row"]) != exported_row.get("source_row")
+                or row["monitoring_location_id"] != exported_row.get("station_id")
+                or any(exported_row.get(key) != row["raw_cells"].get(field) for key, field in native_fields.items())):
+            raise ValueError("The retained selection changes original observation values, support or row identity.")
+    return result
 
 
 def filter_calendar(rows, study, year=None, months=()):
@@ -156,7 +364,23 @@ def observation_files(original, available):
     paths = set(source_paths(index))
     for entry in index["sources"]:
         paths.update(_path(item["path"]) for item in metadata_entries(entry))
-    return {INDEX: body, **{path: original(path) for path in sorted(paths)}}
+    result = {INDEX: body, **{path: original(path) for path in sorted(paths)}}
+    if RESULT_SELECTION_INDEX in available:
+        result[RESULT_SELECTION_INDEX] = original(RESULT_SELECTION_INDEX)
+    if SELECTION_INDEX in available:
+        selection_body = original(SELECTION_INDEX)
+        selector = json.loads(selection_body.decode("utf-8-sig"))
+        source = selector.get("selection_source") if isinstance(selector, dict) else None
+        if not isinstance(source, dict):
+            raise ValueError("The selected study must retain its original selection source.")
+        result[SELECTION_INDEX] = selection_body
+        for key in ("selection_source", "joined_source", "context_source"):
+            descriptor = selector.get(key)
+            if not isinstance(descriptor, dict):
+                raise ValueError("The selected study must retain every original selection companion.")
+            name = _path(descriptor.get("path"))
+            result[name] = original(name)
+    return result
 
 
 def builtin_companion(root):

@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "offline-field-crew",
+  "extend_components": {
+    "implementation": {
+      "paths": [
+        "operator/web/implementation_field_start.mjs",
+        "build_implementation_offline.py",
+        "model/field_deployment.py",
+        "install_implementation.py",
+        "docs/OFFLINE_FIELD_CREW.md",
+        "integration/component_fragments/offline-field-crew.json"
+      ]
+    }
+  },
+  "source_reference": {
+    "workflow": "Complete original saved plan and attachment bytes to an immediately usable offline crew workspace and native field return"
+  }
+}

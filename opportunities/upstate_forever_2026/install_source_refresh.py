@@ -24,6 +24,12 @@ _upstate_refresh_module.install(globals())
 '''
 NAV = '<script type="module" src="/web/source-refresh-nav.mjs"></script>'
 FILES = (
+    "model/source_refresh_report_source.py",
+    "model/source_refresh_report_transfer.py",
+    "model/source_refresh_comparison.py",
+    "source_tools/receive_source_refresh_report.py",
+    "docs/source-refresh-scientific-report.md",
+    "source/source-refresh-report-integration.json",
     "model/source_refresh.py",
     "model/source_refresh_cli.py",
     "model/source_refresh_compat.py",
@@ -56,12 +62,14 @@ FILES = (
 # Exact byte identities from the complete source banks already delivered.
 KNOWN_RELEASES = {
     "model/source_refresh.py": [
+        "3e6c89916d90faa7d9a1d2b584ebb8559b3c80cc6dd1834c18cdeb9b16807690",
         "45ffa005526147e9b7d82de695724697d93fa044fe718c5f18f8195f09fdc893",
         "0d5c82011c23a6ddd0f2e1b2560d938a10babda51f8a48eb3b21203e01d1f12b",
         "57c45e6d341370109e154bfe382844316d75f29f1c13535062d5a67c025dd559",
         "5c2fae7ab68c48ae8108efbd0735133070815654e494981a9496d8c9c25e5862",
         "eddb911a423838aa2b91db159af773f29f7fdb4f63ca1dc42b1b4f33b7f310ef",
-        "492e943128f78f5789f0e21ec1e31ead5c31190dd1db0291a89c88fe8b12754e"
+        "492e943128f78f5789f0e21ec1e31ead5c31190dd1db0291a89c88fe8b12754e",
+        "31e9450d6170a3099f5df6d543a72be3a87ca29aed7c130aba6e2ad1cff60cf9"
     ],
     "model/source_refresh_cli.py": [
         "96118eaaa41b9f213746024d6d13035b95ccd1a24a0af1bbe88c8b1a796e37d3",
@@ -85,7 +93,8 @@ KNOWN_RELEASES = {
         "9de35568bb92a9fe93519e93b92faa01b6fd0ed821d6d9e31c717aa7bf31ab7c",
         "8f0a8720078f313872b03f20353d9f74e095ca4940a2504e1735b1c3abb26f0e",
         "ab79d4564f94af8ce583e426b56b17ac19a5e35462da7fa60a5180eaf01a171e",
-        "4974ebe5fefe218fa90149e05b0c4489d30d1b450c997558a5b54e688554fff2"
+        "4974ebe5fefe218fa90149e05b0c4489d30d1b450c997558a5b54e688554fff2",
+        "c08f6119a48daee6d8789d3b95fa436584f18af02d39a6b9399d887ee910646e"
     ],
     "operator/web/source-refresh.mjs": [
         "e323aaa2fc0f1f486365e2adc12944f21852577656a3d09fb28d4dd8be5074bd",
@@ -95,7 +104,9 @@ KNOWN_RELEASES = {
         "881fd5317b1fb556461af1484704540c2ef0116294031e47006ad6657a483cb1",
         "74c939685ae1d6abb32918932345101bb878c01dab44be1eed98940c6532781c",
         "956a8fd908495b37915674713f7c1f88fdecfacc3dd0b9388041ae688e168275",
-        "70a3965275d657bb214efdadf50437ce2d28f9018dccdfbd8009c52cd6109602"
+        "70a3965275d657bb214efdadf50437ce2d28f9018dccdfbd8009c52cd6109602",
+        "0b48617a0f116749427dbac229db25bd347090af0f62ebbb32621b4d33c91d14",
+        "9f0cdc095be184390a145ab92654e08194925c2e4e92e73d9cefe8d5af443c15"
     ],
     "operator/web/source-refresh-nav.mjs": [
         "5b5413232748ed4aeb70bb0b31d6b8e3f0308ed92eec642b5199f67c177c3f70",
@@ -107,12 +118,16 @@ KNOWN_RELEASES = {
         "7f60d9e886ae06382d0e518c54734c24c4e30430656517c30d62f5715919eb3e"
     ],
     "operator/SOURCE_UPDATES.md": [
+        "aaf32d8b96304e644f787d18f386a0814875fb29730abd70da12ca864e72ef2d",
+        "170a91e1a909d0304069dd9a719ef08c58f38f32ad93d60eb736367fbb42639b",
         "d5638a7ea89219c4465e19f18fdf54e393557ccaed96471720e62bca3d4c4d78",
         "3320a1abddc882ac10534c7139430f52e98e5cbab11132b3a82fa7d05af0e19e",
         "a601dda094dd0841016cf5d4835a055e7da3b910583deb61361ebec21d942cfc",
         "1054da9af879eb2f75f0886dd11524f15022c024bff5ef9eac5406124676894c",
         "915587db87612a08b9a7c72e61c0c23b8f6e74f47a4f5d9dd00ddfa86a5bc7e2",
-        "68de10652357116be30f68648666b0dace95c57d748cc48c03d9a4d5eafa836d"
+        "68de10652357116be30f68648666b0dace95c57d748cc48c03d9a4d5eafa836d",
+        "4eb5077fc8d2f3ff2ac7c03ddee80b6a7cd430067dfd402ac00824e0c3527632",
+        "332c27845dcaab3d33057f32a59db0beafbe2e1307de380e51e2987447439635"
     ],
     "source/landcover-change/METHOD.md": [
         "38939f8077422e6210b8d2f31739962fc3160a9a65cbfe031f0e3c914d17931c"
@@ -124,12 +139,16 @@ KNOWN_RELEASES = {
         "f7acd72e10b3986682c3dbb4617d629cb7586eaaacc159b6134ca4763f4ced1a"
     ],
     "operator/install_source_refresh.py": [
+        "5aad31dd33de34ff99157f0f484554005873dc23d07f41721050663aaf24dd13",
+        "5253c8230ade1a76d4722cfc3fe945b361624e333bf35ecc26f0b560f290ca39",
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
         "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385",
         "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
-        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db"
+        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db",
+        "d7ae653f0cabeb5d158d8b53d6f709208bf61f4a8fdca56f2cfebfe0d61a64c9",
+        "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579"
     ],
     "operator/extensions/source-updates.json": [
         "c849509ff20f8c6959fc8b9687dcd99a8f5f782a61e7cc306342e412fbf955c5",
@@ -146,13 +165,17 @@ KNOWN_RELEASES = {
         "6cfded328d17b8684ea3c9bbb7bc6f40c014c36b08580d244f0b0506126c6c77"
     ],
     "install_source_refresh.py": [
+        "5aad31dd33de34ff99157f0f484554005873dc23d07f41721050663aaf24dd13",
+        "5253c8230ade1a76d4722cfc3fe945b361624e333bf35ecc26f0b560f290ca39",
         "689226ec18f615ee4ada207b59dd2b1c9f05975be6a2ca0286b213adfac9126c",
         "048f71a23119e5b8852bc1fb4c674ad771f8ff9198c08e9414c583b1facef841",
         "57fb0ee006ee3e718bd17feb3de0613aebc8d2734dc4f98c76c7e71879747545",
         "05b9e89c91a03435b166bd1cbcb296221d4792b37d41f941f269a6cf7310417f",
         "0d52c8a0dc0993e454ea50264e399b7dc1aebbabde938e9715bc8d1553714385",
         "167ac16828dfad3609fc4e9b51c55a85076d2748db67f591ab83e462974b8b61",
-        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db"
+        "0d48e7a3946e4ea46e7d7c2e490f878990ca6bf0adf90b49096ff43dcf7231db",
+        "d7ae653f0cabeb5d158d8b53d6f709208bf61f4a8fdca56f2cfebfe0d61a64c9",
+        "9869caa49556e1c834a7d82cbefaffcaeded17bad4291b616858a79a9ddf6579"
     ],
     "model/source_refresh_compat.py": [
         "cf775aa3c318ab2f9ae7b1432faa932f57303f754f44d0cc6cc50ce939932de4"
@@ -186,7 +209,9 @@ KNOWN_RELEASES = {
         "4698277a21b8bf0044bc5335964d94e6d8847e6627f0133e5668012cfedaf705"
     ],
     "source/run_source_updates_browser.mjs": [
-        "c7539ecd51d357ebbce9b644c4f036267538fcefc804de3a8572db294a56f728"
+        "6ffef03aa727a72914bf9675dc901c672c21c90e3ecf1250b3268dee27a27ea8",
+        "c7539ecd51d357ebbce9b644c4f036267538fcefc804de3a8572db294a56f728",
+        "b02a987d3fe10b223c5f16dc4992aca7dd4660a4d517e3e7f943bc9ed70d12b5"
     ],
     "model/source_refresh_receiving.py": [
         "83e88d5c6ca62843716a4cba3cfa3272060b9a815f98b10396ba7ed5ab575d8c"
@@ -296,6 +321,36 @@ def state(path):
             hashes[relative] = digest
     return raw, hashes
 
+REPORT_CONSUMER_JOINS = [
+    {
+        "path": "model/native_versions.py",
+        "before": "    from .model_selection import common_comparison_outputs\n    if (comparison.get(\"schema\")",
+        "after": "    from .model_selection import common_comparison_outputs\n    if \"source_refresh_context\" in comparison:\n        from .source_refresh_comparison import validate\n        return validate(workspace, comparison, expected_id=expected_id)\n    if (comparison.get(\"schema\")"
+    },
+    {
+        "path": "model/scientific_report_study_transfer.py",
+        "before": "    from . import chemistry_study_transfer\n    chemistry_study_transfer.include_source(closure, collection_id, entry)\n",
+        "after": "    from . import chemistry_study_transfer\n    chemistry_study_transfer.include_source(closure, collection_id, entry)\n    from . import source_refresh_report_transfer\n    source_refresh_report_transfer.include_source(closure, collection_id, entry)\n"
+    },
+    {
+        "path": "model/study_transfer.py",
+        "before": "    for relative in chemistry_transfer.lock_paths(closure):\n",
+        "after": "    from . import source_refresh_report_transfer\n    for relative in (*chemistry_transfer.lock_paths(closure),\n                     *source_refresh_report_transfer.lock_paths(closure)):\n"
+    }
+]
+
+
+def compose_report_consumer(text, row):
+    before, after = row["before"], row["after"]
+    if text.count(after) == 1:
+        return text
+    if text.count(before) != 1:
+        raise ValueError("Compose the advancing report consumer's exact source-update join: " + row["path"])
+    result = text.replace(before, after)
+    ast.parse(result, filename=row["path"])
+    return result
+
+
 def _install(application, source, integration, dry_run=False):
     server = target_path(application, "operator/server.py")
     index = target_path(application, "operator/web/index.html")
@@ -334,7 +389,22 @@ def _install(application, source, integration, dry_run=False):
         if relative.endswith(".py"):
             ast.parse(body.decode("utf-8"), filename=relative)
         pending.append((target, body, expected))
+    # Compose only the declared source-update hooks in advancing shared owners.
+    for row in REPORT_CONSUMER_JOINS:
+        target = target_path(application, row["path"])
+        expected = target.read_bytes()
+        body = compose_report_consumer(expected.decode("utf-8"), row).encode("utf-8")
+        pending.append((target, body, expected))
     pending.extend(((server, patched_server, pre_server), (index, html.encode("utf-8"), pre_index)))
+    # Implementation modules precede entrypoints; the descriptor is published last.
+    def publication_order(item):
+        relative = item[0].relative_to(application).as_posix()
+        if relative == "operator/extensions/source-updates.json":
+            return 100
+        if relative in {"operator/server.py", "operator/web/index.html"}:
+            return 90
+        return 10 if relative.startswith("model/") else 20
+    pending.sort(key=publication_order)
     if current_bytes is not None and old_intent is None and all(expected == body for _, body, expected in pending):
         receipt = json.loads(current_bytes)
         print(json.dumps(receipt, indent=2))

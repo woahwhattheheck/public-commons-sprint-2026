@@ -362,7 +362,7 @@ The saved report and operator show each original edition reference as its own so
 
 Open the exact saved assessment context. Under **Scientific and client report**, select **Use saved assessment context in report**. The original task queue retains the operation. After it completes, **Open scientific report** opens the existing ordered scientific composer with this exact retained source. Review the source order, title and contact, preview the report, then use the composer’s normal generation and download controls. This source-only report can be published from the completed assessment or parcel context without selecting a regional model run.
 
-To retain an existing map delivery’s native runs, map settings and previously selected scientific studies, choose that saved delivery before preparing the context. **Open Maps and delivery** opens its original full selection. **Open scientific report** passes that selection’s ordered scientific source choices into the composer, where the existing draft order and nonempty title/contact remain under the operator’s control. The two buttons use the same original completed report-source task.
+To retain an existing map delivery’s native runs, map settings and previously selected scientific studies, choose that saved delivery before preparing the context. **Open Maps and delivery** opens its original full selection. **Open scientific report** restores that selection’s exact ordered scientific source choices and prepared title in the composer, retaining the operator’s contact details. It replaces the previous composer draft’s source selection. The two buttons use the same original completed report-source task.
 
 The same controls appear below an opened parcel association. **Use saved parcel and assessment context in report** includes its exact original context, parcel study, reporting boundary, parcel attributes, relationship rows and complete packages. A received parcel association keeps its original context identity and the destination context binding separately. Its retained values can be reported directly without recalculating them.
 
@@ -386,7 +386,7 @@ python -B -m model.assessment_report_context \
 
 Omit `--parcel-id` for assessment context alone. Omit `--delivery-id` for a new report selection. `--prepare-only` writes the complete recipe, source manifest and retained companion files without importing them; it cannot be combined with a selected delivery.
 
-The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass its source choices to `host.openScientificReport({workspace_key, sources, title})` for the standalone scientific composer, or pass the full selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
+The result includes the original context/parcel IDs, immutable report operation ID, manifest and recipe descriptors, native source collection/document IDs, exact observed-context binding and `delivery_selection`. Pass its source choices to `host.openScientificReport({workspace_key, sources, title, selection_mode: 'replace'})` for the standalone scientific composer, or pass the full selection to the existing delivery form or maintained delivery API. Its ordered source list preserves previously selected studies and adds this exact document once; the delivery binds the resulting full selection before generating its normal reports.
 
 Native operator action:
 
@@ -401,7 +401,7 @@ Native operator action:
 }
 ```
 
-The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list open the scientific composer or Maps and delivery only in the task's original Workspace. The descriptor declares `openScientificReport` and `openDelivery`; install this client with the maintained host that exposes both capabilities. The shared source composer validates the actual collection/document choices and keeps its preview and original-source checks. Before changing any source file, the station-family installer checks the installed app callback and both maintained composer modules, and records their source hashes in its receipt. An older application must receive the maintained Scientific reports implementation before this client is installed.
+The optional parcel and delivery IDs may be omitted. The action uses the original supervised queue and upload/download permissions. Its completed task includes direct links to the recipe, manifest and complete context/parcel ZIPs. The desk and global task list open the scientific composer or Maps and delivery only in the task's original Workspace. The descriptor declares `openScientificReport` and `openDelivery`; install this client with the maintained host that exposes both capabilities. The shared source composer validates the actual collection/document choices and keeps its preview and original-source checks. Before changing any source file, the station-family installer checks the installed app callback and Sources bridge together with the exact staged composer, and records the staged and original destination hashes in its receipt. The family installs the updated composer in the same pass, upgrading an existing composer without the prepared-selection mode while preserving backups and concurrent-source checks.
 
 For a focused receiving check, use the same actual saved context, prepare and import its report source, bind and collect it through `model.observed_context`, and verify every delivered companion against the original source member descriptor. Archive/restore the current Workspace through its normal operation and reopen the same saved source and delivery. Preserve actual context, parcel, collection, document, report and receiving IDs in the existing operation receipt.
 
@@ -427,3 +427,133 @@ The assessment selector uses the producer’s explicit geographic source type to
 Opening **Use saved study in assessment context** always adopts that exact saved study in its original Workspace. When an observed-station study contains geographic context only, its original geographic sources are displayed and the assessment build action stays disabled. Choose a saved assessment study or use **Open Station geography** to prepare the assessment study from its original sources. Saved assessment results and their report, parcel and portable receiving controls remain available below the form.
 
 The complete standalone installation also retains the current native assessment review provider, client and guide, so the maintained station desk can accept its original source-bound station selection without a missing module or browser asset.
+
+
+### Open the exact prepared scientific source selection
+
+**Open scientific report** restores the prepared report's complete source list in its saved reading order and sets its prepared title. It replaces the current composer draft's source selection; the same operator's contact details remain available. Ordinary additions from Sources continue to append a selected study to the existing draft. Pending report operations must complete or be recovered before either action changes a selection.
+
+This family includes and installs the maintained Scientific reports composer with its `replace-v1` prepared-source contract in `operator/web/source_report_editions.mjs`. Before any writes, the station installer checks the exact staged composer together with the existing complete application's callback and Sources bridge. It preserves the original destination bytes in the installation receipt and rechecks them before replacement. An existing composer without the new selection mode upgrades in this same installation; backups and concurrent-source checks apply to the composer as to every changed family member.
+
+
+### Read the original watershed comparison in reports and exports
+
+The saved context compares the publisher's original assessment watershed label with station point/polygon memberships in the **selected original watershed source**. The operator and prepared scientific report show that source explicitly. The computed column displays retained native watershed IDs and each interior/boundary relationship. Repeated native IDs in the same source retain their native feature labels, so separate original polygons remain distinguishable. Memberships in other source layers remain in the original row details and full exports.
+
+Scientific reports include record-level agreement, difference and unresolved counts. A station with multiple causes or source editions contributes multiple original assessment records; these counts are not station counts. The original 164-station selection retains 293 records, 77 publisher-selected watersheds or 78 computed-selected watersheds, and six differing assessment relationships in the original native build. Unresolved relationships are counted separately from differences. Preserve the original source edition, cause, use and support when reading any row.
+
+The operator's filtered CSV now carries the compared source reference, readable computed watershed IDs, complete compared memberships, all original computed memberships and original row/source dictionaries. It follows the same current table search and selected polygon, while report preparation continues to use the full saved context. No native polygon ID or original attribute is replaced with a display label.
+
+Report context edition 1.1.0 uses these human-readable scientific sections. Preparing an existing saved context produces a new immutable report-source edition; prior 1.0.0 report sources remain available. This changes report presentation and filtered exports while preserving the saved station/context editions and native geometries.
+
+In the existing populated receiving course, open both publisher and computed selections and inspect their actual HTML/PDF and filtered CSV. Read a differing original record such as the July 2026 RS-06190 record alongside its separate 2024 cause/use record. Confirm the compared-source caption and original watershed labels are readable at screenshare and narrow widths, inspect the actual rendered pixels, operate CSV/source downloads, and reopen the same scientific report and selected Study. Retain complete original source attachments and each independent receiving identity.
+
+Within each assessment report, edition and cause/use tables follow the saved inventory selection order. The native assessment-group dictionaries keep their original IDs and contents; presentation ordering follows their stable original row IDs. Ordered scientific studies from an existing delivery retain their separate requested reading order in the report composer.
+
+
+### Prepare a current report after an application upgrade
+
+Preparing a saved assessment or parcel context reads the current report edition
+from the operator before submitting its original queue action. That edition is
+part of the request identity. After a report formatter update, the same saved
+context can therefore produce the current report while earlier completed tasks,
+source editions and downloads remain available.
+
+The context's **Open scientific report** controls show the completed preparation
+for the current report edition and selected saved delivery. Open an earlier report
+explicitly from its original task to retain that report's source selection and
+title. Changing the source edition keeps the original contact details and exact
+ordered delivery sources.
+
+The catalogue returns `report_version`; new `assessment.context.report`
+payloads include that exact value. The provider rejects an explicitly different
+version before writing a report source, so a page loaded before an upgrade can
+reload its controls. Retained legacy tasks without this field remain readable
+and resumable. The result's existing `version` identifies its report source;
+station and assessment context IDs remain unchanged.
+
+The context desk shows the latest 15 assessment operations in the operator's original newest-first order. Earlier retained operations remain accessible through the complete Operations panel.
+
+### Original watershed maps in scientific reports
+
+The saved assessment report source now includes native vector maps in the existing
+Scientific Reports HTML and PDF. The original selected watershed source supplies
+the geometry; the longitude/latitude context display is not used as projected
+metre data. The original 217-HUC source uses its retained EPSG:3857 coordinates.
+
+The overview shows the complete retained watershed source in light gray and the
+saved context selection with black outlines. The all-editions publisher selection
+contains77 polygons; the computed-membership selection contains78. Both retain
+the original293 assessment records and all164 stations. These are the saved
+relationship selections, not new geographic calculations or water-quality ranks.
+
+A separate comparison figure shows up to six distinct differing station/polygon
+relationships per page. Gray polygons represent publisher watershed associations;
+black outlines represent saved station memberships. Numbered labels use a
+cartographic point inside the first computed polygon, **not a station location**.
+A station with multiple original assessment records retains every edition,
+cause, use, support and source reference in the map metadata. Pagination never
+drops a differing relationship. Unresolved comparisons remain explicit in
+metadata and report tables and do not become mapped geographic disagreements.
+
+The shared `scientific_map_figures` renderer draws original native XY geometry,
+multipart polygons and holes without reprojection or simplification. The scale
+bar and north arrow describe the projected grid. In EPSG:3857, grid metres are
+not a corrected ground-distance or area measurement. Figure shading carries
+source/relationship roles rather than concentrations, load estimates, ecological
+condition or conservation priority.
+
+Each prepared source retains its raw native watershed body directly under
+`maps/original-source/`, with its actual path, byte count and SHA256 bound to
+the figure layers and report inputs. Complete source companions remain in
+`context/original-station-geography.zip`. The generated
+`maps/assessment-map-figures.json` retains all drawn native geometry, exact
+source feature identities and renderer specifications;
+`maps/assessment-map-context.json` retains the selected polygon IDs, every
+differing original record, source CRS and any native geometry-reader operations.
+The ordinary source downloads include both files and every complete SVG.
+
+Report source1.2 advances the presentation edition while preserving the saved
+station and assessment editions. Its immutable identity binds the exact map
+producer and both shared scientific renderer files. The complete preparation
+and actual browser course bind those same three file hashes. Use a fresh
+preparation output after implementation changes; the existing study/context
+models retain and reopen their prior immutable results.
+
+Generic contexts whose original source uses geographic coordinates or projected
+feet continue to prepare their original report and source attachments. They
+record the explicit native-map availability explanation rather than silently
+reprojecting or treating those coordinates as metres. The original217 source
+is fully supported.
+
+In the existing receiving course, open the exact original and independently
+received report, inspect the grayscale overview, all comparison pages, complete
+legend text, polygon holes, native CRS/grid scale and all actual SVG downloads.
+At screenshare and narrow widths, operate the saved report/source controls and
+reopen its complete exported project. Read RS-06190 and the other original
+differing relationships beside their edition-specific records; preserve the
+separate original/received source identities. Fix any unreadable or clipped
+outgoing map in the maintained source before presentation.
+
+
+<!-- bryce-rendered-product-inspection:begin -->
+## Standing lab rule: inspect the rendered product before presenting it
+
+Bryce's direct owner instruction, October 13, 2026. This applies to every current and future lab peer, provider, model, harness, local session, cloud session, and delegated or child worker.
+
+Before calling a client/prospect-facing app, site, dashboard, demo, report, presentation, or export ready, or putting it before a client/prospect, the responsible producing peer MUST open/run/render the exact outgoing version and visually LOOK at the actual result. Inspect at the actual screenshare/presentation width and at narrow/mobile widths where relevant. Operate critical controls; inspect applicable loaded, empty, loading, and error states; exercise downloads/exports and reopen the delivered files. Capture real screenshots or rendered page images and actually VIEW them. Capturing without viewing does not satisfy this rule.
+
+This includes ALL attachments. Literally observe the actual thing the way a user or recipient would see and use it: open and view downloaded HTML, every relevant PDF/report page, slides, spreadsheets, maps, images, video/audio, archives and project attachments in their normal recipient-facing viewer or application; play audiovisual media and inspect the usable contents of archives/projects. Metadata, schemas, source text, and a browser link do not substitute for opening the attachment and using the delivered result normally.
+
+Fix ugly, cramped, broken, unstyled, clipped, overflowing, or unreadable results within the authorized task before presenting them. Favor simple industrial/plain presentation, consistent spacing and typography, readable tables, and working controls. Do not add decorative template slop. Source review, unit tests, HTTP 200, DOM counts, a reviewer/model approval, or an evidence form do not substitute for looking at and operating the real outgoing product.
+
+This is focused internal product validation, never permission to build or submit a proof, test, or verification product, run broad suites, or repeatedly recheck an unchanged accepted version. Building and integrating the actual deliverable remains the main work; do not substitute endless reviews for delivery. Retain an exact-version visual receipt in the handoff: source/head or artifact hash, URL/file, viewport sizes, screenshots actually viewed, controls/states/export files exercised, fixes, and any precise unresolved gap. A changed outgoing version needs inspection of the affected result.
+
+Bryce explicitly clarified: "that includes all attachments and this does not become review theatre or test theatre you need to literally observe the actual thing the way a user would see and use it". A checklist, screenshot folder, receipt, passing test, or parallel review bureaucracy is not the requirement or a substitute for actual observation and normal use. Perform focused fixes and keep shipping the main work; create no review or approval gate.
+
+Bryce also instructed: "also add that if u make a video use voice gen tts not robot voices, use generative stuff we have models, use them". For video/media narration, use available high-quality generative voice/TTS and applicable generative visual/media capabilities when helpful, with natural professional delivery instead of robotic default voices. Actually play/listen/watch the final exported attachment and inspect clarity, pronunciation, pacing, timing, and audio alignment. Reviewing a text script does not substitute for experiencing the final video/audio. This adds no paid-service purchase or real-person voice-cloning authorization; preserve lab attribution and third-party copyright/license controls.
+
+Pass this rule to child/delegated workers and persist it in owner-controlled provider/project/cloud instruction copies. Record delivery and readback coverage; never claim every running session loaded it without evidence. This rule creates no hooks, watchers, restarts, approval queue, credential restrictions, or new publication authority. Preserve all existing owner rules, including no llama.cpp, no private GitHub repositories or Actions, focused validation, attribution, incident communication, personal meeting approval, contact holds, demo pauses, bounty restrictions, and owner cutoffs.
+
+Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
+<!-- bryce-rendered-product-inspection:end -->

@@ -32,6 +32,8 @@ def main(argv=None):
     revise.add_argument("csv_file", type=Path, help="Edited original interventions.csv in UTF-8")
     revise.add_argument("--title", help="Revised plan title; defaults to the original title")
     revise.add_argument("--purpose", help="Revised purpose; defaults to the original purpose")
+    revise.add_argument("--column-mapping", type=Path,
+                        help="JSON object mapping native plan fields to original CSV headings; null leaves a field unmapped")
     attach = commands.add_parser(
         "plan-attach-watershed", help="Save the next plan revision with its completed regional watershed context")
     attach.add_argument("plan_id")
@@ -67,6 +69,8 @@ def main(argv=None):
                            "bytes": len(original), "sha256": hashlib.sha256(original).hexdigest(),
                            "text": original.decode("utf-8")},
             }
+            if args.column_mapping is not None:
+                imported["column_mapping"] = read_json(args.column_mapping)
             context = {name: previous["context"].get(name) for name in (
                 "source_collection_ids", "grid_id", "baseline_run_id", "scenario_run_ids", "delivery_id",
                 "watershed_context_id")}

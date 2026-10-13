@@ -115,3 +115,60 @@ source retains `original/selection.json`, `original/analysis.json`,
 `original/summary.json`, `original/paired-members.csv` and all originally declared
 artifacts and report members. `science-summary.json` carries the complete
 unrounded member-direction counts and original distributions used by the prose.
+
+## Producing-model versions
+
+Native pairing resolves the original version separately for each model needed by
+the selected pollutants. A completed stage's recorded runtime comes first, then
+the original run's observed runtime. Records without either keep their requested
+version with an explicit legacy label. Every selected run must agree for the
+same output-producing model; the error identifies the model, versions and run
+when they differ. NDR and SDR may retain different producing versions without
+mislabeling one stage as the other.
+
+A uniform effective version keeps the original scalar selection field and the
+same physical raster-analysis identity. A mixed NDR/SDR cohort adds its explicit
+model-to-version mapping to that identity. If a historical requested version
+was different from the actual producing version, a new calculation binds the
+correct effective version rather than reusing the old declaration. Existing
+completed analysis records and exported archives remain readable and retain
+their original identities.
+
+Completed native reports include a full `native-versions.csv` and an immutable
+`native-provenance/<sha256>.json`. The latter retains the original selected
+artifact roster, grid, analysis identity, per-model version decision, requested
+selection, raw run runtime, producing-stage runtime and reuse references. Its
+normal file descriptor is both `reports.native_provenance` and an entry in
+`reports.files`, so complete result ZIPs and scientific-source captures carry
+the same original record. Independent receiving validates its analysis, grid,
+artifact and run bindings using only the existing standard-library storage
+reader. Historical reports without this member show their recorded version and
+state that separate producing-stage provenance was not retained.
+
+The paired component's append-only source fragment includes the maintained
+`model/native_versions.py` and `model/model_selection.py` dependencies. The
+shared-host installer also requires both files before applying its registration.
+
+
+## Original-run selection in the operator
+
+The shared desk lists every retained native run for the selected grid and
+scenarios. Run labels identify each producing model version and whether it came
+from a completed stage, an observed run fallback, or a requested legacy record.
+The requested version alone does not hide or pair a run.
+
+Each quantity is available only when every included baseline and alternative
+contains that quantity and agrees on its producing model version. Nitrogen and
+phosphorus use NDR; sediment uses SDR. A differing SDR version therefore leaves
+an otherwise compatible NDR comparison available. The desk names unavailable
+quantities and their reasons alongside the original run choices. Choose another
+retained run or change the explicitly included profiles to select a different
+compatible cohort. The backend validates the same roster before computation.
+
+Loading a saved design uses the same per-model rule and retains its omitted
+quantity reasons in the saved input description. If no output is compatible,
+the design stays unavailable for analysis and supplies its exact reasons.
+Reopening an existing analysis preserves its requested quantity roster; it
+reports incompatibility instead of silently changing that original selection.
+The older operator views use the same native catalogue for automatic pairing
+and validate the whole selected roster before submitting their original task.

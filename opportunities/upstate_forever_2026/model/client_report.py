@@ -22,7 +22,7 @@ from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
 
 SCHEMA = "upstate.client-report/v1"
-REPORT_EDITION = "2026-10-13-client-report-treatment-response-16"
+REPORT_EDITION = "2026-10-13-client-report-coefficient-sources-18-briefing-controls"
 RFP_URL = "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf"
 RFP_SHA256 = "a519d33190eefaef7ec082c19642fc6b8ef89329ad3c648a561699c7dd277e74"
 POLLUTANTS = (
@@ -1039,9 +1039,11 @@ def _observed_sections(product):
 def build_report(*, workspace, directory, selection, state, baseline, alternatives,
                  grid, profile, records, observation_results, comparison=None,
                  scenario_summary=None, additional_sections=(), decision_product=None,
-                 observed_product=None, output_stem=None, file_key_prefix="", working_archive_path=None):
+                 observed_product=None, coefficient_product=None, output_stem=None,
+                 file_key_prefix="", working_archive_path=None):
     """Drop-in report hook for the existing delivery.py report branch."""
     from .client_receiving_waters import build_sections, LEGACY_SECTION_TITLE
+    from . import client_biophysical_evidence
 
     report = compose_report(workspace=workspace, selection=selection, state=state,
                             baseline=baseline, alternatives=alternatives, grid=grid,
@@ -1056,6 +1058,13 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
         alternative_run_ids=[run["id"] for run in alternatives],
         run_names=run_names, number=_fmt, text=_text,
     )
+    coefficient_sections = client_biophysical_evidence.client_sections(coefficient_product)
+    if coefficient_product is not None:
+        report["coefficient_evidence"] = coefficient_product["binding"]
+        report["quantity_provenance"]["coefficient_evidence"] = coefficient_product["binding"]
+        methods_index = next((index + 1 for index, section in enumerate(report["sections"])
+                              if section["id"] == "methods"), len(report["sections"]))
+        report["sections"][methods_index:methods_index] = coefficient_sections
     appended = list(decision_delivery.client_sections(decision_product))
     appended.extend(_observed_sections(observed_product))
     if observed_product is not None:

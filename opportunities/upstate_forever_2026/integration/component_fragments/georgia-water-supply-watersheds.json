@@ -1,0 +1,13 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "georgia-water-supply-watersheds",
+  "extend_components": {
+    "water_source_review": {
+      "paths": [
+        "source_tools/water_supply_watersheds.py",
+        "source_tools/WATER_SUPPLY_WATERSHEDS.md"
+      ]
+    }
+  },
+  "source_reference": "Original Georgia EPD Savannah–Upper Ogeechee source-water protection GIS under391-3-16-.01; native ZIP inspection, complete source retention, existing Workspace import and original-domain intersection."
+}

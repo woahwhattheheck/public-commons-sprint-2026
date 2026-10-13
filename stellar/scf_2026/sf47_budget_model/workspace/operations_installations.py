@@ -15,6 +15,7 @@ import uuid
 
 from model import Problem, canonical, digest, now, text
 import operations_domain as domain
+import operations_installation_workflows as workflows
 
 SCHEMA = "stellar-forge.sf47-installation.v1"
 SELECTION_SCHEMA = SCHEMA + ".selection"
@@ -122,7 +123,7 @@ def get(operations, program_id, installation_id, selected_revision=None):
 
 def normalized(context, raw):
     raw = object_value(deepcopy(raw), ("name", "stage", "merchantDeploymentId", "buyerDeploymentIds",
-        "workorder", "task", "source", "payment", "receiving", "assignments", "checks"), "installation")
+        "workorder", "task", "source", "payment", "receiving", "assignments", "checks", "workflowPeriods"), "installation")
     records, sources, plan = context["records"], context["sources"], context["plan"]
     maps = {kind: {row["id"]: row for row in records[kind]} for kind in COLLECTIONS}
     retained = lambda value, label: domain.reference_list(value if value is not None else [], sources, label)
@@ -240,6 +241,8 @@ def normalized(context, raw):
               "merchantDeploymentId": merchant, "buyerDeploymentIds": buyers, "workorder": workorder,
               "task": task, "source": source, "payment": payment, "receiving": receiving,
               "assignments": assignments, "checks": checks}
+    if "workflowPeriods" in raw:
+        result["workflowPeriods"] = workflows.normalize_binding(context, raw["workflowPeriods"])
     if len(canonical(result).encode("utf-8")) > MAX_DOCUMENT_BYTES:
         fail("The complete installation input exceeds 128 KiB.", status=413)
     return result
@@ -255,6 +258,8 @@ def capture(context, document):
                      + document["receiving"]["sourceIds"])
     if document["workorder"]["sourceId"]:
         source_ids.add(document["workorder"]["sourceId"])
+    if document.get("workflowPeriods"):
+        source_ids.add(document["workflowPeriods"]["sourceId"])
     for row in document["payment"]["facilitators"]:
         source_ids.update(row["sourceIds"])
     for row in document["checks"]:
@@ -362,7 +367,8 @@ def report(snapshot, document):
             "purchaseStates": dict(sorted(Counter(row["settlementStatus"] + "/" + row["outputStatus"] + "/" + row["state"]
                                                 for row in purchases).items())),
             "purchaseAmounts": sorted(groups.values(), key=lambda row: (row["network"], row["asset"])),
-            "sourceFiles": len(snapshot["sources"]), "sourceBytes": sum(row["bytes"] for row in snapshot["sources"].values())}
+            "sourceFiles": len(snapshot["sources"]), "sourceBytes": sum(row["bytes"] for row in snapshot["sources"].values()),
+            **({"workflowPeriods": workflows.report(document)} if document.get("workflowPeriods") else {})}
 
 
 def differences(before, after, path=""):
@@ -417,6 +423,8 @@ def preview(operations, context, body):
         if previous["revision"] != expected_revision:
             fail("Another installation edition is saved. Reopen its current edition.", "INSTALLATION_CONFLICT", 409)
     document = normalized(context, body.get("document"))
+    original_workflow = workflows.verify_document(operations, context, document)
+    workflows.verify_transition(operations, context, previous, document, original=original_workflow)
     snapshot = capture(context, document)
     value = {"schema": SCHEMA, "installationId": ident, "expectedRevision": expected_revision,
              "source": _source(context), "document": document, "snapshot": snapshot, "report": report(snapshot, document),
@@ -497,7 +505,7 @@ def _record_matches(events, final_records):
     return result
 
 
-def validate_import(context, rows, events, source_version):
+def validate_import(context, rows, events, source_version, source_files=None):
     if not isinstance(rows, list) or len(rows) > MAX_EDITIONS:
         fail("The complete installation history is invalid.")
     by_id, seen = {}, set()
@@ -533,6 +541,10 @@ def validate_import(context, rows, events, source_version):
                 or candidate["source"] != _source(snapshot)):
             fail("The installation must retain its original selected case and funding plan.")
         document = normalized(snapshot, candidate.get("document"))
+        if document.get("workflowPeriods"):
+            if source_files is None:
+                fail("Receive the complete original recurring-work source with this Installation.")
+            workflows.verify_document(None, snapshot, document, lambda source_id: source_files.get("sources/" + source_id))
         if document != candidate["document"] or capture(snapshot, document) != snapshot:
             fail("The installation's selected records or sources are incomplete.")
         for source_id, metadata in snapshot["sources"].items():
@@ -564,6 +576,8 @@ def validate_import(context, rows, events, source_version):
                     or candidate["changes"] != (differences(previous["preview"]["document"], candidate["document"]) if previous else [])
                     or previous is not None and previous["version"] >= row["version"]):
                 fail("The original installation edition sequence is incomplete.")
+            workflows.verify_transition(None, candidate["snapshot"], previous, candidate["document"],
+                lambda source_id: source_files.get("sources/" + source_id))
             previous = row
     if {(event.get("recordId"), event.get("after", {}).get("revision")) for event in events
             if event.get("action") == "installation.save"} != seen:
@@ -589,6 +603,7 @@ def html_document(row):
                        ("assignments", "Original funded and commercial assignments")):
         body += "<h2>" + label + "</h2>" + table(["Field", "Selected value"],
             [[e(name), pretty(item)] for name, item in document[key].items()])
+    body += workflows.html_section(document)
     body += "<h2>Acceptance and corrections</h2>" + table(
         ["Step", "Original criterion", "State", "Operator / observed", "Result / source"],
         [[e(item["title"]), e(item["criterion"]), e(item["state"]),
@@ -622,12 +637,17 @@ def html_document(row):
             "</style><body>" + body + "</body></html>\n").encode("utf-8")
 
 
-def selected_files(context, rows, installation_id, selected_revision):
+def selected_files(context, rows, installation_id, selected_revision, source_files=None):
     ident = identity(installation_id)
     number = revision(selected_revision)
     row = next((value for value in rows if value["id"] == ident and value["revision"] == number), None)
     if row is None:
         fail("The selected installation edition is unavailable.", "INSTALLATION_NOT_FOUND", 404)
+    if row["preview"]["document"].get("workflowPeriods"):
+        if source_files is None:
+            fail("Export the complete recurring-work source with the selected Installation.")
+        workflows.verify_document(None, row["preview"]["snapshot"], row["preview"]["document"],
+                                  lambda source_id: source_files.get("sources/" + source_id))
     document = html_document(row)
     selection = {"schema": SELECTION_SCHEMA, "caseId": context["program"]["id"],
                  "caseVersion": context["program"]["version"], "installationId": ident,

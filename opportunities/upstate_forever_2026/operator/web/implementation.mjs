@@ -25,7 +25,7 @@ function parseOptionalObject(value){const s=String(value||'').trim();if(!s)retur
 function docEqual(a,b){return JSON.stringify(a)===JSON.stringify(b);}
 export class ImplementationWorkbench {
   constructor(root,host={},catalog=null){
-    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.returnReviewModule=null;this.returnReviewEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();this.planReportSource=null;this.fieldDeployment=null;this.deploymentModule=null;
+    this.root=root;this.host=host;this.native=typeof host.api==='function';this.catalog=catalog;this.plan=null;this.nativePlan=null;this.tab='overview';this.asOf=today();this.dirty=false;this.pending=null;this.importedFile=false;this.filter='';this.gone=false;this.generation=0;this.message='';this.error='';this.offlineCopies={};this.planList=[];this.selectionDraft=null;this.selectionPreviewTurn=0;this.observationFlow=null;this.observationReceipts=[];this.labIntake=null;this.labModule=null;this.briefingIntake=null;this.outcomeController=null;this.outcomeModule=null;this.qcModule=null;this.qcEditor=null;this.returnReviewModule=null;this.returnReviewEditor=null;this.labDispatch=null;this.dispatchModule=null;this.resultView=normalizeResultsView();this.planReportSource=null;this.reportSourceInventory=null;this.reportSourceInventoryTurn=0;this.reportSourceOpenTurn=0;this.fieldDeployment=null;this.deploymentModule=null;
     this.onClick=e=>{const b=e.target.closest('[data-impl]');if(!b||!this.root.contains(b))return;this.act(b).catch(x=>this.fail(x));};
     this.onChange=e=>this.change(e).catch(x=>this.fail(x));
     this.onInput=e=>{if(e.target.name==='source_filter')this.syncSourceSelection();};
@@ -119,6 +119,16 @@ export class ImplementationWorkbench {
     }
   }
 
+  closeCostReview(){this.costReviewEditor?.close();this.costReviewEditor=null;}
+  async openCostReview(){
+    if(!this.native||!this.nativePlan?.revision)throw Error('Save or reopen the original native plan before reviewing Economic costs.');
+    if(this.pending)throw Error('Finish the retained plan operation before opening its cost review.');
+    if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor before opening its cost review.');
+    const turn=this.generation,selected=this.plan.id,revision=this.nativePlan.revision,workspace=this.workspace;
+    if(!this.costReviewModule)this.costReviewModule=await import('./implementation_cost_review.mjs');
+    if(this.gone||turn!==this.generation||this.plan?.id!==selected||this.nativePlan?.revision!==revision||this.workspace!==workspace||this.host.getState?.()?.workspace_key!==workspace)return;
+    await this.costReviewModule.openImplementationCostReview(this);
+  }
   closeSampleQC(){if(this.qcModule)this.qcModule.detachImplementationQC(this);else{this.qcEditor?.close();this.qcEditor=null;}}
   async openSampleQC(){
     if(!this.native||!this.nativePlan?.revision)throw Error('Save or reopen the original native plan before reviewing sample quality control.');
@@ -162,34 +172,56 @@ export class ImplementationWorkbench {
   observationBindingCurrent(flow=this.observationFlow){
     return !!flow?.preview && flow.preview.workspace_key===this.workspace &&
       flow.preview.plan_id===this.plan?.id && flow.preview.revision===this.plan?.revision &&
+      docEqual(flow.reviewed_selection??null,flow.existing_report_selection??null) &&
       !this.dirty && !!this.nativePlan && docEqual(this.plan,this.nativePlan);
   }
+  async chooseFieldReportSelection(useCurrent){
+    if(!this.native||this.gone||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the field plan in its original native Workspace.');
+    if(this.pending||['saving','previewing','importing'].includes(this.observationFlow?.stage))throw Error('Finish the retained field-source operation first.');
+    const turn=this.generation,id=this.plan.id,flow={stage:'idle',plan_id:id,existing_report_selection:null,selection_label:''};
+    this.observationFlow=flow;this.cache();this.render();
+    if(!useCurrent)return;
+    this.observationSelectionRead=flow;this.render();
+    const current=()=>!this.gone&&this.generation===turn&&this.plan?.id===id&&this.observationFlow===flow&&flow.stage==='idle'&&!this.pending&&this.host.getState?.()?.workspace_key===this.workspace;
+    try{
+      const module=await import('./implementation_source_reports.mjs');
+      if(!current())return;
+      const selection=await module.captureImplementationReportSelection(this);
+      if(!current()||selection===null)return;
+      flow.existing_report_selection=selection;flow.selection_label='Current Report desk selection, in its original source order';this.cache();this.render();
+    }catch(error){if(current())throw error;}
+    finally{if(this.observationSelectionRead===flow){this.observationSelectionRead=null;if(current())this.render();}}
+  }
   async reviewFieldObservations(){
+    if(this.observationSelectionRead&&this.observationSelectionRead===this.observationFlow)throw Error('Wait for the original Report desk selection to finish loading.');
     if(!this.native||this.gone||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the original native workspace to register field observations.');
     if(this.pending)throw Error('Finish the retained plan operation first.');
     if(this.root.querySelector('dialog[open]'))throw Error('Finish the current field editor first.');
+    const selection=clone(this.observationFlow?.existing_report_selection??null),label=this.observationFlow?.selection_label||'';
     if(this.dirty||!this.nativePlan){
-      this.observationFlow={stage:'saving',plan_id:this.plan.id,operation_id:null};
+      this.observationFlow={stage:'saving',plan_id:this.plan.id,operation_id:null,existing_report_selection:selection,selection_label:label};
       this.cache();
       try{
         const kind=this.importedFile?'implementation.plan.import':this.nativePlan?'implementation.plan.save':'implementation.plan.create';
         await this.queue(kind,{document:this.plan,expected_revision:this.plan.revision});
-      }catch(error){if(!this.pending){this.observationFlow=null;this.cache();}throw error;}
+      }catch(error){if(!this.pending){this.observationFlow.stage='idle';this.cache();}throw error;}
       return;
     }
     const turn=this.generation,selected=clone(this.plan);
-    this.observationFlow={stage:'previewing',plan_id:selected.id};this.cache();this.render();
+    const flow={stage:'previewing',plan_id:selected.id,existing_report_selection:selection,selection_label:label};
+    this.observationFlow=flow;this.cache();this.render();
+    const current=()=>!this.gone&&turn===this.generation&&this.observationFlow===flow&&this.host.getState?.()?.workspace_key===this.workspace;
     try{
-      const result=await this.read('/api/implementation/observations-preview',{plan_id:selected.id,revision:selected.revision});
-      if(this.gone||turn!==this.generation||this.host.getState?.()?.workspace_key!==this.workspace)return;
-      if(!docEqual(this.plan,selected)||this.dirty)throw Error('Field records changed while the preview opened. Save and review their new revision.');
+      const result=await this.host.api('/api/implementation/observations-preview',{method:'POST',body:{workspace:this.workspace,plan_id:selected.id,revision:selected.revision,existing_report_selection:selection}});
+      if(!current())return;
+      if(!docEqual(this.plan,selected)||this.dirty||!docEqual(flow.existing_report_selection,selection))throw Error('Field records or the report selection changed while the preview opened. Save and review their new selection.');
       if(result.schema!=='upstate.implementation-observation-context/v1'||result.workspace_key!==this.workspace||
         result.plan_id!==selected.id||result.revision!==selected.revision||!result.document_digest||!result.operation_id||
         result.plan?.id!==selected.id||result.plan?.revision!==selected.revision)throw Error('The observation preview does not match this saved plan revision.');
-      this.observationFlow={stage:'review',plan_id:selected.id,preview:result};this.tab='field';this.cache();this.render();
+      flow.stage='review';flow.preview=result;flow.reviewed_selection=clone(selection);this.tab='field';this.cache();this.render();
     }catch(error){
-      if(this.gone||turn!==this.generation)return;
-      this.observationFlow=null;this.cache();
+      if(!current())return;
+      flow.stage='idle';flow.preview=null;this.cache();
       throw error;
     }
   }
@@ -202,15 +234,16 @@ export class ImplementationWorkbench {
     try{
       await this.queue('implementation.observations.import',{
         plan_id:flow.preview.plan_id,revision:flow.preview.revision,
-        document_digest:flow.preview.document_digest,observation_operation_id:flow.preview.operation_id
+        document_digest:flow.preview.document_digest,observation_operation_id:flow.preview.operation_id,
+        existing_report_selection:clone(flow.reviewed_selection??null)
       });
     }catch(error){if(!this.pending&&!flow.operation_id){flow.stage='review';this.cache();}throw error;}
   }
   async finishObservationSave(pending){
     const flow=this.observationFlow;
     if(!flow||flow.stage!=='saving'||flow.operation_id!==pending.operation_id||flow.plan_id!==pending.plan_id)return;
-    this.observationFlow=null;this.cache();
-    if(this.dirty){this.message='The field revision is saved. Later browser edits remain available; save and review them when ready.';this.render();return;}
+    flow.stage='idle';flow.operation_id=null;this.cache();
+    if(this.dirty){this.message='The field revision is saved. Later browser edits and the original report selection remain available; save and review them when ready.';this.render();return;}
     await this.reviewFieldObservations();
   }
   completeObservationImport(pending,result){
@@ -255,19 +288,24 @@ export class ImplementationWorkbench {
     const turn=this.generation,planId=this.plan.id;
     const module=await import('./implementation_source_reports.mjs');
     if(this.gone||turn!==this.generation||this.plan?.id!==planId||this.host.getState?.()?.workspace_key!==this.workspace)return;
-    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision});
+    await module.openImplementationSourceReport(this,[source],{title:'Field observations · saved revision '+receipt.revision,selection:source.delivery_selection});
   }
   fieldObservationPanel(){
     if(!this.native)return '';
     const flow=this.observationFlow,receipt=(this.observationReceipts||[]).at(-1);
-    const summary=flow?.preview?.summary,working=['saving','previewing','importing'].includes(flow?.stage);
+    const summary=flow?.preview?.summary,reading=!!flow&&this.observationSelectionRead===flow,working=reading||['saving','previewing','importing'].includes(flow?.stage);
     const counts=summary?'<dl>'+[['Original records',summary.row_count],['Numeric',summary.numeric_count],['Censored',summary.censored_count],['Text',summary.text_count],['Missing',summary.missing_count],['Sites',summary.site_count],['Activities',summary.activity_count],['Records without collection time',summary.collection_time_missing_count],['Sites without coordinates',summary.coordinate_missing_site_count]].map(([label,value])=>'<dt>'+esc(label)+'</dt><dd>'+esc(value??'')+'</dd>').join('')+'</dl>':'';
+    const selectedReport=flow?.existing_report_selection;
+    const selectedSources=selectedReport?.observed_context_sources||(selectedReport?.source_roles?.OBSERVED_CONTEXT?[selectedReport.source_roles.OBSERVED_CONTEXT]:[]);
+    const reportSelection='<details><summary>Preserve an existing report selection</summary><p>Use the current Report desk selection to keep its complete source order, earlier sections and figures, and model/geography settings. Registration retains this snapshot; it does not replace the current Report desk draft.</p>'+
+      (typeof this.host.openExtension==='function'?button('observations-use-current','Use current Report desk selection',working||this.pending?'disabled':''):'')+
+      (selectedReport?'<p>'+esc(flow.selection_label||'Original report selection retained')+' · '+esc(selectedSources.length)+' observed '+(selectedSources.length===1?'source':'sources')+'.</p>'+button('observations-clear-selection','Register without preceding report selection',working||this.pending?'disabled':''):'<p>No preceding report selection chosen.</p>')+'</details>';
     const review=flow?.stage==='review'?'<p>Saved revision '+esc(flow.preview.revision)+'. Review the original records and their coverage before registering this edition.</p>'+counts+
       '<div class="iw-actions">'+button('observations-import','Register saved field observations','',this.observationBindingCurrent(flow)&&summary?.row_count>0?'iw-primary':'iw-disabled')+button('observations-dismiss','Dismiss preview')+'</div>':'';
     const ready=receipt?'<section><h4>Registered field revision '+esc(receipt.revision)+'</h4><p>'+esc(receipt.summary?.row_count??'')+' original records. This edition remains tied to its saved plan revision even after later field edits.</p><div class="iw-actions">'+receipt.observation_ids.map((id,index)=>button('observations-open','Open observed data'+(receipt.observation_ids.length>1?' '+(index+1):''),'data-index="'+index+'"')).join('')+button('observations-source','Open retained source and report')+(receipt.report_source?.delivery_selection&&typeof this.host.openDelivery==='function'?button('observations-report','Prepare client report'):'')+(receipt.report_source?.source_id&&typeof this.host.openScientificReport==='function'?button('observations-publish','Prepare standalone scientific report'):'')+button('observations-details','Inspect observation edition')+'</div></section>':'';
     return '<section class="iw-notice" aria-label="Field observations in the scientific workspace"><h3>Use saved field records in Observed water quality</h3><p>Register the actual observations with their sites, collection times, sample relationships, methods and original qualifiers. Censored, text and missing results retain their original meaning. The same saved revision also supplies its field-observation report source.</p>'+
-      (working?'<p>'+esc(flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
-      '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+review+ready+'</section>';
+      (working?'<p>'+esc(reading?'Reading the current Report desk selection.':flow.stage==='saving'?'Saving the field revision before review.':flow.stage==='previewing'?'Reading the original saved field revision.':'Registering the retained field revision through its original native operation.')+'</p>':
+      '<div class="iw-actions">'+button('observations-review',this.dirty||!this.nativePlan?'Save and review field observations':'Review saved field observations','','iw-primary')+'</div>')+reportSelection+review+ready+'</section>';
   }
 
   readLocal(){try{const data=JSON.parse(localStorage.getItem(this.storageKey)||'{"plans":{}}');this.offlineCopies=data.plans||{};}catch(e){this.message='Browser storage could not be read. Export JSON to retain your work.';}}
@@ -296,8 +334,8 @@ export class ImplementationWorkbench {
   async read(path,args={}){return this.host.api(this.host.endpoint?this.host.endpoint(path,args):path+'?'+new URLSearchParams({workspace:this.workspace,...args}));}
   async reloadList(){if(this.native){const r=await this.read('/api/implementation/list');if(this.gone)return;this.planList=r.plans||r.implementation_plans||[];}else this.planList=Object.values(this.offlineCopies).map(x=>x.document);}
   async openPlan(id,preferNative=false,revision=null){
-    detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();
-    const turn=++this.generation;this.cache();let remote=null,history=[],downloads=[],reports=[];
+    detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();
+    const turn=++this.generation;this.reportSourceInventory=null;this.reportSourceInventoryTurn++;this.reportSourceOpenTurn++;this.cache();let remote=null,history=[],downloads=[],reports=[];
     if(this.native){try{const r=await this.read('/api/implementation/detail',{id,...(revision===null?{}:{revision})});remote=r.plan||r.document||null;history=r.history||[];downloads=r._downloads||[];reports=r.reports||[];}catch(e){if(preferNative||!this.offlineCopies[id])throw e;}}
     if(this.gone||turn!==this.generation)return;
     const local=this.offlineCopies[id];
@@ -306,7 +344,7 @@ export class ImplementationWorkbench {
     else if(remote){this.plan=clone(remote);this.dirty=false;}
     else if(local){this.plan=clone(local.document);this.dirty=!!local.dirty;}
     else throw Error('This plan is not available in the selected workspace.');
-    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.observationFlow=local?.observationFlow||null;this.observationReceipts=local?.observationReceipts||[];this.labIntake=local?.labIntake||null;this.briefingIntake=local?.briefingIntake||null;if(['uploading','opening','previewing'].includes(this.briefingIntake?.stage)){this.briefingIntake.stage='selecting';this.briefingIntake.preview=null;}this.fieldDeployment=local?.fieldDeployment||null;if(this.fieldDeployment&&['previewing','opening'].includes(this.fieldDeployment.stage)){this.fieldDeployment.stage='selecting';this.fieldDeployment.preview=null;}this.planReportSource=local?.planReportSource||null;if(this.planReportSource?.stage==='previewing')this.planReportSource=null;this.labDispatch=local?.labDispatch||null;if(['loading','previewing','reconciling','opening','report-previewing'].includes(this.labDispatch?.stage)){this.labDispatch.stage='editing';this.labDispatch.preview=null;this.labDispatch.reconciliation=null;if(this.labDispatch.reportFlow?.stage==='previewing'){this.labDispatch.reportFlow.preview=null;this.labDispatch.reportFlow.stage='idle';}}this.resultView=normalizeResultsView(local?.resultView);if(['uploading','inspecting','previewing'].includes(this.labIntake?.stage)){this.labIntake.stage='mapping';this.labIntake.preview=null;}if(this.observationFlow?.stage==='previewing')this.observationFlow=null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
+    this.history=history;this.downloads=downloads;this.reports=reports;this.nativePlan=remote?clone(remote):null;this.importedFile=!remote&&this.native&&this.plan.revision>0;this.pending=local?.pending||null;this.observationFlow=local?.observationFlow||null;this.observationReceipts=local?.observationReceipts||[];this.labIntake=local?.labIntake||null;this.briefingIntake=local?.briefingIntake||null;if(['uploading','opening','previewing'].includes(this.briefingIntake?.stage)){this.briefingIntake.stage='selecting';this.briefingIntake.preview=null;}this.fieldDeployment=local?.fieldDeployment||null;if(this.fieldDeployment&&['previewing','opening'].includes(this.fieldDeployment.stage)){this.fieldDeployment.stage='selecting';this.fieldDeployment.preview=null;}this.planReportSource=local?.planReportSource||null;if(['previewing','opening'].includes(this.planReportSource?.stage))this.planReportSource=null;this.labDispatch=local?.labDispatch||null;if(['loading','previewing','reconciling','opening','report-previewing'].includes(this.labDispatch?.stage)){this.labDispatch.stage='editing';this.labDispatch.preview=null;this.labDispatch.reconciliation=null;if(this.labDispatch.reportFlow?.stage==='previewing'){this.labDispatch.reportFlow.preview=null;this.labDispatch.reportFlow.stage='idle';}}this.resultView=normalizeResultsView(local?.resultView);if(['uploading','inspecting','previewing'].includes(this.labIntake?.stage)){this.labIntake.stage='mapping';this.labIntake.preview=null;}if(this.observationFlow?.stage==='previewing')this.observationFlow=null;this.error='';this.message=remote&&local?.dirty&&remote.revision!==local.document.revision?'A newer native revision exists. Your browser draft is retained; export it before choosing Reopen native.':'';this.cache();this.render();
   }
   async receiveSavedPlan(payload){
     if(!this.native||this.gone||payload?.workspace_key!==this.workspace||this.host.getState?.()?.workspace_key!==this.workspace)throw Error('Open the saved plan in its received workspace.');
@@ -314,8 +352,23 @@ export class ImplementationWorkbench {
     const revision=payload.revision??null;
     if(revision!==null&&(!Number.isSafeInteger(revision)||revision<1))throw Error('Choose the original saved revision.');
     if(this.root.querySelector('dialog[open]'))throw Error('Close the current plan editor before opening the received plan.');
-    await this.openPlan(payload.plan_id,true,revision);
-    if(this.gone||this.plan?.id!==payload.plan_id||revision!==null&&this.plan.revision!==revision)throw Error('The saved plan changed while opening its original revision.');
+    const workspace=this.workspace;
+    if(payload.laboratory_report_operation){
+      if(this.pending)throw Error('Finish the current retained plan operation before opening a laboratory report.');
+      if(!/^[0-9a-f]{64}$/.test(payload.laboratory_dispatch_id||'')||!/^[0-9a-f]{64}$/.test(payload.laboratory_report_operation))
+        throw Error('Choose the original laboratory request and report identities.');
+    }
+    const opening=this.openPlan(payload.plan_id,true,revision),turn=this.generation;
+    const current=()=>!this.gone&&this.generation===turn&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace;
+    try{await opening;}catch(error){if(current())throw error;return {accepted:false};}
+    if(!current())return {accepted:false};
+    if(this.plan?.id!==payload.plan_id||revision!==null&&this.plan.revision!==revision)throw Error('The saved plan changed while opening its original revision.');
+    if(payload.laboratory_report_operation){
+      let dispatch;try{dispatch=await this.dispatchCapability();}catch(error){if(current())throw error;return {accepted:false};}
+      if(!current())return {accepted:false};
+      const accepted=await dispatch.openRetainedReport(this,payload);
+      return {accepted,workspace_key:workspace,plan_id:this.plan?.id,revision:this.plan?.revision};
+    }
     this.tab='handover';this.message='Opened the original saved plan at native revision '+this.plan.revision+'. Its retained reports and source files are available below.';this.render();
     return {accepted:true,workspace_key:this.workspace,plan_id:this.plan.id,revision:this.plan.revision};
   }
@@ -325,39 +378,106 @@ export class ImplementationWorkbench {
       return '<a href="'+esc(row.url+'?download=1')+'" download>'+esc(row.label||row.filename||row.name||'Original file')+'</a>';
     }).filter(Boolean).join(' · ');
   }
+  reportSourceInventoryPanel(){
+    if(!this.native)return '';
+    const state=this.reportSourceInventory,loading=state?.loading;
+    const rows=(state?.items||[]).map(row=>[
+      esc(row.title)+'<br><small>Revision '+esc(row.revision)+' · '+esc(row.as_of)+'</small>',
+      row.delivery_selection_supplied?'Original report selection':'Report source only',
+      esc(row.source_count),
+      '<code>'+esc(row.operation_id.slice(0,12))+'</code>',
+      button('plan-report-reopen','Open retained selection','data-source-key="'+esc(row.source_key)+'" data-operation-id="'+esc(row.operation_id)+'"'+(this.pending?' disabled':''))
+    ]);
+    return '<section class="iw-notice" aria-label="Registered report selections"><h3>Registered report selections</h3>'+
+      '<p>Open a previously registered whole-plan report with its exact source order and report choices, including after Workspace transfer or in a fresh browser. Your editable plan stays at its current revision.</p>'+
+      '<div class="iw-actions">'+button('plan-report-refresh',loading?'Loading retained selections…':state?'Refresh retained selections':'Load retained selections',loading?'disabled':'')+'</div>'+
+      (state?.error?'<p role="alert">'+esc(state.error)+'</p>':'')+
+      (state?.loaded?this.table(['Original report','Handoff','Sources','Operation','Open'],rows,'No registered whole-plan report selections are retained for this plan. Create one from Saved native report editions below.'):'')+'</section>';
+  }
+  async loadPlanReportSources(){
+    if(!this.native||!this.plan)return;
+    const workspace=this.workspace,planId=this.plan.id,turn=this.generation,request=++this.reportSourceInventoryTurn;
+    const previous=this.reportSourceInventory;
+    const state={loading:true,loaded:previous?.loaded||false,items:previous?.items||[],error:''};
+    this.reportSourceInventory=state;this.render();
+    const current=()=>!this.gone&&this.generation===turn&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace&&this.plan?.id===planId&&this.reportSourceInventoryTurn===request&&this.reportSourceInventory===state;
+    try{
+      const result=await this.read('/api/implementation/report-sources',{plan_id:planId});
+      if(!current())return;
+      if(result.workspace_key!==workspace||result.plan_id!==planId||!Array.isArray(result.items))throw Error('The retained report inventory names another Workspace or plan.');
+      for(const row of result.items){
+        if(row.plan_id!==planId||![row.source_key,row.operation_id,row.report_id].every(value=>typeof value==='string'&&/^[0-9a-f]{64}$/.test(value)))throw Error('The retained report inventory contains an invalid original identity.');
+      }
+      state.items=clone(result.items);state.loaded=true;
+    }catch(error){if(!current())return;state.error=error?.message||String(error);}
+    finally{if(current()){state.loading=false;if(!this.root.querySelector('dialog[open]'))this.render();}}
+  }
+  async reopenPlanReportSource(sourceKey,operationId){
+    if(this.pending)throw Error('Finish the retained native operation before opening another report selection.');
+    const item=this.reportSourceInventory?.items?.find(row=>row.source_key===sourceKey&&row.operation_id===operationId);
+    if(!item||item.plan_id!==this.plan?.id)throw Error('Load and choose an original retained report selection.');
+    const workspace=this.workspace,planId=this.plan.id,turn=this.generation,request=++this.reportSourceOpenTurn;
+    const flow={stage:'opening',plan_id:planId,report_id:item.report_id};
+    this.planReportSource=flow;this.cache();this.render();
+    const current=()=>!this.gone&&this.generation===turn&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace&&this.plan?.id===planId&&this.reportSourceOpenTurn===request&&this.planReportSource===flow;
+    try{
+      const result=await this.read('/api/implementation/report-source-detail',{source_key:sourceKey,operation_id:operationId});
+      if(!current())return;
+      if(result.workspace_key!==workspace||result.plan_id!==planId||result.report_id!==item.report_id||result.source_key!==sourceKey||result.operation_id!==operationId||
+         result.report_preview?.operation_id!==operationId||result.report_preview?.plan_binding?.document_digest!==item.plan_binding?.document_digest)throw Error('The selected original report handoff changed.');
+      flow.preview={...clone(result.report_preview),workspace_key:workspace};
+      flow.existing_report_selection=clone(result.identity.original_delivery_selection??null);
+      flow.result=clone(result);flow.stage='complete';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();
+    }catch(error){if(!current())return;flow.stage='error';flow.error=error?.message||String(error);this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
+  }
   planReportSourcePanel(){
     const flow=this.planReportSource;
     if(!flow||flow.plan_id!==this.plan?.id)return '';
-    const preview=flow.preview,ready=flow.result;
+    const preview=flow.preview,ready=flow.result,working=['previewing','opening','registering'].includes(flow.stage);
     return '<section class="iw-notice" aria-label="Implementation report source"><h3>Whole plan in the scientific report</h3>'+
       (preview?'<p><b>'+esc(preview.title)+'</b> · saved revision '+esc(preview.plan_binding.revision)+' · original report date '+esc(preview.as_of)+'</p>'+
       '<p>'+Object.entries(preview.counts).map(([name,count])=>esc(count)+' '+esc(name.replaceAll('_',' '))).join(' · ')+'</p>'+
       '<p>'+esc(preview.original_report_member_count)+' original report files and '+esc(preview.attachment_count)+' available original attachments. Other source references remain listed with their actual availability.</p>'+
       this.table(['Original attachment','State'],preview.attachment_inventory.map(row=>[esc(row.label),esc(row.state.replaceAll('_',' '))])):'')+
       '<p>The selected report stays at its original saved revision. Your editable plan and browser draft remain available.</p>'+
+      (preview?'<p>'+(preview.delivery_selection_supplied?'The captured Report desk selection retains '+esc(preview.existing_observed_sources.length)+' preceding observed sources in their original order. The whole plan report is appended once.':'This source-only registration can be added to the current scientific publisher when explicitly opened.')+'</p>':'')+
+      '<div class="iw-actions">'+(typeof this.host.openExtension==='function'?button('plan-report-use-current','Review with current Report desk selection',working||this.pending?'disabled':''):'')+button('plan-report-source-only','Review this report source only',working||this.pending?'disabled':'')+'</div>'+
+      (flow.stage==='error'?'<p role="alert">'+esc(flow.error)+'</p>':'')+
       (flow.stage==='registering'?'<p>The original source registration is retained in the task queue.</p>':
-       ready?'<p>'+this.nativeDownloads(ready._downloads)+'</p><div class="iw-actions">'+button('plan-report-open','Open scientific report','','iw-primary')+'</div>':
-       preview?'<div class="iw-actions">'+button('plan-report-register','Register reviewed report source','','iw-primary')+'</div>':'<p>Opening the selected original report…</p>')+
+       ready?'<p>'+this.nativeDownloads(ready._downloads)+'</p><div class="iw-actions">'+button('plan-report-open','Open scientific report','','iw-primary')+(ready.delivery_selection&&typeof this.host.openDelivery==='function'?button('plan-report-client','Prepare client report'):'')+'</div>':
+       preview?'<div class="iw-actions">'+button('plan-report-register','Register reviewed report source','','iw-primary')+'</div>':flow.stage==='error'?'':'<p>Opening the selected original report…</p>')+
       (!this.pending?'<div class="iw-actions">'+button('plan-report-dismiss','Close report review')+'</div>':'')+'</section>';
   }
-  async previewPlanReportSource(reportId){
+  async previewPlanReportSource(reportId,useCurrent=false){
     if(!this.native||this.pending)throw Error('Finish the retained native operation before reviewing another report.');
     const row=(this.reports||[]).find(item=>item.id===reportId);
     if(!row)throw Error('Choose an original report retained with this plan.');
     const planId=this.plan.id,workspace=this.workspace,turn=this.generation;
-    this.planReportSource={stage:'previewing',plan_id:planId,report_id:reportId};this.cache();this.render();
+    const flow={stage:'previewing',plan_id:planId,report_id:reportId,existing_report_selection:null};
+    this.planReportSource=flow;this.cache();this.render();
+    const current=()=>!this.gone&&turn===this.generation&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace&&this.plan?.id===planId&&this.planReportSource===flow;
     try{
-      const result=await this.host.api('/api/implementation/report-source-preview',{method:'POST',body:{workspace,plan_id:planId,report_id:reportId}});
-      if(this.gone||turn!==this.generation||this.workspace!==workspace||this.plan?.id!==planId||this.planReportSource?.report_id!==reportId)return;
-      if(result.report_id!==reportId||result.plan_binding?.plan_id!==planId||result.plan_binding?.revision!==row.revision||result.workspace_key!==workspace)throw Error('The report preview names another saved plan edition.');
-      this.planReportSource={stage:'review',plan_id:planId,report_id:reportId,preview:result};this.cache();this.render();
-    }catch(error){if(!this.gone&&turn===this.generation&&this.planReportSource?.report_id===reportId){this.planReportSource=null;this.cache();}throw error;}
+      if(useCurrent){
+        const module=await import('./implementation_source_reports.mjs');
+        if(!current())return;
+        const selection=await module.captureImplementationReportSelection(this);
+        if(!current()||selection===null)return;
+        flow.existing_report_selection=selection;
+      }
+      const result=await this.host.api('/api/implementation/report-source-preview',{method:'POST',body:{
+        workspace,plan_id:planId,report_id:reportId,existing_report_selection:clone(flow.existing_report_selection)}});
+      if(!current())return;
+      if(result.report_id!==reportId||result.plan_binding?.plan_id!==planId||result.plan_binding?.revision!==row.revision||result.workspace_key!==workspace||
+         result.delivery_selection_supplied!==(flow.existing_report_selection!==null))throw Error('The report preview names another saved plan edition or selection.');
+      flow.stage='review';flow.preview=result;this.cache();this.render();
+    }catch(error){if(!current())return;flow.stage='error';flow.error=error?.message||String(error);this.cache();this.render();throw error;}
   }
   async registerPlanReportSource(){
     const flow=this.planReportSource;
     if(!flow?.preview||flow.stage!=='review'||flow.plan_id!==this.plan?.id)throw Error('Review the original saved report first.');
     flow.stage='registering';this.cache();
-    try{await this.queue('implementation.report-source.import',{plan_id:flow.plan_id,report_id:flow.report_id,expected_operation_id:flow.preview.operation_id});}
+    try{await this.queue('implementation.report-source.import',{plan_id:flow.plan_id,report_id:flow.report_id,
+      existing_report_selection:clone(flow.existing_report_selection??null),expected_operation_id:flow.preview.operation_id});}
     catch(error){if(!this.pending&&this.planReportSource===flow){flow.stage='review';this.cache();}throw error;}
   }
   finishPlanReportSource(pending,result){
@@ -367,26 +487,33 @@ export class ImplementationWorkbench {
        result.plan_binding?.document_digest!==flow.preview?.plan_binding?.document_digest||
        result.plan_binding?.revision!==flow.preview?.plan_binding?.revision)
       throw Error('The completed source registration differs from the reviewed original report.');
-    flow.result=clone(result);flow.stage='complete';this.pending=null;this.error='';
+    flow.result=clone(result);flow.stage='complete';this.reportSourceInventory=null;this.reportSourceInventoryTurn++;this.pending=null;this.error='';
     this.message='The complete original plan report is registered. Open it in the ordered scientific report composer.';
     this.cache();this.render();
   }
-  async openPlanReportSource(){
+  async openPlanReportSource(target='scientific'){
     const flow=this.planReportSource;
     if(!flow?.result||flow.plan_id!==this.plan?.id)throw Error('Register the reviewed report source first.');
-    const turn=this.generation,workspace=this.workspace;
-    const result=await this.read('/api/implementation/report-source-detail',{source_key:flow.result.source_key,operation_id:flow.result.operation_id});
-    if(this.gone||turn!==this.generation||this.workspace!==workspace||this.planReportSource!==flow)return;
-    if(result.plan_id!==flow.plan_id||result.report_id!==flow.report_id||result.operation_id!==flow.preview.operation_id)throw Error('The retained report handoff changed.');
-    flow.result=clone(result);this.cache();
-    const choice={source_collection_id:result.source_collection_id,source_id:result.source_id};
-    const {openImplementationSourceReport}=await import('./implementation_source_reports.mjs');
-    if(this.gone||turn!==this.generation||this.workspace!==workspace||this.planReportSource!==flow)return;
-    await openImplementationSourceReport(this,[choice],{title:flow.preview.title+' — implementation and fieldwork'});
+    const turn=this.generation,workspace=this.workspace,planId=this.plan.id;
+    const current=()=>!this.gone&&turn===this.generation&&this.workspace===workspace&&this.host.getState?.()?.workspace_key===workspace&&this.plan?.id===planId&&this.planReportSource===flow;
+    try{
+      const result=await this.read('/api/implementation/report-source-detail',{source_key:flow.result.source_key,operation_id:flow.result.operation_id});
+      if(!current())return;
+      if(result.plan_id!==flow.plan_id||result.report_id!==flow.report_id||result.operation_id!==flow.preview.operation_id)throw Error('The retained report handoff changed.');
+      flow.result=clone(result);this.cache();
+      if(target==='client'){
+        if(!result.delivery_selection||typeof this.host.openDelivery!=='function')throw Error('Review this saved report with the current Report desk selection before preparing its client report.');
+        this.cache();await this.host.openDelivery(clone(result.delivery_selection));return;
+      }
+      const choice={source_collection_id:result.source_collection_id,source_id:result.source_id};
+      const {openImplementationSourceReport}=await import('./implementation_source_reports.mjs');
+      if(!current())return;
+      await openImplementationSourceReport(this,[choice],{title:flow.preview.title+' — implementation and fieldwork',selection:result.delivery_selection??null});
+    }catch(error){if(current())throw error;}
   }
   retainedReports(){
     if(!this.native)return '';
-    return '<h3>Retained original files</h3><p>'+this.nativeDownloads(this.downloads)+'</p><h3>Saved native report editions</h3><p>These complete reports retain their exact native revision and original report date. They reopen from this Workspace after transfer.</p>'+this.table(['Revision','Report date','Files','Original downloads','Scientific report'],(this.reports||[]).map(row=>[esc(row.revision),esc(row.as_of),esc(row.files),this.nativeDownloads(row._downloads),button('plan-report-preview','Review whole plan report','data-report-id="'+esc(row.id)+'"')]),'Create a Native report package to retain its complete edition with this plan.')+this.planReportSourcePanel();
+    return this.reportSourceInventoryPanel()+'<h3>Retained original files</h3><p>'+this.nativeDownloads(this.downloads)+'</p><h3>Saved native report editions</h3><p>These complete reports retain their exact native revision and original report date. They reopen from this Workspace after transfer.</p>'+this.table(['Revision','Report date','Files','Original downloads','Scientific report'],(this.reports||[]).map(row=>[esc(row.revision),esc(row.as_of),esc(row.files),this.nativeDownloads(row._downloads),button('plan-report-preview','Review whole plan report','data-report-id="'+esc(row.id)+'"')]),'Create a Native report package to retain its complete edition with this plan.')+this.planReportSourcePanel();
   }
   preserveDraft(doc,reason){try{const key=this.storageKey+'/preserved/'+doc.id+'/'+Date.now();localStorage.setItem(key,JSON.stringify({reason,document:doc}));}catch{}download(doc.id+'-'+reason+'.json',JSON.stringify(doc,null,2),'application/json');}
   commitLocal(next,message='Draft saved in this browser.'){
@@ -490,9 +617,9 @@ export class ImplementationWorkbench {
       if(current()){this.error=e?.message||String(e);this.message='The completed native operation remains retained. Retry reopening its saved result.';this.cache();if(!this.root.querySelector('dialog[open]'))this.render();}
     }finally{if(this.resolvingOperation===pending.operation_id)this.resolvingOperation=null;}
   }
-  detach(){if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
+  detach(){if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();this.evidence?.detach();this.outcomeController?.detach();this.cache();this.gone=true;this.generation++;this.root.removeEventListener('click',this.onClick);this.root.removeEventListener('change',this.onChange);this.root.removeEventListener('input',this.onInput);this.root.removeEventListener('keydown',this.onResultsKey);this.root.removeEventListener('submit',this.onSubmit);this.root.removeEventListener('input',this.onOutcomeInput);window.removeEventListener('beforeunload',this.beforeUnload);}
   render(){
-    if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.evidence?.beforeRender();const p=this.plan;
+    if(this.gone)return;detachSiteVisitIntake(this);this.closeReturnReview();this.closeSampleQC();this.closeCostReview();this.evidence?.beforeRender();const p=this.plan;
     if(!p){this.root.innerHTML='<section class="iw"><h2>Implementation & fieldwork</h2><p>Opening retained plans…</p>'+(this.error?'<pre role="alert">'+esc(this.error)+'</pre>':'')+'</section>';return;}
     let stats=null,validation=validatePlan(p);try{if(!validation.length)stats=summarize(p,this.asOf);}catch(e){validation=[{path:'calendar',message:e.message}];}
     const plans=new Map([...this.planList.map(x=>[x.id,x]),...Object.values(this.offlineCopies).map(x=>[x.document.id,x.document]),[p.id,p]]);
@@ -514,7 +641,7 @@ export class ImplementationWorkbench {
       return '<div class="iw-section-head"><h3>Assigned work and dependencies</h3><div class="iw-actions">'+this.addButton('tasks')+button('method','Add method workflow')+button('csv','Export tasks','data-collection="tasks"')+'</div></div><p class="iw-muted">Durations are working days on this plan’s calendar. Enter zero for a milestone. A blank duration stays open until estimated.</p>'+this.table(['Task / candidate','Phase','Owner','Status','Days','Scheduled dates','Progress',''],p.tasks.map(t=>{const s=schedule.get(t.id);return ['<b>'+esc(t.title)+'</b><small>'+esc(p.candidates.find(c=>c.id===t.candidate_id)?.label||'')+'</small>',esc(t.phase||''),esc(t.assignee||'Unassigned'),'<span class="iw-state">'+esc(t.status.replaceAll('_',' '))+'</span>',esc(t.duration_days??'Estimate'),s?.start?esc(s.start)+(s.last_work_date&&s.last_work_date!==s.start?'<br>'+esc(s.last_work_date):'')+(s.overdue?'<small>Overdue</small>':''):esc('Awaiting predecessor dates'),'<progress max="100" value="'+t.progress_pct+'"></progress><small>'+t.progress_pct+'%</small>',this.editButton('tasks',t.id)+this.evidence.recordButton('tasks',t.id)];}));
     }
     if(this.tab==='budget'){
-      return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
+      return '<div class="iw-section-head"><h3>Cost ledger · USD</h3><div class="iw-actions">'+this.addButton('budget_lines')+button('csv','Export costs','data-collection="budget_lines"')+(this.native?button('cost-review','Review economic costs'):'')+'</div></div><p class="iw-muted">Record budget estimates, contractual commitments and actual costs in separate ledger rows. Amounts are preserved as exact cents.</p>'+(stats?'<div class="iw-stats">'+[['Budget',money(stats.budget.budget)],['Committed',money(stats.budget.commitment)],['Actual cost',money(stats.budget.actual)],['Budget less actual',money(stats.budget.remaining)]].map(([l,v])=>'<div><span>'+l+'</span><strong>'+v+'</strong></div>').join('')+'</div>':'')+this.table(['Kind','Description','Task','Amount','Date','Reference',''],p.budget_lines.map(b=>[esc(b.kind),esc(b.label),esc(p.tasks.find(t=>t.id===b.task_id)?.title||''),money(b.amount_minor),esc(b.date||''),esc(b.reference||''),this.editButton('budget_lines',b.id)]));
     }
     if(this.tab==='sites'){
       return '<div class="iw-section-head"><h3>Sites</h3><div class="iw-actions">'+button('site-visit-import','Import sites / visits CSV')+this.addButton('sites')+'</div>'+'</div>'+this.table(['Site','Coordinates','Candidate',''],p.sites.map(s=>[esc(s.label),esc(s.latitude===null||s.latitude===undefined?'':s.latitude+', '+s.longitude+' · '+(s.coordinate_reference_system||'Source datum unstated')),esc(p.candidates.find(c=>c.id===s.candidate_id)?.label||''),this.editButton('sites',s.id)]))+'<div class="iw-section-head"><h3>Monitoring questions</h3>'+this.addButton('monitoring_plans')+'</div>'+this.table(['Plan','Objective','Sites','Parameters','Frequency',''],p.monitoring_plans.map(m=>[esc(m.title),esc(m.objective),(m.site_ids||[]).map(id=>esc(p.sites.find(s=>s.id===id)?.label||id)).join('<br>'),esc((m.parameters||[]).join(', ')),esc(m.frequency||''),this.editButton('monitoring_plans',m.id)]));
@@ -540,10 +667,16 @@ export class ImplementationWorkbench {
     const action=b.dataset.impl;
     if(action==='site-visit-import'){await openSiteVisitIntake(this);return;}
     if(action.startsWith('deployment-')){const turn=this.generation,selected=this.plan?.id;const deployment=await this.deploymentCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await deployment.act(this,b);return;}
+    if(action==='plan-report-refresh'){await this.loadPlanReportSources();return;}
+    if(action==='plan-report-reopen'){await this.reopenPlanReportSource(b.dataset.sourceKey,b.dataset.operationId);return;}
     if(action==='plan-report-preview'){await this.previewPlanReportSource(b.dataset.reportId);return;}
+    if(action==='plan-report-use-current'){await this.previewPlanReportSource(this.planReportSource?.report_id,true);return;}
+    if(action==='plan-report-source-only'){await this.previewPlanReportSource(this.planReportSource?.report_id,false);return;}
+    if(action==='plan-report-client'){await this.openPlanReportSource('client');return;}
     if(action==='plan-report-register'){await this.registerPlanReportSource();return;}
     if(action==='plan-report-open'){await this.openPlanReportSource();return;}
     if(action==='plan-report-dismiss'){if(this.pending)throw Error('Finish the retained report operation first.');this.planReportSource=null;this.cache();this.render();return;}
+    if(action==='cost-review'){await this.openCostReview();return;}
     if(action==='sample-qc'){await this.openSampleQC();return;}
     if(action==='return-review'){await this.openReturnReview();return;}
     if(action.startsWith('outcomes-')){const controller=await this.outcomeCapability();if(!this.gone)await controller.act(b);return;}
@@ -555,6 +688,8 @@ export class ImplementationWorkbench {
     if(action==='results-json'){download(this.plan.id+'-matching-results-and-sources.json',JSON.stringify(matchingResultsDocument(this.plan,this.resultView,this.dirty?'browser_draft':this.native?'saved_native_revision':'portable_plan'),null,2)+'\n','application/json');return;}
     if(action.startsWith('dispatch-')){const turn=this.generation,selected=this.plan?.id;const dispatch=await this.dispatchCapability();if(!this.gone&&turn===this.generation&&this.plan?.id===selected)await dispatch.act(this,b);return;}
     if(action.startsWith('lab-')){const lab=await this.labCapability();if(!this.gone)await lab.act(this,b);return;}
+    if(action==='observations-use-current'){await this.chooseFieldReportSelection(true);return;}
+    if(action==='observations-clear-selection'){await this.chooseFieldReportSelection(false);return;}
     if(action==='observations-review'){await this.reviewFieldObservations();return;}
     if(action==='observations-import'){await this.registerFieldObservations();return;}
     if(action==='observations-dismiss'){if(this.pending)throw Error('Finish the retained operation before dismissing its preview.');this.observationFlow=null;this.cache();this.render();return;}

@@ -1,0 +1,77 @@
+{
+  "properties": {
+    "capabilities": [
+      "gateway"
+    ],
+    "connectionParameters": {
+      "username": {
+        "type": "string",
+        "uiDefinition": {
+          "displayName": "Caller username",
+          "description": "The selected original workspace caller principal",
+          "tooltip": "The selected original workspace caller principal",
+          "constraints": {
+            "required": "true",
+            "tabIndex": 1,
+            "clearText": true
+          }
+        }
+      },
+      "password": {
+        "type": "securestring",
+        "uiDefinition": {
+          "displayName": "Caller password",
+          "description": "The private caller credential, distinct from the provider token",
+          "tooltip": "The private caller credential, distinct from the provider token",
+          "constraints": {
+            "required": "true",
+            "tabIndex": 2,
+            "clearText": false
+          }
+        }
+      },
+      "authType": {
+        "type": "string",
+        "allowedValues": [
+          {
+            "value": "basic"
+          }
+        ],
+        "uiDefinition": {
+          "displayName": "Authentication type",
+          "description": "Basic authentication over the selected private HTTPS connection",
+          "tooltip": "Basic authentication over the selected private HTTPS connection",
+          "constraints": {
+            "required": "true",
+            "hidden": "true",
+            "allowedValues": [
+              {
+                "text": "Basic",
+                "value": "basic"
+              }
+            ]
+          }
+        }
+      },
+      "gateway": {
+        "type": "gatewaySetting",
+        "uiDefinition": {
+          "displayName": "On-premises data gateway",
+          "description": "The existing gateway that can reach the selected private HTTPS listener",
+          "tooltip": "Choose the original institution-managed gateway",
+          "constraints": {
+            "required": "true",
+            "tabIndex": 3,
+            "capability": [
+              "gateway"
+            ]
+          }
+        }
+      }
+    },
+    "iconBrandColor": "#333333",
+    "publisher": "Commons",
+    "stackOwner": "Workspace deployment owner",
+    "policyTemplateInstances": []
+  }
+}

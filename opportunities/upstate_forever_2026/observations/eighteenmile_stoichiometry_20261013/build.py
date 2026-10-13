@@ -174,17 +174,24 @@ def build(application_root: Path, output: Path):
     for station in sorted({a['station'] for a in d['activities']}):
         c={x['metric']:x for x in d['cohorts'] if x['group_by']=='station' and x['group']==station}
         station_rows.append([station,str(c['pn_mass']['n']),text_interval(c['pn_mass']['statistics']['median']),text_interval(c['np_mass']['statistics']['median']),text_interval(c['nox_fraction']['statistics']['median'])])
+    quantity_labels = {
+        'pn_mass': 'P:N mass ratio',
+        'np_mass': 'N:P mass ratio',
+        'nox_fraction': 'Nitrate/nitrite share of N',
+        'tn': 'Reconstructed N concentration',
+        'p': 'Phosphorus concentration',
+    }
     pair_rows=[]
     for p in d['pair_summaries']:
         if p['station_a']=='SV-375' and p['station_b']=='SV-376' and p['metric'] in ('pn_mass','np_mass','nox_fraction','tn','p'):
-            pair_rows.append([p['metric'],str(p['n']),str(p['counts'].get('higher',0)),str(p['counts'].get('lower',0)),str(p['counts'].get('overlapping',0))])
+            pair_rows.append([quantity_labels[p['metric']],str(p['n']),str(p['counts'].get('higher',0)),str(p['counts'].get('lower',0)),str(p['counts'].get('overlapping',0))])
     sections=[['Source and scientific findings',fs],['Station composition',[
         'Each summary uses the original sampled activities, not equal years or matched station calendars. Finite summary ranges are closed enclosing bounds.',
         {'kind':'table','columns':['Station','Activities','Median P:N mass','Median N:P mass','Median NOx fraction'],'rows':station_rows,'widths':[.75,.65,1.5,1.5,1.5]},
         'SV-245 supplies only one activity. N:P ratios with below-limit P apply over positive P; at P=0 they are undefined.']],
         ['Same-date component contrasts',[
             'The original SV-375/SV-376 comparison covers 23 dates in 2024–2025. B is SV-376. Sampling clocks differ by 25–49 minutes. All source rows and the full annual/seasonal direction counts are retained.',
-            {'kind':'table','columns':['Quantity','Pairs','B higher','B lower','Overlapping'],'rows':pair_rows},
+            {'kind':'table','columns':['Quantity','Pairs','B higher','B lower','Overlapping'],'rows':pair_rows,'widths':[2.3,.6,.85,.85,1.1]},
             'P:N is defined for the complete selected cohort; unlike N:P, it does not need a positive-P qualification. Direction comparisons use exact rational arithmetic and preserve strict below-limit endpoints.']],
         ['Nitrogen reconstruction and censored components',d['methods'][:3]],
         ['Ratio arithmetic and interpretation',d['methods'][3:]],

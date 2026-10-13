@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation",
   "title": "Implementation & fieldwork",
-  "version": "12",
+  "version": "13",
   "order": 70,
   "assets": [
     "implementation.mjs",
@@ -253,7 +253,8 @@
       },
       {
         "methods": [
-          "GET"
+          "GET",
+          "POST"
         ],
         "path": "/api/implementation/observations-preview",
         "operation": "observations-preview",
@@ -426,6 +427,19 @@
         ],
         "path": "/api/implementation/dispatch-report-preview",
         "operation": "dispatch-report-preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/dispatch-report-detail",
+        "operation": "dispatch-report-detail",
         "handler": "read",
         "args": [
           "workspace_key",

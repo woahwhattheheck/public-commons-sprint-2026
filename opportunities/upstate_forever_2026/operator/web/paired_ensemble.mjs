@@ -24,6 +24,32 @@ async function api(path,{method='GET',body,raw,filename}={}){
   if(!response.ok)throw new Error(value.error?.message||`Operator response ${response.status}`);
   return value;
 }
+
+// All views consume the same retained per-model catalogue as the Python binder.
+const producingModel = output => output === 'sediment_export' ? 'sdr' : 'ndr';
+function nativeOutputIssue(runs, output) {
+  const model=producingModel(output);
+  if(!runs.length)return 'Select original native pairs.';
+  if(runs.some(run=>!run?.available_pollutants?.includes(output)))
+    return 'The output is absent from a selected original run.';
+  const versions=runs.map(run=>run.native_model_versions?.[model]?.comparison_version);
+  if(versions.some(version=>!version))
+    return model.toUpperCase()+' producing version is unavailable in a selected run.';
+  const distinct=[...new Set(versions)];
+  return distinct.length===1?'':model.toUpperCase()+' producing versions differ: '+distinct.join(' versus ')+'.';
+}
+function nativeRunLabel(run) {
+  const bases={completed_stage_runtime:'completed stage',observed_run_fallback:'observed run fallback',
+    requested_legacy:'requested legacy'};
+  return Object.entries(run?.native_model_versions||{}).map(([model,info])=>
+    model.toUpperCase()+' '+(info.comparison_version||'unavailable')+
+    ' ('+(bases[info.basis]||'basis unavailable')+')').join('; ')||'Producing runtime unavailable';
+}
+function selectedNativeRuns(runs, pairs) {
+  const byId=new Map(runs.map(run=>[run.id,run]));
+  return pairs.flatMap(pair=>[byId.get(pair.baseline_run_id),byId.get(pair.alternative_run_id)]);
+}
+
 function pairedRuns(runs,grid,baseline,alternative,pollutants){
   if(!pollutants.length||baseline===alternative)return [];
   const groups=new Map();
@@ -45,7 +71,7 @@ function pairedRuns(runs,grid,baseline,alternative,pollutants){
     const order=(a,b)=>score(a)-score(b)||a.id.localeCompare(b.id);
     group.baseline.sort(order);group.alternative.sort(order);
     for(const before of group.baseline){
-      const after=group.alternative.find(run=>run.selection.invest_version===before.selection.invest_version);
+      const after=group.alternative.find(run=>pollutants.every(output=>!nativeOutputIssue([before,run],output)));
       if(after){
         selectedPairs.push({profile_id:profile,baseline_run_id:before.id,alternative_run_id:after.id,scenario_id:alternative});
         break;
@@ -65,6 +91,8 @@ function selection(){
   if(!chosen.length)throw new Error('Select at least one complete paired profile.');
   const pollutants=[...document.querySelectorAll('#pollutants input:checked')].map(x=>x.value);
   if(!pollutants.length)throw new Error('Select a physical output.');
+  const originalRuns=selectedNativeRuns(state?.data?.runs||[],chosen);
+  for(const output of pollutants){const issue=nativeOutputIssue(originalRuns,output);if(issue)throw new Error(issue);}
   const planned=Number($('#planned').value),memory=Number($('#memory').value);
   if(!Number.isSafeInteger(planned)||planned<chosen.length)throw new Error('The planned profile count must be a whole number at least as large as the selected pairs.');
   if(!Number.isFinite(memory)||memory<1)throw new Error('Select a positive tile working budget of at least one MiB.');
@@ -157,7 +185,8 @@ function pairStatus(){
   const excluded=pairs.length-selected.size;
   $('#pair-status').textContent=`${selected.size} selected complete pairs; ${excluded} excluded complete pairs; ${missingProfiles.length} profiles need a completed matching pair for the selected quantities.`+
     (missingProfiles.length?' Missing profiles: '+missingProfiles.map(id=>name('profiles',id)).join('; ')+'.':'')+
-    ' Positive change = baseline − alternative: reduced export. Negative change = increased export.';
+    ' Positive change = baseline − alternative: reduced export. Negative change = increased export.'+
+    (selected.size?' Producing runtimes: '+[...new Set(selectedNativeRuns(state?.data?.runs||[],pairs.filter(pair=>selected.has(pair.profile_id))).map(nativeRunLabel))].join(' / ')+'.':'');
 }
 function pairRows(){
   const baseline=$('#baseline').value,alternative=$('#alternative').value,grid=$('#grid').value;
@@ -175,7 +204,7 @@ function pairRows(){
   pairStatus();
   $('#pairs').innerHTML=pairs.length?'<table><thead><tr><th>Include</th><th>Original parameter profile</th><th>Baseline run</th><th>Alternative run</th></tr></thead><tbody>'+
     pairs.map(pair=>`<tr><td><input aria-label="Include ${esc(name('profiles',pair.profile_id))}" type="checkbox" ${selected.has(pair.profile_id)?'checked':''} data-profile="${esc(pair.profile_id)}"></td><th>${esc(name('profiles',pair.profile_id))}<br><code>${esc(pair.profile_id)}</code></th><td><code>${esc(pair.baseline_run_id)}</code></td><td><code>${esc(pair.alternative_run_id)}</code></td></tr>`).join('')+'</tbody></table>':
-    '<p>Choose distinct scenarios and quantities available in their completed runs. Existing native run programmes prepare and execute matching profiles.</p>';
+    '<p>Choose distinct scenarios and quantities with matching producing model versions in their completed runs. Existing native run programmes prepare and execute matching profiles.</p>';
 }
 function requireReady(context){
   if(!context.workspace||!current(context)||state?.workspace_key!==context.workspace)

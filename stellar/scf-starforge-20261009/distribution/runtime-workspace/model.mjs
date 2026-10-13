@@ -17,6 +17,8 @@ import { createOperationReader, summarizeOperationObservations } from './operati
 import { createWorkspaceBackupAPI } from './workspace-backup.mjs';
 import { createRuntimeProceduresAPI } from './operating-procedures.mjs';
 import { createApplicationInputsAPI } from './application-inputs.mjs';
+import { createApplicationInputSetsAPI } from './application-input-sets.mjs';
+import { createApplicationInputSetEditionsAPI } from './application-input-set-editions.mjs';
 
 import { managedOperationFields, initializeManagedWorkspace, managedState, openManagedHome, reviewManagedAdoption,
   managedConfig, normalizeManagedOperation, executeManagedOperation, managedCommandAlive,
@@ -271,11 +273,14 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
       'PRODUCT_PLAN_RUNTIME_CHANGED', 'Reopen the selected runtime after its current operation.');
     return productPlanHandoff(plan, { runtime, installation, inspection, handoff });
   }
+  const applicationInputs = createApplicationInputsAPI(root,workspaceIdentity);
   const model = {
     directory: root,
     ...createWorkspaceBackupAPI(root),
     ...createRuntimeProceduresAPI(root,workspaceIdentity,()=>model),
-    ...createApplicationInputsAPI(root,workspaceIdentity),
+    ...applicationInputs,
+    ...createApplicationInputSetsAPI(root,workspaceIdentity,applicationInputs),
+    ...createApplicationInputSetEditionsAPI(root,workspaceIdentity,()=>model),
     async sourcePlansState(input) { return sourceProductPlansState(root, input); },
     async sourcePlanRead(input) { return readSourceProductPlan(root, input); },
     async sourcePlanRuntimes(input) {
@@ -625,7 +630,7 @@ export async function openRuntimeWorkspace({ directory, openApiSetupPolicy = {} 
   };
   // Keep retained inspection available during receiving. All existing lifecycle
   // methods, including reviews that persist records, share the backup gate.
-  const readMethods = new Set(["applicationInputsState","applicationInputInspect","applicationInputSelection","applicationInputDownload","runtimeProceduresState","runtimeProcedureRead","runtimeProcedureExport","sourcePlansState","sourcePlanRead","sourcePlanRuntimes","sourcePlanHandoff","sourcePlanBriefing","sourcePlanReceiving","sourceBuildsState","sourceBuildsReadReview","pythonState","pythonDownload","transfersState","transfersDownload","imagesState","imagesDownload","state","operationStatus","catalog","review","compare","handoff","logs","applicationsState","applicationsHistory","applicationsOutput","applicationsTerminal","managedState","close"]);
+  const readMethods = new Set(["applicationInputSetEditionReview","applicationInputSetEditionRead","applicationInputSetEditionReceived","applicationInputSetEditionsState","applicationInputSetsState","applicationInputSetInspect","applicationInputSetSelection","applicationInputsState","applicationInputInspect","applicationInputSelection","applicationInputDownload","runtimeProceduresState","runtimeProcedureRead","runtimeProcedureExport","sourcePlansState","sourcePlanRead","sourcePlanRuntimes","sourcePlanHandoff","sourcePlanBriefing","sourcePlanReceiving","sourceBuildsState","sourceBuildsReadReview","pythonState","pythonDownload","transfersState","transfersDownload","imagesState","imagesDownload","state","operationStatus","catalog","review","compare","handoff","logs","applicationsState","applicationsHistory","applicationsOutput","applicationsTerminal","managedState","close"]);
   for (const [name, method] of Object.entries(model)) {
     if (typeof method !== 'function' || readMethods.has(name) || name.startsWith('workspaceBackup')) continue;
     model[name] = (...args) => withWorkspaceWrite(root, async () => {

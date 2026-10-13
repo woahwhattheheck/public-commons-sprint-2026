@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "nc-ambient-original-intake",
+  "source_reference": "Original NC ambient WQP download intake; original capture supplied by receiver",
+  "components": {
+    "nc-ambient-original-intake": {
+      "title": "Original NC ambient CSV and ZIP intake",
+      "paths": [
+        "source_tools/receive_nc_ambient_sources.py",
+        "docs/NC_AMBIENT_ORIGINAL_INTAKE.md"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "nc-ambient-original-intake"
+  ]
+}

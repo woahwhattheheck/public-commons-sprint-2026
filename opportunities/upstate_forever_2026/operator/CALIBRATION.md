@@ -421,7 +421,7 @@ travel in the complete calibration component.
 
 ## Include a native calibration dossier in the client delivery
 
-Open a saved complete review and choose **Prepare report source**. This queued operation registers its exact ranking, original reference and validation metrics, optional source-error analysis, equal-axis figures, map atlas and complete original dossier as an ordinary `upstate.observed-report/v1` source. The review lists each completed source. **Open scientific report** enters the existing Sources composer with that original source, including for nutrient-only or sediment-only calibration. **Open mapped report form** retains the complete native-baseline delivery. Other observed studies remain in the same ordered source picker.
+Open a saved complete review and choose **Prepare report source**. This queued operation registers its exact ranking, original reference and validation metrics, optional source-error analysis, equal-axis figures, map atlas and complete original dossier as an ordinary `upstate.observed-report/v1` source. The review lists each completed source. **Open this report only** selects exactly that original source and its title in the existing Sources composer, including for nutrient-only or sediment-only calibration. **Open mapped report form** retains the complete native-baseline delivery. **Add to current report** preserves other studies in the same ordered source picker and appends this source once.
 
 The complete scientific report receives its readable tables and vector PDF figures. Every original dossier file, full ZIP, map, source CSV and figure specification travels as a verified companion; original relative links survive export and reopening. The calibration provider verifies this saved source again during ordinary Workspace restore. See [the complete source workflow](../model/CALIBRATION_REPORT_SOURCE.md) for native APIs, partial-model behavior, source identities and maintained receiving.
 
@@ -441,10 +441,11 @@ Complete receiving includes `model/calibration_execution.py` beside the calibrat
 
 A saved complete review can become a scientific report without preparing the
 full map delivery. Choose **Prepare report source** in the review. When its
-original task completes, choose **Open scientific report** in that task or the
-review's registered-source row. The existing Sources composer appends the exact
-original source after your current selections, deduplicates it by collection and
-source ID, and preserves a title or contact already entered. Inspect its current
+original task completes, choose **Open this report only** in that task or the
+review's registered-source row to select exactly that source and its title. Choose
+**Add to current report** to append the original source after the current ordered
+selections, deduplicate by collection/source ID and preserve the draft title. Both
+retain contact details. Inspect the intended
 preview, then use the maintained saved-report queue to build the HTML, PDF,
 Markdown and complete source edition. Reopen that saved edition in Sources.
 
@@ -461,7 +462,7 @@ The provider's original `report-source` read now returns
 unchanged `source_selection`, `delivery_selection` and `delivery_issue`.
 The calibration controller verifies the source record, Workspace and both source
 IDs before calling the maintained
-`host.openScientificReport({workspace_key, sources, title})` capability.
+`host.openScientificReport({workspace_key, sources, title, selection_mode})` capability.
 The descriptor declares that capability. It never treats a source ID as a report
 entry key. A newer source request, another review or a changed Workspace discards
 an older response before navigation.
@@ -474,3 +475,8 @@ Install that complete publisher before this calibration successor and run the
 same existing calibration installer or cumulative assembly. The existing
 source archive, original report queue and independent reopening remain owned by
 SourceReports.
+
+
+### Prepared-source selection compatibility
+
+The current Scientific Reports composer declares `SCIENTIFIC_REPORT_SOURCE_SELECTION = 'replace-v1'`. The calibration review checks that declaration before **Open this report only**, preventing an older composer from silently appending to an unrelated draft. **Add to current report** uses its original append behavior. Source IDs, single-model support, report queue, physical tables/figures and selected Study transfer remain unchanged. An intervening Workspace switch or superseded source response still cancels navigation. A busy or changing report draft is reconciled through the maintained composer's existing request and revision guards.

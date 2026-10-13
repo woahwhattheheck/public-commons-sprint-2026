@@ -16,6 +16,7 @@ import json
 import os
 from pathlib import Path
 import re
+import signal
 import subprocess
 import sys
 import tempfile
@@ -192,6 +193,8 @@ def verify_checkpoint(output, value, operation_id, checked=None):
         for item in teaching:
             bound(item)
     elif schema == "upstate.rehearsal-receiving/v1":
+        if value.get("programme_opening") is not None:
+            bound(value["programme_opening"].get("receipt_file"))
         native_path = bound(value.get("native"))
         original = read_json(native_path)
         if original.get("rehearsal_id") != value["rehearsal_id"]:
@@ -219,7 +222,8 @@ def validate(value):
     if not isinstance(value, dict) or value.get("schema") != SCHEMA:
         raise ValueError("Select the complete original rehearsal receiving input")
     expected = {"schema", "operation_id", "workspace_directory", "output_directory",
-                "rehearsal", "fresh_run_ids", "step_notes", "task_timeout_seconds", "browser"}
+                "rehearsal", "fresh_run_ids", "step_notes", "task_timeout_seconds", "browser",
+                "programme_receiving", "customer_review", "fieldwork_receiving"}
     if set(value) - expected:
         raise ValueError("Unexpected receiving input fields: " + ", ".join(sorted(set(value) - expected)))
     if not re.fullmatch(r"[A-Za-z0-9_-]{16,100}", value.get("operation_id", "")):
@@ -254,6 +258,23 @@ def validate(value):
         for key, path in browser.items():
             if not isinstance(path, str) or not Path(path).is_absolute():
                 raise ValueError("Use an existing absolute browser/runtime path: " + key)
+    if "programme_receiving" in value:
+        choice = value["programme_receiving"]
+        if not isinstance(choice, dict) or set(choice) != {"path", "bytes", "sha256", "programme_id"}:
+            raise ValueError("Select the complete frozen Programme adoption descriptor")
+        identifier(choice["programme_id"])
+        name = choice.get("path")
+        if (not isinstance(name, str) or not name or "\\" in name
+                or Path(name).is_absolute() or any(part in ("", ".", "..") for part in name.split("/"))
+                or isinstance(choice["bytes"], bool) or not isinstance(choice["bytes"], int)
+                or choice["bytes"] <= 0 or not re.fullmatch(r"[0-9a-f]{64}", str(choice["sha256"]))):
+            raise ValueError("Use the original Workspace-relative Programme adoption path and digest")
+    if "customer_review" in value:
+        from source_tools.simulated_customer_review_recording import validate_choice
+        validate_choice(value["customer_review"])
+    if "fieldwork_receiving" in value:
+        from source_tools.simulated_fieldwork_recording import validate_choice as validate_fieldwork
+        validate_fieldwork(value["fieldwork_receiving"])
     return value
 
 
@@ -675,6 +696,100 @@ def bundle(output, complete):
     return describe(destination, output)
 
 
+def _programme_source(operator, workspace_key, value):
+    choice = value.get("programme_receiving")
+    if choice is None:
+        return None
+    ws = operator.ws(workspace_key)
+    adopted = read_json(verify_file(ws.root, choice))
+    if (adopted.get("schema") != "upstate.simulated-programme-receiving/v1"
+            or adopted.get("programme_id") != choice["programme_id"]
+            or adopted.get("project_id") != ws.project["id"]):
+        raise ValueError("The selected Programme opening belongs to another original case")
+    selected = value["rehearsal"]["selection"]
+    if ([row["run_id"] for row in adopted["native_runs"]] !=
+            [selected["baseline_run_id"], *selected["alternative_run_ids"]]
+            or adopted.get("existing_delivery_id") != selected["delivery_id"]):
+        raise ValueError("The Programme opening differs from this rehearsal's native selection")
+    return adopted
+
+
+def _save_programme_opening(operator, workspace_key, value, output):
+    adopted = _programme_source(operator, workspace_key, value)
+    if adopted is None:
+        return None
+    from source_tools.adopt_simulated_headwaters_programme import save_operator_opening
+    result = save_operator_opening(operator, workspace_key, adopted)
+    path = output / "results" / ("programme-opening-" + digest(result) + ".json")
+    retain(path, result)
+    return {**result, "receipt_file": describe(path, output)}
+
+
+def _verify_programme_opening(operator, workspace_key, value, opening):
+    if value.get("programme_receiving") is None:
+        if opening is not None:
+            raise ValueError("An unselected Programme opening was added to the rehearsal")
+        return None
+    adopted = _programme_source(operator, workspace_key, value)
+    if (not isinstance(opening, dict)
+            or opening.get("programme_id") != adopted["programme_id"]
+            or opening.get("opening_id") != adopted["operator_opening"]["id"]):
+        raise ValueError("Retain the exact original Programme opening receipt")
+    ws = operator.ws(workspace_key)
+    selected = read_json(verify_file(ws.root, opening["operator_session_file"]))
+    if (selected != opening["operator_session"]
+            or operator.operator_session(workspace_key) != selected
+            or selected["journey"]["selection"] != adopted["operator_opening"]["journey"]["selection"]):
+        raise ValueError("The restored operator opening differs from its original saved view")
+    return opening
+
+
+def run_browser_child(command, output):
+    """Close the original browser cooperatively before stopping its process group."""
+    child = subprocess.Popen(command, text=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE, start_new_session=True)
+    try:
+        stdout, stderr = child.communicate()
+    except BaseException as error:
+        receipt = {"state": "INTERRUPTED", "requested_signal": "SIGTERM",
+                   "grace_seconds": 30, "escalated": False,
+                   "error": {"type": type(error).__name__, "message": str(error)}}
+        stdout = stderr = ""
+        try:
+            if child.poll() is None:
+                child.terminate()
+            try:
+                stdout, stderr = child.communicate(timeout=30)
+            except subprocess.TimeoutExpired:
+                receipt["escalated"] = True
+                try:
+                    os.killpg(child.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                stdout, stderr = child.communicate(timeout=10)
+        except BaseException as stop_error:
+            receipt["stop_error"] = {"type": type(stop_error).__name__,
+                                     "message": str(stop_error)}
+            try:
+                os.killpg(child.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            except OSError as kill_error:
+                receipt["kill_error"] = str(kill_error)
+            try:
+                child.wait(timeout=5)
+            except (OSError, subprocess.TimeoutExpired) as wait_error:
+                receipt["wait_error"] = str(wait_error)
+        receipt.update(returncode=child.poll(), stdout=stdout or "", stderr=stderr or "")
+        try:
+            retain(output / "results" / ("browser-stop-" + digest(receipt) + ".json"), receipt)
+        except OSError as save_error:
+            if hasattr(error, "add_note"):
+                error.add_note("Browser interruption receipt could not be saved: " + str(save_error))
+        raise
+    return subprocess.CompletedProcess(command, child.returncode, stdout, stderr)
+
+
 def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
     value = validate(read_json(input_path))
     output = Path(value["output_directory"]).resolve()
@@ -685,6 +800,18 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
     with (output / ".journey.lock").open("a+b") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
         retain(output / "input.json", value)
+        customer_choice = None
+        if value.get("customer_review") is not None:
+            from model.workspace import Workspace
+            from source_tools.simulated_customer_review_recording import verify_choice
+            customer_choice = verify_choice(Workspace(value["workspace_directory"]), output,
+                                            value["customer_review"])
+        fieldwork_choice = None
+        if value.get("fieldwork_receiving") is not None:
+            from model.workspace import Workspace
+            from source_tools.simulated_fieldwork_recording import verify_choice as verify_fieldwork
+            fieldwork_choice = verify_fieldwork(Workspace(value["workspace_directory"]), output,
+                                               value["fieldwork_receiving"])
         complete_path = output / "results" / "complete.json"
         native_path = output / "results" / "native.json"
         saved_complete = read_json(complete_path) if complete_path.exists() else None
@@ -710,6 +837,8 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                     "rehearsal_id": complete["rehearsal_id"], "sender": complete["sender"],
                     "receiver": complete["receiver"], "earlier_receiver": complete["earlier_receiver"],
                     "state": "COMPLETE"})
+                _verify_programme_opening(server.operator, complete["receiver"]["workspace"],
+                                          value, complete.get("programme_opening"))
                 return {**complete, "delivery": bundle(output, complete), "reopened": True}
             if saved_native is not None:
                 original = saved_native
@@ -720,6 +849,8 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                         raise ValueError("The retained original native phase changed")
             else:
                 original = native(journey)
+            programme_opening = _save_programme_opening(
+                server.operator, original["sender_workspace"], value, output)
             browser_result = None
             browser = value.get("browser")
             if browser and not skip_browser:
@@ -729,10 +860,14 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                           "receiver_workspace": original["receiver_workspace"],
                           "output_directory": str(output / "browser"),
                           "playwright_module": browser["playwright_module"], "executable": browser["executable"]}
+                if customer_choice is not None:
+                    config["customer_review"] = customer_choice
+                if fieldwork_choice is not None:
+                    config["fieldwork_receiving"] = fieldwork_choice
                 browser_input = output / "private" / "browser-input.json"
                 publish(browser_input, canonical(config) + b"\n", immutable=False)
-                child = subprocess.run([browser["node"], str(APP / "operator" / "rehearsal_browser.mjs"),
-                                        str(browser_input)], text=True, capture_output=True)
+                child = run_browser_child([browser["node"], str(APP / "operator" / "rehearsal_browser.mjs"),
+                                           str(browser_input)], output)
                 receipt = {"returncode": child.returncode, "stdout": child.stdout, "stderr": child.stderr}
                 retain(output / "results" / ("browser-process-" + digest(receipt) + ".json"), receipt)
                 if child.returncode:
@@ -742,6 +877,10 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                 verify_browser_files(output, browser_result, value["operation_id"], original["rehearsal_id"])
             elif browser and skip_browser:
                 return {**original, "browser_state": "NOT_RUN", "meaning": "Native phase is retained. Reuse the same command without --native-only for the configured browser continuation."}
+            # Preserve the original selected opening in the final scientific copy,
+            # including after the browser exercised other actual views.
+            programme_opening = _save_programme_opening(
+                server.operator, original["sender_workspace"], value, output)
             current = journey.current(original["sender_workspace"], original["rehearsal_id"])["record"]
             retain(output / "results" / "final-selection.json", current)
             final_export = journey.execute("export-final", original["sender_workspace"], "rehearsal.export", lambda: {
@@ -758,6 +897,7 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
             final_restore = journey.execute("restore-final", original["sender_workspace"], "workspace.restore",
                                             lambda: {"upload_id": uploaded["id"]})
             final_receiver = final_restore["result"]["workspace_key"]
+            _verify_programme_opening(server.operator, final_receiver, value, programme_opening)
             received = journey.current(final_receiver, current["id"])["record"]
             if received != current:
                 raise ValueError("The final scientific receiving copy lacks the complete current walkthrough and media")
@@ -769,6 +909,7 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
                 "operation_id": value["operation_id"], "rehearsal_id": current["id"],
                 "project_id": original["project"]["id"],
                 "native": describe(native_path, output),
+                "programme_opening": programme_opening,
                 "browser": describe(output / "browser" / "result.json", output) if browser_result else None,
                 "browser_state": "COMPLETE" if browser_result else "NOT_CONFIGURED",
                 "sender": {"workspace": original["sender_workspace"], "revision": current["revision"],
@@ -785,6 +926,8 @@ def run(input_path, *, resolutions=None, resumes=(), skip_browser=False):
         # Reopen the original operator and registry after closing all original tasks.
         with operator_session(value, output) as (server, client, connection_file):
             reopened = Journey(value, output, client)
+            _verify_programme_opening(server.operator, complete["receiver"]["workspace"],
+                                      value, complete.get("programme_opening"))
             for name in ("sender", "receiver", "earlier_receiver"):
                 expected = complete[name]
                 record = reopened.current(expected["workspace"], complete["rehearsal_id"])["record"]

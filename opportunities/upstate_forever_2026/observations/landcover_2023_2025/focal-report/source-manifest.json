@@ -1,0 +1,153 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Priority watershed land-cover interpretation, 2023–2025",
+  "entries": [
+    {
+      "id": "original-focal-landcover-eaa53b9f304f55e442a4",
+      "title": "Priority watershed land-cover interpretation, 2023–2025",
+      "kind": "document",
+      "role": "OBSERVED_CONTEXT",
+      "vintage": "Original Annual NLCD product years 2023 and 2025; captured 2026-10-13",
+      "uri": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms",
+      "path": "observed-report.json",
+      "bytes": 22392,
+      "sha256": "eaa53b9f304f55e442a4a9a0d614d76b674f488e148011c1a6cf84404254ba30",
+      "companions": [
+        {
+          "path": "selected-annual-inputs.json",
+          "bytes": 58404,
+          "sha256": "5fb4cf58dde51ef1a416c2ac0f6900d2e049a73fea2ea9f5e446a5ada341983b"
+        },
+        {
+          "path": "selected-transitions.json",
+          "bytes": 252542,
+          "sha256": "6ab17d1d944e1bc425e558f9611f4d8a6199714fc05dfd35e38f04b91ea32858"
+        },
+        {
+          "path": "focal-summary.csv",
+          "bytes": 2168,
+          "sha256": "ae4cf489f6f9861f072a740cdf82bac11b4ee01a3dc19e1e7729239e7cb43470"
+        },
+        {
+          "path": "group-change.csv",
+          "bytes": 6537,
+          "sha256": "532c65c70a9f234f839ee81586a9817e623e90485d7371fd53c51632a897555d"
+        },
+        {
+          "path": "rebuild.mjs",
+          "bytes": 4877,
+          "sha256": "119b37e8e5f93f0c5ebf6b8863023a58a4767f57b55f961483b6278967c6d6af"
+        },
+        {
+          "path": "README.md",
+          "bytes": 5633,
+          "sha256": "13d909a201326aacd0e90cca6b17d166475232ee6552e8d762a150fe7c433ff6"
+        },
+        {
+          "path": "model-sources.json",
+          "bytes": 3418,
+          "sha256": "4d34a4928b6f5d4fbc18991ebc92d4e7ae64cf1edb3b0696dbaaa471eed4d057"
+        },
+        {
+          "path": "parent/annual-2023.json",
+          "bytes": 477495,
+          "sha256": "1e4bea16ffb1ccaf8361972a042bb2b71a2320b36aea069d9a2282954e005836"
+        },
+        {
+          "path": "parent/annual-2025.json",
+          "bytes": 477860,
+          "sha256": "21a9d49dc2811778ef86d5bd05114530e52bdd2cabb60e8eb4857dd8fd40adc8"
+        },
+        {
+          "path": "parent/transitions-2023-2025.json",
+          "bytes": 5892411,
+          "sha256": "c1813390a4884b54cf878817c58ac91abc0dc8a5c1571765a034926252dc672a"
+        },
+        {
+          "path": "parent/huc12-change-summary.csv",
+          "bytes": 23193,
+          "sha256": "6d703c75b24eb9dc38a1d868bcd0b43e976e6e94bbb7a8eeef25bf69328c4bec"
+        },
+        {
+          "path": "parent/model-sources.json",
+          "bytes": 6924,
+          "sha256": "15596485b8044a60edfbdaefe39dd8987f550fc5e1c6289edc26a2bec063b9f5"
+        },
+        {
+          "path": "scope-summary.csv",
+          "bytes": 1012,
+          "sha256": "e1e77259bb1c18e0747ef2e5e859d8b6d65ef258f7292edbce641e5723d10a8e"
+        },
+        {
+          "path": "reconciliation.json",
+          "bytes": 6093,
+          "sha256": "9c1cfcad14d20983b01313311cf84f0a60ced86301e8eb8b7af77e6d0aa5e787"
+        },
+        {
+          "path": "focal-figures.json",
+          "bytes": 37371,
+          "sha256": "54a3e214d4f824ef0095035b0fb1d62639c4b13eea24c1626d1936ee14efd99b"
+        },
+        {
+          "path": "focal-figures.svg",
+          "bytes": 22652,
+          "sha256": "e4e639aca19a512a3a877b412e7eadf509b369ce98de16a4e9725734c9e6e9b6"
+        },
+        {
+          "path": "focal-report.html",
+          "bytes": 131805,
+          "sha256": "a9921b38603edad701afe9e11307c8da56af37ebbbaaacf20ce0a5b31441a8ec"
+        }
+      ],
+      "metadata": {
+        "interpretation_kind": "original_focal_landcover_context",
+        "product_years": [
+          2023,
+          2025
+        ],
+        "watershed_count": 7,
+        "source_context": [
+          {
+            "group": "rfp_focus",
+            "huc12s": [
+              "030601010703",
+              "030601010704",
+              "030601020502",
+              "030601020507"
+            ]
+          },
+          {
+            "group": "eighteenmile_huc10",
+            "huc10": "0306010106",
+            "huc12s": [
+              "030601010601",
+              "030601010602"
+            ]
+          },
+          {
+            "group": "sv840_current_wbd_huc12",
+            "huc12s": [
+              "030601010803"
+            ]
+          }
+        ],
+        "related_source_ids": [
+          "upstate-landcover-focal-focal-summary-ae4cf489f6f9",
+          "upstate-landcover-focal-group-change-532c65c70a9f"
+        ],
+        "source_relationships": [
+          {
+            "relationship": "interprets_original_source",
+            "source_id": "upstate-landcover-focal-focal-summary-ae4cf489f6f9"
+          },
+          {
+            "relationship": "interprets_original_source",
+            "source_id": "upstate-landcover-focal-group-change-532c65c70a9f"
+          }
+        ],
+        "parent_paired_source_id": "original-landcover-change-b8bceabf4cbc9f3e97cefb88",
+        "spatial_method": "centre inclusion; half-open scanline edges; even-odd ring parity"
+      }
+    }
+  ]
+}

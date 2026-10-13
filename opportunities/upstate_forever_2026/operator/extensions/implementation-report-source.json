@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "implementation-report-source",
   "title": "Implementation plan reports",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "order": 73,
   "assets": [],
   "backend": {
@@ -34,6 +34,19 @@
         ],
         "path": "/api/implementation/report-source-detail",
         "operation": "detail",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/implementation/report-sources",
+        "operation": "list",
         "handler": "read",
         "args": [
           "workspace_key",

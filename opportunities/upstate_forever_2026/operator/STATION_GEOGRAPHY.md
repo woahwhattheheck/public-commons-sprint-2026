@@ -8,9 +8,51 @@ Materialize the station contribution files under a source directory, then run:
 
     python SOURCE_ROOT/operator/install_station_geography.py --application APPLICATION --source-root SOURCE_ROOT
 
-The installer copies all 48 station, assessment and microbial application members, including the current observed-station catalogue and saved assessment-report helper, including the complete 22-file original microbial source directory. Before changing the application, it checks each selected source manifest's primary bodies and companions against the available files and declared original hashes. The dry-run receipt includes these original-source identities. It preserves prior versions and invokes the existing install_extensions.py when the application has not yet installed its extension host. Restart the existing operator to discover operator/extensions/station-geography.json. Run the model commands below from APPLICATION, the directory containing model and operator.
+The installer copies the complete declared station, assessment, microbial and original WBD component inventory, including the current observed-station catalogue, saved assessment-report helper, native watershed figure helpers, prepared-source Scientific reports composer and complete 22-file original microbial source directory. It also installs the complete preparation, supervised native receiving and browser course declared by the assessment component, with their operating guides and original course example. The same installation includes all four original input manifests and their source families: SCDES705, the two complete normalized published assessment editions and publisher-text companion, WQP8 with the exact draft101 CSV, and WQP2. Before changing the application, it checks each selected source manifest's primary bodies and companions against the available files and declared original hashes. The dry-run receipt includes these original-source identities. It preserves prior versions and invokes the existing install_extensions.py when the application has not yet installed its extension host. Restart the existing operator to discover operator/extensions/station-geography.json. Run the model commands below from APPLICATION, the directory containing model and operator.
 
 Runtime dependencies are the application's existing pyproj, shapely and fiona stack. The browser uses the existing local host and an SVG map. Model observations, measurement imports, chemistry and annual-load calculations keep their existing interfaces.
+
+## Prepare, receive and operate the same complete study
+
+The installed workflow lives in `source/observed-report-20261013/`. Use
+[PREPARE_ASSESSMENT.md](../source/observed-report-20261013/PREPARE_ASSESSMENT.md)
+for all three original station studies and four saved assessment selections.
+Its default command uses the original inputs installed at their maintained
+application-relative paths. The existing Workspace supplies the exact original
+217-watershed domain; its retained source identity is checked by the study
+resolver. A receiver missing that domain imports its original manifest once.
+The installed report source retains native watershed figures alongside the
+original assessment rows, source editions and comparison relationships.
+
+Continue the same scientific-report operation with
+[RECEIVING.md](../source/observed-report-20261013/RECEIVING.md) and, when several
+original selections are already accepted,
+[RECEIVING_COURSE.md](../source/observed-report-20261013/RECEIVING_COURSE.md).
+The existing receiver supervises its own native worker, applies the configured
+phase timeout through shutdown and the optional browser phase, and retains
+the original queued tasks and output selections for resuming that operation.
+The installed course example retains its author's original project and paths;
+select the current operation's actual paths before using it.
+
+[ASSESSMENT_BROWSER.md](../source/observed-report-20261013/ASSESSMENT_BROWSER.md)
+continues the original page and recording through the 164-station study,
+all four saved contexts, their full exports and the prepared scientific-report
+selection. The receiver and course share the same scripts installed here;
+no additional source packet is needed for those stages.
+
+Use the complete application's existing scientific Python environment,
+including its GIS and ReportLab dependencies, and its Node environment with
+Playwright and the existing browser installation. The installer checks the
+native report host files before changing source, stages the current composer
+and source helpers, and retains its ordinary previous-body and concurrency
+checks. It does not start another operator or duplicate the accepted receiving
+operation. Restart the existing operator after source installation so its
+loaded report version matches the new preparation.
+
+After receiving, open the actual rendered screens and downloaded reports at
+the presentation width and a narrow width, operate the controls, and reopen the
+delivered files as a recipient would. Inspect the screenshots or recording
+visually and repair observed issues before presenting the product.
 
 ## Original inputs for the 87-station study
 

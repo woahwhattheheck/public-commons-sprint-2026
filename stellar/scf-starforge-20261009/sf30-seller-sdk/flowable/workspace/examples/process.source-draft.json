@@ -1,0 +1,82 @@
+{
+  "schema": "stellar-forge.flowable-programme-draft.v1",
+  "id": "original-process-source-example",
+  "title": "Original process commissioning example",
+  "kind": "process",
+  "operation": "",
+  "tenantId": "",
+  "catalogue": "process-catalog.json",
+  "roles": {
+    "operator": "admin",
+    "reviewer": "reviewer",
+    "specialist": "",
+    "approver": ""
+  },
+  "familyKeys": [
+    "sf_grant_review",
+    "sf_customer_onboarding",
+    "sf_vendor_approval"
+  ],
+  "migrateKeys": [
+    "sf_grant_review",
+    "sf_vendor_approval"
+  ],
+  "delegationKey": "sf_customer_onboarding",
+  "inputs": {
+    "sf_grant_review": "inputs/sf_grant_review.json",
+    "sf_customer_onboarding": "inputs/sf_customer_onboarding.json",
+    "sf_vendor_approval": "inputs/sf_vendor_approval.json"
+  },
+  "files": [
+    {
+      "path": "process-catalog.json",
+      "mediaType": "application/json",
+      "text": "{\n  \"schema\": \"stellar-forge.flowable-native-process-catalog.v1\",\n  \"description\": \"Complete original BPMN examples deployed to the original Flowable engine by the native receiving journey.\",\n  \"families\": [\n    {\n      \"key\": \"sf_grant_review\",\n      \"name\": \"Grant review\",\n      \"intake\": \"Application intake\",\n      \"review\": \"Eligibility review\",\n      \"finalize\": \"Award setup\"\n    },\n    {\n      \"key\": \"sf_customer_onboarding\",\n      \"name\": \"Customer onboarding\",\n      \"intake\": \"Customer intake\",\n      \"review\": \"Account approval\",\n      \"finalize\": \"Provisioning\"\n    },\n    {\n      \"key\": \"sf_vendor_approval\",\n      \"name\": \"Vendor approval\",\n      \"intake\": \"Vendor intake\",\n      \"review\": \"Commercial review\",\n      \"finalize\": \"Vendor activation\"\n    }\n  ],\n  \"resources\": [\n    {\n      \"key\": \"sf_grant_review\",\n      \"name\": \"Grant review\",\n      \"intake\": \"Application intake\",\n      \"review\": \"Eligibility review\",\n      \"finalize\": \"Award setup\",\n      \"version\": 1,\n      \"filename\": \"grant-review-v1.bpmn20.xml\"\n    },\n    {\n      \"key\": \"sf_grant_review\",\n      \"name\": \"Grant review\",\n      \"intake\": \"Application intake\",\n      \"review\": \"Eligibility review\",\n      \"finalize\": \"Award setup\",\n      \"version\": 2,\n      \"filename\": \"grant-review-v2.bpmn20.xml\"\n    },\n    {\n      \"key\": \"sf_customer_onboarding\",\n      \"name\": \"Customer onboarding\",\n      \"intake\": \"Customer intake\",\n      \"review\": \"Account approval\",\n      \"finalize\": \"Provisioning\",\n      \"version\": 1,\n      \"filename\": \"customer-onboarding-v1.bpmn20.xml\"\n    },\n    {\n      \"key\": \"sf_customer_onboarding\",\n      \"name\": \"Customer onboarding\",\n      \"intake\": \"Customer intake\",\n      \"review\": \"Account approval\",\n      \"finalize\": \"Provisioning\",\n      \"version\": 2,\n      \"filename\": \"customer-onboarding-v2.bpmn20.xml\"\n    },\n    {\n      \"key\": \"sf_vendor_approval\",\n      \"name\": \"Vendor approval\",\n      \"intake\": \"Vendor intake\",\n      \"review\": \"Commercial review\",\n      \"finalize\": \"Vendor activation\",\n      \"version\": 1,\n      \"filename\": \"vendor-approval-v1.bpmn20.xml\"\n    },\n    {\n      \"key\": \"sf_vendor_approval\",\n      \"name\": \"Vendor approval\",\n      \"intake\": \"Vendor intake\",\n      \"review\": \"Commercial review\",\n      \"finalize\": \"Vendor activation\",\n      \"version\": 2,\n      \"filename\": \"vendor-approval-v2.bpmn20.xml\"\n    }\n  ]\n}\n"
+    },
+    {
+      "path": "grant-review-v1.bpmn20.xml",
+      "mediaType": "application/xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n  xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"https://tjlabs.dev/flowable/process-operations\">\n  <process id=\"sf_grant_review\" name=\"Grant review v1\" isExecutable=\"true\">\n    <startEvent id=\"start\" name=\"Case received\"/>\n    <sequenceFlow id=\"start_to_intake\" sourceRef=\"start\" targetRef=\"intake\"/>\n    <userTask id=\"intake\" name=\"Application intake\"/>\n    <sequenceFlow id=\"intake_to_review\" sourceRef=\"intake\" targetRef=\"review\"/>\n    <userTask id=\"review\" name=\"Eligibility review\"/>\n    <sequenceFlow id=\"review_to_end\" sourceRef=\"review\" targetRef=\"end\"/>\n    <endEvent id=\"end\" name=\"Case complete\"/>\n  </process>\n</definitions>\n"
+    },
+    {
+      "path": "grant-review-v2.bpmn20.xml",
+      "mediaType": "application/xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n  xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"https://tjlabs.dev/flowable/process-operations\">\n  <process id=\"sf_grant_review\" name=\"Grant review v2\" isExecutable=\"true\">\n    <startEvent id=\"start\" name=\"Case received\"/>\n    <sequenceFlow id=\"start_to_intake\" sourceRef=\"start\" targetRef=\"intake\"/>\n    <userTask id=\"intake\" name=\"Application intake\"/>\n    <sequenceFlow id=\"intake_to_review\" sourceRef=\"intake\" targetRef=\"review\"/>\n    <userTask id=\"review\" name=\"Eligibility review\"/>\n    <sequenceFlow id=\"review_to_finalize\" sourceRef=\"review\" targetRef=\"finalize\"/>\n    <userTask id=\"finalize\" name=\"Award setup\"/>\n    <sequenceFlow id=\"finalize_to_end\" sourceRef=\"finalize\" targetRef=\"end\"/>\n    <endEvent id=\"end\" name=\"Case complete\"/>\n  </process>\n</definitions>\n"
+    },
+    {
+      "path": "customer-onboarding-v1.bpmn20.xml",
+      "mediaType": "application/xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n  xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"https://tjlabs.dev/flowable/process-operations\">\n  <process id=\"sf_customer_onboarding\" name=\"Customer onboarding v1\" isExecutable=\"true\">\n    <startEvent id=\"start\" name=\"Case received\"/>\n    <sequenceFlow id=\"start_to_intake\" sourceRef=\"start\" targetRef=\"intake\"/>\n    <userTask id=\"intake\" name=\"Customer intake\"/>\n    <sequenceFlow id=\"intake_to_review\" sourceRef=\"intake\" targetRef=\"review\"/>\n    <userTask id=\"review\" name=\"Account approval\"/>\n    <sequenceFlow id=\"review_to_end\" sourceRef=\"review\" targetRef=\"end\"/>\n    <endEvent id=\"end\" name=\"Case complete\"/>\n  </process>\n</definitions>\n"
+    },
+    {
+      "path": "customer-onboarding-v2.bpmn20.xml",
+      "mediaType": "application/xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n  xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"https://tjlabs.dev/flowable/process-operations\">\n  <process id=\"sf_customer_onboarding\" name=\"Customer onboarding v2\" isExecutable=\"true\">\n    <startEvent id=\"start\" name=\"Case received\"/>\n    <sequenceFlow id=\"start_to_intake\" sourceRef=\"start\" targetRef=\"intake\"/>\n    <userTask id=\"intake\" name=\"Customer intake\"/>\n    <sequenceFlow id=\"intake_to_review\" sourceRef=\"intake\" targetRef=\"review\"/>\n    <userTask id=\"review\" name=\"Account approval\"/>\n    <sequenceFlow id=\"review_to_finalize\" sourceRef=\"review\" targetRef=\"finalize\"/>\n    <userTask id=\"finalize\" name=\"Provisioning\"/>\n    <sequenceFlow id=\"finalize_to_end\" sourceRef=\"finalize\" targetRef=\"end\"/>\n    <endEvent id=\"end\" name=\"Case complete\"/>\n  </process>\n</definitions>\n"
+    },
+    {
+      "path": "vendor-approval-v1.bpmn20.xml",
+      "mediaType": "application/xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n  xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"https://tjlabs.dev/flowable/process-operations\">\n  <process id=\"sf_vendor_approval\" name=\"Vendor approval v1\" isExecutable=\"true\">\n    <startEvent id=\"start\" name=\"Case received\"/>\n    <sequenceFlow id=\"start_to_intake\" sourceRef=\"start\" targetRef=\"intake\"/>\n    <userTask id=\"intake\" name=\"Vendor intake\"/>\n    <sequenceFlow id=\"intake_to_review\" sourceRef=\"intake\" targetRef=\"review\"/>\n    <userTask id=\"review\" name=\"Commercial review\"/>\n    <sequenceFlow id=\"review_to_end\" sourceRef=\"review\" targetRef=\"end\"/>\n    <endEvent id=\"end\" name=\"Case complete\"/>\n  </process>\n</definitions>\n"
+    },
+    {
+      "path": "vendor-approval-v2.bpmn20.xml",
+      "mediaType": "application/xml",
+      "text": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<definitions xmlns=\"http://www.omg.org/spec/BPMN/20100524/MODEL\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\n  xmlns:flowable=\"http://flowable.org/bpmn\" targetNamespace=\"https://tjlabs.dev/flowable/process-operations\">\n  <process id=\"sf_vendor_approval\" name=\"Vendor approval v2\" isExecutable=\"true\">\n    <startEvent id=\"start\" name=\"Case received\"/>\n    <sequenceFlow id=\"start_to_intake\" sourceRef=\"start\" targetRef=\"intake\"/>\n    <userTask id=\"intake\" name=\"Vendor intake\"/>\n    <sequenceFlow id=\"intake_to_review\" sourceRef=\"intake\" targetRef=\"review\"/>\n    <userTask id=\"review\" name=\"Commercial review\"/>\n    <sequenceFlow id=\"review_to_finalize\" sourceRef=\"review\" targetRef=\"finalize\"/>\n    <userTask id=\"finalize\" name=\"Vendor activation\"/>\n    <sequenceFlow id=\"finalize_to_end\" sourceRef=\"finalize\" targetRef=\"end\"/>\n    <endEvent id=\"end\" name=\"Case complete\"/>\n  </process>\n</definitions>\n"
+    },
+    {
+      "path": "inputs/sf_grant_review.json",
+      "mediaType": "application/json",
+      "text": "{\"processDefinitionId\":\"__PROCESS_DEFINITION_ID__\",\"businessKey\":\"__BUSINESS_KEY__\",\"name\":\"Grant review native commissioning reference\",\"variables\":[{\"name\":\"caseNumber\",\"type\":\"long\",\"value\":9223372036854775806},{\"name\":\"customer\",\"type\":\"string\",\"value\":\"Native receiving example\"},{\"name\":\"amount\",\"type\":\"double\",\"value\":1248.75}]}\n"
+    },
+    {
+      "path": "inputs/sf_customer_onboarding.json",
+      "mediaType": "application/json",
+      "text": "{\"processDefinitionId\":\"__PROCESS_DEFINITION_ID__\",\"businessKey\":\"__BUSINESS_KEY__\",\"name\":\"Customer onboarding native commissioning reference\",\"variables\":[{\"name\":\"caseNumber\",\"type\":\"long\",\"value\":9223372036854775806},{\"name\":\"customer\",\"type\":\"string\",\"value\":\"Native receiving example\"},{\"name\":\"amount\",\"type\":\"double\",\"value\":1248.75}]}\n"
+    },
+    {
+      "path": "inputs/sf_vendor_approval.json",
+      "mediaType": "application/json",
+      "text": "{\"processDefinitionId\":\"__PROCESS_DEFINITION_ID__\",\"businessKey\":\"__BUSINESS_KEY__\",\"name\":\"Vendor approval native commissioning reference\",\"variables\":[{\"name\":\"caseNumber\",\"type\":\"long\",\"value\":9223372036854775806},{\"name\":\"customer\",\"type\":\"string\",\"value\":\"Native receiving example\"},{\"name\":\"amount\",\"type\":\"double\",\"value\":1248.75}]}\n"
+    }
+  ]
+}

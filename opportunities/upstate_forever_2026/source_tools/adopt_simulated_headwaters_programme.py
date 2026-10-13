@@ -17,8 +17,8 @@ APPLICATION = Path(__file__).resolve().parents[1]
 if str(APPLICATION) not in sys.path:
     sys.path.insert(0, str(APPLICATION))
 
-from model.common import atomic_json, held, identifier, now, read_json, verify_file
-from model.compute_programme import ComputeProgrammes
+from model.common import atomic_json, digest, held, identifier, now, read_json, verify_file
+from model.compute_programme import ComputeProgrammes, POLLUTANTS
 from model.model_selection import run_models, validate_completed_run
 from model.native_study import retained_runtimes
 from model.workspace import Workspace
@@ -95,6 +95,133 @@ def _control_source(ws, source, receipt, recipe_entry, recipe):
             patches[0].get("to_code") != control["scenario"]["to_code"]):
         raise ValueError("Matched-control scenario differs from its original mask and conversion")
     return value, original_record
+
+
+
+def _operator_opening(ws, receipt, rows, status, programme_id, delivery):
+    """Bind the existing Guided journey to one actual mapped alternative."""
+    alternatives = [row["run_id"] for row in rows[1:]]
+    mapped = delivery["selection"]["scenario_run_ids"] if delivery else alternatives
+    focus_id = next(run_id for run_id in alternatives if run_id in mapped)
+    run = ws.inspect_run(focus_id)
+    baseline_id = receipt["baseline_run_id"]
+    selected_row = next(row for row in rows if row["run_id"] == focus_id)
+    comparison_id = receipt.get("comparison_id")
+    if not comparison_id:
+        comparison_id = status["comparisons"][selected_row["key"]]["id"]
+    comparison = ws.retained_item("comparisons", identifier(comparison_id))
+    if (comparison["baseline_run_id"] != baseline_id or
+            focus_id not in [row["run_id"] for row in comparison.get("alternatives", [])]):
+        raise ValueError("The opening comparison differs from its original baseline and alternative")
+    review_id = (receipt.get("spatial_review_ids") or {}).get(focus_id)
+    if not review_id and focus_id == alternatives[0]:
+        review_id = receipt.get("spatial_review_id")
+    if review_id:
+        from model.spatial import SpatialReview
+        spatial = SpatialReview(ws)
+        review = ws.retained_item("spatial_reviews", identifier(review_id))
+        catalog = {row["id"]: row for row in spatial.catalog()["layers"]}
+        for field, wanted in (("primary", baseline_id), ("reference", baseline_id),
+                              ("comparison", focus_id)):
+            layer = catalog.get((review.get(field) or {}).get("layer_id"))
+            if layer is None or layer.get("group") != "run" or layer.get("run_id") != wanted:
+                raise ValueError("The opening spatial view differs from its selected original runs")
+        if spatial.validate_saved(review).get("identity") != "MATCH":
+            raise ValueError("The opening spatial view differs from its retained native sources")
+    selection = {
+        "baseline_run_id": baseline_id, "grid_id": run["selection"]["grid_id"],
+        "profile_id": run["selection"]["profile_id"], "scenario_id": run["selection"]["scenario_id"],
+        "run_id": focus_id, "models": ["ndr", "sdr"], "comparison_id": comparison["id"],
+        "spatial_review_id": review_id or "", "spatial_export_id": "",
+        "delivery_id": delivery["id"] if delivery else "", "calibration_review_id": "",
+    }
+    context = {
+        "operation": OPERATION, "demo_id": DEMO_ID,
+        "project_id": ws.project["id"], "programme_id": programme_id,
+        "recipe_sha256": receipt["recipe_sha256"], "selection": selection,
+        "alternative_run_ids": alternatives,
+    }
+    opening_id = digest(context)
+    journey = {
+        "schema": "upstate.operating-journey/v1", "project_id": ws.project["id"],
+        "step": "compare", "selection": selection, "regional": None, "community": None,
+        "notes": (
+            "SIMULATED headwater inputs; original completed InVEST 3.20 NDR/SDR outputs. "
+            "The selected comparison joins the saved baseline and mapped conservation alternative. "
+            "Inspect the selected native quantities, common coverage and original map legend. "
+            "Run programme: " + programme_id + ". "
+            "Original recipe SHA256: " + receipt["recipe_sha256"] + "."
+        ),
+        "note_versions": [],
+        "recorded_context": {"project_title": ws.project["title"],
+                             "operator_opening": {"id": opening_id, **context}},
+    }
+    if isinstance(run.get("completed_at"), str):
+        journey["started_at"] = run["completed_at"]
+    return {
+        "schema": "upstate.simulated-operator-opening/v1", "id": opening_id,
+        "entry_view": "journey", "programme_view": "programmes",
+        "programme_id": programme_id, "journey": journey,
+        "meaning": "Original saved Guided journey selections for this same completed simulated case.",
+    }
+
+
+def save_operator_opening(operator, workspace_key, receiving):
+    """Save through the receiving owner's existing live Operator session API.
+
+    Invoke once before its final portable capture. This function creates no
+    server, task, or model run; the original API owns validation and revision
+    conflict handling. Existing notes remain in that API's retained history.
+    """
+    if receiving.get("schema") != "upstate.simulated-programme-receiving/v1":
+        raise ValueError("Use the original completed Programme receiving record")
+    opening = receiving.get("operator_opening")
+    if not isinstance(opening, dict) or opening.get("schema") != "upstate.simulated-operator-opening/v1":
+        raise ValueError("Retain this Programme's original operator opening")
+    ws = operator.ws(workspace_key)
+    if receiving.get("project_id") != ws.project["id"]:
+        raise ValueError("Save the opening in its original project or verified restored copy")
+    journey = json.loads(json.dumps(opening["journey"]))
+    context = journey["recorded_context"]["operator_opening"]
+    original = {key: value for key, value in context.items() if key != "id"}
+    if (digest(original) != opening["id"] or context.get("id") != opening["id"]
+            or context.get("project_id") != ws.project["id"]
+            or context.get("programme_id") != receiving.get("programme_id")
+            or opening.get("programme_id") != receiving.get("programme_id")
+            or original.get("selection") != journey.get("selection")):
+        raise ValueError("The original operator opening identity or Programme binding differs")
+    manager = ComputeProgrammes(ws)
+    status = manager.status(identifier(opening["programme_id"]))
+    if (status.get("state") != "complete" or
+            {row["run_id"] for row in status["runs"]} !=
+            {journey["selection"]["baseline_run_id"], *context["alternative_run_ids"]}):
+        raise ValueError("The saved opening must use this completed Programme's exact native cases")
+    current = operator.operator_session(workspace_key)
+    previous = (current or {}).get("journey", {})
+    previous_context = previous.get("recorded_context", {}).get("operator_opening", {})
+    if (previous_context.get("id") == opening["id"] and
+            previous.get("selection") == journey["selection"]):
+        saved = current
+    else:
+        saved = operator.save_operator_session(workspace_key, {
+            "journey": journey, "expected_revision": (current or {}).get("revision"),
+        })
+    readback = operator.operator_session(workspace_key)
+    if readback != saved or readback["journey"].get("selection") != journey["selection"]:
+        raise ValueError("Saved operator selection readback differs")
+    session_bytes = (ws.root / "operator-session.json").read_bytes()
+    if json.loads(session_bytes) != saved:
+        raise ValueError("The operator view changed during receiving; reopen its current saved selection")
+    descriptor = {"path": "operator-session.json", "bytes": len(session_bytes),
+                  "sha256": hashlib.sha256(session_bytes).hexdigest()}
+    return {
+        "schema": "upstate.simulated-operator-opening-receipt/v1",
+        "project_id": ws.project["id"], "opening_id": opening["id"],
+        "programme_id": opening["programme_id"], "revision": saved["revision"],
+        "operator_session": saved, "operator_session_file": descriptor, "journey": saved["journey"],
+        "entry_view": opening["entry_view"], "programme_view": opening["programme_view"],
+        "selection": journey["selection"],
+    }
 
 
 def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
@@ -225,13 +352,41 @@ def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
     # The existing Programme still owns state, comparison and report production;
     # this receiving command has no route to execute missing native stages.
     started = time.perf_counter()
-    status = manager.execute(programme["id"])
+    status = manager.status(programme["id"])
+    report = manager.read_report(programme["id"]) if status["state"] == "complete" else None
+    reused_programme = report is not None and report.get("programme_state") == "complete"
+    if reused_programme:
+        expected_rows = {(run_id, pollutant) for run_id in ids for pollutant in POLLUTANTS}
+        actual_rows = [(row["run_id"], row["pollutant"]) for row in report["rows"]]
+        if (report.get("programme_id") != programme["id"]
+                or report.get("workspace_id") != ws.project["id"]
+                or report.get("grid_id") != grid["id"]
+                or report.get("source_reference") != selection["source_reference"]
+                or [row["run_id"] for row in status["runs"]] != ids
+                or len(actual_rows) != len(expected_rows) or set(actual_rows) != expected_rows
+                or any(row["state"] != "complete" or row["artifact"] is None
+                       for row in report["rows"])):
+            raise ValueError("Retained complete Programme report differs from the original native cases")
+        # Reopening a retained report still verifies its original native bytes.
+        # CompletedWorkspace.run only validates saved completed stages; it cannot
+        # dispatch a model or rewrite Programme progress and comparisons.
+        for run_id in ids:
+            ws.run(run_id)
+        for row in report["rows"]:
+            for name in ("artifact", "comparison_artifact"):
+                if row.get(name) is not None:
+                    verify_file(ws.root, row[name])
+        for item in report["files"]:
+            verify_file(ws.root, item)
+    else:
+        status = manager.execute(programme["id"])
     timings["completed_run_reconciliation_seconds"] = time.perf_counter() - started
     if status["state"] != "complete":
         raise ValueError("Open the retained Programme for its original comparison/report error: " + programme["id"])
     for row in status["runs"]:
         attempts = row.get("attempts", [])
-        if row["run_id"] not in ids or not attempts or attempts[-1].get("reused") is not True:
+        if (row["run_id"] not in ids or (not reused_programme
+                and (not attempts or attempts[-1].get("reused") is not True))):
             raise ValueError("Programme must retain verification of the already-completed native runs")
     report = manager.read_report(programme["id"])
     report_selection = {
@@ -261,16 +416,18 @@ def adopt(workspace, receipt_path, *, output=None, control_receipt=None):
         "classification": recipe["classification"],
         "project_id": ws.project["id"], "workspace": str(ws.root),
         "application": str(APPLICATION), "programme_id": programme["id"],
-        "programme_state": status["state"], "native_runs": retained,
+        "programme_state": status["state"], "programme_reused": reused_programme,
+        "native_runs": retained,
         "source_collection_id": source_collection, "recipe_sha256": receipt["recipe_sha256"],
         "input_summary": recipe["input_summary"],
         "original_receipt": {"path": str(receipt_path), "bytes": len(receipt_bytes), "sha256": receipt_sha},
         "existing_delivery_id": delivery_id,
         "existing_delivery_run_ids": delivery["selection"]["scenario_run_ids"] if delivery else [],
         "control": control, "original_control_receipt": control_original,
-        "report": {"schema": report["schema"], "programme_id": report["programme_id"],
+        "report": {"schema": report["schema"], "id": report["id"], "programme_id": report["programme_id"],
                    "rows": report["rows"], "files": report.get("files", [])},
         "native_study_selection": report_selection,
+        "operator_opening": _operator_opening(ws, receipt, retained, status, programme["id"], delivery),
         "delivery_preview": map_preview, "timings": timings, "completed_at": now(),
     }
     if target is not None:

@@ -166,6 +166,73 @@
           <details><summary>Complete progress history</summary><pre id="workflow-run-events"></pre></details>
           <details><summary>Complete saved run</summary><pre id="workflow-run-json"></pre></details>
         </section>
+        <section id="workflow-series-section" class="panel">
+          <div class="section-heading"><div><p class="eyebrow">Repeat the complete customer task</p><h3>Recurring customer work</h3></div><div class="actions"><button id="series-new">New series</button><button id="series-refresh">Refresh series</button></div></div>
+          <p>Keep the customer, procedure and calendar together. Review each period’s actual source and inputs, then start its original saved workflow. Dates describe the work period; the operator starts each cycle.</p>
+          <div id="series-pending" class="panel compact" hidden><h4>Continue a saved series action</h4><div id="series-pending-list"></div></div>
+          <section class="subsection" aria-labelledby="series-agenda-title">
+            <div class="section-heading"><h4 id="series-agenda-title">Customer delivery agenda</h4><button id="series-agenda-export" type="button">Export calendar</button></div>
+            <p class="hint">See due work across every customer series in this profile. Open a saved period to continue it, or plan a proposed period with its actual source and inputs.</p>
+            <form id="series-agenda-form">
+              <div class="columns">
+                <div><label for="series-agenda-from">Due from</label><input id="series-agenda-from" type="date" required></div>
+                <div><label for="series-agenda-to">Due through</label><input id="series-agenda-to" type="date" required></div>
+              </div>
+              <div class="columns">
+                <div><label for="series-agenda-query">Customer, task or source</label><input id="series-agenda-query" type="search" maxlength="160"></div>
+                <div><label for="series-agenda-status">Work status</label><select id="series-agenda-status"><option value="open">Open work</option><option value="all">All work</option><option value="PROPOSED">Periods to plan</option><option value="PLANNED">Planned</option><option value="READY">Ready</option><option value="RUNNING">Running</option><option value="PAUSED">Paused</option><option value="WAITING">Waiting</option><option value="COMPLETE">Complete</option><option value="CANCELLED">Cancelled</option></select></div>
+              </div>
+              <details><summary>Calendar and overdue work</summary>
+                <label for="series-agenda-today">Today for due-date comparison</label><input id="series-agenda-today" type="date" required>
+                <label><input id="series-agenda-overdue" type="checkbox" checked> Include earlier overdue saved work</label>
+                <label><input id="series-agenda-proposed" type="checkbox" checked> Include calendar periods to plan</label>
+                <p class="hint">The selected window covers up to 366 days. Deadlines use whole calendar dates. The export includes every matching period, across all pages.</p>
+              </details>
+              <button id="series-agenda-load" type="submit">Open delivery agenda</button>
+            </form>
+            <p id="series-agenda-summary" class="hint" role="status"></p>
+            <div class="table-wrap"><table><thead><tr><th scope="col">Due</th><th scope="col">Customer work</th><th scope="col">Progress</th><th scope="col">Selected source</th><th scope="col">Continue</th></tr></thead><tbody id="series-agenda-rows"></tbody></table></div>
+            <div class="pager"><button id="series-agenda-previous" type="button">Previous</button><span id="series-agenda-page"></span><button id="series-agenda-next" type="button">Next</button></div>
+          </section>
+          <div class="request-layout">
+            <div><h4>Customer series</h4><div id="series-list" class="select-list"></div></div>
+            <div id="series-editor" hidden>
+              <form id="series-form">
+                <div class="columns"><div><label for="series-name">Series name</label><input id="series-name" maxlength="160" required></div><div><label for="series-customer">Customer or receiving team</label><input id="series-customer" maxlength="160" required></div></div>
+                <label for="series-task">Complete recurring task and useful output</label><textarea id="series-task" rows="3" maxlength="8000" required></textarea>
+                <label for="series-workflow">Saved workflow</label><select id="series-workflow" required></select>
+                <p id="series-selected-workflow" class="hint"></p>
+                <div class="columns"><div><label for="series-cadence">Calendar</label><select id="series-cadence"><option value="manual">Select each period</option><option value="day">Days</option><option value="week">Weeks</option><option value="month">Months</option></select></div><div><label for="series-interval">Interval</label><input id="series-interval" type="number" min="1" max="366" value="1"><label for="series-anchor">First period begins</label><input id="series-anchor" type="date"></div></div>
+                <label for="series-base-inputs">Complete default workflow inputs (JSON)</label><textarea id="series-base-inputs" class="code-input" spellcheck="false" rows="6">{}</textarea>
+                <details><summary>Use period values in native inputs</summary><p>Map a complete cycle value into an existing input container. Available values are /id, /runId, /key, /label, /period/start, /period/end, /dueDate, /sourceEdition and /reason.</p><label for="series-bindings">Cycle input bindings (JSON)</label><textarea id="series-bindings" class="code-input" spellcheck="false" rows="4">[]</textarea></details>
+                <label><input id="series-enabled" type="checkbox" checked> Enable new work in this series</label>
+                <p class="hint">Turning off new work keeps existing native runs and their original controls available.</p>
+                <div class="actions"><button id="series-save" type="submit" class="primary">Save series edition</button><button id="series-export" type="button">Export complete profile</button></div>
+                <p id="series-edition" class="hint"></p>
+              </form>
+            </div>
+          </div>
+          <div id="series-work" hidden>
+            <section class="subsection">
+              <div class="section-heading"><h4>Plan the next work period</h4><button id="series-cycle-new">New period or source edition</button></div>
+              <form id="series-calendar-form"><div class="columns"><div><label for="series-calendar-from">Calendar window begins</label><input id="series-calendar-from" type="date" required></div><div><label for="series-calendar-to">Calendar window ends</label><input id="series-calendar-to" type="date" required></div></div><button id="series-calendar" type="submit">Show complete periods</button></form>
+              <div id="series-calendar-list" class="select-list"></div><button id="series-calendar-next" hidden>Next calendar periods</button>
+              <div id="series-cycle-editor" hidden>
+                <form id="series-cycle-form">
+                  <div class="columns"><div><label for="series-cycle-key">Stable period or source key</label><input id="series-cycle-key" maxlength="160" required></div><div><label for="series-cycle-label">Work label</label><input id="series-cycle-label" maxlength="160" required></div></div>
+                  <div class="columns"><div><label for="series-period-start">Complete period begins</label><input id="series-period-start" type="date" required><label for="series-period-end">Complete period ends</label><input id="series-period-end" type="date" required></div><div><label for="series-due-date">Due date</label><input id="series-due-date" type="date" required><label for="series-source-edition">Selected source edition or reference</label><textarea id="series-source-edition" rows="2" maxlength="8000"></textarea></div></div>
+                  <label for="series-cycle-reason">Why this period or changed source is useful to the customer</label><textarea id="series-cycle-reason" rows="2" maxlength="8000" required></textarea>
+                  <label for="series-previous-cycle">Earlier cycle, when this continues or corrects it</label><select id="series-previous-cycle"><option value="">No earlier cycle selected</option></select>
+                  <label for="series-cycle-inputs">Complete inputs for this cycle (JSON)</label><textarea id="series-cycle-inputs" class="code-input" spellcheck="false" rows="6">{}</textarea>
+                  <button id="series-cycle-review" type="submit">Review complete cycle</button>
+                </form>
+              </div>
+              <section id="series-review" class="panel compact" hidden><h4 id="series-review-title">Review this customer cycle</h4><dl id="series-review-properties" class="properties"></dl><div id="series-review-issues"></div><div class="table-wrap"><table><thead><tr><th>Step</th><th>Native request</th><th>After return</th></tr></thead><tbody id="series-review-steps"></tbody></table></div><details><summary>Complete selected inputs and native requests</summary><pre id="series-review-json"></pre></details><div class="actions"><button id="series-cycle-save" class="primary">Save reviewed cycle</button><button id="series-cycle-start" class="primary" hidden>Start original workflow</button></div></section>
+            </section>
+            <section class="subsection"><h4>Saved periods and original progress</h4><div id="series-cycles" class="select-list"></div><div class="actions"><button id="series-cycles-previous">Previous</button><button id="series-cycles-next">Next</button></div></section>
+            <section id="series-cycle-detail" class="subsection" hidden><h4 id="series-cycle-title"></h4><dl id="series-cycle-properties" class="properties"></dl><p id="series-cycle-message"></p><div class="actions"><button id="series-cycle-start-review">Review first start</button><button id="series-open-run">Open original run and customer receiving</button></div><form id="series-cycle-cancel-form"><label for="series-cycle-cancel-reason">Reason to cancel this unstarted period</label><textarea id="series-cycle-cancel-reason" rows="2" maxlength="8000" required></textarea><button id="series-cycle-cancel" type="submit">Cancel planned period</button></form><details><summary>Complete saved cycle and native state</summary><pre id="series-cycle-json"></pre></details></section>
+          </div>
+        </section>
       </section>
 
       <section id="page-customers" class="page" hidden>
@@ -174,7 +241,7 @@
           <section class="panel"><h3>Receive or resume a customer</h3><p>Use the export identity returned by the merchant. Receiving keeps the original manifest, verified files and resumable transfer.</p>
             <form id="customer-form">
               <p id="customer-form-hint" class="hint"></p>
-              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option><option value="openapi">API workspace package</option><option value="grant-reviewer">Grant reviewer packet and results</option><option value="grpc">gRPC customer, source and observations</option></select>
+              <label for="customer-family">Original customer authority</label><select id="customer-family"><option value="core">Merchant release store</option><option value="opensearch">OpenSearch workspace deployment</option><option value="openapi">API workspace package</option><option value="grant-reviewer">Grant reviewer packet and results</option><option value="grpc">gRPC customer, source and observations</option><option value="worldbank-programme">World Bank programme and complete workspace</option></select>
               <div id="customer-workspace-field" hidden><label for="customer-workspace">Configured workspace alias</label><input id="customer-workspace" pattern="[A-Za-z0-9][A-Za-z0-9._-]{0,127}" autocomplete="off"></div>
               <label for="customer-export">Original export ID</label><input id="customer-export" pattern="[a-z0-9][a-z0-9_-]{0,63}" required autocomplete="off">
               <label for="customer-sha">Manifest SHA-256</label><input id="customer-sha" pattern="[a-f0-9]{64}" class="mono" required autocomplete="off">

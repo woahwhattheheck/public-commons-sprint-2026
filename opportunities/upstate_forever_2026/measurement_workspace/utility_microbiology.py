@@ -100,12 +100,49 @@ def catalog_entry(application=None):
             "counts": dict(COUNTS)}
 
 
+RETAINED_MANIFEST_SHA256 = "ee6d5cc19e2a98b799db33df08026c6020a9a122f5cfb4ab83f1e415476dee23"
+
+
+def build_retained_files(originals):
+    """Build the original study from its retained report edition, without disk substitution."""
+    if not isinstance(originals, dict) or any(not isinstance(value, bytes) for value in originals.values()):
+        raise ValueError("Retained microbial sources must contain original file bytes")
+    manifest_body = originals.get("source-manifest.json", b"")
+    if _sha(manifest_body) != RETAINED_MANIFEST_SHA256:
+        raise ValueError("Choose the exact microbial source edition retained by this report")
+    manifest = json.loads(manifest_body)
+    if manifest.get("schema") != "upstate.sources/v1":
+        raise ValueError("Retain the original microbial source manifest")
+    declared = {"source-manifest.json": {"sha256": RETAINED_MANIFEST_SHA256, "bytes": len(manifest_body)}}
+    for entry in manifest["entries"]:
+        for member in [entry, *entry.get("companions", [])]:
+            name = _relative(member["path"])
+            previous = declared.get(name)
+            if previous and any(previous.get(key) is not None and member.get(key) is not None
+                                and previous[key] != member[key] for key in ("sha256", "bytes")):
+                raise ValueError("Retained microbial source declarations conflict: " + name)
+            declared[name] = {**(previous or {}), **{key: value for key, value in member.items() if value is not None}}
+    if set(originals) != set(declared) or len(declared) != 22:
+        raise ValueError("Retain the complete original 22-file microbial edition")
+    for name, expected in declared.items():
+        data = originals[name]
+        if expected.get("sha256") != _sha(data) or expected.get("bytes", len(data)) != len(data):
+            raise ValueError("Retained original microbial source bytes changed: " + name)
+        data.decode("utf-8")
+    return _build_files(dict(originals), None)
+
+
 def build_files(application=None):
     originals = source_files(application)
     from . import utility_microbiology_context as temporal_context
     application_root = Path(application) if application is not None else Path(__file__).resolve().parents[1]
     temporal = (temporal_context.load_companion(application_root)
                 if (application_root / temporal_context.SOURCE_MANIFEST).is_file() else None)
+    return _build_files(originals, temporal)
+
+
+def _build_files(originals, temporal):
+    manifest_sha256 = _sha(originals["source-manifest.json"])
     inputs = json.loads(originals["source-inputs.json"])
     captures = {entry["path"]: entry for entry in inputs["sources"]}
     for name, capture in captures.items():
@@ -209,7 +246,7 @@ def build_files(application=None):
         "grab_sampling": {"start": dates[0], "end": dates[-1], "frequency": "Original irregular sampling dates", "total_visits": 730},
         "content_counts": dict(COUNTS),
         "source_interpretation": {"coordinates": "Original CSV numeric strings and datums: 34 WGS84 / EPSG:4326 and two NAD83 / EPSG:4269.",
-            "utility_source_counts": utility_counts, "source_manifest_sha256": MANIFEST_SHA256,
+            "utility_source_counts": utility_counts, "source_manifest_sha256": manifest_sha256,
             "temporal_support": "Original sampling dates and methods; routine and field-replicate activity types remain distinct."}}
     notes = [
         {"code": "ORIGINAL_RECORDS", "context": "All 730 original WQP result rows retain all 63 source fields, six response identities and CSV row selectors."},
@@ -249,7 +286,7 @@ def build_files(application=None):
             "original_station_columns": station_fields,
             "coordinate_datums": {datum: len(rows) for datum, rows in native.items()},
             "first_sampling_date": dates[0], "last_sampling_date": dates[-1],
-            "sampling_dates": len(dates), "source_manifest_sha256": MANIFEST_SHA256})})
+            "sampling_dates": len(dates), "source_manifest_sha256": manifest_sha256})})
     companions = [{"path": "original/" + name, "sha256": _sha(data), "bytes": len(data)}
                   for name, data in sorted(originals.items())]
     original_manifest = json.loads(originals["source-manifest.json"])

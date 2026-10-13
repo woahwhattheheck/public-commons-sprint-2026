@@ -22,11 +22,24 @@ FILES = (
     "operator/install_gauge_support.py",
     "operator/GAUGE_SUPPORT.md",
     "integration/component_fragments/gauge-scientific-composer.json",
+    "model/gauge_study_transfer.py",
+    "model/gauge_study_receiving.py",
+    "model/GAUGE_STUDY_RECEIVING.md",
+    "operator/gauge_receiving.py",
+    "operator/web/gauge_received_studies.mjs",
+    "model/GAUGE_STUDY_TRANSFER.md",
+    "integration/component_fragments/gauge-study-transfer.json",
 )
 REQUIRES = (
     "model/station_geography.py", "model/station_assessment_context.py", "model/spatial_esri.py",
     "model/workspace.py", "model/portable.py", "model/watershed_context.py",
     "model/observed_context.py", "model/scientific_report.py",
+    "model/observed_report_render.py", "model/scientific_report_editions.py",
+    "model/study_transfer.py", "model/scientific_report_study_transfer.py",
+    "model/study_report_transfer.py",
+    "model/study_receiving.py", "operator/study_receiving.py",
+    "operator/web/received_studies.mjs", "operator/web/extensions/study_transfer.mjs",
+    "operator/extensions/study-transfer.json",
     "operator/extension_registry.py", "operator/web/extension_host.mjs",
     "operator/extensions/station-geography.json", "operator/extensions/watershed-context.json",
     "operator/source_reports.py", "operator/source_report_editions.py",
@@ -71,8 +84,8 @@ def install(application, source_root, *, apply=False):
                 if value.get("schema") != "upstate.operator-extension/v1" or value.get("id") != "gauge-support":
                     raise ValueError("Choose the gauge-support shared extension descriptor")
             elif (value.get("schema") != "upstate.application-component-fragment/v1"
-                    or value.get("id") != "gauge-scientific-composer"):
-                raise ValueError("Choose the original Gauge scientific-composer component fragment")
+                    or value.get("id") != Path(member).stem):
+                raise ValueError("Choose the original Gauge component fragment: " + member)
         target = application / member
         if not target.resolve().is_relative_to(application):
             raise ValueError("Component destination leaves its application root")
