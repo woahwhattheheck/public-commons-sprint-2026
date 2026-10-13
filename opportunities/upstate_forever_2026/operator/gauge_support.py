@@ -14,6 +14,15 @@ class GaugeSupport:
         return [{key: row.get(key) for key in ("id", "title", "created_at", "summary", "selection")}
                 for row in self.operator.ws(workspace_key)._list(gauge_support.KIND)]
 
+    def _report(self, workspace_key, edition_id):
+        ws = self.operator.ws(workspace_key)
+        value = gauge_report_context.latest(ws, identifier(edition_id))
+        if value is not None:
+            value["_downloads"] = [self.operator._ticket(workspace_key,
+                verify_file(ws.root, item), item, Path(item["path"]).name)
+                for item in value.get("files", [])]
+        return value
+
     def _edition(self, workspace_key, edition_id, complete=True):
         ws = self.operator.ws(workspace_key)
         row = gauge_support.inspect(ws, identifier(edition_id), verify=True, include_result=complete)
@@ -22,6 +31,7 @@ class GaugeSupport:
             verify_file(ws.root, item), item, item.get("label") or Path(item["path"]).name)
             for item in row["files"]]
         if complete:
+            row["scientific_report"] = self._report(workspace_key, edition_id)
             for name, key in (("catchments.geojson","catchments"),("regional-hucs.geojson","hucs"),
                               ("gauges.geojson","gauges")):
                 item = next(item for item in row["files"] if Path(item["path"]).name == name)
@@ -33,6 +43,8 @@ class GaugeSupport:
         ws = self.operator.ws(workspace_key)
         if operation == "catalog":
             return {"workspace_key": workspace_key, **gauge_support.catalog(ws)}
+        if operation == "report":
+            return self._report(workspace_key, payload.get("id") or payload.get("edition_id"))
         if operation == "edition":
             return self._edition(workspace_key, payload.get("id") or payload.get("edition_id"))
         if operation == "verify":
@@ -46,7 +58,8 @@ class GaugeSupport:
         payload = task.get("payload") or {}
         if task["action"] == "gauge.support.report":
             return gauge_report_context.prepare(self.operator.ws(task["workspace"]),
-                payload.get("edition_id"), delivery_id=payload.get("delivery_id") or None)
+                payload.get("edition_id"), delivery_id=payload.get("delivery_id") or None,
+                render=payload.get("render", True))
         result = gauge_support.build(self.operator.ws(task["workspace"]), payload.get("selection", payload))
         return {key: result.get(key) for key in ("id","title","summary","selection","build_id")}
 
@@ -57,7 +70,7 @@ class GaugeSupport:
             task.setdefault("_downloads", []).extend(self.operator._ticket(task["workspace"],
                 verify_file(ws.root, item), item, Path(item["path"]).name) for item in result.get("files", []))
             task["_gauge_support"] = {"id": result.get("gauge_support_id"),
-                "title": "Gauge support report source", "view": "gauge-support"}
+                "title": "Gauge scientific report", "view": "gauge-support"}
             return task
         if task.get("action") in ACTIONS and task.get("state") == "complete" and (task.get("result") or {}).get("id"):
             row = self._edition(task["workspace"], task["result"]["id"], complete=False)

@@ -3,6 +3,7 @@ import {need,copy,plain,text,id,units,decimal,dayOf,windowOf,inWindow,atoms,netw
   validateSourceEdition,sourceSummary,keyForReceipt,txKey} from './source.mjs';
 import {canonical,compareEditions as compareCarbonEditions} from '../stellarcarbon-statements/engine.mjs';
 import {paymentFundingCapacity,compareNativeOrder,paymentBeforePayout} from './funding.mjs';
+import {isImmutableJSON} from './immutable.mjs';
 export {canonical};
 export const WORKSPACE_SCHEMA='stellar-forge.givecredit-workspace.v1';
 export const STATEMENT_SCHEMA='stellar-forge.givecredit-statement.v1';
@@ -473,8 +474,8 @@ export function prepareStatement(state,input){
       unassignedDonations:selectedDonations.filter(row=>!links.some(link=>link.donationId===row.id)).length,
       receiptsWithSharedPayment:[...receiptGroups].filter(([,ids])=>ids.length>1).map(([paymentKey,receiptIds])=>({paymentKey,receiptIds})),
       paymentSourceAvailable:Boolean(native),carbonSourceAvailable:Boolean(carbon)},
-    organization:registrySource?.tables.organizations.find(row=>row.id===selection.organizationId)||null,
-    initiative:registrySource?.tables.initiatives.find(row=>row.id===selection.initiativeId)||null,
+    organization:copy(registrySource?.tables.organizations.find(row=>row.id===selection.organizationId)||null),
+    initiative:copy(registrySource?.tables.initiatives.find(row=>row.id===selection.initiativeId)||null),
     donations:copy(selectedDonations),payments:copy(payments),receipts:copy(selectedReceiptRows),impacts,
     relatedPayouts,
     certificates:certificateRows,retirementRegister:certificateRows.filter(row=>row.withinRetirementPeriod),
@@ -552,7 +553,7 @@ export function compareEditions(state,beforeId,afterId){
   }
   return {schema:'stellar-forge.givecredit-comparison.v1',before:{id:before.id,label:before.label},after:{id:after.id,label:after.label},kind:before.kind,tables};
 }
-export function mutate(state,operation){
+export function mutate(state,operation,{reuseImmutableEditions=false}={}){
   validateWorkspace(state);
   need(plain(operation)&&plain(operation.value),'OPERATION_REQUIRED','Send a complete operator action.');
   const requestId=id(operation.requestId),actor=text(operation.actor||'Local operator','operator',300);
@@ -560,13 +561,15 @@ export function mutate(state,operation){
   const previous=state.operations.find(row=>row.requestId===requestId);
   if(previous){need(previous.intent===intent,'REQUEST_REUSED','This request identifier belongs to another operation.',409);return {state,result:copy(previous.result),replayed:true};}
   need(operation.revision===state.revision,'STALE_WORKSPACE','Refresh the workspace before saving.',409);
-  const next=copy(state),value=operation.value,context={recordId:id(operation.recordId||requestId),at:operation.at||now()};
+  if(reuseImmutableEditions)need(state.editions.every(isImmutableJSON),'IMMUTABLE_EDITIONS_REQUIRED','Native edition reuse requires deeply retained immutable source editions.');
+  const next=reuseImmutableEditions?{...copy({...state,editions:[]}),editions:[...state.editions]}:copy(state),value=operation.value,context={recordId:id(operation.recordId||requestId),at:operation.at||now()};
   let result;
   if(operation.action==='import'){
     validateSourceEdition(value.source);
     const previous=value.source.sha256&&next.editions.find(row=>row.sha256===value.source.sha256);
     if(previous)result={edition:{id:previous.id,label:previous.label,...sourceSummary(previous)},alreadyPresent:true};
-    else{const source={...copy(value.source),id:context.recordId,label:text(value.label,'source edition label',300),importedAt:context.at};
+    else{const retainedSource=reuseImmutableEditions&&isImmutableJSON(value.source)?value.source:copy(value.source);
+      const source={...retainedSource,id:context.recordId,label:text(value.label,'source edition label',300),importedAt:context.at};
       next.editions.push(source);result={edition:{id:source.id,label:source.label,...sourceSummary(source)}};}
   }else if(operation.action==='payment-link'){
     result={paymentLink:saveRecord(next.paymentLinks,value,context,input=>normalizePaymentLink(next,input))};

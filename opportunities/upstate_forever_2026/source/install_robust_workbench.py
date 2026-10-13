@@ -73,6 +73,11 @@ PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
 LEGACY = "operator/extensions/robust-decisions.json"
 LEGACY_SHA = "8c5dfebfddd81df683a4b40fd8e8b893ec7940acf807575edaa0d35cbc8fcd13"
+LEGACY_PREDECESSORS = {
+    (757, LEGACY_SHA),
+    # Original ECD1 complete-source queue registration and workspace verifier.
+    (1912, "f21897e81a61f61074a12c58295fe00377414b8fb2557e08b98345ded0792175"),
+}
 RETIRED = LEGACY + ".retired-ECO13-ROBUST-DD6B"
 
 
@@ -273,10 +278,12 @@ def verify_composition(application, pending):
 def prepare_legacy_retirement(application, pending):
     old = read_existing(application, LEGACY)
     backup = read_existing(application, RETIRED)
-    if old is not None and (len(old) != 757 or sha(old) != LEGACY_SHA):
+    if old is not None and (len(old), sha(old)) not in LEGACY_PREDECESSORS:
         raise ValueError("Preserve and compose the newer legacy decision registration: " + LEGACY)
-    if backup is not None and (len(backup) != 757 or sha(backup) != LEGACY_SHA):
+    if backup is not None and (len(backup), sha(backup)) not in LEGACY_PREDECESSORS:
         raise ValueError("Preserve the existing decision-registration retirement record: " + RETIRED)
+    if old is not None and backup is not None and old != backup:
+        raise ValueError("Preserve both distinct original decision registrations before retirement")
     descriptor = json.loads(assembled_data(application, pending, "operator/extensions/robust-workbench.json"))
     ours = set(descriptor.get("backend", {}).get("actions", []))
     directory = target_path(application, "operator/extensions/robust-workbench.json").parent
@@ -332,7 +339,7 @@ def run(application, packet_paths, *, dry_run=False):
             "application": str(application), "dry_run": dry_run,
             "changed": changed,
             "retired_registration": {"path": LEGACY, "retained_as": RETIRED,
-                                     "sha256": LEGACY_SHA} if legacy is not None else None,
+                                     "sha256": sha(legacy)} if legacy is not None else None,
             "files": [{"path": name, "bytes": len(data), "sha256": sha(data),
                        "previous_sha256": sha(originals[name]) if originals[name] is not None else None,
                        "packet": origins[name]} for name, data in sorted(pending.items())],

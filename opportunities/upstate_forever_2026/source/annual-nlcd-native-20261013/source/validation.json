@@ -1,0 +1,586 @@
+{
+  "schema": "upstate.nlcd-native-source-validation/v1",
+  "year_probe": {
+    "schema": "upstate.annual-nlcd-year-probe/v1",
+    "native_column": 120905,
+    "native_row": 66053,
+    "native_crs": "EPSG:5070",
+    "native_centre": [
+      1211564.999444216,
+      1333214.9982741694
+    ],
+    "results": [
+      {
+        "year": 1985,
+        "url": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&layers=mrlc_Land-Cover-Native_conus_year_data%3ALand-Cover-Native_conus_year_data&query_layers=mrlc_Land-Cover-Native_conus_year_data%3ALand-Cover-Native_conus_year_data&styles=&crs=EPSG%3A5070&bbox=1211534.9994442207%2C1333184.9982741433%2C1211594.9994442114%2C1333244.9982741955&width=2&height=2&i=1&j=1&format=image%2Fpng&info_format=application%2Fjson&feature_count=1&time=1985-01-01T00%3A00%3A00.000Z&buffer=0",
+        "body": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":\"\",\"geometry\":null,\"properties\":{\"PALETTE_INDEX\":81}}],\"totalFeatures\":\"unknown\",\"numberReturned\":1,\"timeStamp\":\"2026-10-13T04:53:36.703Z\",\"crs\":null}",
+        "bytes": 213,
+        "sha256": "c43543bc1c82af8fd8ac0a81dfd26e75302723d699cddc10c5e2b6562e310202",
+        "value": 81
+      },
+      {
+        "year": 2025,
+        "url": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&layers=mrlc_Land-Cover-Native_conus_year_data%3ALand-Cover-Native_conus_year_data&query_layers=mrlc_Land-Cover-Native_conus_year_data%3ALand-Cover-Native_conus_year_data&styles=&crs=EPSG%3A5070&bbox=1211534.9994442207%2C1333184.9982741433%2C1211594.9994442114%2C1333244.9982741955&width=2&height=2&i=1&j=1&format=image%2Fpng&info_format=application%2Fjson&feature_count=1&time=2025-01-01T00%3A00%3A00.000Z&buffer=0",
+        "body": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":\"\",\"geometry\":null,\"properties\":{\"PALETTE_INDEX\":23}}],\"totalFeatures\":\"unknown\",\"numberReturned\":1,\"timeStamp\":\"2026-10-13T04:57:38.663Z\",\"crs\":null}",
+        "bytes": 213,
+        "sha256": "837a045dc87d100059e646fee7adf253e9ec5f0406047f26ea6ab39697aab8a6",
+        "value": 23
+      }
+    ],
+    "conclusion": "The ordinary WMS point route applies the requested time. The UTFGrid route returns the identical2025 value and complete body under both1985 and2025, matching the observed loss of raster reader parameters in UTFGridMapOutputFormat."
+  },
+  "independent_2025_forest_probe": {
+    "url": "https://dmsdata.cr.usgs.gov/geoserver/mrlc_Land-Cover-Native_conus_year_data/wms?service=WMS&version=1.3.0&request=GetFeatureInfo&layers=mrlc_Land-Cover-Native_conus_year_data%3ALand-Cover-Native_conus_year_data&query_layers=mrlc_Land-Cover-Native_conus_year_data%3ALand-Cover-Native_conus_year_data&styles=&crs=EPSG%3A5070&bbox=1211474.99944423%2C1333394.998274326%2C1211534.9994442207%2C1333454.9982743782&width=2&height=2&i=1&j=1&format=image%2Fpng&info_format=application%2Fjson&feature_count=1&time=2025-01-01T00%3A00%3A00.000Z&buffer=0",
+    "params": {
+      "service": "WMS",
+      "version": "1.3.0",
+      "request": "GetFeatureInfo",
+      "layers": "mrlc_Land-Cover-Native_conus_year_data:Land-Cover-Native_conus_year_data",
+      "query_layers": "mrlc_Land-Cover-Native_conus_year_data:Land-Cover-Native_conus_year_data",
+      "styles": "",
+      "crs": "EPSG:5070",
+      "bbox": "1211474.99944423,1333394.998274326,1211534.9994442207,1333454.9982743782",
+      "width": "2",
+      "height": "2",
+      "i": "1",
+      "j": "1",
+      "format": "image/png",
+      "info_format": "application/json",
+      "feature_count": "1",
+      "time": "2025-01-01T00:00:00.000Z",
+      "buffer": "0"
+    },
+    "centre": [
+      1211504.9994442253,
+      1333424.9982743522
+    ],
+    "method": "GeoServer WMS.pixelToWorld uses integer screen coordinate without half-pixel offset; symmetric 2x2 bbox and i=j=1 target exact native centre",
+    "body": "{\"type\":\"FeatureCollection\",\"features\":[{\"type\":\"Feature\",\"id\":\"\",\"geometry\":null,\"properties\":{\"PALETTE_INDEX\":43}}],\"totalFeatures\":\"unknown\",\"numberReturned\":1,\"timeStamp\":\"2026-10-13T04:36:48.142Z\",\"crs\":null}",
+    "value": 43
+  },
+  "actual_png_checks": {
+    "small_2025": {
+      "bytes": 2037,
+      "sha256": "a6ee6e3d4b101658416a03ffef6f427a21c873290645f99908696a8e032b2f7c",
+      "developed_cell": 23,
+      "forest_cell": 43
+    },
+    "small_1985": {
+      "bytes": 2051,
+      "sha256": "2e4b988ec18b6e78a1b22ff997e2ba65e060e9a737ef182842cd094aaebfdf9d",
+      "developed_cell": 81
+    },
+    "large_2025": {
+      "bytes": 279736,
+      "sha256": "aada47d6e45c6bc57c692cd638690a991e1cd02393356e1904c1cbb80aa55eec",
+      "width": 1024,
+      "height": 1024,
+      "overlap_pixels": 4096,
+      "overlap_mismatches": 0
+    }
+  },
+  "full_capture": {
+    "tiles": 49,
+    "pixels": 40713317,
+    "png_bytes": 11252658,
+    "nodata_cells": 0,
+    "class_counts": {
+      "11": 1105669,
+      "21": 3509200,
+      "22": 1822272,
+      "23": 605923,
+      "24": 212075,
+      "31": 89408,
+      "41": 10025616,
+      "42": 8130872,
+      "43": 4204909,
+      "52": 1072801,
+      "71": 1551681,
+      "81": 7010479,
+      "82": 243722,
+      "90": 1105091,
+      "95": 23599
+    }
+  },
+  "published_replay": {
+    "schema": "upstate.native-geotiff-published-replay/v1",
+    "source_pages": 18,
+    "parts": 688,
+    "bytes": 9237060,
+    "sha256": "a9f6bfedc4bd3936b20c05b68709f2f450b822df9fbd8cd53fa2f46bb27e5157",
+    "strips": [
+      {
+        "row": 0,
+        "parts": 130,
+        "bytes": 1742610,
+        "sha256": "0ecaa88f05f9fa50d8d2c2f6da671778e4e0e91b147ea866fe8d1408f1cc0f24"
+      },
+      {
+        "row": 1,
+        "parts": 112,
+        "bytes": 1510806,
+        "sha256": "ebd2d4ab38238629f1d6a4d84b925422b382f6a6f5c8f69c0dea518d294b9f4f"
+      },
+      {
+        "row": 2,
+        "parts": 111,
+        "bytes": 1485433,
+        "sha256": "39d26ff00d75e0778006436bbec8e6b20d59c716a637d07d66b619c540cbfe88"
+      },
+      {
+        "row": 3,
+        "parts": 93,
+        "bytes": 1247136,
+        "sha256": "e34edd84785f591aa29537afa05ceabe32a0b56edc49cdcd472e8c7451c9126e"
+      },
+      {
+        "row": 4,
+        "parts": 109,
+        "bytes": 1468611,
+        "sha256": "d8c489846bac3c689a930fe71c8e00901dab626ae32940896b4c363f24ec9635"
+      },
+      {
+        "row": 5,
+        "parts": 113,
+        "bytes": 1512954,
+        "sha256": "50d214c56c5cded38253a2b831168f50169511e1684ba0114c427c22769cdc12"
+      },
+      {
+        "row": 6,
+        "parts": 20,
+        "bytes": 268838,
+        "sha256": "b00cf6c8e636af6c2470f41b7acb6773d3cc7aaec1ba0d14db129192dd261eb6"
+      }
+    ]
+  },
+  "tiff_tags": {
+    "256": {
+      "type": 4,
+      "count": 1,
+      "values": [
+        6443
+      ]
+    },
+    "257": {
+      "type": 4,
+      "count": 1,
+      "values": [
+        6319
+      ]
+    },
+    "258": {
+      "type": 3,
+      "count": 1,
+      "values": [
+        8
+      ]
+    },
+    "259": {
+      "type": 3,
+      "count": 1,
+      "values": [
+        8
+      ]
+    },
+    "262": {
+      "type": 3,
+      "count": 1,
+      "values": [
+        1
+      ]
+    },
+    "270": {
+      "type": 2,
+      "count": 207,
+      "values": [
+        85,
+        83,
+        71,
+        83,
+        32,
+        65,
+        110,
+        110,
+        117,
+        97,
+        108,
+        32,
+        78,
+        76,
+        67,
+        68,
+        50,
+        48,
+        50,
+        53,
+        32,
+        110,
+        97,
+        116,
+        105,
+        118,
+        101,
+        32,
+        99,
+        108,
+        97,
+        115,
+        115,
+        32,
+        115,
+        111,
+        117,
+        114,
+        99,
+        101,
+        59,
+        32,
+        101,
+        120,
+        97,
+        99,
+        116,
+        32,
+        121,
+        101,
+        97,
+        114,
+        50,
+        48,
+        50,
+        53,
+        45,
+        48,
+        49,
+        45,
+        48,
+        49,
+        84,
+        48,
+        48,
+        58,
+        48,
+        48,
+        58,
+        48,
+        48,
+        46,
+        48,
+        48,
+        48,
+        90,
+        59,
+        32,
+        69,
+        80,
+        83,
+        71,
+        53,
+        48,
+        55,
+        48,
+        59,
+        32,
+        110,
+        97,
+        116,
+        105,
+        118,
+        101,
+        51,
+        48,
+        109,
+        32,
+        103,
+        114,
+        105,
+        100,
+        59,
+        32,
+        102,
+        117,
+        108,
+        108,
+        50,
+        49,
+        55,
+        72,
+        85,
+        67,
+        32,
+        85,
+        112,
+        112,
+        101,
+        114,
+        32,
+        83,
+        97,
+        118,
+        97,
+        110,
+        110,
+        97,
+        104,
+        32,
+        98,
+        117,
+        102,
+        102,
+        101,
+        114,
+        49,
+        48,
+        48,
+        48,
+        109,
+        59,
+        32,
+        101,
+        120,
+        112,
+        108,
+        105,
+        99,
+        105,
+        116,
+        32,
+        100,
+        105,
+        115,
+        99,
+        114,
+        101,
+        116,
+        101,
+        32,
+        87,
+        77,
+        83,
+        32,
+        99,
+        108,
+        97,
+        115,
+        115,
+        32,
+        109,
+        97,
+        112,
+        112,
+        105,
+        110,
+        103,
+        32,
+        119,
+        105,
+        116,
+        104,
+        111,
+        117,
+        116,
+        32,
+        115,
+        112,
+        97,
+        116,
+        105,
+        97,
+        108,
+        32,
+        114,
+        101,
+        115,
+        97,
+        109,
+        112,
+        108,
+        105,
+        110,
+        103,
+        46,
+        0
+      ]
+    },
+    "273": {
+      "type": 4,
+      "count": 7,
+      "values": [
+        672,
+        1743282,
+        3254088,
+        4739521,
+        5986657,
+        7455268,
+        8968222
+      ]
+    },
+    "277": {
+      "type": 3,
+      "count": 1,
+      "values": [
+        1
+      ]
+    },
+    "278": {
+      "type": 4,
+      "count": 1,
+      "values": [
+        1024
+      ]
+    },
+    "279": {
+      "type": 4,
+      "count": 7,
+      "values": [
+        1742610,
+        1510806,
+        1485433,
+        1247136,
+        1468611,
+        1512954,
+        268838
+      ]
+    },
+    "284": {
+      "type": 3,
+      "count": 1,
+      "values": [
+        1
+      ]
+    },
+    "305": {
+      "type": 2,
+      "count": 55,
+      "values": [
+        85,
+        112,
+        112,
+        101,
+        114,
+        32,
+        83,
+        97,
+        118,
+        97,
+        110,
+        110,
+        97,
+        104,
+        32,
+        110,
+        97,
+        116,
+        105,
+        118,
+        101,
+        32,
+        99,
+        108,
+        97,
+        115,
+        115,
+        32,
+        115,
+        111,
+        117,
+        114,
+        99,
+        101,
+        32,
+        114,
+        101,
+        99,
+        101,
+        105,
+        118,
+        101,
+        114,
+        32,
+        50,
+        48,
+        50,
+        54,
+        45,
+        49,
+        48,
+        45,
+        49,
+        51,
+        0
+      ]
+    },
+    "339": {
+      "type": 3,
+      "count": 1,
+      "values": [
+        1
+      ]
+    },
+    "33550": {
+      "type": 12,
+      "count": 3,
+      "values": [
+        29.999999995403137,
+        30.000000026127967,
+        0
+      ]
+    },
+    "33922": {
+      "type": 12,
+      "count": 6,
+      "values": [
+        0,
+        0,
+        0,
+        1114859.9994590343,
+        1428209.9983569037,
+        0
+      ]
+    },
+    "34735": {
+      "type": 3,
+      "count": 24,
+      "values": [
+        1,
+        1,
+        0,
+        5,
+        1024,
+        0,
+        1,
+        1,
+        1025,
+        0,
+        1,
+        1,
+        2048,
+        0,
+        1,
+        4269,
+        3072,
+        0,
+        1,
+        5070,
+        3076,
+        0,
+        1,
+        9001
+      ]
+    },
+    "42113": {
+      "type": 2,
+      "count": 4,
+      "values": [
+        50,
+        53,
+        48,
+        0
+      ]
+    }
+  },
+  "format_references": [
+    "https://docs.ogc.org/is/19-008r4/19-008r4.html",
+    "https://www.usgs.gov/ngp-standards-and-specifications/gtrastertypegeokey-requirement"
+  ]
+}

@@ -1,0 +1,1030 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "SV-833 original hydrologic network and monitoring context",
+  "captured_at": "2026-10-13",
+  "scope": "Original NLDI whole reaches, unsimplified whole catchments, and indexed NWIS site relationships for Three and Twenty Creek",
+  "entries": [
+    {
+      "id": "sv833-hydrology-station-location-representations",
+      "title": "SV-833 original and indexed station representations",
+      "kind": "vector",
+      "role": "SV833_LOCATION_CONTEXT",
+      "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+      "bytes": 2408,
+      "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "source_crs": "EPSG:4326",
+      "native_id_field": "id",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14,
+        "native_id_field": "id"
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+          "bytes": 8785,
+          "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+          "bytes": 88567,
+          "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+          "bytes": 23893,
+          "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+          "bytes": 18479,
+          "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+          "bytes": 32098,
+          "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    },
+    {
+      "id": "sv833-hydrology-upstream-original-reaches",
+      "title": "SV-833 original upstream whole reaches",
+      "kind": "vector",
+      "role": "SV833_UPSTREAM_NETWORK",
+      "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+      "bytes": 88567,
+      "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "source_crs": "EPSG:4326",
+      "native_id_field": "comid",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14,
+        "native_id_field": "comid"
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+          "bytes": 8785,
+          "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+          "bytes": 2408,
+          "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+          "bytes": 23893,
+          "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+          "bytes": 18479,
+          "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+          "bytes": 32098,
+          "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    },
+    {
+      "id": "sv833-hydrology-whole-upstream-catchments",
+      "title": "SV-833 original whole upstream catchments",
+      "kind": "vector",
+      "role": "SV833_WHOLE_CATCHMENT",
+      "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+      "bytes": 23893,
+      "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "source_crs": "EPSG:4326",
+      "native_id_field": "basin_id",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14,
+        "native_id_field": "basin_id"
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+          "bytes": 8785,
+          "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+          "bytes": 2408,
+          "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+          "bytes": 88567,
+          "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+          "bytes": 18479,
+          "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+          "bytes": 32098,
+          "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    },
+    {
+      "id": "sv833-hydrology-downstream-nwis-sites",
+      "title": "SV-833 downstream indexed NWIS surface-water sites",
+      "kind": "vector",
+      "role": "SV833_DOWNSTREAM_NWIS",
+      "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+      "bytes": 18479,
+      "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "source_crs": "EPSG:4326",
+      "native_id_field": "site_id",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14,
+        "native_id_field": "site_id"
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+          "bytes": 8785,
+          "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+          "bytes": 2408,
+          "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+          "bytes": 88567,
+          "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+          "bytes": 23893,
+          "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+          "bytes": 32098,
+          "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    },
+    {
+      "id": "sv833-hydrology-report",
+      "title": "SV-833 original hydrologic context report",
+      "kind": "document",
+      "role": "observed_water_quality_hydrologic_context",
+      "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+      "bytes": 50540,
+      "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+          "bytes": 8785,
+          "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+          "bytes": 2408,
+          "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+          "bytes": 88567,
+          "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+          "bytes": 23893,
+          "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+          "bytes": 18479,
+          "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+          "bytes": 32098,
+          "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    },
+    {
+      "id": "sv833-hydrology-map",
+      "title": "SV-833 original network and indexed-site map",
+      "kind": "document",
+      "role": "observed_water_quality_figure",
+      "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+      "bytes": 32098,
+      "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14,
+        "media_type": "image/svg+xml"
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+          "bytes": 8785,
+          "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+          "bytes": 2408,
+          "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+          "bytes": 88567,
+          "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+          "bytes": 23893,
+          "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+          "bytes": 18479,
+          "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    },
+    {
+      "id": "sv833-hydrology-downstream-nwis-site-context",
+      "title": "SV-833 connected NWIS site source inventory",
+      "kind": "table",
+      "role": "SV833_DOWNSTREAM_NWIS_INVENTORY",
+      "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-site-context.csv",
+      "bytes": 8785,
+      "sha256": "23f64c5f1685b8cf0ea0d49f6037df086c83efac36049bdc97177044eaab97e4",
+      "uri": "https://app.notion.com/p/3f8dd77231008194832bda8cdd7b6c84",
+      "vintage": "Original NLDI responses captured 2026-10-13",
+      "metadata": {
+        "source_schema": "sv833.original-hydrologic-context/v1",
+        "station": "21SC60WQ_WQX-SV-833",
+        "containing_comid": 11749277,
+        "whole_catchment": true,
+        "split_catchment": false,
+        "network_distance_km": 100,
+        "original_flowline_count": 45,
+        "upstream_nwis_sites": 0,
+        "downstream_nwis_sites": 14,
+        "native_id_field": "site_id"
+      },
+      "companions": [
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-wqp-feature-original.json",
+          "bytes": 575,
+          "sha256": "19a42b0f544ba73f363330ded9708723d75190e35b71c79eac0363020af9dd68"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-coordinate-hydrolocation-original.json",
+          "bytes": 722,
+          "sha256": "e0bedf7781067e109fe86c2ac2e8328ee886006ef76241a62124bef15cb680db"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-nwis-sites-100km-original.json",
+          "bytes": 42,
+          "sha256": "ed778c73ea51338d6576fb5992b189f2b94d9f3d5e199f46c1af520d6b0b3e6c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-downstream-nwis-sites-100km-original.json",
+          "bytes": 7935,
+          "sha256": "b1fb44f94a4a4c2d13847ec5aea343214b1d81aff2695dd59661cc7531cdad51"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-reaches-100km-original.json",
+          "bytes": 23115,
+          "sha256": "d3e4b42bd8cf635f6fd741086cd8a69d7bc0e538e35eedd7446eeef5787bd1e8"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/original/sv833-nldi-upstream-whole-catchment-basin-original.json",
+          "bytes": 7993,
+          "sha256": "3387b59bb154a2cb94d2f96cc100ee821122a677899ee29e3ea071a0fbe68c8d"
+        },
+        {
+          "path": "source/eighteenmile-stream-nutrients-20261013/original/seneca-nutrient-stations.csv",
+          "bytes": 14616,
+          "sha256": "c27a0e7fcd486c17634c71f1f2ac8e29b7d6eaec29bf08c22c0c47d186b5708c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/analysis.mjs",
+          "bytes": 8537,
+          "sha256": "c11c9cd17e76d902deb679cf3b16b14597806e0eb520015a632f937926ebb155"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/figures.mjs",
+          "bytes": 6732,
+          "sha256": "27e677acfc8154ff5e1d9148834c50e4b029481535d2660c22463a00724ba9e4"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/report.mjs",
+          "bytes": 12342,
+          "sha256": "096a503cf88bb178f0a784bdbc1ec35b89a818bb4d4cadfac00e144d7b73c64e"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/outputs.mjs",
+          "bytes": 1169,
+          "sha256": "7ea298f81303a29189514e469abfff214cf0b5865aa83d7482f4349675d9a336"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/build_study.mjs",
+          "bytes": 2281,
+          "sha256": "16bd05098b6e7db10ea5292fa09c6eef26bbdb0c3fb0660b509cb67b7b953374"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/README.md",
+          "bytes": 5587,
+          "sha256": "976f2ba55596c5d45ee7165ead6330e75268cbd3a1f0c77938b68de804aab5fe"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/input-manifest.json",
+          "bytes": 2978,
+          "sha256": "696b45b08bb9a2a322fa5c8b72bdac3bfbbf55c8fdd7175a0d802baeb92b108f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.csv",
+          "bytes": 826,
+          "sha256": "5f5594cfd8cb482d4caa764ec36cac4eba0bef763bdb15409cb7f7db6197c25d"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-reach-inventory.csv",
+          "bytes": 17136,
+          "sha256": "2427af7ef18fd67e3dd83cbb2f3ee8ab9bbbb89b2ba1d00ea0946ecc7e309b8f"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/station-location-representations.geojson",
+          "bytes": 2408,
+          "sha256": "942862ece65a7499386a0193019481483d685549ada8185ba3c38707debe0496"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/upstream-original-reaches.geojson",
+          "bytes": 88567,
+          "sha256": "09230843f840849d17f0690e94f470a5efecd0e3558279f7eb3a94b6e53c834c"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/whole-upstream-catchments.geojson",
+          "bytes": 23893,
+          "sha256": "79b8613423a3489bf9f6e581c64e96f4d60f20896da68ab9a93db3e4cd50ac67"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/downstream-nwis-sites.geojson",
+          "bytes": 18479,
+          "sha256": "82ec3ee78a4b70cfd9630e9116bcce943898c12848570461a9927fc09c75e558"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/hydrologic-context-summary.json",
+          "bytes": 53129,
+          "sha256": "b508ee23eef5cfd88081be18086c17bc8998477ab7dd117ca1b6930b56efb289"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.svg",
+          "bytes": 32098,
+          "sha256": "fa67c6c1aa517fd894724cb9d1423340d67e1c178b7f594c262f62d98624f441"
+        },
+        {
+          "path": "source/sv833-hydrologic-context-20261013/sv833-hydrologic-context.html",
+          "bytes": 50540,
+          "sha256": "b7a8e05031ad6fa1e7226856d9e757e85f9bdbbd4c870d6287b557116f0393ce"
+        },
+        {
+          "path": "observations/sv833_2021_2026/csv.mjs",
+          "bytes": 1178,
+          "sha256": "689e201967192e743d9f207936c2673c23f8523a8be91d3df307277ca6195c9b"
+        }
+      ]
+    }
+  ]
+}

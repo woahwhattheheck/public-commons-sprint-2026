@@ -8,13 +8,13 @@ import { parseArgs } from 'node:util';
 
 const {values:args}=parseArgs({options:{
  'url-file':{type:'string'},url:{type:'string'},opening:{type:'string'},
- workspace:{type:'string'},output:{type:'string'},'browser-channel':{type:'string'},
+ workspace:{type:'string'},output:{type:'string'},'browser-channel':{type:'string'},'browser-executable':{type:'string'},
  'skip-transfer':{type:'boolean',default:false},'task-timeout-seconds':{type:'string',default:'1800'},
  headed:{type:'boolean',default:false},video:{type:'boolean',default:false},
  help:{type:'boolean',default:false}
 }});
 if(args.help){
- process.stdout.write('Usage: node source/run_saved_regional_view_browser.mjs --url-file PRIVATE_URL_FILE --opening regional-workflow-opening.json [--workspace CURRENT_OPERATOR_WORKSPACE_KEY] [--output DIRECTORY] [--video] [--headed] [--skip-transfer] [--task-timeout-seconds 1800]\nOpens actual retained regional, profile and optional native experiment/decision records through the existing operator controls. Saves the original view, reopens it in a fresh browser, retains the prior browser draft, and backs up/restores the native workspace. Private operator URL and token are redacted from the journal.\n');
+ process.stdout.write('Usage: node source/run_saved_regional_view_browser.mjs --url-file PRIVATE_URL_FILE --opening regional-workflow-opening.json [--workspace CURRENT_OPERATOR_WORKSPACE_KEY] [--output DIRECTORY] [--video] [--headed] [--skip-transfer] [--task-timeout-seconds 1800] [--browser-channel NAME | --browser-executable PATH]\nOpens actual retained regional, profile and optional native experiment/decision records through the existing operator controls. Saves the original view, reopens it in a fresh browser, retains the prior browser draft, and backs up/restores the native workspace. Private operator URL and token are redacted from the journal.\n');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','regional-opening',new Date().toISOString().replace(/[:.]/g,'-')));
@@ -25,6 +25,12 @@ const same=value=>value&&typeof value==='object'?Array.isArray(value)?value.map(
 const canonical=value=>JSON.stringify(same(value));
 const sha=value=>createHash('sha256').update(value).digest('hex');
 function requireValue(value,message){if(!value)throw Error(message);}
+function browserRuntime(){
+ requireValue(!(args['browser-channel']&&args['browser-executable']),'Choose a browser channel or an explicit executable path.');
+ return {kind:args['browser-executable']?'executable':args['browser-channel']?'channel':'bundled',
+  executable_path:args['browser-executable']?resolve(args['browser-executable']):null,
+  channel:args['browser-channel']||null,headless:!args.headed};
+}
 function redact(value){
  let result=String(value);
  for(const secret of [privateURL,capability,origin].filter(Boolean))result=result.split(secret).join('[private operator]');
@@ -229,6 +235,7 @@ async function continueNativeSavedView(opening){
 }
 
 async function main(){
+ journal.browser_runtime=browserRuntime();
  await mkdir(join(output,'exports'),{recursive:true});
  requireValue(args.opening,'Supply the original regional-workflow-opening.json receipt.');
  const opening=JSON.parse(await readFile(resolve(args.opening),'utf8'));
@@ -238,7 +245,9 @@ async function main(){
  requireValue(['http:','https:'].includes(parsed.protocol),'Use the original HTTP or HTTPS operator URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
  requireValue(capability,'Use the original operator startup URL including its private capability fragment.');
- browser=await chromium.launch({headless:!args.headed,...(args['browser-channel']?{channel:args['browser-channel']}:{})});
+ browser=await chromium.launch({headless:!args.headed,
+  ...(args['browser-channel']?{channel:args['browser-channel']}:{ }),
+  ...(args['browser-executable']?{executablePath:resolve(args['browser-executable'])}:{ })});
  context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true,...(args.video?{recordVideo:{dir:join(output,'video'),size:{width:1440,height:1000}}}:{})});
  page=await context.newPage();page.setDefaultTimeout(60000);
  page.on('pageerror',error=>journal.browser_errors.push(redact(error.message)));

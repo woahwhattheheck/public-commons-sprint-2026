@@ -100,3 +100,14 @@ Use the operator's existing **Create complete backup** action to preserve the re
 When Scientific investigations is connected, **Investigate this analysis** opens its composer with the complete saved report selected. The linked dataset contains the actual native run identities, units, scenario effects, parameter comparisons, ranks, and observation membership. Ask a question about those results in the investigation interface; the saved diagnostic remains the numerical source.
 
 The integration passes the current registered workspace and exact diagnostic dataset identity. A transferred workspace resolves the report through its restored location. Saved reports remain readable through **Runs and files** and **Export**.
+
+## Include this analysis in a scientific or client report
+
+Choose **Use in scientific report** on a saved analysis. Select a new report or
+an existing delivery whose native runs and ordered sources should continue.
+The original queued operation retains the exact report SHA and complete source
+companions. Its completed task opens the prepared original report form.
+
+See [DIAGNOSTIC_REPORTS.md](DIAGNOSTIC_REPORTS.md) for the complete operator,
+command-line, revision-recovery and receiving workflow. Incomplete diagnostic
+cohorts remain explicitly incomplete in their report sections.
