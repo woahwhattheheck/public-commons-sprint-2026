@@ -10,7 +10,7 @@ import os
 from pathlib import Path
 import tempfile
 
-FILES = ("model/programme_reuse.py","model/PROGRAMME_NATIVE_REUSE.md","operator/programme_native_reuse_patch.json","operator/install_programme_reuse.py","integration/component_fragments/programme-native-reuse.json",)
+FILES = ("model/programme_reuse.py","model/PROGRAMME_NATIVE_REUSE.md","operator/programme_native_reuse_patch.json","operator/install_programme_reuse.py","integration/component_fragments/programme-native-reuse.json","source_tools/continue_programme_source_reuse.py","source_tools/PROGRAMME_SOURCE_REUSE_COURSE.md",)
 
 
 def _sha(body):
@@ -109,7 +109,7 @@ def install(application, source_root):
                     raise ValueError("An original Programme native reuse composition preimage differs")
                 if not saved.exists():
                     _atomic(saved, original)
-        result = {"schema": "upstate.programme-native-reuse-install/v1", "version": "1.0.2",
+        result = {"schema": "upstate.programme-native-reuse-install/v1", "version": "1.1.0",
                   "patch_sha256": _sha(spec_bytes), "files": metadata}
         _atomic(pending_path, _encoded(result))
         for name in candidates:
