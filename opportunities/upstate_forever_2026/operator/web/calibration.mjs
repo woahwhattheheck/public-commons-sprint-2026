@@ -40,7 +40,7 @@ export function attachCalibration({getState,api,endpoint,openForm,submitAction,d
   };
   const draftKey = () => 'upstate-calibration-draft:'+current();
   const form = () => $('#operation-form');
-  const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,repaint,
+  const mapsDesk=createCalibrationMaps({current,read,submitAction,openForm,fileList,detail,repaint,
     getReport:()=>activeReport,getUncertainty:()=>activeUncertainty,getData:calibrationData,
     openReport,openUncertainty,activate:()=>{if(!mounted)location.hash='calibration';else repaint();}});
   async function read(operation,values={}){
