@@ -11,7 +11,7 @@ import { applicationEnvironment } from './application-environment.mjs';
 import { defaultApplicationProviders, applicationProviderForKind } from './application-providers.mjs';
 import { prepareProviderApplication, retainedApplicationArguments } from './application-provider.mjs';
 import { absolute, privateDirectory, makePrivate, regular, readJSON, saveJSON, recordId, operationId,
-  operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now } from './storage.mjs';
+  operationLease, operationRunning, tailFile, plain, need, digest, json, canonical, now, runtimeWorkspaceError } from './storage.mjs';
 
 
 const SCHEMA = 'stellar-forge.runtime-application.v1';
@@ -19,7 +19,7 @@ const TYPES = ['applications', 'application-reviews', 'application-homes', 'appl
 const bindingKeys = ['directory', 'installationId', 'profileId', 'profileSha256', 'lockSha256', 'sourceCommit', 'sourceManifestSha256'];
 const binding = value => Object.fromEntries(bindingKeys.map(key => [key, value[key]]));
 const hash = value => digest(json(canonical(value)));
-const errorView = error => ({ code: error.code ?? 'APPLICATION_ERROR', message: String(error.message ?? error).slice(0, 2000) });
+const errorView = error => runtimeWorkspaceError(error, 'APPLICATION_ERROR');
 const directoryFor = (root, id) => join(root, 'applications', recordId(id));
 const reviewPath = (root, id) => join(root, 'application-reviews', recordId(id) + '.json');
 const operationPath = (root, id) => join(root, 'operations', operationId(id));

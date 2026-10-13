@@ -483,7 +483,9 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     title.textContent = app.label; phase.textContent = app.phase;
     actions.hidden = Boolean(app.error);
     if (app.error) {
-      details.replaceChildren(element('p', app.error.message)); outputPanel.hidden = true; historyRows.replaceChildren();
+      details.replaceChildren(element('p', app.error.message));
+      if (app.error.flock) details.append(element('pre', JSON.stringify(app.error.flock, null, 2)));
+      outputPanel.hidden = true; historyRows.replaceChildren();
       relatedApplications.hidden = navigationRecovery.hidden = true; urlNote.textContent = ''; return;
     }
     const connected = app.connectionReady ?? Boolean(app.release);
@@ -497,6 +499,8 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
     ]));
     if (!connected && app.adoption?.state?.error?.message)
       details.append(element('p', app.adoption.state.error.message, 'note'));
+    if (app.adoption?.state?.error?.flock)
+      details.append(element('pre', JSON.stringify(app.adoption.state.error.flock, null, 2)));
     const current = app.current, active = Boolean(current?.active), unsettled = ['PENDING', 'QUEUED', 'RUNNING', 'INTERRUPTED'].includes(current?.phase);
     reviewStart.disabled = !connected || active || unsettled;
     stop.disabled = !current || !active && !unsettled;
@@ -576,7 +580,13 @@ export function createApplicationsWorkspaceView({ root, api, getState, refreshWo
           element('p', run.id + ' · ' + run.createdAt),
           element('p', run.result?.state ? 'Original outcome: ' + run.result.state + (run.result.exitCode !== null && run.result.exitCode !== undefined ? ', exit ' + run.result.exitCode : '') :
             run.active ? 'The original worker lease is held.' : 'Original operation retained.'),
-          actions); return row;
+          actions);
+        if (run.state?.error?.flock || run.result?.error?.flock) {
+          const diagnostic = element('details'); diagnostic.append(element('summary', 'Original lock process diagnostics'),
+            element('pre', JSON.stringify(run.state?.error?.flock ?? run.result.error.flock, null, 2)));
+          row.append(diagnostic);
+        }
+        return row;
       }));
     }
     if (!selectedRun || !pageRuns.some(run => run.id === selectedRun)) selectedRun = pageRuns[0]?.id ?? null;
