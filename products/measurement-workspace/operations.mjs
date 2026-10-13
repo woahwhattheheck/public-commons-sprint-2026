@@ -66,6 +66,13 @@ export function resolveOperation(input){
  if(op.method==='GET')need(input.body===undefined,'Read operations do not accept an ignored body.');
  else need(plain(input.body),'Supply the complete original JSON body.');
  const suffix=query.toString();
- const replay=['flow-save','load-save'].includes(op.name)&&!input.body?.expected_id?'never':op.replay;
+ let replay=['flow-save','load-save'].includes(op.name)&&!input.body?.expected_id?'never':op.replay;
+ const body=input.body;
+ if(op.name==='large-intake-begin'&&/^[a-f0-9]{64}$/.test(body?.id))replay='exact';
+ if(op.name==='large-intake-chunk'&&Number.isSafeInteger(body?.offset)&&body.offset>=0&&/^[a-f0-9]{64}$/.test(body?.sha256))replay='exact';
+ if(op.name==='large-intake-prepare')replay='read';
+ if(op.name==='large-intake-commit'&&Number.isSafeInteger(body?.expectedRevision)&&/^[a-f0-9]{64}$/.test(body?.expectedSourceSha256)&&/^[a-f0-9]{64}$/.test(body?.expectedNormalizerPin))replay='exact';
+ if(op.name==='large-export'&&/^[a-f0-9]{64}$/.test(body?.id))replay='exact';
+ if(op.name==='large-intake-receive'&&Object.keys(body||{}).length===0)replay='exact';
  return Object.freeze({...op,replay,path:BASE+route+(suffix?'?'+suffix:''),body:op.method==='GET'?null:input.body});
 }
