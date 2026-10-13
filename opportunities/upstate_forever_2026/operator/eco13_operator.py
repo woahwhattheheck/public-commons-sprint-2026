@@ -21,6 +21,7 @@ import threading
 import zipfile
 
 from model.common import atomic_json, digest, file_digest, held, now, read_json
+from model import comparison_review
 
 APPLICATION = Path(__file__).resolve().parents[1]
 PACKAGE = APPLICATION / "integrations" / "eco13_scenario_lab"
@@ -41,6 +42,7 @@ RECORD_SCHEMA = "upstate.eco13-record/v1"
 ACTIONS = frozenset({
     "eco13.experiment.receive", "eco13.report.save",
     "eco13.comparison.export", "eco13.archive.receive",
+    "eco13.review.create", "eco13.review.receive",
 })
 MAX_PAGE = 250
 MONEY_LIMIT = 9007199254740991
@@ -55,6 +57,8 @@ _ALLOWED = {
     },
     "eco13.comparison.export": {"record_id"},
     "eco13.archive.receive": {"upload_id", "title"},
+    "eco13.review.create": {"record_id", "title", "purpose", "notes"},
+    "eco13.review.receive": {"review_id", "source_collection_id", "title"},
 }
 
 
@@ -469,6 +473,7 @@ class Eco13Operator:
             },
             "native_status": copy.deepcopy(record["native_status"]),
             "interpretation": comparison.get("interpretation"),
+            "customer_reviews": comparison_review.catalog(ws, record_id=record_id),
         }
 
     def read(self, workspace_key, operation, payload=None):
@@ -492,6 +497,7 @@ class Eco13Operator:
                 return {
                     "schema": "upstate.eco13-catalog/v1", "workspace_key": workspace_key,
                     "experiments": native, "records": records, "issues": issues,
+                    "comparison_reviews": comparison_review.catalog(ws),
                     "limits": {"page_size": MAX_PAGE},
                 }
             record_id = _id(payload.get("record_id", payload.get("id")))
@@ -738,6 +744,14 @@ class Eco13Operator:
             with held(lock_root / ".operator.lock", blocking=False):
                 if action == "eco13.comparison.export":
                     return self._export(ws, task["workspace"], task, identity, payload)
+                if action == "eco13.review.create":
+                    selection = {"schema": comparison_review.SELECTION_SCHEMA, **payload}
+                    for original in _transfer_identities(task, action, payload):
+                        captured = comparison_review.completed(ws, selection, original["id"])
+                        if captured is not None:
+                            return {**captured, "reused_completed_output": True}
+                    return comparison_review.create(
+                        ws, selection, operation_id=identity["id"], created_at=task["created_at"])
                 completed = self._completed(ws, identity)
                 if completed is None:
                     for original in _transfer_identities(task, action, payload):
@@ -798,10 +812,17 @@ class Eco13Operator:
                     _render(root, payload)
                     kind = "report"
                 else:
-                    upload = self.app.upload(_id(payload.get("upload_id"), "upload"))
-                    archive_source = {key: upload[key] for key in ("id", "filename", "bytes", "sha256")}
+                    if action == "eco13.review.receive":
+                        archive_path, original_archive = comparison_review.archive_for_review(
+                            ws, _id(payload.get("review_id"), "review"),
+                            _id(payload.get("source_collection_id"), "source collection"))
+                        archive_source = {"kind": "comparison-review", **original_archive}
+                    else:
+                        upload = self.app.upload(_id(payload.get("upload_id"), "upload"))
+                        archive_path = Path(upload["path"])
+                        archive_source = {key: upload[key] for key in ("id", "filename", "bytes", "sha256")}
                     if not root.exists():
-                        store.receive_workspace(Path(upload["path"]), root)
+                        store.receive_workspace(archive_path, root)
                     plan, _ = verify_plan(root)
                     if plan.get("mode") != upstate_intake.MODE:
                         raise ValueError("Choose a portable original experiment comparison.")
@@ -837,6 +858,12 @@ class Eco13Operator:
             scope, record = _read_record(ws, record_id)
             task["_eco13"] = {"record_id": record_id, "title": record["title"], "status": record["status"]}
             task["_item"] = {"kind": "eco13-records", "id": record_id}
+            if task["action"] == "eco13.review.create":
+                capture = comparison_review.summary(ws, _id(result.get("capture_id"), "comparison capture"))
+                if capture["record_id"] != record_id or capture["review_id"] != result.get("review_id"):
+                    raise ValueError("The retained review task differs from its original comparison capture.")
+                task["_review"] = {"review_id": capture["review_id"], "kind": "comparison-review"}
+                task["_eco13"]["review_id"] = capture["review_id"]
             task["_downloads"] = self._downloads(task["workspace"], scope, record)
             if result.get("archive"):
                 original = result["archive"]
@@ -873,4 +900,5 @@ class Eco13Operator:
                 raise ValueError("A restored ECO13 report belongs to another native plan.")
             records.append({"id": record["id"], "status": record["status"],
                             "files": len(record["files"]), "plan_sha256": record["plan_sha256"]})
-        return {"schema": "upstate.eco13-workspace-verification/v1", "records": records}
+        return {"schema": "upstate.eco13-workspace-verification/v1", "records": records,
+                **comparison_review.verify_all(workspace)}
