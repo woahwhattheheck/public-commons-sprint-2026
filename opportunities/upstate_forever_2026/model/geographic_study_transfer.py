@@ -477,6 +477,7 @@ def _prepared(closure, expected):
             or identity.get("schema") != "upstate.geographic-headwaters/v1"
             or identity.get("project_id") != value["project_id"]
             or identity.get("selection") != value.get("selection")
+            or identity.get("geographic_binding") != value.get("geography")
             or receipt.get("geography") != value.get("geography")
             or receipt.get("input_summary") != value.get("input_summary")):
         raise ValueError("Geographic preparation lost its immutable input identity")
@@ -571,6 +572,13 @@ def _allocation(closure, entry, recipe, members, key):
     if (report.get("schema") != "upstate.geographic-scenario-allocation/v1"
             or report.get("id") != key or not isinstance(identity, dict) or digest(identity) != key
             or report.get("project_id") != metadata.get("project_id")
+            or report.get("project_id") != prepared.get("project_id")
+            or identity.get("project_id") != report.get("project_id")
+            or identity.get("prepared_id") != prepared.get("id")
+            or identity.get("context_id") != report.get("context_id")
+            or identity.get("grid_id") != prepared.get("grid_id")
+            or context_identity.get("project_id") != report.get("project_id")
+            or context_identity.get("prepared_id") != prepared.get("id")
             or recipe.get("project_id") != report["project_id"]
             or report.get("prepared_id") != prepared.get("id")
             or metadata.get("geographic_preparation_id") != prepared.get("id")
