@@ -12,7 +12,7 @@ export const HELP = 'Recovery workspace host handoff\n\n' +
   'starforge merchant-recovery-remote workspace handoff restore --bundle ABS_BUNDLE --restore ABS_NEW_DIRECTORY --pass-env NAME --expected-manifest-sha256 HASH\n' +
   'starforge merchant-recovery-remote workspace handoff review --bundle ABS_BUNDLE --restore ABS_RESTORED_DIRECTORY --pass-env NAME --expected-manifest-sha256 HASH --target ABS_PRIVATE_TARGET [--operation ABS_ADOPTION_STATE] [--python ABS_PYTHON]\n' +
   'starforge merchant-recovery-remote workspace handoff adopt --bundle ABS_BUNDLE --restore ABS_RESTORED_DIRECTORY --pass-env NAME --expected-manifest-sha256 HASH --target ABS_PRIVATE_TARGET --expected-review-sha256 HASH --quiesced [--operation ABS_ADOPTION_STATE] [--python ABS_PYTHON]\n\n' +
-  'starforge merchant-recovery-remote workspace handoff operation --operation ABS_ADOPTION_STATE --expected-review-sha256 HASH\n\n' +
+  'starforge merchant-recovery-remote workspace handoff operation --operation ABS_ADOPTION_STATE --expected-review-sha256 HASH [--python ABS_PYTHON]\n\n' +
   'With --operation, adoption resumes its original private staged files and publishes\n' +
   'complete roots without replacing existing state. Reuse the same review and directory.\n' +
   'The operation command reads its saved receipt without native authentication or dispatch.\n' +
@@ -34,7 +34,7 @@ const options = {
     'operationDirectory', 'python'],
   adopt: ['bundleDirectory', 'restoreDirectory', 'passphraseEnv', 'expectedManifestSha256',
     'targetFile', 'expectedReviewSha256', 'quiesced', 'operationDirectory', 'python'],
-  operation: ['operationDirectory', 'expectedReviewSha256']
+  operation: ['operationDirectory', 'expectedReviewSha256', 'python']
 };
 const flags = { '--selection': 'selectionFile', '--plan': 'planFile', '--bundle': 'bundleDirectory',
   '--operation': 'operationDirectory', '--python': 'python', '--restore': 'restoreDirectory', '--pass-env': 'passphraseEnv',
@@ -60,7 +60,8 @@ export function parseHostHandoffArguments(argv) {
   }
   for (const key of options[command])
     if (result[key] === undefined && !(command === 'export' && key === 'quiesced') &&
-        !(['review', 'adopt'].includes(command) && ['operationDirectory', 'python'].includes(key)))
+        !((['review', 'adopt'].includes(command) && ['operationDirectory', 'python'].includes(key)) ||
+          (command === 'operation' && key === 'python')))
       throw error('A value is required for ' + key);
   for (const key of ['selectionFile', 'planFile', 'bundleDirectory', 'operationDirectory', 'restoreDirectory', 'targetFile', 'python'])
     if (result[key] !== undefined) absolute(result[key], key);

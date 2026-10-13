@@ -95,4 +95,6 @@ export declare function adoptRestoredHostHandoff(input: HostHandoffAdoptInput): 
 /** Reads recorded status only. Does not authenticate a bundle or inspect current receiving state. */
 export declare function inspectHostHandoffAdoption(input: {
   operationDirectory: string; expectedReviewSha256: string;
+  /** Optional executable for reading the recorded operation; default /usr/bin/python3. */
+  python?: string;
 }): Promise<Record<string, unknown>>;
