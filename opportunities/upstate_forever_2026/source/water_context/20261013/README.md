@@ -83,3 +83,15 @@ Original sources:
 - [Retained original geometry, metadata and complete-domain response records](https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e)
 
 The existing [20261012 source guide](../20261012/README.md) describes acquisition and the CSV-primary source CLI. This prepared edition supplies the actual full-domain import directly.
+
+## Receive the original completed regional run
+
+The companion `complete-sources.json` imports the completed 13 October receiving edition into the same Workspace source store. It preserves both stable source IDs and 22 context companions, including all seven outputs for `watershed-4592eb077b7164d59ba4`, the execution/source records, the exact original ZIP, and the historical model source used for that run.
+
+```sh
+python -B -m model.cli --workspace /path/to/existing-workspace source-import source/water_context/20261013/complete-sources.json
+```
+
+The maintained `operator/receive_watershed_context.py` consumes `received/watershed-context-20261013/eco-watershed13-received.zip` to register that original result for the existing report, selection and export views. Its archive SHA-256 is `716ddaeb211536cc90590a003bffb0bd1b18386d92cf663649743d06970868b5`.
+
+This historical run selected Lower Tugaloo and preceded the later native-network enrichment documented above. Its source/output bytes and result identity stay together. The original seven-file edition's guide and manifest are preserved byte for byte as `original-source-README.md` and `original-sources.json`; the latter records the original filenames. Use `complete-sources.json` for the reconstructed receiving edition. The current network-enabled `../sources-20261013.json` remains available for the maintained loader.
