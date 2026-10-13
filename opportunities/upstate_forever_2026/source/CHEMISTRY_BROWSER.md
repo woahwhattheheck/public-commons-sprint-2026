@@ -90,3 +90,9 @@ The continuation checks the original workspace and source/case choice, exact edi
 request-state.json is a private local continuation file, created with owner-only permissions. It may contain original scientific selections, upload identities and local file-ticket references; keep it with the receiving worker and omit it from human-facing delivery packages. Authentication headers and startup capability are never written into this file. The public journey.json retains redacted operator references and also uses a flushed atomic replacement, so an interruption while writing its progress leaves the previous complete journal readable. Use one worker per output directory. Source selection, model preparation and compute continue through the existing native stores and task queue.
 
 This driver is part of the current public application and therefore travels in the existing portable source export. The Reach chemistry interface and scientific input contract are documented in operator/CHEMISTRY_OPERATOR.md and the original model/reach_chemistry documentation.
+
+## Use an existing Chromium executable
+
+When the receiving machine already has a working Chromium binary, add `--browser-executable /actual/installed/chromium`. The driver passes that explicit path to the existing Playwright launch. Choose either this option or `--browser-channel NAME`; omitting both retains Playwright’s bundled Chromium selection.
+
+The public journey records the requested browser kind, executable path or channel, and headless setting in `browser_runtime`. A resumed attempt preserves its previous runtime selection in the attempt history. This runtime choice is separate from the original scientific input and task fingerprints, so a repaired or newly available browser can continue the same retained requests with `--resume`.

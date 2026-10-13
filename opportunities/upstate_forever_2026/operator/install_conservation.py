@@ -150,7 +150,8 @@ KNOWN_PRIOR = {
         "52e834dd9675a64b57260274a358635f1c8fa25510232207e10d0885629ef25e",
         "ab542f2dcfa03e80aa1f1cb7dc8f999457cbf4a3c063668567226a852bbfbf65",
         "3e97167402d1a7864ae6e0ede8121bad2153c3cf91e4c2aab2304da355db440f",
-        "60da58ce834260465f74dd03f6af420ecfabd8e4ab244e9150abdd506d3177b9"
+        "60da58ce834260465f74dd03f6af420ecfabd8e4ab244e9150abdd506d3177b9",
+        "80cbc140e5b9ffbbf5a37fdd1a4d41ab185e76519c0dff8bce8b1395d7399816"
     ],
     "operator/web/conservation.css": [
         "9eddc5584dfe6ae93c6e6a779af56ba9604b63757084cb1cd81bdca99617eb13",
@@ -191,7 +192,8 @@ KNOWN_PRIOR = {
         "ed55c470f236a6ecc0b9325dcfd224c056957c8e6bc7dc1bbfcf2f1fe091569b",
         "edae3aa44e2eef6ae09e0388772552aad492ec6daa1a9b28ba5bab1aef06ae41",
         "406f90a9b6fcba4a9344c94f1ab8a579aeb1fc156cc872e3248a5e6e21249bd3",
-        "e54103b5949b2b02bf29b6e16d3beaaa8f124cfc406073ef0545d00dd74da4a7"
+        "e54103b5949b2b02bf29b6e16d3beaaa8f124cfc406073ef0545d00dd74da4a7",
+        "a4f76bbff48272cacc87ca74350ad24218c682c34ca7b6abf6292399c5336a6c"
     ],
     "operator/conservation_regional_receiving.py": [
         "a4326a019784fdb0bd03aa071ee5f01e40694d3063d0a8b6da70caed5ce9daf7",
@@ -373,11 +375,13 @@ KNOWN_PRIOR = {
     ],
     "operator/conservation_experiment_browser_receiving.py": [
         "3a4727836d1a78fb54e00cf16098e167618e16a7181623f32d67412365c78b2b",
-        "b3d6ab4cf93b1bc65240a638ca7d2b378f2177b624c56d91cafeab11ea4e62b0"
+        "b3d6ab4cf93b1bc65240a638ca7d2b378f2177b624c56d91cafeab11ea4e62b0",
+        "f53042085c385c7bdda75e0a71bb6ffd0053f659e8a46715c53ae3831d1f2546"
     ],
     "operator/CONSERVATION_EXPERIMENT_BROWSER.md": [
         "703700f71cc0c849991ea89a439d436e3fef10500525f6f0bbc7c87d261afa29",
-        "b440f3a59b96095aa6f8402d2521c3b25d179dcc8293255405070e057ef23057"
+        "b440f3a59b96095aa6f8402d2521c3b25d179dcc8293255405070e057ef23057",
+        "8a20adf9ba4385ddd2e162b707f5e93e01cf7a91c0982c8d8ae8c1499408a447"
     ],
     "operator/web/conservation_optimization_bridge.mjs": [
         "2d79a5ff3bb86c434c9f895f00bee37a9b90c0a4bad0c26129a7d1bcb941a22a",

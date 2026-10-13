@@ -26,7 +26,10 @@ REQUIRED = ("model/workspace.py", "model/observations.py", "model/common.py",
             "model/calibration.py", "model/CALIBRATION.md",
             "model/calibration_uncertainty.py", "model/CALIBRATION_UNCERTAINTY.md",
             "model/calibration_maps.py", "model/CALIBRATION_MAPS.md",
-            "model/calibration_review.py", "model/CALIBRATION_REVIEW.md", "model/spatial.py", "operator/server.py",
+            "model/calibration_review.py", "model/CALIBRATION_REVIEW.md",
+            "model/calibration_report_source.py", "model/CALIBRATION_REPORT_SOURCE.md",
+            "model/scientific_figures.py", "model/observed_context.py",
+            "model/spatial.py", "operator/server.py",
             "operator/calibration.py", "operator/web/app.mjs", "operator/web/index.html",
             "operator/web/calibration.mjs", "operator/web/calibration_maps.mjs",
             "operator/web/calibration_review.mjs", "operator/web/calibration.css",
@@ -186,6 +189,7 @@ def _extension_changes(assembly, installer, current, additions):
     manifest = current["files"].get("operator/calibration-install.json")
     recorded = json.loads(manifest).get("installed", {}) if manifest else {}
     owned = set(REQUIRED) - {"model/workspace.py", "model/observations.py", "model/common.py", "model/spatial.py",
+                             "model/scientific_figures.py", "model/observed_context.py",
                              "operator/server.py", "operator/web/app.mjs", "operator/web/index.html",
                              "operator/extension_registry.py", "operator/web/extension_host.mjs",
                              "install_extensions.py"}

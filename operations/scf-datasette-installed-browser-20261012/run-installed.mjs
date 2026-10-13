@@ -132,7 +132,11 @@ export async function runInstalledDatasetteBrowser({
   const sourceDeclaration=await readJSON(join(workspaceDirectory,'workspace.json'));
   const input={repository,sourceRef,publisherProgrammeDirectory,outputDirectory,workspaceDirectory,
     workspaceId:sourceDeclaration.workspaceId,port,receivedPort,playwrightModule,browserExecutable:browserExecutable??null};
-  if(state)need(same(state.input,input),'DATASETTE_INSTALLED_ORIGINAL_INPUT_CHANGED');
+  // Host browser paths can change when the same retained workspace moves hosts.
+  // Preserve the original input; only these two execution bindings may differ.
+  if(state)need(same(state.input,{...input,
+    playwrightModule:state.input.playwrightModule,browserExecutable:state.input.browserExecutable}),
+    'DATASETTE_INSTALLED_ORIGINAL_INPUT_CHANGED');
   else state={schema:'stellar-forge.datasette-installed-browser-journey.v1',id:randomUUID(),input,
     sourceResolution:{kind:sourceResolution,commit:sourceRef},startedAt:stamp(),phase:'CREATED',checks:{},applications:{},runs:[],browserErrors:[],artifacts:[]};
   const save=async phase=>{state.phase=phase;state.updatedAt=stamp();await retain(stateFile,state);
@@ -144,6 +148,12 @@ export async function runInstalledDatasetteBrowser({
   const fromRepo=path=>import(pathToFileURL(join(repository,path)).href);
   let apps,context,browserAttempt,activeApp=null,stopActive=null,failed=false;
   try{
+    const browserRuntime={playwrightModule,browserExecutable:browserExecutable??null};
+    state.browserRuntimeSelections??=[{at:state.startedAt,kind:'original',
+      selection:{playwrightModule:state.input.playwrightModule,browserExecutable:state.input.browserExecutable}}];
+    if(!same(state.browserRuntimeSelections.at(-1).selection,browserRuntime))
+      state.browserRuntimeSelections.push({at:stamp(),kind:'host-recovery',
+        previous:state.browserRuntimeSelections.at(-1).selection,selection:browserRuntime});
     await save('ORIGINAL_PROGRAMME_RETAINED');
     const {buildDistribution}=await fromRepo(DIST+'build.mjs');
     const buildDirectory=join(outputDirectory,'build');
@@ -365,7 +375,10 @@ export async function runInstalledDatasetteBrowser({
     const browser=await import(moduleName);
     const chromium=browser.chromium??browser.default?.chromium;
     need(typeof chromium?.launchPersistentContext==='function','DATASETTE_INSTALLED_BROWSER_RUNTIME');
-    browserAttempt={id:randomUUID(),startedAt:stamp(),errorOffset:state.browserErrors.length};
+    const actualExecutable=browserExecutable??chromium.executablePath();
+    const executableVersion=await runCommand(actualExecutable,['--version']);
+    browserAttempt={id:randomUUID(),startedAt:stamp(),errorOffset:state.browserErrors.length,
+      runtime:{playwrightModule,browserExecutable:actualExecutable,version:executableVersion.stdout.trim()}};
     state.browserAttempts??=[];state.browserAttempts.push(browserAttempt);
     await save('BROWSER_ATTEMPT_RETAINED');
     const openBrowser=async(url,width=1440,height=1000)=>{
