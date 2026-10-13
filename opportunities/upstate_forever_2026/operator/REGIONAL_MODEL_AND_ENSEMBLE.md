@@ -494,3 +494,11 @@ Public source references:
 - InVEST SDR method: https://storage.googleapis.com/releases.naturalcapitalproject.org/invest-userguide/latest/en/sdr.html
 
 Prepared for TokenJunkieLabs' Upper Savannah application. Preserve the existing original-source and dependency license notices in the delivered source and receiving package.
+
+## Reopen the selected paired-raster result
+
+In **Paired raster analysis**, receive the original result ZIP, open its completed task, then select **Open analysis**. The result view presents its actual common-support basin summaries, quantitative raster previews, original member totals, source references and full report. **Export complete result ZIP** retains the same analysis identity and all result members for independent receiving.
+
+Selecting a result now saves that analysis ID in `paired-ensemble-view.json` in the scientific Workspace. Reopening the paired desk restores the selected result. The complete Workspace archive carries this view alongside its original analysis directory; receiving a result-only ZIP creates a result in the chosen Workspace, where opening it saves that Workspace's selected view. This display selection leaves the analysis identity and quantitative files intact.
+
+The result view checks which original run IDs are available in the receiving Workspace. Available runs open directly. Native continuation appears when the matching original Workspace run records are present; otherwise the view retains the original run references and directs the operator to the scientific Workspace backup for calculations. Report inspection, quantitative downloads and result export remain available for the received result.
