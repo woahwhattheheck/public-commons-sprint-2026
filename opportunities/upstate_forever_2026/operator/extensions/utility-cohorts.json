@@ -2,10 +2,11 @@
   "schema": "upstate.operator-extension/v1",
   "id": "utility-cohorts",
   "title": "Utility scenario cohorts",
-  "version": "3",
+  "version": "4",
   "order": 67,
   "assets": [
     "utility_cohort.mjs",
+    "native_versions.mjs",
     "utility_cohort.css"
   ],
   "backend": {

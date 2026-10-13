@@ -8,7 +8,8 @@ import time
 
 from model.common import (INVEST_VERSION, atomic_json, describe_file, digest,
                           identifier, now, read_json, relative_file, verify_file)
-from model import model_selection, rasters, scenario_decisions, utility_scenario_cohort as core
+from model import (model_selection, native_versions, rasters, scenario_decisions,
+                   utility_scenario_cohort as core)
 
 ACTION = "utility.cohort.build"
 ROOT = "utility-scenario-cohorts"
@@ -61,6 +62,10 @@ def _compact(value):
                       "source_collection_id", "source_id", "title", "vintage")},
                   analysis_selection_sha256=digest(plan) if plan else None,
                   source_area_count=len(value.get("zone_bindings", [])))
+    execution = value.get("native_execution")
+    if isinstance(execution, dict):
+        result["native_execution"] = {name: execution.get(name) for name in (
+            "policy", "models", "versions")}
     progress = value.get("progress")
     if isinstance(progress, dict) and "label" in progress:
         result["progress"] = progress
@@ -171,19 +176,33 @@ def _catalog(operator, workspace_key):
                 scope, scope_error = {}, str(error)
             expected = set(scope.get("expected_artifacts", []))
             shared = [name for name in shared if name in expected]
-            eligible = (run.get("state") == "complete" and bool(shared)
-                        and scope.get("selected_models_complete", False)
-                        and run.get("runtime", {}).get("version") == INVEST_VERSION)
+            versions = native_versions.model_versions(
+                run, native_versions.models_for_outputs(shared))
+            version_eligibility = {}
+            for output in shared:
+                try:
+                    core.native_cohort([run], [output])
+                    version_eligibility[output] = {"eligible": True, "reason": None}
+                except (ValueError, KeyError, TypeError) as error:
+                    version_eligibility[output] = {"eligible": False, "reason": str(error)}
+            ready = [name for name in shared if version_eligibility[name]["eligible"]]
+            # Keep all original outputs. The selected cohort, not this catalogue,
+            # determines the common models whose observed versions must agree.
+            eligible = (run.get("state") == "complete" and bool(ready)
+                        and scope.get("selected_models_complete", False))
             if run.get("state") != "complete":
                 note = "Finish the original native run in Native runs."
-            elif run.get("runtime", {}).get("version") != INVEST_VERSION:
-                note = "Run the retained inputs with InVEST " + INVEST_VERSION + "."
             elif scope_error:
                 note = scope_error
             elif not shared:
                 note = "Complete the selected native model and retain its annual-mass exports."
+            elif not ready:
+                note = "; ".join(dict.fromkeys(
+                    item["reason"] for item in version_eligibility.values()))
             else:
-                note = ", ".join(LABELS[key] for key in shared) + " ready for comparison"
+                note = ", ".join(LABELS[key] for key in ready) + " ready for comparison"
+                if len(ready) != len(shared):
+                    note += "; other outputs require their original observed model execution"
             runs.append({
                 "id": run["id"], "state": run.get("state"), "eligible": eligible,
                 "selection": selected, "comparison_pollutants": shared,
@@ -192,6 +211,15 @@ def _catalog(operator, workspace_key):
                 "scenario_kind": scenario.get("kind"), "profile_title": profile.get("title", profile["id"]),
                 "completed_at": run.get("completed_at"),
                 "runtime_version": run.get("runtime", {}).get("version"),
+                "native_version": native_versions.native_version(run),
+                "model_versions": versions, "version_eligibility": version_eligibility,
+                "runtime": run.get("runtime") or {},
+                "stages": {
+                    model: {name: value for name, value in
+                            ((run.get("stages") or {}).get(model) or {}).items()
+                            if name in ("completed_at", "runtime", "reused_from")}
+                    for model in versions
+                },
             })
         except (ValueError, OSError, KeyError, TypeError) as error:
             issues.append({"run_id": path.parent.name, "message": str(error)})
@@ -200,10 +228,14 @@ def _catalog(operator, workspace_key):
         "schema": "upstate.utility-cohort-catalog/v1", "workspace_key": workspace_key,
         "project": workspace.project, "sources": sources, "runs": runs,
         "cohorts": overview(operator, workspace_key), "issues": issues,
+        "native_version_requirement": {
+            "version": INVEST_VERSION, "observed_execution_required": True,
+            "comparison_scope": "common_native_models",
+        },
         "published_areas": list(core.AREAS), "pollutants": [
             {"id": key, "title": LABELS[key], "units": rasters.MASS_UNITS[key]} for key in POLLUTANTS],
         "source_preparation": {
-            "module": "source_tools.prepare_public_water",
+            "module": "source_tools.prepare_public_source_water",
             "result": "public-water-preparation.json",
             "collection_field": "source_collection_id",
             "role": core.SOURCE_ROLE,
@@ -277,6 +309,7 @@ def read(operator, workspace_key, operation, payload, fault):
                         "zone_bindings", "weight_grid", "notes")},
                     "comparison_pollutants": plan.get("comparison_pollutants", list(POLLUTANTS)),
                     "analysis_selection": plan["analysis_selection"],
+                    "native_execution": plan.get("native_execution"),
                     "runs": _retained_runs(workspace, plan["run_ids"])}
         key = identifier(payload.get("id") or payload.get("cohort_id") or payload.get("view_id"))
         directory, value = _cohort(workspace, key)
