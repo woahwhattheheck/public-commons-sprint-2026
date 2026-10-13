@@ -106,6 +106,7 @@ def detail(workspace, key):
                                     for row in identity.get("implementation_report_sources", [])},
         report_source_keys={(row["source_collection_id"], row["source_id"])
                             for row in identity.get("scientific_report_sources", [])},
+        geographic_native_studies=identity.get("geographic_native_studies", []),
     ).resolve(identity.get("investigation_dependencies", ()))
     captured_reports = identity.get("scientific_report_editions", [])
     captured_fields = identity.get("implementation_report_sources", [])
