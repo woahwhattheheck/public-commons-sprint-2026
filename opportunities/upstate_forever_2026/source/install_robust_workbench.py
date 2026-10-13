@@ -21,6 +21,7 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/source_refresh_comparison.py",
     "model/economic_comparison.py",
     "model/economic_comparison_render.py",
     "model/economic_comparison_source.py",
@@ -221,6 +222,7 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/source_refresh_comparison.py",
     "model/economic_comparison.py",
     "model/economic_comparison_render.py",
     "model/economic_comparison_source.py",
@@ -700,6 +702,10 @@ def verify_economic_study_dependencies(application, pending):
     )
     for name in dependencies:
         assembled_data(application, pending, name)
+    native_versions = assembled_data(application, pending, "model/native_versions.py")
+    if b"source_refresh_comparison" in native_versions:
+        for dependency in ("model/source_refresh_comparison.py", "model/rasters.py"):
+            assembled_data(application, pending, dependency)
     helper = assembled_data(application, pending, "model/economic_comparison_study_transfer.py")
     if any(signature not in helper for signature in
            (b"def include_source(", b"def summary(", b"def augment(")):
