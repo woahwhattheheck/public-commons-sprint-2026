@@ -7,6 +7,7 @@ Copyright 2026 TokenJunkieLabs.
 from __future__ import annotations
 from pathlib import Path
 import json
+from ..common import MODEL_OUTPUTS, selected_models
 from .ensemble_rasters import analyze, UNITS
 from .ensemble_store import atomic, digest, identifier, now, read, verify
 
@@ -25,6 +26,7 @@ class EnsembleWorkspace:
         pollutants = selection.get('pollutants', list(UNITS))
         if not isinstance(pollutants, list) or not pollutants or len(set(pollutants)) != len(pollutants) or any(p not in UNITS for p in pollutants):
             raise ValueError('Select distinct supported physical pollutant outputs')
+        requested_models = {MODEL_OUTPUTS[pollutant][0] for pollutant in pollutants}
         members, seen_profiles, seen_pairs = [], set(), set()
         expected_grid = baseline_scenario = alternative_scenario = version = None
         profile_refs = []
@@ -36,6 +38,8 @@ class EnsembleWorkspace:
             for run in (before, after):
                 if run.get('state') != 'complete':
                     raise ValueError('Finish selected native run ' + run['id'] + ' before ensemble analysis')
+                if not requested_models.issubset(selected_models(run['selection'])):
+                    raise ValueError('Choose pollutant outputs calculated by every selected native run')
             b, a = before['selection'], after['selection']
             if b['profile_id'] != a['profile_id']:
                 raise ValueError('Each scenario effect must pair the SAME parameter profile')
@@ -63,17 +67,18 @@ class EnsembleWorkspace:
                 raise ValueError('Duplicate native run pair')
             seen_pairs.add(pair_key)
             profile = self.workspace._get('profiles', profile_id)
-            required_models = {'sdr' if pollutant == 'sediment_export' else 'ndr'
-                               for pollutant in pollutants}
-            missing_models = sorted(required_models - set(profile))
-            if missing_models:
-                raise ValueError('Original profile lacks selected model parameters: ' + ', '.join(missing_models))
+            profile_models = selected_models(profile)
+            if not requested_models.issubset(profile_models):
+                raise ValueError('Choose pollutant outputs supplied by every selected parameter profile')
+            if any(name not in profile for name in profile_models):
+                raise ValueError('Retain each selected native model section in the original parameter profile')
             profile_refs.append({'profile_id': profile_id, 'title': profile.get('title'),
                                  'references': profile.get('references'),
                                  'table_summary': profile.get('table_summary'),
                                  'source_collection_id': profile.get('source_collection_id'),
                                  'biophysical_source_id': profile.get('biophysical_source_id'),
                                  **{name: profile[name] for name in ('ndr', 'sdr') if name in profile},
+                                 **({'models': profile_models} if profile_models != ['ndr', 'sdr'] else {}),
                                  'scientific_status': profile.get('scientific_status', 'unspecified in original profile')})
             member = {'id': pair_key, 'profile_id': profile_id,
                       'baseline_run_id': before['id'], 'alternative_run_id': after['id'],

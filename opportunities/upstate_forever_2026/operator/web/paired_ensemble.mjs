@@ -22,27 +22,67 @@ function saveRequest(value,operation){lastRequest=value;pendingOperation=operati
 function restoreRequest(){const value=sessionStorage.getItem(storageKey());lastRequest=null;pendingOperation=null;if(value){try{const record=JSON.parse(value);lastRequest=record.selection;pendingOperation=record.operation;}catch{}}$('#recovery').hidden=!lastRequest;}
 function name(kind,id){return state?.data[kind]?.find(x=>x.id===id)?.title||id?.slice(0,14)||'Unknown';}
 function options(node,kind){const previous=node.value;node.innerHTML=(state.data[kind]||[]).map(x=>`<option value="${esc(x.id)}">${esc(x.title||x.spec?.title||x.id.slice(0,14))}</option>`).join('');if([...node.options].some(x=>x.value===previous))node.value=previous;}
+function pairedRuns(runs,grid,baseline,alternative,pollutants){
+  if(!pollutants.length||baseline===alternative)return [];
+  const groups=new Map();
+  const required=new Set(pollutants.map(value=>value==='sediment_export'?'sdr':'ndr'));
+  const models=run=>Array.isArray(run.selection.models)?run.selection.models:['ndr','sdr'];
+  const score=run=>models(run).filter(model=>!required.has(model)).length;
+  for(const run of runs){
+    const selection=run.selection;
+    if(run.state!=='complete'||!selection||selection.grid_id!==grid||
+      ![baseline,alternative].includes(selection.scenario_id)||
+      !pollutants.every(pollutant=>run.artifacts?.[pollutant])||
+      ![...required].every(model=>models(run).includes(model)))continue;
+    const group=groups.get(selection.profile_id)||{baseline:[],alternative:[]};
+    group[selection.scenario_id===baseline?'baseline':'alternative'].push(run);
+    groups.set(selection.profile_id,group);
+  }
+  const selectedPairs=[];
+  for(const[profile,group]of groups){
+    const order=(a,b)=>score(a)-score(b)||a.id.localeCompare(b.id);
+    group.baseline.sort(order);group.alternative.sort(order);
+    for(const before of group.baseline){
+      const after=group.alternative.find(run=>run.selection.invest_version===before.selection.invest_version);
+      if(after){
+        selectedPairs.push({profile_id:profile,baseline_run_id:before.id,alternative_run_id:after.id,scenario_id:alternative});
+        break;
+      }
+    }
+  }
+  return selectedPairs.sort((a,b)=>a.profile_id.localeCompare(b.profile_id));
+}
+let pairContrast=null;
 function pairRows(){
   const baseline=$('#baseline').value, alternative=$('#alternative').value,grid=$('#grid').value;
-  const runs=(state?.data.runs||[]).filter(x=>x.state==='complete'&&x.selection.grid_id===grid);
-  const grouped=new Map();
-  for(const run of runs){const p=run.selection.profile_id;const r=grouped.get(p)||{};r[run.selection.scenario_id]=run;grouped.set(p,r);}
-  pairs=[];
-  for(const [profile,row] of grouped){if(baseline!==alternative&&row[baseline]&&row[alternative])pairs.push({profile_id:profile,baseline_run_id:row[baseline].id,alternative_run_id:row[alternative].id,scenario_id:alternative});}
-  pairs.sort((a,b)=>a.profile_id.localeCompare(b.profile_id));selected=new Set(pairs.map(p=>p.profile_id));
+  const pollutants=[...document.querySelectorAll('#pollutants input:checked')].map(input=>input.value);
+  const contrast=JSON.stringify([grid,baseline,alternative]), previousProfiles=new Set(pairs.map(pair=>pair.profile_id));
+  const previousSelection=new Set(selected);
+  pairs=pairedRuns(state?.data.runs||[],grid,baseline,alternative,pollutants);
+  selected=new Set(pairs.filter(pair=>contrast!==pairContrast||!previousProfiles.has(pair.profile_id)||previousSelection.has(pair.profile_id)).map(pair=>pair.profile_id));
+  pairContrast=contrast;
   $('#planned').value=Math.max(Number($('#planned').value)||1,pairs.length);
   const requestedProfiles=new Set((state?.data.runs||[]).filter(r=>r.selection.grid_id===grid&&[baseline,alternative].includes(r.selection.scenario_id)).map(r=>r.selection.profile_id));
   const missing=[...requestedProfiles].filter(id=>!selected.has(id));
   $('#planned').value=Math.max(Number($('#planned').value)||1,requestedProfiles.size);
-  $('#pair-status').textContent=`${pairs.length} complete profile-matched pairs are available on this grid. ${missing.length} additional profiles have missing or incomplete runs for this contrast.`+(missing.length?' Profiles: '+missing.map(id=>name('profiles',id)).join('; '):'');
-  $('#pairs').innerHTML=pairs.length?'<table><thead><tr><th>Include</th><th>Original parameter profile</th><th>Baseline run</th><th>Alternative run</th></tr></thead><tbody>'+pairs.map(p=>`<tr><td><input aria-label="Include ${esc(name('profiles',p.profile_id))}" type="checkbox" checked data-profile="${p.profile_id}"></td><th>${esc(name('profiles',p.profile_id))}<br><code>${p.profile_id}</code></th><td><code>${p.baseline_run_id}</code></td><td><code>${p.alternative_run_id}</code></td></tr>`).join('')+'</tbody></table>':'<p>Choose distinct scenarios with completed runs under the same parameter profiles. Existing native run programmes prepare and execute those runs.</p>';
+  $('#pair-status').textContent=`${pairs.length} complete profile-matched pairs cover the selected quantities on this grid. ${missing.length} additional profiles need a completed matching pair with those outputs.`+(missing.length?' Profiles: '+missing.map(id=>name('profiles',id)).join('; '):'');
+  $('#pairs').innerHTML=pairs.length?'<table><thead><tr><th>Include</th><th>Original parameter profile</th><th>Baseline run</th><th>Alternative run</th></tr></thead><tbody>'+pairs.map(p=>`<tr><td><input aria-label="Include ${esc(name('profiles',p.profile_id))}" type="checkbox" ${selected.has(p.profile_id)?'checked':''} data-profile="${p.profile_id}"></td><th>${esc(name('profiles',p.profile_id))}<br><code>${p.profile_id}</code></th><td><code>${p.baseline_run_id}</code></td><td><code>${p.alternative_run_id}</code></td></tr>`).join('')+'</tbody></table>':'<p>Choose distinct scenarios and the quantities available in their completed runs. Existing native run programmes prepare and execute matching profiles.</p>';
 }
 function selection(){
-  const quantiles=$('#quantiles').value.split(',').map(x=>Number(x.trim()));
-  if(!quantiles.length||quantiles.some(q=>!Number.isFinite(q)||q<0||q>1))throw new Error('Enter finite quantiles between zero and one.');
-  const chosen=pairs.filter(p=>selected.has(p.profile_id));if(!chosen.length)throw new Error('Select at least one complete paired profile.');
-  const pollutants=[...document.querySelectorAll('#pollutants input:checked')].map(x=>x.value);if(!pollutants.length)throw new Error('Select a physical output.');
-  return {title:$('#title').value,purpose:$('#purpose').value,pairs:chosen,pollutants,quantiles,support:$('#support').value,planned_member_count:Number($('#planned').value),memory_mb:Number($('#memory').value)};
+  const title=$('#title').value.trim(),purpose=$('#purpose').value.trim();
+  if(!title||!purpose)throw new Error('Give these ensemble results a title and purpose.');
+  const parts=$('#quantiles').value.split(',').map(value=>value.trim());
+  const quantiles=parts.map(Number);
+  if(parts.some(value=>!value)||!quantiles.length||quantiles.some(q=>!Number.isFinite(q)||q<0||q>1)||new Set(quantiles).size!==quantiles.length)
+    throw new Error('Enter distinct finite quantiles between zero and one, separated by commas.');
+  const chosen=pairs.filter(p=>selected.has(p.profile_id));
+  if(!chosen.length)throw new Error('Select at least one complete paired profile.');
+  const pollutants=[...document.querySelectorAll('#pollutants input:checked')].map(x=>x.value);
+  if(!pollutants.length)throw new Error('Select a physical output.');
+  const planned=Number($('#planned').value),memory=Number($('#memory').value);
+  if(!Number.isSafeInteger(planned)||planned<chosen.length)throw new Error('The planned profile count must be a whole number at least as large as the selected pairs.');
+  if(!Number.isFinite(memory)||memory<1)throw new Error('Select a positive tile working budget of at least one MiB.');
+  return {title,purpose,pairs:chosen,pollutants,quantiles,support:$('#support').value,planned_member_count:planned,memory_mb:memory};
 }
 async function inspect(){clear();try{const value=selection();const result=await api('/api/paired-ensemble/preview',{method:'POST',body:{workspace,selection:value}});$('#preview-result').textContent=JSON.stringify(result,null,2);$('#preview-result').hidden=false;}catch(e){fail(e);}}
 async function submit(action,value,operation){
@@ -83,14 +123,31 @@ async function refresh(reset=true){
 }
 function renderResults(){
   const rows=state.data.paired_ensemble_products||[];
-  $('#results').innerHTML=rows.map(row=>`<article class="result"><h3>${esc(row.title)}</h3><p>${esc(row.state)} · ${row.members} selected profiles</p><code>${row.id}</code><div class="actions"><button data-open="${row.id}">Open report and source</button><button data-export="${row.id}" ${row.state==='complete'?'':'disabled'}>Export complete project</button></div><div id="detail-${row.id}"></div></article>`).join('')||'<p>No retained ensemble products yet.</p>';
+  $('#results').innerHTML=rows.map(row=>`<article class="result"><h3>${esc(row.title)}</h3><p>${esc(row.state)} · ${row.members} selected profiles</p><code>${row.id}</code><div class="actions"><button data-open="${row.id}">Open results and source</button><button data-export="${row.id}" ${row.state==='complete'?'':'disabled'}>Export complete project</button></div><div id="detail-${row.id}"></div></article>`).join('')||'<p>No retained ensemble products yet.</p>';
 }
 function showDownloads(result,target=$('#progress')){const span=document.createElement('span');for(const file of result._downloads||[]){const a=document.createElement('a');a.href=file.url||file.href||('/api/file/'+file.id);a.textContent=file.title||file.filename||'Download complete project';a.style.marginLeft='12px';span.append(a);}target.append(span);}
-async function openResult(id){const detail=await api('/api/item?'+new URLSearchParams({workspace,kind:'paired_ensemble_products',id}));const target=$('#detail-'+id);target.replaceChildren();const a=document.createElement('a');a.href=detail._report_url;a.target='_blank';a.rel='noopener';a.textContent='Open complete offline-style report';target.append(a);const pre=document.createElement('pre');pre.textContent=JSON.stringify({effect_direction:detail.effect_direction,coverage:Object.fromEntries(Object.entries(detail.summary||{}).map(([p,s])=>[p,{common_cells:s.common_cells,reporting_cells:s.reporting_cells,units:s.units}]))},null,2);target.append(pre);}
+async function openResult(id){
+  const requestedWorkspace=workspace;
+  const detail=await api('/api/item?'+new URLSearchParams({workspace,kind:'paired_ensemble_products',id}));
+  const target=$('#detail-'+id);
+  if(requestedWorkspace!==workspace||!target)return;
+  target.replaceChildren();
+  if(detail._report_url){
+    const link=document.createElement('a');link.href=detail._report_url;link.target='_blank';link.rel='noopener';
+    link.textContent='Open complete report';target.append(link);
+  }else{
+    const message=document.createElement('p');message.textContent='Retained state: '+detail.state+'. Continue the saved calculation to finish its report.';target.append(message);
+  }
+  const pre=document.createElement('pre');
+  pre.textContent=JSON.stringify({state:detail.state,effect_direction:detail.effect_direction,
+    coverage:Object.fromEntries(Object.entries(detail.summary||{}).map(([p,s])=>[p,{common_cells:s.common_cells,reporting_cells:s.reporting_cells,units:s.units}]))},null,2);
+  target.append(pre);showDownloads(detail,target);
+}
 $('#refresh').onclick=()=>refresh().catch(fail);$('#preview').onclick=inspect;$('#build').onclick=()=>build();$('#resume').onclick=()=>build(true);
 $('#pause').onclick=async()=>{try{if(!lastRequest)throw new Error('Choose the saved running selection.');await api('/api/paired-ensemble/pause',{method:'POST',body:{workspace,selection:lastRequest}});$('#progress').textContent='Pause requested after the current durable tile.';}catch(e){fail(e);}};
 $('#workspace').onchange=()=>{workspace=$('#workspace').value;refresh().catch(fail);};
 for(const id of ['baseline','alternative','grid'])$('#'+id).onchange=pairRows;
+$('#pollutants').onchange=()=>{pairRows();$('#preview-result').hidden=true;};
 $('#pairs').onchange=event=>{const id=event.target.dataset.profile;if(id){if(event.target.checked)selected.add(id);else selected.delete(id);}};
 $('#results').onclick=async event=>{try{if(event.target.dataset.open)await openResult(event.target.dataset.open);if(event.target.dataset.export)await submit('paired_ensemble.export',{ensemble_id:event.target.dataset.export});}catch(e){fail(e);}};
 $('#archive').onchange=async()=>{try{const file=$('#archive').files[0];if(!file)return;const uploaded=await api('/api/upload',{method:'POST',raw:file,filename:file.name});await submit('paired_ensemble.receive',{upload_id:uploaded.id});}catch(e){fail(e);}};
