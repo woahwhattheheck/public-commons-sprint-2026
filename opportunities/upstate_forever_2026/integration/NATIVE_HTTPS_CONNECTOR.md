@@ -76,3 +76,9 @@ https://docs.python.org/3.12/library/sqlite3.html
 
 Current Cloudflare request, memory and streaming limits:
 https://developers.cloudflare.com/workers/platform/limits/
+
+## Current source routing and concurrent requests
+
+The connector admits GET, POST, PUT, PATCH or DELETE only when that exact path/method appears in the actual installed handler, extension manifest, or private additional_routes configuration. Each mutating method sends the exact configured advertised Origin. Original method and complete document bytes are preserved. The ordinary maintained Measurements extension uses POST /api/measurements/rpc with its original method/path/document in the body; no direct mounted Measurements service is inferred from files merely being present. A deliberately mounted original service can provide its actual concrete route inventory in additional_routes. The native service remains authoritative for route, size and scientific meaning.
+
+Up to the configured worker count can relay independent requests. Each poll excludes this connector's currently active request IDs through the paired edge exclude parameter; a concurrent polling race backs off briefly. The edge filters exclusions before selecting queued requests, preventing duplicate active requests from consuming the connector or API budget. Original per-request locks and durable write identity remain in place.

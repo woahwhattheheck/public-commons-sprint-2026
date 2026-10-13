@@ -99,7 +99,7 @@ async function outcome(id,signal){
   if(response.headers.get('X-Eco-Pending')==='1'){
    await response.body?.cancel();attempt=0;await pause(retryDelay(response,0,500),signal);continue;
   }
-  if(retryCodes.has(response.status)&&response.headers.has('X-Eco-Transport-Error')){
+  if((retryCodes.has(response.status)||(response.status===409&&response.headers.get('X-Eco-Transport-Error')==='RESULT_OPEN'))&&response.headers.has('X-Eco-Transport-Error')){
    await response.body?.cancel();if(attempt++>=7)throw problem('The original request is retained but its result is temporarily unavailable.','REMOTE_INTERRUPTED',id,response.status);
    await pause(retryDelay(response,attempt),signal);continue;
   }
