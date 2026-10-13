@@ -294,6 +294,8 @@ class ClientSourceIntake:
                                      "vintage": inspection["created_at"],
                                      **describe_file(directory, path),
                                      "client_source_original": True})
+        manifest_checkpoint = directory / "sources.json"
+        previous_manifest = read_json(manifest_checkpoint) if manifest_checkpoint.exists() else None
         for index, (choice, file, part) in enumerate(checked):
             path = materialized[choice["file_index"]]
             source_id = "client-" + digest({"inspection": inspection_id, "selection": choice})[:32]
@@ -301,6 +303,19 @@ class ClientSourceIntake:
             entry.update(id=source_id, kind=part["kind"], client_source={
                 "inspection_id": inspection_id, "source_sha256": file["original"]["sha256"],
                 "filename": file["filename"], "part_name": part["name"], "selection": choice})
+            if part["kind"] == "table":
+                if previous_manifest is None:
+                    saved_preview = {"schema": "upstate.client-source-preview/v1",
+                                     "source_sha256": file["original"]["sha256"],
+                                     "format": file["inspection"]["format"],
+                                     "options": deepcopy(file["options"]), "part": deepcopy(part)}
+                else:
+                    # Resume an already checkpointed edition with its original metadata.
+                    previous_entry = next((item for item in previous_manifest["entries"]
+                                           if item["id"] == source_id), {})
+                    saved_preview = previous_entry.get("client_source", {}).get("inspection")
+                if saved_preview is not None:
+                    entry["client_source"]["inspection"] = deepcopy(saved_preview)
             companions = [describe_file(directory, selection_path)]
             companions.extend({key: row[key] for key in ("path", "bytes", "sha256")} for row in original_entries)
             if part["kind"] == "vector":
