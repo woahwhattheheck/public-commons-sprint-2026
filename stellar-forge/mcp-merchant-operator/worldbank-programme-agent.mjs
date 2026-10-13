@@ -1,4 +1,5 @@
 // MIT. Agent execution on the original Analysis owner, with complete native delivery custody.
+import { WorldBankIntakeAgent } from './worldbank-intake-agent.mjs';
 import { constants } from 'node:fs';
 import { open } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -24,8 +25,12 @@ function mediaType(name) {
 export class MerchantWorldBankProgrammeAgent {
   #config; #reads = new RetainedFileReads({ errorPrefix: 'WORLDBANK' });
   #controller = new AbortController(); #pending = new Set(); #clients = new Set(); #exports = new Map();
-  #closing = false; #closed = false; #close;
-  constructor(config) { this.#config = config; }
+  #closing = false; #closed = false; #close; #intakes;
+  constructor(config) {
+    this.#config=config;
+    this.#intakes=new WorldBankIntakeAgent({config,reads:this.#reads,
+      using:(...args)=>this.#using(...args),definition:(...args)=>this.#definition(...args),isClosing:()=>this.#closing});
+  }
   get summary() {
     return { configured: Boolean(this.#config.worldbankProgrammes), ...this.#reads.summary,
       workspaces: Object.entries(this.#config.worldbankProgrammes?.workspaces ?? {}).map(([workspace,value]) =>
@@ -136,6 +141,7 @@ export class MerchantWorldBankProgrammeAgent {
   }
   async #execute(action,args) {
     if(action==='connections')return this.summary;
+    if(action.startsWith('intake_'))return this.#intakes.execute(action,args);
     const {workspace,programme,...input}=args;
     const definition=this.#definition(workspace,programme);
     if(action==='recipe'){

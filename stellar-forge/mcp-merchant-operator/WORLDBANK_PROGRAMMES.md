@@ -2,7 +2,7 @@
 
 This provider operates a named programme in an already running, privately owned Analysis workspace. The original World Bank service owns source preparation, comparison, review, report publication, workbook creation, SQLite history and portable workspace export. Merchant exposes these actions to an agent and retains every delivered file. The existing Console workflow series owns dates, periods, calls, review pauses and handover.
 
-The native service instructions remain [Analysis programmes](../../products/worldbank/ANALYSIS_PROGRAMMES.md), [World Bank operating guide](../../products/worldbank/OPERATING.md) and [recurring source delivery](../../products/worldbank/RECURRING.md). Read the installed source manifest to identify the exact code in use. Source acquisition and registering a new World Bank response remain with the original service owner. Choose a real retained source revision; these tools never synthesize a source response.
+The native service instructions remain [Analysis programmes](../../products/worldbank/ANALYSIS_PROGRAMMES.md), [World Bank operating guide](../../products/worldbank/OPERATING.md) and [recurring source delivery](../../products/worldbank/RECURRING.md). Read the installed source manifest to identify the exact code in use. Source acquisition remains with the original service owner. The `intake_*` tools and `worldbank-programme-agent intake` command register an approved complete handover through that same owner's native importer; see [approved source intake](WORLDBANK_SOURCE_INTAKE.md). Choose the exact registered source revision for programme preparation.
 
 ## Connect the original service
 
@@ -139,3 +139,8 @@ There is one native Analysis owner and one saved workflow period. This adapter d
 Before presenting the completed application or its reports as ready, open the exact outgoing version with the populated customer workspace, look at its rendered screens or real screenshots, and operate the important controls. Review the screenshare width and relevant narrow/mobile width, empty, loading and error states, downloads, exports and reopening. Fix unreadable, clipped, overflowing, unstyled or broken output in the same application. Capturing screenshots without viewing them, source review and HTTP responses do not replace this inspection.
 
 Use plain industrial presentation: readable tables, clear hierarchy, consistent typography and spacing, restrained controls and useful labels. Keep the original workflows and computations. Continue through observed repairs and the existing receiving programme; use focused checks rather than a broad suite. Carry this requirement into delegated receiving work and any standalone application handoff. This implements the repository's owner-directed rendered-product inspection instruction, version 2026-10-13.1.
+
+
+## Approved source intake on this original provider
+
+The complete approved-ZIP registration and receiving flow is available through `worldbank-programme-agent intake`, the typed `./merchant/worldbank-programmes/intake` export and the existing provider's `intake_*` actions. See [WORLDBANK_SOURCE_INTAKE.md](WORLDBANK_SOURCE_INTAKE.md) for original-ID continuation, restored upload chunks, full original-file receiving and exact source-to-programme preparation. Existing named programme review, publication, customer edits and complete delivery continue through their original methods.
