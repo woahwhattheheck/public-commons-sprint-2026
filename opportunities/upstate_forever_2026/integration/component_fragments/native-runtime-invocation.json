@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-runtime-invocation",
+  "source_reference": "ECO-NATIVE-38F0/1.0.0/2026-10-13",
+  "components": {
+    "native-runtime-invocation": {
+      "paths": [
+        "source_tools/native_runtime/invocation.py",
+        "source_tools/NATIVE_INVOCATION.md",
+        "integration/component_fragments/native-runtime-invocation.json"
+      ],
+      "requires": ["native-runtime-capsule"],
+      "retained_only": []
+    }
+  },
+  "required_components": ["native-runtime-invocation"]
+}
