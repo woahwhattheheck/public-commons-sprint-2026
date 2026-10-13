@@ -255,3 +255,13 @@ Resume with the same current admission and output. A later explicit report or
 executor source adoption uses the existing admission modes normally. Never
 manufacture a previous CLI receipt for a directly prepared project, and never
 change its original selection merely to fit a receiving command.
+
+## Original editable reference GIS in the same receiving course
+
+The original completed baseline/restoration/control trio is prepared through `model.geographic_gis_handover.prepare` after its mapped delivery and Programme adoption. The full twelve-member scientific source and each pending member remain unchanged. The helper creates an ordinary original GIS export and original native execution history, without any model execution. The immutable handover includes `delivery/geographic-gis.json`, the complete original GIS ZIP/project/opening tree, all retained history/source companions, and direct opening links.
+
+Archive binding checks the exact preparation, ordered reference run IDs, mapped delivery and full GIS identity. Independent receiving runs the archived application's actual helper, verifies every retained original member, and imports the original ZIP through `gis_workspace.receive` within that restored Workspace. The returned `gis_verification.received.id` and `geographic_gis.export.id` are the original receipt/export inputs for the existing GIS review; no second project or replacement scientific comparison is created. The original archive remains immutable. A later completed sensitivity course becomes its own full handover edition and retains the earlier reference edition.
+
+The native receiving component includes the three existing geographic-reference-gis source leaves directly and depends on `gis-native-study` and `native-run-history`. It does not require the geographic-reference-gis component, which already requires geographic-programme and would create a dependency cycle. Existing installed source admission must include these complete maintained leaves and their normal component closure.
+
+Open the actual archived START_HERE, GIS opening and QGIS project, original report/PDF, and downloadable original files at desktop and 390-pixel width before human delivery, following the existing rendered-product inspection policy. Preserve actual returned render results with the original receiving operation.
