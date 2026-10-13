@@ -72,3 +72,25 @@ The independent B41A/7737 Source workspace and 81CF/F2A6 original Operating plan
 The four publication outputs remain `dist/grant.html`, `dist/grant-data/application.md`, `dist/grant-data/product-and-finance.md` and `dist/grant-data/source-index.json`. The publication uses the existing companion edition/return implementation, 5403's original Saved projects model, existing Atlas catalog review/search, and the original financial walkthrough.
 
 The public browser manifest includes every new module and source route. The grant-reviewer contribution exposes the original companion, catalog and publication interfaces and includes this guide. Future canonical chapters and registered product selections remain owned by the existing manuscript and cumulative publisher.
+
+## Continue unfinished reviews and record Required content
+
+The public editor and named-review workspace now use the maintained working-copy and Required content implementations. They share the existing browser store with Saved projects.
+
+### Keep a review in progress
+
+Open **Review prepared draft** and choose a full saved application. Record a review, or leave a decision, requested change, reply, supporting reference or carry-forward choice unfinished. **Save working copy now** retains every raw value together with the complete original review and selected incoming draft. A reload or another window opens an independent working identity. **Download complete working copy** transfers that whole state; **Open working package** validates it before switching and preserves the preceding local work.
+
+A working package and a recorded-review export serve different purposes. The working package keeps unfinished values, including invalid text awaiting correction. An explicit recorded action continues the original review journal. Sender-local browser record IDs are cleared when another operator receives a working package, while the logical review, source editions and recorded history remain intact. See [Complete working copies](./GRANT_REVIEW_ROUNDS.md#complete-working-copies) for conflict recovery and original-context navigation.
+
+### Review the selected submission wording
+
+In **Prepare submission → Required content**, select the complete canonical answers or actual issuer fields reviewed, name the reviewer, enter a supporting location or reason, and explicitly record the decision. Pending decisions stay in the original application draft and its full save/export. Recording retains the preceding full version.
+
+The decision retains its exact text basis: selected answer and field bodies, field prompts and limits, associated source answers, form context and the published criteria edition. Editing one of those values shows the complete previous/current comparison. Older decisions without an exact basis remain historical. New handover preparations freeze coverage for their selected output; an answer-only review does not silently cover issuer-field output. Reopening verifies that coverage against the original immutable snapshot.
+
+Use [Required content review](./GRANT_REQUIRED_CONTENT_REVIEW.md) for the complete selection, comparison, re-review and prepared-report journey. Existing prepared editions keep their original bodies and remain readable.
+
+### Receiving in the original installed case
+
+Continue the existing saved application and review operation with these public modules. Open the full retained draft; record a named content review, edit one selected answer, inspect its changed basis, and prepare/download/reopen the exact handover. Then leave a reviewer decision and revision choice unfinished, save/download its working package, reopen independently and continue the same logical review. Retain the original record alongside the received copy. The current source and models are published together; the equipped owner records the actual browser and IndexedDB result in the existing case.
