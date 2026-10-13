@@ -31,7 +31,7 @@ area quantities and coverage remain in the quantitative CSV and JSON.
 
 For an already completed study, **Refresh completed results** rebuilds the saved
 report and GIS export from its retained native runs. A completed study reached
-through the existing backend \`parameter-study.run\` action also upgrades an older
+through the existing backend `parameter-study.run` action also upgrades an older
 export edition automatically. This keeps the
 original study, case, run, profile, grid and comparison identities. It does not
 launch native calculations for a completed study. The existing queued summarize action powers **Refresh completed results**.
