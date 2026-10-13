@@ -148,8 +148,8 @@ original Workspace. It opens each selected source/contribution pair or result
 raster through SpatialReview, saves the exact review, renders PDF/SVG/PNG and the
 map pack, and reopens the exported review against its original source bindings.
 
-From the application root, run the four-utility source-plan journey using the
-actual Workspace path and the plan ID returned by preparation:
+From the application root, run the four-area source-plan journey for the two
+utilities using the actual Workspace path and the plan ID returned by preparation:
 
 ```sh
 python -B model/receiving_water_journey.py \
