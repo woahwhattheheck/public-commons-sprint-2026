@@ -383,6 +383,56 @@ def observation_files(original, available):
     return result
 
 
+AGREEING_ACTIVITY_BASIS = "agreeing_original_activity_characteristic/v1"
+
+
+def statistical_rows(records, study):
+    """Give agreeing original activity/characteristic values one statistical weight."""
+    basis = study.get("observation_statistic_basis")
+    if basis is None:
+        return records
+    if basis != AGREEING_ACTIVITY_BASIS:
+        raise ValueError("Unsupported original observation statistic basis.")
+    groups = {}
+    for row in records:
+        key = (row["monitoring_location_id"], row.get("project_id", ""),
+               row["activity_id"], row["parameter_original"])
+        groups.setdefault(key, []).append(row)
+    output = []
+    ignored = {"ResultIdentifier", "ResultDetectionQuantitationLimitUrl"}
+    support_fields = (
+        "value", "unit", "censored", "censor_direction", "detection_condition",
+        "detection_limit", "detection_limit_unit", "detection_limit_type",
+        "depth", "depth_unit", "source_depth_token", "date", "local_time",
+        "source_timezone", "project_id", "activity_type", "series_key",
+    )
+    for group in groups.values():
+        first = group[0]
+        cells = {key: value for key, value in first["raw_cells"].items() if key not in ignored}
+        identifiers = set()
+        originals = []
+        for row in group:
+            identifier = row.get("original_result_identifier")
+            if not isinstance(identifier, str) or not identifier or identifier in identifiers:
+                raise ValueError("Activity weighting requires distinct original ResultIdentifiers.")
+            identifiers.add(identifier)
+            if ({key: value for key, value in row["raw_cells"].items() if key not in ignored} != cells
+                    or any(row.get(key) != first.get(key) for key in support_fields)):
+                raise ValueError("Repeated activity/characteristic results disagree; retain a separate analytical cohort.")
+            originals.append({key: row.get(key) for key in (
+                "original_result_identifier", "original_record_id", "record_id",
+                "original_source_path", "original_source_sha256", "source_csv_row",
+                "monitoring_location_id", "activity_id", "source_selector",
+            )})
+        output.append({**first,
+            "measurement_original_result_count": len(group),
+            "measurement_original_result_ids": sorted(identifiers),
+            "measurement_original_records": originals,
+            "statistic_basis": AGREEING_ACTIVITY_BASIS,
+        })
+    return output
+
+
 def builtin_companion(root):
     """Read a complete installed source set using exact declared file identities."""
     root = root.resolve(strict=True)

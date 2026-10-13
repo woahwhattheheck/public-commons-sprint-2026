@@ -404,6 +404,12 @@ def continue_saved_review(workspace, output, state, state_path, *, profile="sv83
 
 
 PROFILES = {
+    "three_twenty_2026": {
+        "module": "three_twenty_observations", "site_id": "SV-833",
+        "title": "Three and Twenty Creek original 2026 observations",
+        "results": 242, "activities": 15, "limits": 242,
+        "parameter": "Escherichia coli", "year": 2026, "measurements": 142,
+    },
     "sv833": {
         "module": "sv833_observations", "site_id": "SV-833",
         "title": "SV-833 original observations and scientific reports",
@@ -431,7 +437,7 @@ def main(argv=None, *, profile="sv833"):
                         help="With --saved-review, verify an explicit original-operation and archive location specification.")
     parser.add_argument("--scientific-report", type=Path,
                         help="After --saved-review, continue exact original and hydrology reviews through scientific reports and editable Study receiving.")
-    parser.add_argument("--year", type=int, default=2025)
+    parser.add_argument("--year", type=int, default=expected.get("year", 2025))
     parser.add_argument("--parameter", default=expected["parameter"])
     args = parser.parse_args(argv)
     if args.relocate_receiving and (not args.saved_review or args.create_workspace):
@@ -543,6 +549,16 @@ def main(argv=None, *, profile="sv833"):
                 "above_limit": sum(row["censor_direction"] == "above" for row in rows),
                 "source_manifest": record["source_manifest"],
             })
+            if "measurements" in expected:
+                all_context = store.context(study_id, version_id)
+                original_count = len(all_context["observations"]["rows"])
+                weighted = all_context["observations"].get("statistics_rows", [])
+                if original_count != expected["results"] or len(weighted) != expected["measurements"]:
+                    raise ValueError("The original-ID and activity-weighted native cohort differ.")
+                checkpoint("activity_weighting", {
+                    "original_result_ids": original_count, "activity_measurements": len(weighted),
+                    "statistic_basis": all_context["observations"]["statistic_basis"],
+                })
             export_root = workspace.root / "published_study_exports" / operation_id
             prior_selected = state["phases"].get("selected_report")
             if prior_selected is not None:
