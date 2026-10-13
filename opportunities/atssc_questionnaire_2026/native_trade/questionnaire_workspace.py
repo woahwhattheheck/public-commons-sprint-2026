@@ -1010,7 +1010,7 @@ class Workspace:
                 parts.append("</tbody></table>")
             parts.append("</html>")
             return "".join(parts).encode()
-        raise OperationError("FORMAT","Choose JSON, CSV, HTML, PDF or DOCX")
+        raise OperationError("FORMAT","Choose JSON, CSV, HTML, PDF, DOCX, XLSX or PPTX")
 
     def op_export_report(self,p):
         report = self.op_get_report({"report_id":p["report_id"]})
@@ -1141,8 +1141,8 @@ def receive_project(archive_path,destination,expected_sha256=None):
                 for sha,raw in db.execute("SELECT sha,bytes FROM workbooks"):
                     if digest(raw) != sha: raise OperationError("ARCHIVE","Received original workbook bytes failed verification")
             os.mkdir(destination,0o700)
-            for root in ("application","workspace","document-runtime","calculation-runtime"):
-                if (temp/root).exists(): os.rename(temp/root,destination/root)
+            for item in sorted(temp.iterdir()):
+                os.rename(item,destination/item.name)
     result = Workspace(destination/"workspace").op_status({})
     if result["workspace_id"] != manifest["workspace_id"]: raise OperationError("ARCHIVE","Received native workspace identity changed")
     return {"directory":str(destination),"workspace_id":result["workspace_id"],"integrity":"ok","verified_files":len(manifest["files"]),"sha256":digest(data)}

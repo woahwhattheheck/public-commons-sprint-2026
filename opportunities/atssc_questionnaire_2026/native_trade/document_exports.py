@@ -85,6 +85,23 @@ def _number(value):
     return result
 
 
+def _question_context(question):
+    label = _text(question.get("label", question["id"]))
+    heading = question.get("original_question_heading")
+    if isinstance(heading, dict):
+        heading = heading.get("text")
+    context = []
+    section = question.get("section")
+    if isinstance(section, str) and section:
+        context.append("Worksheet " + _text(section))
+    if heading and _text(heading) != label:
+        context.append(_text(heading))
+    prompt = question.get("original_question_text")
+    if prompt and _text(prompt) not in {label, _text(heading)}:
+        context.append(_text(prompt))
+    return context
+
+
 def document_model(payload):
     """Return the common disclosure-safe content used by Word and PDF."""
     if not isinstance(payload, dict):
@@ -149,18 +166,7 @@ def document_model(payload):
                 "classification": classification,
                 "alternative": _text(alternatives.get(qid) or choice.get("public_alternative")),
             }
-            source_heading = question.get("original_question_heading")
-            if isinstance(source_heading,dict):
-                source_heading = source_heading.get("text")
-            section = question.get("section")
-            item["context"] = []
-            if isinstance(section,str) and section:
-                item["context"].append("Worksheet " + _text(section))
-            if source_heading and _text(source_heading) != item["label"]:
-                item["context"].append(_text(source_heading))
-            source_prompt = question.get("original_question_text")
-            if source_prompt and _text(source_prompt) not in {item["label"],_text(source_heading)}:
-                item["context"].append(_text(source_prompt))
+            item["context"] = _question_context(question)
             original = response["values"].get(qid)
             withheld = edition == "public" and classification == "protected"
             if item["kind"] == "table":
@@ -203,6 +209,7 @@ def document_model(payload):
         total = sum(numbers, Decimal(0))
         model["numeric_totals"].append({
             "label": _text(q.get("label", q["id"])), "unit": _text(q.get("unit")),
+            "context": _question_context(q),
             "answered": str(len(numbers)), "sum": format(total, "f") if numbers else "No public answers" if edition == "public" else "Not answered",
             "mean": format(total / len(numbers), "f") if numbers else "",
             "minimum": format(min(numbers), "f") if numbers else "",
@@ -391,7 +398,13 @@ def _word(model):
 
     if model["numeric_totals"] and not model["view_sections"]:
         doc.add_paragraph("Summary statistics", "Heading 1")
+        previous_context = None
         for summary in model["numeric_totals"]:
+            context = tuple(summary["context"])
+            if context and context != previous_context:
+                for value in context:
+                    doc.add_paragraph(value).paragraph_format.keep_with_next = True
+            previous_context = context
             doc.add_paragraph(summary["label"] + ("  " + summary["unit"] if summary["unit"] else ""), "Heading 2")
             table(["Count", "Sum", "Mean", "Minimum", "Maximum"], [[summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]], [0.75, 1.8, 1.8, 1.375, 1.375])
     if model["view_sections"]:
@@ -526,20 +539,33 @@ def _pdf(model):
             padding = 10 if compact else 14
             first_rows = sum(max(cell.wrap(widths[index]-14,1000000)[1] for index,cell in enumerate(row))+padding for row in content[:2])
             minimum = heading.wrap(width,1000000)[1]+heading.getSpaceBefore()+heading.getSpaceAfter()+first_rows+8
+            prefix_start = len(story)
+            while prefix_start and story[prefix_start-1].getKeepWithNext():
+                prefix_start -= 1
+                prefix = story[prefix_start]
+                minimum += prefix.wrap(width,1000000)[1]+prefix.getSpaceBefore()+prefix.getSpaceAfter()
             # Protect the caption and first complete row, without keeping the
-            # entire long table together or creating a mostly empty page.
-            story.extend([CondPageBreak(min(minimum,page_size[1]-110)),heading])
+            # entire long table together or leaving its question context behind.
+            story.insert(prefix_start,CondPageBreak(min(minimum,page_size[1]-110)))
+            story.append(heading)
         story.extend([result, Spacer(1, 8)])
     if model["numeric_totals"] and not model["view_sections"]:
         story.append(paragraph("Summary statistics", "heading"))
+        previous_context = None
         for summary in model["numeric_totals"]:
+            context = tuple(summary["context"])
+            if context and context != previous_context:
+                for value in context:
+                    story.append(paragraph(value, "metadata"))
+            previous_context = context
             story.append(paragraph(summary["label"] + ("  " + summary["unit"] if summary["unit"] else ""), "question"))
             table(["Count", "Sum", "Mean", "Minimum", "Maximum"], [[summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]], [54, 129.6, 129.6, 99, 99])
     if model["view_sections"]:
         from document_charts import chart_panels, pdf_chart
         for view in model["view_sections"]:
             story.append(paragraph(_text(view["title"]),"heading"))
-            if view.get("note"): story.append(paragraph(_text(view["note"])))
+            if view.get("note"):
+                story.append(paragraph(_text(view["note"]), "metadata" if view["kind"] != "text" else "body"))
             if view["kind"] == "text": continue
             table(["Statistic","Value"],[[METRIC_LABELS[x],_metric(view["summary"].get(x))] for x in view["statistics"]],[151.2,360])
             story.append(paragraph(str(view["summary"]["answered"])+" visible answers from "+str(view["summary"]["observations"])+" observations."))
@@ -567,8 +593,7 @@ def _pdf(model):
                         table(headers, [[_cell_text(c) for c in row] for row in question["rows"]])
                     else:
                         for row_number, row in enumerate(question["rows"], 1):
-                            story.append(paragraph("Answer row " + str(row_number), "record"))
-                            table(["Column", "Answer"], list(zip(headers, [_cell_text(c) for c in row])), [151.2, 360])
+                            table(["Column", "Answer"], list(zip(headers, [_cell_text(c) for c in row])), [151.2, 360],caption="Answer row " + str(row_number))
                 else:
                     story.append(paragraph(question["empty_text"]))
             else:

@@ -8,9 +8,11 @@ import {createRequire} from "node:module";
 import {pathToFileURL,fileURLToPath} from "node:url";
 const hash=raw=>createHash("sha256").update(raw).digest("hex");
 const now=()=>new Date().toISOString();
-export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outputDirectory,publicationId,tradeSourceId,runId=randomUUID()}){
+export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outputDirectory,publicationId,tradeSourceId,runId=randomUUID(),resume=false}){
   await mkdir(outputDirectory,{recursive:true,mode:0o700});
-  const report={schema:"commons.atssc.respondent-browser-operation.v1",operation:"ATSSC-QUESTIONNAIRE-WORKSHARE-9FCD-20261012",started_at:now(),run_id:runId,phases:[],outputs:[],page_errors:[]};
+  const previous=resume?JSON.parse(await readFile(path.join(outputDirectory,"BROWSER_RESULT.json"),"utf8")):null;
+  const report=previous||{schema:"commons.atssc.respondent-browser-operation.v1",operation:"ATSSC-QUESTIONNAIRE-WORKSHARE-9FCD-20261012",started_at:now(),run_id:runId,phases:[],outputs:[],page_errors:[]};
+  if(previous){assert.equal(previous.run_id,runId);delete report.error;report.status="RUNNING";}
   const contexts=[];let page;
   const save=async()=>writeFile(path.join(outputDirectory,"BROWSER_RESULT.json"),JSON.stringify(report,null,2)+"\n",{mode:0o600});
   const phase=async(name,result)=>{report.phases.push({name,at:now(),result});await save();process.stdout.write(JSON.stringify({phase:name,result})+"\n");};
@@ -49,6 +51,11 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     const sessionPromise=page.waitForResponse(r=>r.url().endsWith("/api/session")&&r.request().method()==="POST");
     await form("login").getByRole("button",{name:"Open operator session",exact:true}).click();
     assert((await sessionPromise).ok());await page.locator("#actor").waitFor();
+    const operatorLanguage=page.locator('[data-language-select]').first();
+    if(await operatorLanguage.count()){
+      await operatorLanguage.selectOption("EN");
+      await page.waitForFunction(()=>document.documentElement.lang==="en-CA"&&!document.querySelector('[data-language-select]')?.disabled);
+    }
     await page.locator("#actor").fill("ATSSC browser receiving operator");
     await page.locator("#reason").fill("Operate the complete saved commissioning case through its original visible forms");
     const initial=await pure(operator,"outreach.status"),native=await pure(operator,"status");
@@ -59,6 +66,9 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     const profile=await sendForm("profile","save_profile");
     await phase("original_operator_case_opening_and_current_application_origin",{workspace_id:initial.workspace_id,revision:profile.revision,publication_id:publicationId});
 
+    const suffix=runId.replaceAll("-","").slice(0,12),companyIds=["BROWSER-F-"+suffix,"BROWSER-G-"+suffix];
+    const companyNames=["Browser receiving company F "+suffix,"Browser receiving company G "+suffix];
+    if(!resume){
     await tab("coverage");
     await form("coverage-preview").locator('[name="source_id"]').selectOption(tradeSourceId);
     await form("coverage-preview").locator('[name="target_percent"]').fill("80");
@@ -70,8 +80,6 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     const savedCoverage=await sendForm("coverage-save","save_coverage");
     await phase("visible_whole_trade_coverage_review",{coverage_id:savedCoverage.coverage.id,groups:coverage.groups,selected_companies:coverage.counts.selected_companies});
 
-    const suffix=runId.replaceAll("-","").slice(0,12),companyIds=["BROWSER-F-"+suffix,"BROWSER-G-"+suffix];
-    const companyNames=["Browser receiving company F "+suffix,"Browser receiving company G "+suffix];
     const csv="Company ID,Company,Contact,Email,Country,Language\n"+companyIds[0]+","+companyNames[0]+",Browser receiving F,browser-f-"+suffix+"@commissioning.invalid,CA,EN\n"+companyIds[1]+","+companyNames[1]+",Browser receiving G,browser-g-"+suffix+"@commissioning.invalid,CA,FR\n";
     const originalName="Browser_Original_Contacts_"+suffix+".csv";
     await writeFile(path.join(outputDirectory,originalName),csv,{mode:0o600});
@@ -124,12 +132,22 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     assert.equal(message.delivery.state,"ACCEPTED");assert(message.wire.message_id);
     await phase("visible_review_queue_and_native_relay_submission",{message_id:message.id,recipient:message.recipient,wire:message.wire,delivery:message.delivery});
 
+    }
+    await tab("assignments");
+    const receivedAssignments=await pure(operator,"outreach.status");
+    const assignment=receivedAssignments.assignments.find(a=>a.company_id===companyIds[0]&&a.respondent.publication_id===publicationId);
+    assert(assignment,"Resume the retained original assignment");
+    const privateAssignment=(await button("assignment",assignment.id,"get_assignment")).assignment;
     const respondentContext=await newContext(),respondent=await respondentContext.newPage();
     await respondent.goto(baseUrl+privateAssignment.entry_path);
     await respondent.locator("#access-code").fill(privateAssignment.access_code);
     const respondentSession=respondent.waitForResponse(r=>r.url().endsWith("/api/session")&&r.request().method()==="POST");
-    await respondent.getByRole("button",{name:"Open workspace",exact:true}).click();assert((await respondentSession).ok());
+    await respondent.getByRole("button",{name:/Open workspace|Ouvrir l’espace de travail/}).click();assert((await respondentSession).ok());
+    await respondent.locator("[data-language-select]").first().waitFor();
+    await respondent.locator("[data-language-select]").first().selectOption("EN");
+    await respondent.waitForFunction(()=>document.documentElement.lang==="en-CA"&&!document.querySelector("[data-language-select]")?.disabled);
     const companyAnswer=respondent.getByLabel("Company name *",{exact:true});
+    if(!resume){
     await companyAnswer.fill(companyNames[0]);
     await respondent.getByLabel("Reported value *",{exact:true}).fill("250.00");
     await respondent.getByLabel("I confirm the public answers and public alternatives may be released publicly",{exact:true}).check();
@@ -140,13 +158,18 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     assert.equal(response.notifications.prepared_count,2);assert(!response.notifications.messages);
     await phase("original_respondent_saved_progress_reopen_and_submission",{respondent_id:privateAssignment.respondent_id,draft_version:progress.draft_version,revision_id:response.revision_id,number:response.number,public_confirmed:response.validation.public_confirmed});
 
+    }else{
+      assert.equal(await companyAnswer.inputValue(),companyNames[0]);
+      assert.equal(await respondent.getByLabel("Reported value *",{exact:true}).inputValue(),"250.00");
+    }
     await respondent.getByRole("link",{name:"Update my contact information",exact:true}).click();
     const contactForm=respondent.locator('form[data-form="respondent-contact"]');
     await contactForm.locator('[name="phone"]').fill("+1 555 0198");
     await contactForm.locator('[name="language"]').selectOption("FR");
     await invoke(respondent,"outreach.update_respondent_contact",()=>contactForm.locator('button[type="submit"]').click());
+    await respondent.locator("[data-language-select]").first().selectOption("FR");
     await respondent.getByRole("heading",{name:"Vos coordonnées",exact:true}).waitFor();
-    await page.locator('[data-action="refresh"]').click();
+    await invoke(page,"outreach.status",()=>page.locator('[data-action="refresh"]').click());
     await tab("followups");
     const due=await sendForm("followups-read","followups");
     assert(due.items.filter(i=>i.assignment_id===assignment.id).every(i=>!i.eligible));
@@ -160,12 +183,22 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     await sendForm("followup-log","log_followup");
     await phase("own_contact_language_and_original_received_followup_suppression",{respondent_id:current.respondent_id,language:current.language,due_items:due.items.filter(i=>i.assignment_id===assignment.id)});
 
+    const publicContext=await newContext(),publicPage=await publicContext.newPage();
+    let publicAssignment,registration;
+    const retainedPublic=(await pure(operator,"outreach.status")).assignments.find(a=>a.contact.email==="public-browser-"+suffix+"@commissioning.invalid");
+    if(resume&&retainedPublic){
+      publicAssignment=retainedPublic;registration={respondent_id:retainedPublic.respondent_id};
+      const originalEntry=(await pure(operator,"outreach.get_assignment",{id:retainedPublic.id})).assignment;
+      await publicPage.goto(baseUrl+originalEntry.entry_path);
+      await publicPage.locator("#access-code").fill(originalEntry.access_code);
+      await publicPage.getByRole("button",{name:/Open workspace|Ouvrir l’espace de travail/}).click();
+    }else{
     await tab("assignments");
     await form("public-link").locator('[name="name"]').fill("French browser receiving entry "+runId);
     await form("public-link").locator('[name="publication_id"]').selectOption(publicationId);
     await form("public-link").locator('[name="language"]').selectOption("FR");
     const publicLink=await sendForm("public-link","save_public_link");
-    const publicContext=await newContext(),publicPage=await publicContext.newPage();
+
     await publicPage.goto(baseUrl+"/public/entry/"+encodeURIComponent(publicLink.link.token));
     const entry=publicPage.locator('form[data-form="public-entry"]');await entry.waitFor();
     await entry.locator('[name="company_name"]').fill(companyNames[0]);
@@ -174,14 +207,20 @@ export async function receiveRespondentBrowser({browser,baseUrl,operatorKey,outp
     await entry.locator('[name="country"]').fill("CA");
     const registeredResponse=publicPage.waitForResponse(r=>r.url().endsWith("/api/outreach/public-entry"));
     await entry.getByRole("button",{name:"Créer mon accès",exact:true}).click();
-    const registration=await resultOf(await registeredResponse);
+    registration=await resultOf(await registeredResponse);
     const withPublic=await pure(operator,"outreach.status");
-    const publicAssignment=withPublic.assignments.find(a=>a.respondent_id===registration.respondent_id);
+    publicAssignment=withPublic.assignments.find(a=>a.respondent_id===registration.respondent_id);
     assert(publicAssignment&&publicAssignment.company_id!==companyIds[0]);
     assert.equal(publicAssignment.registration_state,"NEW_COMPANY_CONTACT_REVIEW");
     await publicPage.getByRole("button",{name:"Ouvrir votre questionnaire",exact:true}).click();
+    }
+    await publicPage.getByRole("button",{name:/Save progress|Enregistrer la progression/}).waitFor();
+    const publicLanguage=publicPage.locator('[data-language-select]').first();
+    await publicLanguage.waitFor();await publicLanguage.selectOption("EN");
+    await publicPage.waitForFunction(()=>document.documentElement.lang==="en-CA"&&!document.querySelector('[data-language-select]')?.disabled);
     await publicPage.getByRole("button",{name:"Save progress",exact:true}).waitFor();
     await phase("french_public_company_entry_and_private_original_questionnaire",{respondent_id:registration.respondent_id,company_id:publicAssignment.company_id,registration_state:publicAssignment.registration_state});
+    await invoke(page,"outreach.status",()=>page.locator('[data-action="refresh"]').click());
 
     const layouts=[];
     for(const viewport of [{width:1365,height:900},{width:390,height:844}]){

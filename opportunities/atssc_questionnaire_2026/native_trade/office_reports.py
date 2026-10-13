@@ -60,7 +60,8 @@ def report_tables(model):
     sections=[]
     for view in model['view_sections']:
         if view.get('kind')=='text':
-            sections.append({'title':view['title'],'note':view.get('note',''),'headers':['Description'],'rows':[[view.get('text','')]]})
+            text='\n'.join(dict.fromkeys(v for v in [view.get('note',''),view.get('text','')] if v))
+            sections.append({'title':view['title'],'note':'','kind':'text','headers':['Description'],'rows':[[text]]})
             continue
         rows=[['Statistic','Value']]
         rows += [[METRIC_LABELS[k],number(view['summary'].get(k))] for k in view['statistics']]
@@ -75,7 +76,7 @@ def report_tables(model):
             sections.append({'title':view['title']+' · '+caption,'note':view.get('note',''),'headers':headers,'rows':converted})
     if not sections:
         sections=[{'title':'Numeric answers','note':'','headers':['Question','Unit','Answered','Sum','Mean','Minimum','Maximum'],
-            'rows':[[r['label'],r['unit'],number(r['answered']),number(r['sum']),number(r['mean']),number(r['minimum']),number(r['maximum'])] for r in model['numeric_totals']]}]
+            'rows':[['\n'.join([*r.get('context',[]),r['label']]),r['unit'],number(r['answered']),number(r['sum']),number(r['mean']),number(r['minimum']),number(r['maximum'])] for r in model['numeric_totals']]}]
     responses=[]
     for response in model['responses']:
         for question in response['questions']:
@@ -213,12 +214,23 @@ def _pptx(model):
         header_height=row_height(header,widths)
         limit=440-header_height
         chunk=[];used=0
+        prepared=[]
         for row in rows:
+            if row_height(row,widths)<=limit:
+                prepared.append(row);continue
+            lines=[[wrapped for line in str('' if value is None else value).split('\n') for wrapped in textwrap.wrap(line,max(9,int((widths[i]-24)/11)),break_long_words=True) or ['']] for i,value in enumerate(row)]
+            count=max(1,int(limit/22)-1)
+            for start in range(0,max(len(cell) for cell in lines),count):prepared.append(['\n'.join(cell[start:start+count]) for cell in lines])
+        for row in prepared:
             height=row_height(row,widths)
             if chunk and used+height>limit:pages.append({'title':title,'note':note,'headers':header,'header_height':header_height,'rows':chunk,'widths':widths});chunk=[];used=0
             chunk.append((row,height));used+=height
         if chunk or not rows:pages.append({'title':title,'note':note,'headers':header,'header_height':header_height,'rows':chunk,'widths':widths})
     for section in sections:
+        if section.get('kind')=='text':
+            lines=[wrapped for line in section['rows'][0][0].split('\n') for wrapped in textwrap.wrap(line,90,break_long_words=True) or ['']]
+            for start in range(0,len(lines),14):pages.append({'title':section['title'],'text':'\n'.join(lines[start:start+14])})
+            continue
         header=section['headers'];rows=section['rows'];widths=[430]+[(1160-430)/max(1,len(header)-1)]*(len(header)-1) if len(header)>2 else [720,440]
         add_table(section['title'],section['note'],header,rows,widths)
     for panel in panels(model):pages.append({'title':panel['title'],'chart':panel})
