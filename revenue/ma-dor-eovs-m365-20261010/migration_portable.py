@@ -27,11 +27,13 @@ LEGACY_APPLICATION_FILES = (
     "public/migration-index.html", "public/migration-style.css",
     "public/migration-app.js",
 )
-APPLICATION_PROFILE = "commons.case-migration-application/v1"
-APPLICATION_FILES = LEGACY_APPLICATION_FILES + (
+CASE_APPLICATION_PROFILE = "commons.case-migration-application/v1"
+CASE_APPLICATION_FILES = LEGACY_APPLICATION_FILES + (
     "migration_cases.py", "CASE_MIGRATION.md", "CASE_RECEIVING.md", "case_receiving.py",
     "public/migration-cases.js",
 )
+APPLICATION_PROFILE = "commons.grant-migration-application/v1"
+APPLICATION_FILES = CASE_APPLICATION_FILES + ("GRANT_MIGRATION.md","grant_receiving.py","grant_reference_example.py")
 BLOCK = 1024 * 1024
 
 
@@ -43,8 +45,11 @@ def application_selection(entries, *, profile=None):
     actual = set(names)
     legacy = {"application/" + name for name in LEGACY_APPLICATION_FILES}
     current = {"application/" + name for name in APPLICATION_FILES}
+    cases = {"application/" + name for name in CASE_APPLICATION_FILES}
     if profile == APPLICATION_PROFILE and actual == current:
         return APPLICATION_PROFILE
+    if profile == CASE_APPLICATION_PROFILE and actual == cases:
+        return CASE_APPLICATION_PROFILE
     if profile is None and actual == legacy:
         return None
     raise ValueError("Frozen application inventory/profile is not one complete supported edition")
@@ -54,7 +59,8 @@ def captured_application_selection(entries):
     # A prepare started before this extension keeps its original complete roster.
     # New prepares always freeze APPLICATION_FILES before their reservation.
     names = {entry.get("path") for entry in entries}
-    profile = APPLICATION_PROFILE if names == {"application/" + name for name in APPLICATION_FILES} else None
+    profile = (APPLICATION_PROFILE if names == {"application/" + name for name in APPLICATION_FILES} else
+               CASE_APPLICATION_PROFILE if names == {"application/" + name for name in CASE_APPLICATION_FILES} else None)
     return application_selection(entries, profile=profile)
 
 
@@ -195,8 +201,9 @@ def _manifest_from_archive(archive):
     if not isinstance(entries, list) or not entries:
         raise ValueError("Delivery contains no complete file inventory")
     profile = value.get("application_profile")
-    roster = APPLICATION_FILES if profile == APPLICATION_PROFILE else LEGACY_APPLICATION_FILES
-    if profile not in (None, APPLICATION_PROFILE):
+    roster = (APPLICATION_FILES if profile == APPLICATION_PROFILE else
+              CASE_APPLICATION_FILES if profile == CASE_APPLICATION_PROFILE else LEGACY_APPLICATION_FILES)
+    if profile not in (None, CASE_APPLICATION_PROFILE, APPLICATION_PROFILE):
         raise ValueError("Unsupported application source profile")
     expected = {"delivery.json"}
     for entry in entries:

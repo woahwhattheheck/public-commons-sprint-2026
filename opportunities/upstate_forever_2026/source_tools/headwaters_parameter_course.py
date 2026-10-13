@@ -250,7 +250,16 @@ def continue_course(workspace, ensemble_id, *, execute=False, raster_products=Tr
             result.update(state="failed" if isinstance(error, Exception) else "interrupted",
                           updated_at=now(),
                           error={"type": type(error).__name__, "message": str(error)})
-            atomic_json(path, result)
+            try:
+                atomic_json(path, result)
+            except OSError as receipt_error:
+                error.course_receipt_error = {
+                    "type": type(receipt_error).__name__,
+                    "message": str(receipt_error), "errno": receipt_error.errno,
+                }
+                if hasattr(error, "add_note"):
+                    error.add_note("Could not retain the parameter-course failure record: "
+                                   + str(receipt_error))
             raise
 
 

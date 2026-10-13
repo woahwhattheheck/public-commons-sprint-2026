@@ -49,7 +49,7 @@ def selected_analysis(workspace, selection, *, priority_settings=None, progress=
         "alternative_run_ids": alternatives,
         "quantity_scope": choice.get("quantity_scope", "reporting"),
     }
-    for name in ("title", "weights", "normalization", "pollutants"):
+    for name in ("title", "weights", "normalization", "pollutants", "accounting"):
         if name in choice:
             request[name] = choice[name]
     if priority_settings and "normalization" not in request:
@@ -142,6 +142,13 @@ def export(workspace, analysis_id, directory):
         "quantity_scope": analysis["quantity_scope"], "pollutants": analysis.get("pollutants", list(rasters.MASS_UNITS)),
         "normalization": analysis["normalization"],
         "families": families, "files": files, "measurement": analysis["measurement"],
+        "accounting": analysis.get("accounting"),
+        "accounting_subjects": [
+            {**row, "metrics": {**row["metrics"], "files": {
+                name: exported(item) for name, item in row["metrics"]["files"].items()
+            }}}
+            for row in analysis["subjects"] if row["kind"] == "accounting"
+        ],
         "receptors": [
             {"id": row["id"], "title": row["title"], "family": row["family"],
              "relationship_precision": row["relationship_precision"],
@@ -198,6 +205,7 @@ def attach_state(state, delivery_directory, product):
         "artifact_root": directory.relative_to(delivery_directory).as_posix(),
         "normalization": inventory["normalization"], "families": inventory["families"],
         "measurement": inventory["measurement"],
+        "accounting": inventory.get("accounting"),
         "report_sections": report_section(product),
     }
     for name, item in inventory["files"].items():

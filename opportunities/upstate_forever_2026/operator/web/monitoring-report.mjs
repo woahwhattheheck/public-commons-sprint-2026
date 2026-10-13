@@ -13,8 +13,11 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   const section=document.createElement('section');
   section.className='monitoring-scientific-report';
   section.innerHTML=`
-    <h4>Use this programme in the scientific report</h4>
-    <p class="small">Retain the exact saved design or campaign revision, original sources, planning budget, station assignments and recorded field history. Add that source to the existing scientific report.</p>
+    <h4>Use this Monitoring work in the scientific report</h4>
+    <p class="small">Retain an exact saved design, campaign revision or budget comparison with its original scientific sources. Add that retained source to the existing scientific report.</p>
+    <div class="row"><label>Report scope<select data-report-scope><option value="programme">Current saved plan or campaign</option><option value="comparison">Saved budget comparison</option></select></label>
+    <label data-report-comparison-field hidden>Saved budget comparison<select data-report-comparison><option value="">Choose a saved comparison</option></select></label></div>
+    <button type="button" data-report-comparisons-refresh hidden>Refresh saved comparisons</button>
     <p data-report-selection class="small"></p>
     <div class="row"><label>Report source title<input data-report-title required maxlength="300"></label>
     <label>Scientific delivery<select data-report-delivery><option value="">New report selection</option></select></label></div>
@@ -33,12 +36,17 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   const saved=readSaved(storageKey)||{};
   let operation=saved.operation||null, prepared=saved.prepared||null;
   let chosenDelivery=saved.delivery_id||'', selectedSaved=saved.saved_id||'';
+  let reportScope=saved.scope==='comparison'?'comparison':'programme',chosenComparison=saved.comparison_id||'',comparison=null;
+  const titleDrafts=saved.title_drafts&&typeof saved.title_drafts==='object'&&!Array.isArray(saved.title_drafts)?saved.title_drafts:{};
+  let comparisonReading=false,comparisonSequence=0,comparisonCatalogSequence=0,comparisonNeedsRefresh=false;
+  find('scope').value=reportScope;
   let generation=0, detached=false, reading=false, submitting=false, requestSequence=0;
   let selectionKey='', sourceRows=[], lastTaskState=operation?.handled_complete_id===operation?.task_id&&operation?.task_id?operation.task_id+':complete':'', lastDeliveryList='';
   const current=()=>!detached&&node.isConnected&&getState()?.workspace_key===workspaceKey;
   const status=(text,error=false)=>{find('status').textContent=text;find('status').dataset.error=String(error);};
-  function persist(){saveSaved(storageKey,{operation,prepared,delivery_id:chosenDelivery,saved_id:selectedSaved});}
+  function persist(){saveSaved(storageKey,{operation,prepared,delivery_id:chosenDelivery,saved_id:selectedSaved,scope:reportScope,comparison_id:chosenComparison,title_drafts:titleDrafts});}
   function choice(){
+    if(reportScope==='comparison')return comparison&&!comparisonReading&&comparison.id===chosenComparison?{comparison_id:comparison.id}:null;
     const plan=node.plan;
     if(!plan||!['optimal','feasible'].includes(plan.status))return null;
     const campaign=node.campaign&&node.campaign.plan?.id===plan.id?node.campaign:null;
@@ -47,6 +55,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       : {plan_id:plan.id};
   }
   function title(){
+    if(reportScope==='comparison')return comparison?.title||'Monitoring budget choices';
     return (node.campaign&&node.campaign.plan?.id===node.plan?.id?node.campaign.revision.title:node.plan?.title)||'Monitoring programme';
   }
   function fail(error){status(error?.message||String(error),true);toast?.(error?.message||String(error));}
@@ -54,21 +63,32 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   function renderSelection(){
     const selected=choice(), next=selected?JSON.stringify(selected):'';
     if(next!==selectionKey){
+      if(selectionKey)titleDrafts[selectionKey]=find('title').value;
       selectionKey=next;
-      find('title').value=title()+' — monitoring programme';
+      if(next)find('title').value=Object.prototype.hasOwnProperty.call(titleDrafts,next)?titleDrafts[next]:title()+(reportScope==='comparison'?' — budget comparison':' — monitoring programme');
+      persist();
     }
+    find('comparison-field').hidden=reportScope!=='comparison';
+    find('comparisons-refresh').hidden=reportScope!=='comparison';
+    find('comparison').disabled=comparisonReading;
+    find('comparison').value=chosenComparison;
     const campaign=selected?.campaign_id;
-    find('selection').textContent=selected
-      ? campaign?'Current saved campaign revision '+node.campaign.revision.revision+' · '+campaign
-        :'Saved '+node.plan.status+' design · '+node.plan.id
-      :'Open a feasible saved design or a campaign to prepare its report source.';
+    const baseline=comparison?.rows?.find(row=>row.plan_id===comparison.baseline_plan_id);
+    find('selection').textContent=reportScope==='comparison'
+      ? comparisonReading?'Reading the original saved comparison…'
+        : selected?(comparison.title+' · '+comparison.plan_ids.length+' original plans · baseline '+(baseline?.title||'original selected plan'))
+        :'Choose an exact saved budget comparison to prepare its scientific report source.'
+      : selected
+        ? campaign?'Current saved campaign revision '+node.campaign.revision.revision+' · '+campaign
+          :'Saved '+node.plan.status+' design · '+node.plan.id
+        :'Open a feasible saved design or a campaign to prepare its report source.';
     find('prepare').disabled=!selected||submitting||(operation&&!terminal.has(operation.state)&&!!operation.task_id);
     find('task').hidden=!operation?.task_id;
     find('retry').hidden=!operation||!!operation.task_id||submitting;
     find('open').hidden=!prepared?.source||!prepared?.delivery_selection;
     const retained=prepared?.selection||{};
     find('prepared').textContent=prepared?.source
-      ? 'Prepared source: '+(prepared.title||prepared.id)+(retained.campaign_id?' · campaign '+retained.campaign_id+' · exact revision '+retained.expected_revision_id:retained.plan_id?' · saved design '+retained.plan_id:'')
+      ? 'Prepared source: '+(prepared.title||prepared.id)+(retained.campaign_id?' · campaign '+retained.campaign_id+' · exact revision '+retained.expected_revision_id:retained.plan_id?' · saved design '+retained.plan_id:retained.comparison_id?' · saved budget comparison':'')
       : '';
     find('reopen').disabled=!selectedSaved||reading;
     const rows=getState()?.data?.deliveries||[];
@@ -141,7 +161,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
   }
   async function prepare(){
     if(submitting||!current())return;
-    const selected=choice();if(!selected)throw Error('Open an actual feasible saved design or campaign.');
+    const selected=choice();if(!selected)throw Error(reportScope==='comparison'?'Choose and open an actual saved budget comparison.':'Open an actual feasible saved design or campaign.');
     const heading=find('title').value.trim();if(!heading)throw Error('Provide the report source title.');
     if(heading.length>300)throw Error('Use a title of at most 300 characters.');
     const payload={...selected,title:heading,...(chosenDelivery?{delivery_id:chosenDelivery}:{})};
@@ -162,11 +182,48 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       if(!current()||version!==generation)return;
       sourceRows=Array.isArray(response.reports)?response.reports:[];
       const select=find('saved');select.replaceChildren(new Option('Choose a retained report source',''));
-      for(const row of sourceRows)select.add(new Option((row.title||row.id)+(row.selection?.campaign_id?' · campaign revision':' · saved design'),row.id));
+      for(const row of sourceRows)select.add(new Option((row.title||row.id)+(row.selection?.comparison_id?' · budget comparison':row.selection?.campaign_id?' · campaign revision':' · saved design'),row.id));
       if(selectedSaved&&!sourceRows.some(row=>row.id===selectedSaved))selectedSaved='';
       select.value=selectedSaved;persist();renderSelection();
       if(showMessage)status(sourceRows.length+' retained monitoring report source'+(sourceRows.length===1?'':'s')+'.');
     }catch(error){if(current()&&version===generation&&showMessage)fail(error);}
+  }
+  async function loadComparison(id){
+    const version=generation,sequence=++comparisonSequence;
+    comparison=null;comparisonReading=Boolean(id);renderSelection();
+    if(!id)return;
+    try{
+      if(!validId(id))throw Error('Choose an original saved comparison.');
+      const value=await api('/api/monitoring?'+new URLSearchParams({
+        workspace:workspaceKey,action:'comparison.get',payload:JSON.stringify({comparison_id:id})
+      }));
+      if(!current()||version!==generation||sequence!==comparisonSequence||reportScope!=='comparison'||id!==chosenComparison)return;
+      if(value.id!==id||!Array.isArray(value.plan_ids)||!value.plan_ids.length||!value.plan_ids.includes(value.baseline_plan_id))
+        throw Error('The saved comparison has a different original plan inventory.');
+      comparison=value;
+    }catch(error){if(current()&&version===generation&&sequence===comparisonSequence)fail(error);}
+    finally{if(sequence===comparisonSequence){comparisonReading=false;if(current())renderSelection();}}
+  }
+  async function refreshComparisons(showMessage=false){
+    if(!current())return;
+    const version=generation,sequence=++comparisonCatalogSequence;
+    try{
+      const response=await api('/api/monitoring?'+new URLSearchParams({
+        workspace:workspaceKey,action:'comparison.list',payload:'{}'
+      }));
+      if(!current()||version!==generation||sequence!==comparisonCatalogSequence)return;
+      const rows=Array.isArray(response.records)?response.records:[],select=find('comparison');
+      select.replaceChildren(new Option('Choose a saved comparison',''));
+      for(const row of rows)if(validId(row.id))select.add(new Option((row.title||row.id)+' · '+row.plan_ids.length+' plans',row.id));
+      if(chosenComparison&&![...select.options].some(option=>option.value===chosenComparison))
+        select.add(new Option('Previously selected comparison · '+chosenComparison.slice(0,12),chosenComparison));
+      select.value=chosenComparison;
+      if(reportScope==='comparison'&&chosenComparison&&comparison?.id!==chosenComparison)await loadComparison(chosenComparison);
+      if(current()&&version===generation&&sequence===comparisonCatalogSequence){
+        renderSelection();
+        if(showMessage)status(rows.length+' saved budget comparison'+(rows.length===1?'':'s')+'.');
+      }
+    }catch(error){if(current()&&version===generation&&(showMessage||reportScope==='comparison'))fail(error);}
   }
   async function reopen(){
     if(!current()||reading||!validId(selectedSaved))return;
@@ -188,6 +245,14 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     if(typeof openDelivery!=='function')throw Error('Use the current shared scientific report form.');
     await openDelivery(clone(prepared.delivery_selection));
   }
+  find('scope').onchange=()=>{
+    reportScope=find('scope').value==='comparison'?'comparison':'programme';
+    comparisonSequence++;comparisonReading=false;persist();renderSelection();
+    if(reportScope==='comparison')void refreshComparisons();
+  };
+  find('comparison').onchange=()=>{chosenComparison=find('comparison').value;persist();void loadComparison(chosenComparison);};
+  find('comparisons-refresh').onclick=()=>refreshComparisons(true);
+  find('title').oninput=()=>{if(selectionKey)titleDrafts[selectionKey]=find('title').value;persist();};
   find('prepare').onclick=()=>prepare().catch(fail);
   find('retry').onclick=()=>submitOriginal().catch(fail);
   find('task').onclick=()=>operation?.task_id&&showTask?.(operation.task_id);
@@ -202,6 +267,7 @@ export function attachMonitoringReport(node, context, workspaceKey) {
     detached=false;
     if(!current())return;
     renderSelection();
+    if(comparisonNeedsRefresh&&reportScope==='comparison'){comparisonNeedsRefresh=false;void refreshComparisons();}
     const task=(getState()?.tasks||[]).find(row=>row.id===operation?.task_id);
     if(task){
       if(task.state==='complete'&&!task.result?.source){
@@ -210,7 +276,8 @@ export function attachMonitoringReport(node, context, workspaceKey) {
       else{try{acceptTask(task);}catch(error){fail(error);}}
     }
   }
-  function detach(){detached=true;generation++;requestSequence++;}
+  function detach(){detached=true;generation++;requestSequence++;comparisonSequence++;comparisonCatalogSequence++;comparisonReading=false;comparisonNeedsRefresh=true;}
   update();void refreshSources(false);void readTask();
+  if(reportScope==='comparison')void refreshComparisons();
   return {update,detach};
 }
