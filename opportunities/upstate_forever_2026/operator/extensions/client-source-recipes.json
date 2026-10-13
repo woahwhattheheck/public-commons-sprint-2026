@@ -1,0 +1,132 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "client-source-recipes",
+  "title": "Source recipes",
+  "version": "1",
+  "order": 20,
+  "assets": [
+    "client_source_recipes.mjs",
+    "client_source_recipes.css"
+  ],
+  "backend": {
+    "module": "client_source_recipes",
+    "factory": {
+      "handler": "ClientSourceRecipes",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "client-source-recipe.create",
+      "client-source-recipe.revise",
+      "client-source-recipe.prepare-use",
+      "client-source-recipe.attach-result",
+      "client-source-recipe.export",
+      "client-source-recipe.receive"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/client-source-recipes/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/client-source-recipes/result",
+        "operation": "result",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/client-source-recipes/plan",
+        "operation": "plan",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/client-source-recipes/use",
+        "operation": "use",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/client_source_recipes.mjs",
+    "factory": "createClientSourceRecipes",
+    "requires": [
+      "getState",
+      "getWorkspace",
+      "api",
+      "refresh",
+      "toast",
+      "navigate",
+      "openItem",
+      "showTask"
+    ],
+    "styles": [
+      "/web/client_source_recipes.css"
+    ],
+    "view": {
+      "id": "client-source-recipes",
+      "title": "Source recipes",
+      "after": "client-source-intake"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "suspend"
+    }
+  }
+}
