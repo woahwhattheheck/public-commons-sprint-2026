@@ -92,7 +92,7 @@ Repeat the same command and paths to reuse retained imports, completed build and
 
 ## Build the published 159-station assessment study
 
-Import the completed published inventory in addition to the same retained monitoring, WQP and domain sources. The accepted inventory is the exact file results/assessment-records-domain217.csv in the complete scientific source bank [F0C8KECMA4V](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V): 111,624 bytes, SHA-256 01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7. Place that unchanged file beside the maintained source/station-assessment-context/sources.json manifest using basename assessment-records-domain217.csv. This is an additional source collection, so the original draft inventory remains available.
+Import the completed published inventory together with the original monitoring, WQP8, additional WQP2 and domain sources. The accepted inventory is the exact file results/assessment-records-domain217.csv in the complete scientific source bank [F0C8KECMA4V](https://tokenjunkielabs.slack.com/docs/T0BRETUB5TK/F0C8KECMA4V): 111,624 bytes, SHA-256 01f1a0262bb719f39d4b6c8b6e690bbf670d9aea83cbe0f532daf81b0c6a09f7. The component installer retains that unchanged file beside source/station-assessment-context/sources.json using basename assessment-records-domain217.csv. This is an additional source collection, so the original draft inventory remains available.
 
 Run from the existing application directory:
 
@@ -103,9 +103,10 @@ Run from the existing application directory:
       --source-manifest WQP_SUPPLEMENT/sources.json \
       --source-manifest ORIGINAL_DOMAIN/sources.json \
       --source-manifest PUBLISHED_INVENTORY/sources.json \
+      --source-manifest WQP_ADDITIONAL_TWO/sources.json \
       --receive-workspace SECOND_WORKSPACE --create-receiving-workspace
 
-The existing workspace creation, native build, portable archive and receiving commands are shared by both studies. This selection requires 192 records at 159 exact station IDs, including both published editions. It resolves original inputs by their retained byte identity. The 2024 records carry their original assessment cause/use and published HUC; the July 2026 records also carry TMDL support status, report and approval date. Five of the retained eight WQP stations belong to this published inventory. The accepted draft-study inventory overlaps the published inventory at 82 station IDs; all remaining IDs are matched against the same complete retained source layer.
+The existing workspace creation, native build, portable archive and receiving commands are shared by both studies. This selection requires 192 records at 159 exact station IDs, including both published editions. It resolves original inputs by their retained byte identity. The 2024 records carry their original assessment cause/use and published HUC; the July 2026 records also carry TMDL support status, report and approval date. Five of the retained eight WQP stations belong to this published inventory. The accepted draft-study inventory overlaps the published inventory at 82 station IDs; 152 station IDs match the complete retained source layer, and the additional WQP2 source supplies RS-21038 and RS-22075.
 
 The original station table, candidate choices, mapped watershed filter and full polygon coverage continue to operate. The assessment edition filter narrows the station map/table and filtered station CSV. Watershed coverage describes the full selected study inventory and includes zero-station polygons. Its cause counts display expanded labels.
 
