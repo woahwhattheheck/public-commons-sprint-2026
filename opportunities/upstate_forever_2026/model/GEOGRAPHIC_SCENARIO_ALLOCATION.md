@@ -59,6 +59,19 @@ Utility areas, nested protection buffers, HUC associations and family unions can
 
 An empty display geometry, a region with no selected cells, and a region with selected cells but no three-run valid categorical support remain explicit. The original raster mask can retain boundary cells even when its display polygon is empty. Those mask-selected cells and quantities remain valid retained accounting; the report names this condition and omits only the absent map shape, without inventing a replacement polygon. They do not become evidence of balance or no effect. The balance plot excludes only rows with no common categorical support, and its caption/table retain that exclusion. Supported zero-change rows remain visible at the origin.
 
+### Original utility-focus unions
+
+The optional utility_upstream_union rows use the retained source/receptor-profiles/utility-focus-20261012.json profile, whose original schema is upstate.receptor-spec/v1. That profile attributes its anchors to the issuer appendix identified by SHA-256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf.
+
+| Retained utility profile | Exact anchor HUC12s | Profile's issuer-reference pages |
+| --- | --- | --- |
+| ARJWS — Six and Twenty focus watersheds | 030601010703; 030601010704 | 6, 12, 16 |
+| PRWD — Tugaloo and Choestoea focus watersheds | 030601020502; 030601020507 | 6, 14, 16 |
+
+The kernel uses each anchor's already-retained Receiving upstream_huc_ids relationship and contribution geometry, then deduplicates their union for that utility. The explicit relationship is profile_upstream_huc_union, separately evaluated in model_domain and reporting scopes. It is a profile-anchored upstream HUC planning union, not an intake-delineated catchment or a substitute for published protection areas. The exact profile file is retained in the allocation artifact and identity.
+
+These union rows have original categorical allocation and three-run native-validity/support counts. They do not have pairwise mass totals unless an actual matching original Receiving union analysis supplies those results. No pairwise totals are copied or summed from the overlapping member anchors, and common support counts are not represented as a native load calculation.
+
 ## Reading the allocation report
 
 The report identifies the exact project, geographic preparation, allocation and three native runs before presenting numerical comparisons.
