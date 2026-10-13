@@ -553,15 +553,18 @@ function runForm(){
   form.elements.namedItem('grid').addEventListener('change',update);form.elements.namedItem('profile').addEventListener('change',update);update();
  });
 }
+function completedModelStage(row,model){
+ const stage=row?.stages?.[model]||row?.stage_summary?.[model];
+ return stage?.completed_at&&(stage.file_count??Object.keys(stage.files||{}).length)>0?stage:null;
+}
 function completedModelSources(target,model){
  const rows=(state?.data?.runs||[]).filter(row=>nativeModels(row.selection).includes(model)&&
-  !['running','queued'].includes(row.state)&&row.stages?.[model]?.completed_at&&
-  Object.keys(row.stages[model].files||{}).length);
+  !['running','queued'].includes(row.state)&&completedModelStage(row,model));
  const rank=row=>(row.selection.scenario_id===target.selection.scenario_id?4:0)+
   (row.selection.grid_id===target.selection.grid_id?2:0)+
   (row.selection.profile_id===target.selection.profile_id?1:0);
  return rows.slice().sort((a,b)=>rank(b)-rank(a)||
-  String(b.stages[model].completed_at).localeCompare(String(a.stages[model].completed_at))||
+  String(completedModelStage(b,model).completed_at).localeCompare(String(completedModelStage(a,model).completed_at))||
   a.id.localeCompare(b.id));
 }
 function canSelectCompletedModels(row){
@@ -620,7 +623,7 @@ async function completedModelsForm(id){
     return '<tr><td>'+esc(model.toUpperCase())+'</td><td>'+esc(named('scenarios',row.selection.scenario_id))+
      '</td><td>'+esc(named('grids',row.selection.grid_id))+'</td><td>'+
      esc(named('profiles',row.selection.profile_id))+'</td><td>'+
-     esc(when(row.stages[model].completed_at))+'</td></tr>';
+     esc(when(completedModelStage(row,model)?.completed_at))+'</td></tr>';
    });
    $('#completed-model-selection').innerHTML=table(['Model','Scenario','Grid','Parameters','Completed'],rows);
   };
