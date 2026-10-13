@@ -21,6 +21,7 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/native_versions.py",
     "model/robust_decisions/eco_robust/decision_delivery.py",
     "model/delivery.py",
     "model/client_report.py",
@@ -49,6 +50,7 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/native_versions.py",
     # Optional full current postimages bind original native atlas delivery.
     "model/delivery.py",
     "model/client_report.py",
@@ -221,7 +223,7 @@ def assembled_data(application, pending, name):
 def verify_composition(application, pending):
     for name in REQUIRED:
         assembled_data(application, pending, name)
-    for name in ("model/workspace.py", "model/experiments.py",
+    for name in ("model/workspace.py", "model/experiments.py", "model/native_versions.py",
                  "model/experiment_profiles.py", "operator/server.py",
                  "operator/extension_registry.py", "operator/web/app.mjs",
                  "operator/web/extension_host.mjs"):

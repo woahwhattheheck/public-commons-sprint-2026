@@ -185,7 +185,8 @@
       "getState",
       "api",
       "refreshState",
-      "showTask"
+      "showTask",
+      "openExtension"
     ]
   }
 }

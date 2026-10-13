@@ -287,3 +287,5 @@ Both endpoints use the original registered-workspace authorization and return `w
 GET and POST are supported. `point_index` is zero based and is never inferred. Read operations open the native saved calculation without constructing the mutable Store. They do not submit work or rewrite the source database. The atlas remains responsible for the existing `delivery.build` queue action.
 
 The `source_decision` pin identifies `study_id`, `revision`, `study_sha256`, `run_id`, `result_sha256`, `profile_id`, `candidate_id`, `point_index`, `selected_study_sha256` and `selected_result_sha256`. Parent frontier and explicitly selected point identities are retained separately. The browser passes the server-returned selection unchanged to the registered `map-atlas` controller's `create({workspace_key, selection})` method.
+
+The registered Decision studies client requires the original host's `openExtension` capability to open the same workspace's atlas. Native producing-stage versions are compared through the maintained `model/native_versions.py` helper, including resumed runs whose model stages completed under separate original runtime records.
