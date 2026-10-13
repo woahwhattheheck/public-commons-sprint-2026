@@ -1,0 +1,883 @@
+{
+  "version": "dealscout.lead-working-record.v1",
+  "pack": {
+    "id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+    "revision": 1,
+    "document": {
+      "customer": {
+        "name": "BilledOK",
+        "company_domain": "billedok.de",
+        "contact_url": "https://billedok.de/impressum",
+        "case_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+        "prospect_id": ""
+      },
+      "brief": {
+        "title": "Fünf weitere recherchierte Catering-Betriebe für BilledOK",
+        "description": "Ein kostenloses vollständiges Unternehmensprofil und fünf weitere deutsche Catering-Betriebe mit veröffentlichtem Geschäftskontakt, konkretem Einkaufs- oder Küchenablauf, Originalquellen und individuell vorbereitetem Gesprächseinstieg.",
+        "geography": "Deutschland",
+        "skills": [
+          "Catering-Einkauf",
+          "Lieferantenrechnungen",
+          "Artikelpreisvergleich"
+        ],
+        "lead_kind": "company_fit",
+        "quantity": 5,
+        "currency": "USD",
+        "price_minor": 2000,
+        "max_age_days": 30,
+        "excluded_domains": [
+          "billedok.de",
+          "catering-nimmersatt.de"
+        ],
+        "excluded_sources": [],
+        "exclusions": "Der bestehende Bestell-, Qualitäts-, Buchhaltungs- und Archivierungsprozess bleibt erhalten. Bedarf, Belegvolumen und interne Einkaufszuständigkeit werden im Gespräch geklärt. Rechnungsmuster ausschließlich freiwillig und berechtigt bereitstellen."
+      },
+      "operator_note": "Complete original research and prepared first offer. Preserve current relationship and shared-account capacity rules."
+    },
+    "sha256": "687c5b9de586cdd8d6f5adb9feb96a0401ab54cd0446850fb8558472f8d39c01",
+    "updated_at": "2026-10-13T11:09:00.000Z",
+    "history": []
+  },
+  "leads": [
+    {
+      "id": "billedok-vegetaria-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Vegetaria Catering Service GmbH",
+        "company_domain": "vegetaria-catering.de",
+        "company_url": "https://vegetaria-catering.de/",
+        "buyer_key": "vegetaria-catering.de",
+        "person": "Pino Schefer",
+        "source_url": "https://vegetaria-catering.de/mittagstisch-firmen/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13T11:09:00.000Z",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Vegetaria liefert vegetarische Firmen-Mittagsmenüs im Großraum München. Die eigene Unternehmensseite beschreibt täglich frische Zutaten von ausgewählten Lieferanten und Fachhändlern sowie Trockenwaren, Obst und Gemüse. Pino Schefer wird als Eigentümer und Geschäftsführer genannt.",
+        "fit": "Ein abgegrenzter Rückblick auf wiederkehrende Zutaten könnte Preisänderungen je kg oder Stück zeigen, ohne Menüplanung, Lieferantenauswahl oder Qualitätsvorgaben zu verändern.",
+        "contact_url": "mailto:info@vegetaria-catering.com",
+        "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://vegetaria-catering.de/wir_ueber_uns/",
+        "geography": "Finsing / Großraum München, Deutschland",
+        "budget": "",
+        "opening_message": "Guten Tag Herr Schefer, Ihre Website beschreibt den täglichen Einkauf frischer Zutaten bei ausgewählten Partnern. Wäre ein kurzer Vergleich hilfreich, der bei drei wiederkehrenden Artikeln aus einer freigegebenen Rechnungsserie die Preisentwicklung pro kg oder Stück zeigt? Ihre Qualitäts- und Lieferantenvorgaben bleiben dabei erhalten.",
+        "source_status": "open",
+        "status_note": "Mit Geschäftsführung oder Einkauf klären, wie Rechnungspositionen heute ausgewertet werden und ob ein zusätzlicher Rückblick Arbeit spart. Produktvarianten und besondere Zutaten getrennt lassen; ein niedrigerer Preis allein begründet keinen Lieferantenwechsel.",
+        "tags": [
+          "DE",
+          "catering",
+          "supplier-invoices",
+          "company-fit"
+        ],
+        "operator_note": "Eigentümer / Geschäftsführer. Bestehender Ablauf: Auf Wunsch übernimmt Vegetaria Lieferung, Thekenaufbau, Abrechnung und Abholung. Der Kontakt läuft über das veröffentlichte Büro-Postfach; die Website nutzt .de, das bestätigte Postfach .com. Vorschlag: Eine freigegebene Rechnungsserie eines Lieferanten verwenden; drei häufige Artikel über mehrere Termine verfolgen. Gebindegröße, Bio-/Qualitätsklasse, Netto-/Bruttobasis und Gutschriften prüfen, bevor Preise verglichen werden. Weitere Quellen: https://vegetaria-catering.de/wir_ueber_uns/"
+      },
+      "sha256": "bea44284b19f7322e86dbd8277fc232f0de1bb158b32dace80f969471b49fc11",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-caterlove-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Caterlove",
+        "company_domain": "caterlove.de",
+        "company_url": "https://www.caterlove.de/",
+        "buyer_key": "caterlove.de",
+        "person": "Negissa Ghorjani",
+        "source_url": "https://www.caterlove.de/de/business-catering",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13T11:09:00.000Z",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Caterlove plant Einkauf, Küche und Logistik für jeden Auftrag neu und produziert auf den Veranstaltungstermin. Das Unternehmen verbindet Fingerfood und persische Küche; Negissa Ghorjani ist die veröffentlichte Gründerin.",
+        "fit": "Vor einem neuen Angebot könnte ein kurzer Blick auf wiederkehrende Einkaufsartikel zeigen, ob die bisherige Zutatenbasis noch zu den jüngsten Einkaufspreisen passt.",
+        "contact_url": "mailto:kontakt@caterlove.de",
+        "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://www.caterlove.de/de/ueber-uns",
+        "geography": "Hamburg und Umland, Deutschland",
+        "budget": "",
+        "opening_message": "Guten Tag Frau Ghorjani, Sie planen den Einkauf für jedes Catering neu. Wäre eine kurze Übersicht hilfreich, die vor dem nächsten Angebot bei drei wiederkehrenden Zutaten die jüngsten Einkaufspreise mit den bisherigen vergleicht? Ihre Menüauswahl, Halal-Vorgaben und persönliche Kalkulation bleiben maßgeblich.",
+        "source_status": "open",
+        "status_note": "Erst klären, welche Artikel tatsächlich wiederkehren und ob die Einkaufsauswertung bereits abgedeckt ist. Zertifizierte und andere Qualitäten nicht allein wegen ähnlicher Bezeichnungen gleichsetzen. Keine automatische Rezept- oder Eventkalkulation versprechen.",
+        "tags": [
+          "DE",
+          "catering",
+          "supplier-invoices",
+          "company-fit"
+        ],
+        "operator_note": "Inhaberin und Gründerin. Bestehender Ablauf: Business-Angebote werden nach Gästezahl, Ablauf und Budget zusammengestellt. Die Website nennt 48–72 Stunden für ein individuelles Angebot und veröffentlicht ein direktes Kontaktpostfach. Vorschlag: Ein freigegebenes früheres Menü und einige dazugehörige Lieferantenrechnungen als Gesprächsgrundlage nehmen. Drei tatsächlich wiederkehrende Artikel nach gleicher Einheit und Spezifikation vergleichen; BilledOKs Preisübersicht unterstützt die bestehende Angebotskalkulation. Weitere Quellen: https://www.caterlove.de/de/ueber-uns"
+      },
+      "sha256": "896962ee5e3fc04e40a2262f2f5a5f63ae83ac09b815bc1dff88761f87853dc5",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-kleine-kantine-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Die kleine Kantine",
+        "company_domain": "diekleinekantine-hamburg.de",
+        "company_url": "https://diekleinekantine-hamburg.de/",
+        "buyer_key": "diekleinekantine-hamburg.de",
+        "person": "Geschäftsführung / Küchenteam",
+        "source_url": "https://diekleinekantine-hamburg.de/mittagstisch/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13T11:09:00.000Z",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Die kleine Kantine kocht täglich wechselnden Mittagstisch und bietet zusätzlich Business- und Event-Catering. Fleisch, Molkerei, Obst und Gemüse kommen laut eigener Seite von Partnern aus Hamburg und Umgebung.",
+        "fit": "Eine gemeinsame Preisübersicht wiederkehrender Zutaten könnte den Einkauf für Mittagstisch und Catering unterstützen, während die vorhandene Menü- und Angebotsplanung bestehen bleibt.",
+        "contact_url": "mailto:kontakt@diekleinekantine-hamburg.de",
+        "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://diekleinekantine-hamburg.de/catering/",
+        "geography": "Hamburg-Rahlstedt, Deutschland",
+        "budget": "",
+        "opening_message": "Guten Tag an das Team der kleinen Kantine, Sie verbinden wechselnden Mittagstisch mit Catering und beziehen Zutaten von regionalen Partnern. Wäre ein kurzer Rechnungsvergleich interessant, der bei einigen regelmäßig gekauften Artikeln die Preisentwicklung sichtbar macht und Ihre bestehende Menüplanung ergänzt?",
+        "source_status": "open",
+        "status_note": "Den heutigen Rechnungs- und Einkaufsprozess sowie den zuständigen Ansprechpartner feststellen. Regionale Herkunft und Qualität bleiben Auswahlkriterien. Schwankende Mengen, Saisonalität und Lieferkosten getrennt von Stückpreisänderungen betrachten.",
+        "tags": [
+          "DE",
+          "catering",
+          "supplier-invoices",
+          "company-fit"
+        ],
+        "operator_note": "Betriebs- oder Einkaufsverantwortliche. Bestehender Ablauf: Catering wird passend zu Anlass, Gästezahl und Budget angeboten; die veröffentlichte Kontaktadresse führt zum Team. Die beim Abruf sichtbare Wochenkarte trägt ein Septemberdatum und wird hier nicht als aktueller Speiseplan verwendet. Vorschlag: Eine freigegebene Rechnungsreihe eines Gemüse- oder Molkereipartners betrachten. Drei wiederkehrende Positionen nach vergleichbarer Einheit und Qualität sortieren und auffällige Änderungen für die Küchenleitung markieren. Weitere Quellen: https://diekleinekantine-hamburg.de/catering/ https://diekleinekantine-hamburg.de/uber-uns/"
+      },
+      "sha256": "619b2a8f8377f292712ec959bb573f77eac4ba8dc381bbbd0edb6edee996bd44",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-gaumenfreunde-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Gaumenfreunde Hamburg – Catering & Events",
+        "company_domain": "gaumenfreunde-hamburg.de",
+        "company_url": "https://www.gaumenfreunde-hamburg.de/",
+        "buyer_key": "gaumenfreunde-hamburg.de",
+        "person": "Dave Steinhardt",
+        "source_url": "https://www.gaumenfreunde-hamburg.de/event-catering/business-catering/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13T11:09:00.000Z",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Gaumenfreunde veröffentlicht konkrete Business-Lunch-Menüs mit unterschiedlichen Zutaten sowie Buffet-, BBQ- und Fingerfood-Angebote. Dave Steinhardt ist als Inhaber mit direktem Unternehmenspostfach aufgeführt.",
+        "fit": "Wiederkehrende Zutaten aus mehreren Veranstaltungsformaten könnten in einem kleinen Rechnungsrückblick gemeinsam auf Preisänderungen geprüft werden.",
+        "contact_url": "mailto:info@gaumenfreunde-hamburg.de",
+        "contact_instructions": "Veröffentlichtes Unternehmenspostfach des Inhabers. Kontaktquelle: https://www.gaumenfreunde-hamburg.de/event-catering/business-catering/",
+        "geography": "Hamburg, Deutschland",
+        "budget": "",
+        "opening_message": "Guten Tag Herr Steinhardt, Ihre Business-Lunch-Menüs zeigen eine konkrete Auswahl an Zutaten. Wäre ein kurzer Vergleich interessant, der anhand freigegebener Lieferantenrechnungen die Preisentwicklung einiger dieser Artikel nachvollziehbar macht, bevor Sie das nächste individuelle Angebot kalkulieren?",
+        "source_status": "open",
+        "status_note": "Wiederholungsfrequenz und aktuelle Einkaufssoftware erfragen. Eine veröffentlichte Menüseite beweist weder einen Kostenanstieg noch ungenutzte Einsparungen. Fisch-, Fleisch- und andere Qualitätsvarianten nur nach fachlicher Freigabe vergleichen.",
+        "tags": [
+          "DE",
+          "catering",
+          "supplier-invoices",
+          "company-fit"
+        ],
+        "operator_note": "Inhaber. Bestehender Ablauf: Die Website bietet ein Anfrageformular und persönliche Catering-Planung. Die öffentlich genannten Beispielmenüs liefern einen konkreten Gesprächseinstieg; Angebotspreise sollten aktuell bestätigt werden. Vorschlag: Drei tatsächlich regelmäßig bestellte Artikel aus früheren Business-Lunch-Aufträgen wählen. Vergleichbare Rechnungsmengen und Einheiten nebeneinanderstellen; die vorhandene Menü- und Eventkalkulation bleibt das führende Verfahren. Weitere Quellen:"
+      },
+      "sha256": "30ed25d6bcdd2ebb91ba74e70493f4e1013da9f40d97d9cd14d685508643286c",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-barbaras-kueche-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "Barbaras Küche",
+        "company_domain": "barbaraskueche.de",
+        "company_url": "https://barbaraskueche.de/",
+        "buyer_key": "barbaraskueche.de",
+        "person": "Barbaras-Küche-Team",
+        "source_url": "https://barbaraskueche.de/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13T11:09:00.000Z",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "Barbaras Küche beschreibt regionale und saisonale Speisen, Business-Catering ab 40 Portionen, handgemachte Maultaschen und ein Café in Trebnitz. Das Unternehmen veröffentlicht ein direktes Postfach und eine Mobilnummer.",
+        "fit": "Ein kleiner Preisrückblick auf Zutaten eines häufig produzierten Gerichts könnte bei der nächsten Catering-Kalkulation helfen, ohne Rezept oder regionale Beschaffung zu verändern.",
+        "contact_url": "mailto:info@barbaraskueche.de",
+        "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://barbaraskueche.de/",
+        "geography": "Catering für Berlin; Café in Trebnitz, Deutschland",
+        "budget": "",
+        "opening_message": "Guten Tag an das Team von Barbaras Küche, Ihre handgemachten Maultaschen und das Catering ab 40 Portionen bieten einen konkreten Ansatz für einen kleinen Einkaufspreisvergleich. Wäre eine Übersicht zu wenigen regelmäßig gekauften Zutaten hilfreich, bevor Sie das nächste Catering-Angebot kalkulieren?",
+        "source_status": "open",
+        "status_note": "Aktuellen Catering-Betrieb, Lieferregion und Entscheidungsverantwortliche bestätigen. Prüfen, ob die tatsächliche Rechnungsmenge einen zusätzlichen Auswertungsschritt rechtfertigt. Keine personenbezogenen Gästedaten oder Allergieangaben für die Lieferantenanalyse verwenden.",
+        "tags": [
+          "DE",
+          "catering",
+          "supplier-invoices",
+          "company-fit"
+        ],
+        "operator_note": "Küchen- oder Einkaufsverantwortliche. Bestehender Ablauf: Catering wird direkt per E-Mail angefragt. Die eigene Homepage verbindet das Catering-Angebot mit dem Café; die aktuelle Lieferregion ist im ersten Gespräch zu bestätigen. Vorschlag: Für ein tatsächlich wiederkehrendes Gericht zwei bis drei Zutaten auswählen und eine freigegebene Rechnungsserie betrachten. Erst gleiche Einheiten, Mengenbasis und Zutatenqualität bestätigen; anschließend nur die beobachtete Preisentwicklung zeigen. Weitere Quellen: https://barbaraskueche.de/catering-berlin/"
+      },
+      "sha256": "dcbd0b5bebbec9e3ef657fc57f83fc9e4cf9837cd4c375156659f3e0b0bab8d1",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-unikorn-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "organization": "UNIKORN Catering & Events",
+        "company_domain": "unikorncatering.de",
+        "company_url": "https://unikorncatering.de/",
+        "buyer_key": "unikorncatering.de",
+        "person": "George Kallman / Gabriella Feuermann",
+        "source_url": "https://unikorncatering.de/buero-catering-muenchen/",
+        "published_on": "",
+        "author_updated_on": "",
+        "lead_kind": "company_fit",
+        "checked_at": "2026-10-13T11:09:00.000Z",
+        "deadline_on": "",
+        "deadline_at": "",
+        "demand": "UNIKORN bietet Büro-Catering bis zur regelmäßigen Mitarbeiterverpflegung sowie größere Veranstaltungen. George Kallman ist als Betriebsleiter und Gabriella Feuermann als Geschäftsführerin genannt. Anfragen und Bestellungen sind bereits mit Catersmart verknüpft.",
+        "fit": "Eine ergänzende Auswertung freigegebener Lieferantenrechnungen könnte wiederkehrende Artikelpreise für Büroverpflegung und Veranstaltungen sichtbar machen.",
+        "contact_url": "mailto:info@unikorncatering.de",
+        "contact_instructions": "Veröffentlichtes allgemeines Unternehmenspostfach. Kontaktquelle: https://unikorncatering.de/das-team/",
+        "geography": "München, Deutschland",
+        "budget": "",
+        "opening_message": "Guten Tag an die UNIKORN-Betriebsleitung, Sie bieten regelmäßige Büroverpflegung und nutzen bereits Catersmart für Anfragen und Bestellungen. Wäre ein abgegrenzter Vergleich von Lieferantenrechnungen hilfreich, der wiederkehrende Artikelpreise ergänzt, ohne Ihren bestehenden Bestell- und Eventprozess umzustellen?",
+        "source_status": "open",
+        "status_note": "Zuerst vorhandene Einkaufs-, ERP- und Catersmart-Auswertungen klären. Nur einen tatsächlich zusätzlichen Nutzen anbieten; keine direkte Catersmart-Integration voraussetzen. Aufgrund des größeren Teams eignet sich ein klar abgegrenzter Lieferanten-Pilot.",
+        "tags": [
+          "DE",
+          "catering",
+          "supplier-invoices",
+          "company-fit"
+        ],
+        "operator_note": "Betriebsleiter / Geschäftsführerin. Bestehender Ablauf: Die bestehenden Catersmart-Bestell- und Anfragewege bleiben erhalten. Das veröffentlichte allgemeine Postfach kann an Betriebsleitung oder Einkauf weiterleiten. Vorschlag: Einen regelmäßig genutzten Lieferanten und einige echte wiederkehrende Artikel auswählen. BilledOKs Rechnungsauswertung neben dem bestehenden Bestell-/Eventprozess zeigen und prüfen, ob sie zusätzliche relevante Erkenntnisse liefert. Weitere Quellen: https://unikorncatering.de/das-team/"
+      },
+      "sha256": "f99892d6949ca3c2cb2eb37bc3e949f2087a0c28e70b90bbdfdd006f8c8f5bfc",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    }
+  ],
+  "editions": [
+    {
+      "version": "dealscout.lead-pack.v1",
+      "id": "billedok-free-vegetaria-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "kind": "sample",
+      "prepared_at": "2026-10-13T11:09:00.000Z",
+      "brief": {
+        "customer": {
+          "name": "BilledOK",
+          "company_domain": "billedok.de",
+          "contact_url": "https://billedok.de/impressum",
+          "case_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "prospect_id": ""
+        },
+        "brief": {
+          "title": "Fünf weitere recherchierte Catering-Betriebe für BilledOK",
+          "description": "Ein kostenloses vollständiges Unternehmensprofil und fünf weitere deutsche Catering-Betriebe mit veröffentlichtem Geschäftskontakt, konkretem Einkaufs- oder Küchenablauf, Originalquellen und individuell vorbereitetem Gesprächseinstieg.",
+          "geography": "Deutschland",
+          "skills": [
+            "Catering-Einkauf",
+            "Lieferantenrechnungen",
+            "Artikelpreisvergleich"
+          ],
+          "lead_kind": "company_fit",
+          "quantity": 5,
+          "currency": "USD",
+          "price_minor": 2000,
+          "max_age_days": 30,
+          "excluded_domains": [
+            "billedok.de",
+            "catering-nimmersatt.de"
+          ],
+          "excluded_sources": [],
+          "exclusions": "Der bestehende Bestell-, Qualitäts-, Buchhaltungs- und Archivierungsprozess bleibt erhalten. Bedarf, Belegvolumen und interne Einkaufszuständigkeit werden im Gespräch geklärt. Rechnungsmuster ausschließlich freiwillig und berechtigt bereitstellen."
+        },
+        "operator_note": "Complete original research and prepared first offer. Preserve current relationship and shared-account capacity rules."
+      },
+      "brief_revision": 1,
+      "leads": [
+        {
+          "id": "billedok-vegetaria-20261013",
+          "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Vegetaria Catering Service GmbH",
+            "company_domain": "vegetaria-catering.de",
+            "company_url": "https://vegetaria-catering.de/",
+            "buyer_key": "vegetaria-catering.de",
+            "person": "Pino Schefer",
+            "source_url": "https://vegetaria-catering.de/mittagstisch-firmen/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13T11:09:00.000Z",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Vegetaria liefert vegetarische Firmen-Mittagsmenüs im Großraum München. Die eigene Unternehmensseite beschreibt täglich frische Zutaten von ausgewählten Lieferanten und Fachhändlern sowie Trockenwaren, Obst und Gemüse. Pino Schefer wird als Eigentümer und Geschäftsführer genannt.",
+            "fit": "Ein abgegrenzter Rückblick auf wiederkehrende Zutaten könnte Preisänderungen je kg oder Stück zeigen, ohne Menüplanung, Lieferantenauswahl oder Qualitätsvorgaben zu verändern.",
+            "contact_url": "mailto:info@vegetaria-catering.com",
+            "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://vegetaria-catering.de/wir_ueber_uns/",
+            "geography": "Finsing / Großraum München, Deutschland",
+            "budget": "",
+            "opening_message": "Guten Tag Herr Schefer, Ihre Website beschreibt den täglichen Einkauf frischer Zutaten bei ausgewählten Partnern. Wäre ein kurzer Vergleich hilfreich, der bei drei wiederkehrenden Artikeln aus einer freigegebenen Rechnungsserie die Preisentwicklung pro kg oder Stück zeigt? Ihre Qualitäts- und Lieferantenvorgaben bleiben dabei erhalten.",
+            "source_status": "open",
+            "status_note": "Mit Geschäftsführung oder Einkauf klären, wie Rechnungspositionen heute ausgewertet werden und ob ein zusätzlicher Rückblick Arbeit spart. Produktvarianten und besondere Zutaten getrennt lassen; ein niedrigerer Preis allein begründet keinen Lieferantenwechsel.",
+            "tags": [
+              "DE",
+              "catering",
+              "supplier-invoices",
+              "company-fit"
+            ],
+            "operator_note": "Eigentümer / Geschäftsführer. Bestehender Ablauf: Auf Wunsch übernimmt Vegetaria Lieferung, Thekenaufbau, Abrechnung und Abholung. Der Kontakt läuft über das veröffentlichte Büro-Postfach; die Website nutzt .de, das bestätigte Postfach .com. Vorschlag: Eine freigegebene Rechnungsserie eines Lieferanten verwenden; drei häufige Artikel über mehrere Termine verfolgen. Gebindegröße, Bio-/Qualitätsklasse, Netto-/Bruttobasis und Gutschriften prüfen, bevor Preise verglichen werden. Weitere Quellen: https://vegetaria-catering.de/wir_ueber_uns/"
+          },
+          "sha256": "bea44284b19f7322e86dbd8277fc232f0de1bb158b32dace80f969471b49fc11",
+          "updated_at": "2026-10-13T11:09:00.000Z",
+          "history": []
+        }
+      ],
+      "replaces": "",
+      "replacements": [],
+      "currency": "USD",
+      "price_minor": 0,
+      "sha256": "ce2899a4f9b03a31d9ad178da558765378ef7b430ef4325c95bb53532d3c39cc"
+    },
+    {
+      "version": "dealscout.lead-pack.v1",
+      "id": "billedok-paid-five-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "kind": "paid",
+      "prepared_at": "2026-10-13T11:09:00.000Z",
+      "brief": {
+        "customer": {
+          "name": "BilledOK",
+          "company_domain": "billedok.de",
+          "contact_url": "https://billedok.de/impressum",
+          "case_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "prospect_id": ""
+        },
+        "brief": {
+          "title": "Fünf weitere recherchierte Catering-Betriebe für BilledOK",
+          "description": "Ein kostenloses vollständiges Unternehmensprofil und fünf weitere deutsche Catering-Betriebe mit veröffentlichtem Geschäftskontakt, konkretem Einkaufs- oder Küchenablauf, Originalquellen und individuell vorbereitetem Gesprächseinstieg.",
+          "geography": "Deutschland",
+          "skills": [
+            "Catering-Einkauf",
+            "Lieferantenrechnungen",
+            "Artikelpreisvergleich"
+          ],
+          "lead_kind": "company_fit",
+          "quantity": 5,
+          "currency": "USD",
+          "price_minor": 2000,
+          "max_age_days": 30,
+          "excluded_domains": [
+            "billedok.de",
+            "catering-nimmersatt.de"
+          ],
+          "excluded_sources": [],
+          "exclusions": "Der bestehende Bestell-, Qualitäts-, Buchhaltungs- und Archivierungsprozess bleibt erhalten. Bedarf, Belegvolumen und interne Einkaufszuständigkeit werden im Gespräch geklärt. Rechnungsmuster ausschließlich freiwillig und berechtigt bereitstellen."
+        },
+        "operator_note": "Complete original research and prepared first offer. Preserve current relationship and shared-account capacity rules."
+      },
+      "brief_revision": 1,
+      "leads": [
+        {
+          "id": "billedok-caterlove-20261013",
+          "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Caterlove",
+            "company_domain": "caterlove.de",
+            "company_url": "https://www.caterlove.de/",
+            "buyer_key": "caterlove.de",
+            "person": "Negissa Ghorjani",
+            "source_url": "https://www.caterlove.de/de/business-catering",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13T11:09:00.000Z",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Caterlove plant Einkauf, Küche und Logistik für jeden Auftrag neu und produziert auf den Veranstaltungstermin. Das Unternehmen verbindet Fingerfood und persische Küche; Negissa Ghorjani ist die veröffentlichte Gründerin.",
+            "fit": "Vor einem neuen Angebot könnte ein kurzer Blick auf wiederkehrende Einkaufsartikel zeigen, ob die bisherige Zutatenbasis noch zu den jüngsten Einkaufspreisen passt.",
+            "contact_url": "mailto:kontakt@caterlove.de",
+            "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://www.caterlove.de/de/ueber-uns",
+            "geography": "Hamburg und Umland, Deutschland",
+            "budget": "",
+            "opening_message": "Guten Tag Frau Ghorjani, Sie planen den Einkauf für jedes Catering neu. Wäre eine kurze Übersicht hilfreich, die vor dem nächsten Angebot bei drei wiederkehrenden Zutaten die jüngsten Einkaufspreise mit den bisherigen vergleicht? Ihre Menüauswahl, Halal-Vorgaben und persönliche Kalkulation bleiben maßgeblich.",
+            "source_status": "open",
+            "status_note": "Erst klären, welche Artikel tatsächlich wiederkehren und ob die Einkaufsauswertung bereits abgedeckt ist. Zertifizierte und andere Qualitäten nicht allein wegen ähnlicher Bezeichnungen gleichsetzen. Keine automatische Rezept- oder Eventkalkulation versprechen.",
+            "tags": [
+              "DE",
+              "catering",
+              "supplier-invoices",
+              "company-fit"
+            ],
+            "operator_note": "Inhaberin und Gründerin. Bestehender Ablauf: Business-Angebote werden nach Gästezahl, Ablauf und Budget zusammengestellt. Die Website nennt 48–72 Stunden für ein individuelles Angebot und veröffentlicht ein direktes Kontaktpostfach. Vorschlag: Ein freigegebenes früheres Menü und einige dazugehörige Lieferantenrechnungen als Gesprächsgrundlage nehmen. Drei tatsächlich wiederkehrende Artikel nach gleicher Einheit und Spezifikation vergleichen; BilledOKs Preisübersicht unterstützt die bestehende Angebotskalkulation. Weitere Quellen: https://www.caterlove.de/de/ueber-uns"
+          },
+          "sha256": "896962ee5e3fc04e40a2262f2f5a5f63ae83ac09b815bc1dff88761f87853dc5",
+          "updated_at": "2026-10-13T11:09:00.000Z",
+          "history": []
+        },
+        {
+          "id": "billedok-kleine-kantine-20261013",
+          "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Die kleine Kantine",
+            "company_domain": "diekleinekantine-hamburg.de",
+            "company_url": "https://diekleinekantine-hamburg.de/",
+            "buyer_key": "diekleinekantine-hamburg.de",
+            "person": "Geschäftsführung / Küchenteam",
+            "source_url": "https://diekleinekantine-hamburg.de/mittagstisch/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13T11:09:00.000Z",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Die kleine Kantine kocht täglich wechselnden Mittagstisch und bietet zusätzlich Business- und Event-Catering. Fleisch, Molkerei, Obst und Gemüse kommen laut eigener Seite von Partnern aus Hamburg und Umgebung.",
+            "fit": "Eine gemeinsame Preisübersicht wiederkehrender Zutaten könnte den Einkauf für Mittagstisch und Catering unterstützen, während die vorhandene Menü- und Angebotsplanung bestehen bleibt.",
+            "contact_url": "mailto:kontakt@diekleinekantine-hamburg.de",
+            "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://diekleinekantine-hamburg.de/catering/",
+            "geography": "Hamburg-Rahlstedt, Deutschland",
+            "budget": "",
+            "opening_message": "Guten Tag an das Team der kleinen Kantine, Sie verbinden wechselnden Mittagstisch mit Catering und beziehen Zutaten von regionalen Partnern. Wäre ein kurzer Rechnungsvergleich interessant, der bei einigen regelmäßig gekauften Artikeln die Preisentwicklung sichtbar macht und Ihre bestehende Menüplanung ergänzt?",
+            "source_status": "open",
+            "status_note": "Den heutigen Rechnungs- und Einkaufsprozess sowie den zuständigen Ansprechpartner feststellen. Regionale Herkunft und Qualität bleiben Auswahlkriterien. Schwankende Mengen, Saisonalität und Lieferkosten getrennt von Stückpreisänderungen betrachten.",
+            "tags": [
+              "DE",
+              "catering",
+              "supplier-invoices",
+              "company-fit"
+            ],
+            "operator_note": "Betriebs- oder Einkaufsverantwortliche. Bestehender Ablauf: Catering wird passend zu Anlass, Gästezahl und Budget angeboten; die veröffentlichte Kontaktadresse führt zum Team. Die beim Abruf sichtbare Wochenkarte trägt ein Septemberdatum und wird hier nicht als aktueller Speiseplan verwendet. Vorschlag: Eine freigegebene Rechnungsreihe eines Gemüse- oder Molkereipartners betrachten. Drei wiederkehrende Positionen nach vergleichbarer Einheit und Qualität sortieren und auffällige Änderungen für die Küchenleitung markieren. Weitere Quellen: https://diekleinekantine-hamburg.de/catering/ https://diekleinekantine-hamburg.de/uber-uns/"
+          },
+          "sha256": "619b2a8f8377f292712ec959bb573f77eac4ba8dc381bbbd0edb6edee996bd44",
+          "updated_at": "2026-10-13T11:09:00.000Z",
+          "history": []
+        },
+        {
+          "id": "billedok-gaumenfreunde-20261013",
+          "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Gaumenfreunde Hamburg – Catering & Events",
+            "company_domain": "gaumenfreunde-hamburg.de",
+            "company_url": "https://www.gaumenfreunde-hamburg.de/",
+            "buyer_key": "gaumenfreunde-hamburg.de",
+            "person": "Dave Steinhardt",
+            "source_url": "https://www.gaumenfreunde-hamburg.de/event-catering/business-catering/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13T11:09:00.000Z",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Gaumenfreunde veröffentlicht konkrete Business-Lunch-Menüs mit unterschiedlichen Zutaten sowie Buffet-, BBQ- und Fingerfood-Angebote. Dave Steinhardt ist als Inhaber mit direktem Unternehmenspostfach aufgeführt.",
+            "fit": "Wiederkehrende Zutaten aus mehreren Veranstaltungsformaten könnten in einem kleinen Rechnungsrückblick gemeinsam auf Preisänderungen geprüft werden.",
+            "contact_url": "mailto:info@gaumenfreunde-hamburg.de",
+            "contact_instructions": "Veröffentlichtes Unternehmenspostfach des Inhabers. Kontaktquelle: https://www.gaumenfreunde-hamburg.de/event-catering/business-catering/",
+            "geography": "Hamburg, Deutschland",
+            "budget": "",
+            "opening_message": "Guten Tag Herr Steinhardt, Ihre Business-Lunch-Menüs zeigen eine konkrete Auswahl an Zutaten. Wäre ein kurzer Vergleich interessant, der anhand freigegebener Lieferantenrechnungen die Preisentwicklung einiger dieser Artikel nachvollziehbar macht, bevor Sie das nächste individuelle Angebot kalkulieren?",
+            "source_status": "open",
+            "status_note": "Wiederholungsfrequenz und aktuelle Einkaufssoftware erfragen. Eine veröffentlichte Menüseite beweist weder einen Kostenanstieg noch ungenutzte Einsparungen. Fisch-, Fleisch- und andere Qualitätsvarianten nur nach fachlicher Freigabe vergleichen.",
+            "tags": [
+              "DE",
+              "catering",
+              "supplier-invoices",
+              "company-fit"
+            ],
+            "operator_note": "Inhaber. Bestehender Ablauf: Die Website bietet ein Anfrageformular und persönliche Catering-Planung. Die öffentlich genannten Beispielmenüs liefern einen konkreten Gesprächseinstieg; Angebotspreise sollten aktuell bestätigt werden. Vorschlag: Drei tatsächlich regelmäßig bestellte Artikel aus früheren Business-Lunch-Aufträgen wählen. Vergleichbare Rechnungsmengen und Einheiten nebeneinanderstellen; die vorhandene Menü- und Eventkalkulation bleibt das führende Verfahren. Weitere Quellen:"
+          },
+          "sha256": "30ed25d6bcdd2ebb91ba74e70493f4e1013da9f40d97d9cd14d685508643286c",
+          "updated_at": "2026-10-13T11:09:00.000Z",
+          "history": []
+        },
+        {
+          "id": "billedok-barbaras-kueche-20261013",
+          "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "Barbaras Küche",
+            "company_domain": "barbaraskueche.de",
+            "company_url": "https://barbaraskueche.de/",
+            "buyer_key": "barbaraskueche.de",
+            "person": "Barbaras-Küche-Team",
+            "source_url": "https://barbaraskueche.de/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13T11:09:00.000Z",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "Barbaras Küche beschreibt regionale und saisonale Speisen, Business-Catering ab 40 Portionen, handgemachte Maultaschen und ein Café in Trebnitz. Das Unternehmen veröffentlicht ein direktes Postfach und eine Mobilnummer.",
+            "fit": "Ein kleiner Preisrückblick auf Zutaten eines häufig produzierten Gerichts könnte bei der nächsten Catering-Kalkulation helfen, ohne Rezept oder regionale Beschaffung zu verändern.",
+            "contact_url": "mailto:info@barbaraskueche.de",
+            "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://barbaraskueche.de/",
+            "geography": "Catering für Berlin; Café in Trebnitz, Deutschland",
+            "budget": "",
+            "opening_message": "Guten Tag an das Team von Barbaras Küche, Ihre handgemachten Maultaschen und das Catering ab 40 Portionen bieten einen konkreten Ansatz für einen kleinen Einkaufspreisvergleich. Wäre eine Übersicht zu wenigen regelmäßig gekauften Zutaten hilfreich, bevor Sie das nächste Catering-Angebot kalkulieren?",
+            "source_status": "open",
+            "status_note": "Aktuellen Catering-Betrieb, Lieferregion und Entscheidungsverantwortliche bestätigen. Prüfen, ob die tatsächliche Rechnungsmenge einen zusätzlichen Auswertungsschritt rechtfertigt. Keine personenbezogenen Gästedaten oder Allergieangaben für die Lieferantenanalyse verwenden.",
+            "tags": [
+              "DE",
+              "catering",
+              "supplier-invoices",
+              "company-fit"
+            ],
+            "operator_note": "Küchen- oder Einkaufsverantwortliche. Bestehender Ablauf: Catering wird direkt per E-Mail angefragt. Die eigene Homepage verbindet das Catering-Angebot mit dem Café; die aktuelle Lieferregion ist im ersten Gespräch zu bestätigen. Vorschlag: Für ein tatsächlich wiederkehrendes Gericht zwei bis drei Zutaten auswählen und eine freigegebene Rechnungsserie betrachten. Erst gleiche Einheiten, Mengenbasis und Zutatenqualität bestätigen; anschließend nur die beobachtete Preisentwicklung zeigen. Weitere Quellen: https://barbaraskueche.de/catering-berlin/"
+          },
+          "sha256": "dcbd0b5bebbec9e3ef657fc57f83fc9e4cf9837cd4c375156659f3e0b0bab8d1",
+          "updated_at": "2026-10-13T11:09:00.000Z",
+          "history": []
+        },
+        {
+          "id": "billedok-unikorn-20261013",
+          "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+          "revision": 1,
+          "document": {
+            "organization": "UNIKORN Catering & Events",
+            "company_domain": "unikorncatering.de",
+            "company_url": "https://unikorncatering.de/",
+            "buyer_key": "unikorncatering.de",
+            "person": "George Kallman / Gabriella Feuermann",
+            "source_url": "https://unikorncatering.de/buero-catering-muenchen/",
+            "published_on": "",
+            "author_updated_on": "",
+            "lead_kind": "company_fit",
+            "checked_at": "2026-10-13T11:09:00.000Z",
+            "deadline_on": "",
+            "deadline_at": "",
+            "demand": "UNIKORN bietet Büro-Catering bis zur regelmäßigen Mitarbeiterverpflegung sowie größere Veranstaltungen. George Kallman ist als Betriebsleiter und Gabriella Feuermann als Geschäftsführerin genannt. Anfragen und Bestellungen sind bereits mit Catersmart verknüpft.",
+            "fit": "Eine ergänzende Auswertung freigegebener Lieferantenrechnungen könnte wiederkehrende Artikelpreise für Büroverpflegung und Veranstaltungen sichtbar machen.",
+            "contact_url": "mailto:info@unikorncatering.de",
+            "contact_instructions": "Veröffentlichtes allgemeines Unternehmenspostfach. Kontaktquelle: https://unikorncatering.de/das-team/",
+            "geography": "München, Deutschland",
+            "budget": "",
+            "opening_message": "Guten Tag an die UNIKORN-Betriebsleitung, Sie bieten regelmäßige Büroverpflegung und nutzen bereits Catersmart für Anfragen und Bestellungen. Wäre ein abgegrenzter Vergleich von Lieferantenrechnungen hilfreich, der wiederkehrende Artikelpreise ergänzt, ohne Ihren bestehenden Bestell- und Eventprozess umzustellen?",
+            "source_status": "open",
+            "status_note": "Zuerst vorhandene Einkaufs-, ERP- und Catersmart-Auswertungen klären. Nur einen tatsächlich zusätzlichen Nutzen anbieten; keine direkte Catersmart-Integration voraussetzen. Aufgrund des größeren Teams eignet sich ein klar abgegrenzter Lieferanten-Pilot.",
+            "tags": [
+              "DE",
+              "catering",
+              "supplier-invoices",
+              "company-fit"
+            ],
+            "operator_note": "Betriebsleiter / Geschäftsführerin. Bestehender Ablauf: Die bestehenden Catersmart-Bestell- und Anfragewege bleiben erhalten. Das veröffentlichte allgemeine Postfach kann an Betriebsleitung oder Einkauf weiterleiten. Vorschlag: Einen regelmäßig genutzten Lieferanten und einige echte wiederkehrende Artikel auswählen. BilledOKs Rechnungsauswertung neben dem bestehenden Bestell-/Eventprozess zeigen und prüfen, ob sie zusätzliche relevante Erkenntnisse liefert. Weitere Quellen: https://unikorncatering.de/das-team/"
+          },
+          "sha256": "f99892d6949ca3c2cb2eb37bc3e949f2087a0c28e70b90bbdfdd006f8c8f5bfc",
+          "updated_at": "2026-10-13T11:09:00.000Z",
+          "history": []
+        }
+      ],
+      "replaces": "",
+      "replacements": [],
+      "currency": "USD",
+      "price_minor": 2000,
+      "sha256": "3fa413c792bd1438da1e1d90d07af186c4c75b73946ac64d77759b6e960825b4"
+    }
+  ],
+  "withdrawals": [],
+  "deliveries": [],
+  "customer_files": [
+    {
+      "id": "billedok-file-1-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample.csv",
+        "title": "sample.csv",
+        "description": "Vollständige kostenlose Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "text/csv",
+        "lead_ids": [
+          "billedok-vegetaria-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "IlVudGVybmVobWVuIiwiUmVnaW9uIiwiQW5zcHJlY2hwYXJ0bmVyIiwiUm9sbGUiLCJFLU1haWwiLCJUZWxlZm9uIiwiQmVvYmFjaHRldGVyIEFibGF1ZiIsIkJlc3RlaGVuZGVyIFByb3plc3MiLCJNw7ZnbGljaGVyIEFuc2F0eiIsIktsZWluZSBEZW1vbnN0cmF0aW9uIiwiR2VzcHLDpGNoc2VpbnN0aWVnIiwiUXVhbGlmaXppZXJ1bmciLCJIYXVwdHF1ZWxsZSIsIktvbnRha3RxdWVsbGUiLCJXZWl0ZXJlIFF1ZWxsZW4iLCJQcsO8ZmRhdHVtIg0KIlZlZ2V0YXJpYSBDYXRlcmluZyBTZXJ2aWNlIEdtYkgiLCJGaW5zaW5nIC8gR3Jvw59yYXVtIE3DvG5jaGVuLCBEZXV0c2NobGFuZCIsIlBpbm8gU2NoZWZlciIsIkVpZ2VudMO8bWVyIC8gR2VzY2jDpGZ0c2bDvGhyZXIiLCJpbmZvQHZlZ2V0YXJpYS1jYXRlcmluZy5jb20iLCIrNDkgODkgMjAzNDQ4NzEiLCJWZWdldGFyaWEgbGllZmVydCB2ZWdldGFyaXNjaGUgRmlybWVuLU1pdHRhZ3NtZW7DvHMgaW0gR3Jvw59yYXVtIE3DvG5jaGVuLiBEaWUgZWlnZW5lIFVudGVybmVobWVuc3NlaXRlIGJlc2NocmVpYnQgdMOkZ2xpY2ggZnJpc2NoZSBadXRhdGVuIHZvbiBhdXNnZXfDpGhsdGVuIExpZWZlcmFudGVuIHVuZCBGYWNoaMOkbmRsZXJuIHNvd2llIFRyb2NrZW53YXJlbiwgT2JzdCB1bmQgR2Vtw7xzZS4gUGlubyBTY2hlZmVyIHdpcmQgYWxzIEVpZ2VudMO8bWVyIHVuZCBHZXNjaMOkZnRzZsO8aHJlciBnZW5hbm50LiIsIkF1ZiBXdW5zY2ggw7xiZXJuaW1tdCBWZWdldGFyaWEgTGllZmVydW5nLCBUaGVrZW5hdWZiYXUsIEFicmVjaG51bmcgdW5kIEFiaG9sdW5nLiBEZXIgS29udGFrdCBsw6R1ZnQgw7xiZXIgZGFzIHZlcsO2ZmZlbnRsaWNodGUgQsO8cm8tUG9zdGZhY2g7IGRpZSBXZWJzaXRlIG51dHp0IC5kZSwgZGFzIGJlc3TDpHRpZ3RlIFBvc3RmYWNoIC5jb20uIiwiRWluIGFiZ2VncmVuenRlciBSw7xja2JsaWNrIGF1ZiB3aWVkZXJrZWhyZW5kZSBadXRhdGVuIGvDtm5udGUgUHJlaXPDpG5kZXJ1bmdlbiBqZSBrZyBvZGVyIFN0w7xjayB6ZWlnZW4sIG9obmUgTWVuw7xwbGFudW5nLCBMaWVmZXJhbnRlbmF1c3dhaGwgb2RlciBRdWFsaXTDpHRzdm9yZ2FiZW4genUgdmVyw6RuZGVybi4iLCJFaW5lIGZyZWlnZWdlYmVuZSBSZWNobnVuZ3NzZXJpZSBlaW5lcyBMaWVmZXJhbnRlbiB2ZXJ3ZW5kZW47IGRyZWkgaMOkdWZpZ2UgQXJ0aWtlbCDDvGJlciBtZWhyZXJlIFRlcm1pbmUgdmVyZm9sZ2VuLiBHZWJpbmRlZ3LDtsOfZSwgQmlvLS9RdWFsaXTDpHRza2xhc3NlLCBOZXR0by0vQnJ1dHRvYmFzaXMgdW5kIEd1dHNjaHJpZnRlbiBwcsO8ZmVuLCBiZXZvciBQcmVpc2UgdmVyZ2xpY2hlbiB3ZXJkZW4uIiwiR3V0ZW4gVGFnIEhlcnIgU2NoZWZlciwgSWhyZSBXZWJzaXRlIGJlc2NocmVpYnQgZGVuIHTDpGdsaWNoZW4gRWlua2F1ZiBmcmlzY2hlciBadXRhdGVuIGJlaSBhdXNnZXfDpGhsdGVuIFBhcnRuZXJuLiBXw6RyZSBlaW4ga3VyemVyIFZlcmdsZWljaCBoaWxmcmVpY2gsIGRlciBiZWkgZHJlaSB3aWVkZXJrZWhyZW5kZW4gQXJ0aWtlbG4gYXVzIGVpbmVyIGZyZWlnZWdlYmVuZW4gUmVjaG51bmdzc2VyaWUgZGllIFByZWlzZW50d2lja2x1bmcgcHJvIGtnIG9kZXIgU3TDvGNrIHplaWd0PyBJaHJlIFF1YWxpdMOkdHMtIHVuZCBMaWVmZXJhbnRlbnZvcmdhYmVuIGJsZWliZW4gZGFiZWkgZXJoYWx0ZW4uIiwiTWl0IEdlc2Now6RmdHNmw7xocnVuZyBvZGVyIEVpbmthdWYga2zDpHJlbiwgd2llIFJlY2hudW5nc3Bvc2l0aW9uZW4gaGV1dGUgYXVzZ2V3ZXJ0ZXQgd2VyZGVuIHVuZCBvYiBlaW4genVzw6R0emxpY2hlciBSw7xja2JsaWNrIEFyYmVpdCBzcGFydC4gUHJvZHVrdHZhcmlhbnRlbiB1bmQgYmVzb25kZXJlIFp1dGF0ZW4gZ2V0cmVubnQgbGFzc2VuOyBlaW4gbmllZHJpZ2VyZXIgUHJlaXMgYWxsZWluIGJlZ3LDvG5kZXQga2VpbmVuIExpZWZlcmFudGVud2VjaHNlbC4iLCJodHRwczovL3ZlZ2V0YXJpYS1jYXRlcmluZy5kZS9taXR0YWdzdGlzY2gtZmlybWVuLyIsImh0dHBzOi8vdmVnZXRhcmlhLWNhdGVyaW5nLmRlL3dpcl91ZWJlcl91bnMvIiwiaHR0cHM6Ly92ZWdldGFyaWEtY2F0ZXJpbmcuZGUvd2lyX3VlYmVyX3Vucy8iLCIyMDI2LTEwLTEzIg0K",
+        "bytes": 2118,
+        "sha256": "5cf6f5d1d463e252cbc585d4b48ecaaa0b214e59cbec10a15627096c8b5e7d18"
+      },
+      "sha256": "57a6e0fd6dfbba196bcc07fc1a5d95f685ee44b7a914103d4d00687869ddaa0b",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-2-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample.md",
+        "title": "sample.md",
+        "description": "Vollständige kostenlose Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "text/markdown",
+        "lead_ids": [
+          "billedok-vegetaria-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "IyBFaW4gcmVjaGVyY2hpZXJ0ZXIgQ2F0ZXJpbmctQmV0cmllYiBmw7xyIEJpbGxlZE9LCgpTdGFuZDogMTMuIE9rdG9iZXIgMjAyNi4gS29zdGVubG9zZXMgTXVzdGVycHJvZmlsLgoKRGllIMO2ZmZlbnRsaWNoZW4gUXVlbGxlbiBiZWxlZ2VuIGRlbiBiZXNjaHJpZWJlbmVuIEJldHJpZWIgdW5kIHNlaW5lbiBBYmxhdWYuIERlciB2b3JnZXNjaGxhZ2VuZSBFaW5zYXR6IGlzdCBlaW5lIEdlc3Byw6RjaHNoeXBvdGhlc2U7IGRpZSBwYXNzZW5kZSBQZXJzb24gYmVzdMOkdGlndCBCZWRhcmYgdW5kIFZvcmdlaGVuLgoKIyMgVmVnZXRhcmlhIENhdGVyaW5nIFNlcnZpY2UgR21iSAoKIyMjIFJlZ2lvbgoKRmluc2luZyAvIEdyb8OfcmF1bSBNw7xuY2hlbiwgRGV1dHNjaGxhbmQKCiMjIyBHZXNjaMOkZnRza29udGFrdAoKUGlubyBTY2hlZmVyIMK3IEVpZ2VudMO8bWVyIC8gR2VzY2jDpGZ0c2bDvGhyZXIKaW5mb0B2ZWdldGFyaWEtY2F0ZXJpbmcuY29tIMK3ICs0OSA4OSAyMDM0NDg3MQoKIyMjIMOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWYKClZlZ2V0YXJpYSBsaWVmZXJ0IHZlZ2V0YXJpc2NoZSBGaXJtZW4tTWl0dGFnc21lbsO8cyBpbSBHcm/Dn3JhdW0gTcO8bmNoZW4uIERpZSBlaWdlbmUgVW50ZXJuZWhtZW5zc2VpdGUgYmVzY2hyZWlidCB0w6RnbGljaCBmcmlzY2hlIFp1dGF0ZW4gdm9uIGF1c2dld8OkaGx0ZW4gTGllZmVyYW50ZW4gdW5kIEZhY2how6RuZGxlcm4gc293aWUgVHJvY2tlbndhcmVuLCBPYnN0IHVuZCBHZW3DvHNlLiBQaW5vIFNjaGVmZXIgd2lyZCBhbHMgRWlnZW50w7xtZXIgdW5kIEdlc2Now6RmdHNmw7xocmVyIGdlbmFubnQuCgojIyMgQmVzdGVoZW5kZXIgUHJvemVzcwoKQXVmIFd1bnNjaCDDvGJlcm5pbW10IFZlZ2V0YXJpYSBMaWVmZXJ1bmcsIFRoZWtlbmF1ZmJhdSwgQWJyZWNobnVuZyB1bmQgQWJob2x1bmcuIERlciBLb250YWt0IGzDpHVmdCDDvGJlciBkYXMgdmVyw7ZmZmVudGxpY2h0ZSBCw7xyby1Qb3N0ZmFjaDsgZGllIFdlYnNpdGUgbnV0enQgLmRlLCBkYXMgYmVzdMOkdGlndGUgUG9zdGZhY2ggLmNvbS4KCiMjIyBNw7ZnbGljaGVyIEJpbGxlZE9LLUFuc2F0egoKRWluIGFiZ2VncmVuenRlciBSw7xja2JsaWNrIGF1ZiB3aWVkZXJrZWhyZW5kZSBadXRhdGVuIGvDtm5udGUgUHJlaXPDpG5kZXJ1bmdlbiBqZSBrZyBvZGVyIFN0w7xjayB6ZWlnZW4sIG9obmUgTWVuw7xwbGFudW5nLCBMaWVmZXJhbnRlbmF1c3dhaGwgb2RlciBRdWFsaXTDpHRzdm9yZ2FiZW4genUgdmVyw6RuZGVybi4KCiMjIyBWb3JnZXNjaGxhZ2VuZSBrbGVpbmUgRGVtb25zdHJhdGlvbgoKRWluZSBmcmVpZ2VnZWJlbmUgUmVjaG51bmdzc2VyaWUgZWluZXMgTGllZmVyYW50ZW4gdmVyd2VuZGVuOyBkcmVpIGjDpHVmaWdlIEFydGlrZWwgw7xiZXIgbWVocmVyZSBUZXJtaW5lIHZlcmZvbGdlbi4gR2ViaW5kZWdyw7bDn2UsIEJpby0vUXVhbGl0w6R0c2tsYXNzZSwgTmV0dG8tL0JydXR0b2Jhc2lzIHVuZCBHdXRzY2hyaWZ0ZW4gcHLDvGZlbiwgYmV2b3IgUHJlaXNlIHZlcmdsaWNoZW4gd2VyZGVuLgoKIyMjIFZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnCgpHdXRlbiBUYWcgSGVyciBTY2hlZmVyLCBJaHJlIFdlYnNpdGUgYmVzY2hyZWlidCBkZW4gdMOkZ2xpY2hlbiBFaW5rYXVmIGZyaXNjaGVyIFp1dGF0ZW4gYmVpIGF1c2dld8OkaGx0ZW4gUGFydG5lcm4uIFfDpHJlIGVpbiBrdXJ6ZXIgVmVyZ2xlaWNoIGhpbGZyZWljaCwgZGVyIGJlaSBkcmVpIHdpZWRlcmtlaHJlbmRlbiBBcnRpa2VsbiBhdXMgZWluZXIgZnJlaWdlZ2ViZW5lbiBSZWNobnVuZ3NzZXJpZSBkaWUgUHJlaXNlbnR3aWNrbHVuZyBwcm8ga2cgb2RlciBTdMO8Y2sgemVpZ3Q/IElocmUgUXVhbGl0w6R0cy0gdW5kIExpZWZlcmFudGVudm9yZ2FiZW4gYmxlaWJlbiBkYWJlaSBlcmhhbHRlbi4KCiMjIyBWb3IgZGVtIFZlcnN1Y2gga2zDpHJlbgoKTWl0IEdlc2Now6RmdHNmw7xocnVuZyBvZGVyIEVpbmthdWYga2zDpHJlbiwgd2llIFJlY2hudW5nc3Bvc2l0aW9uZW4gaGV1dGUgYXVzZ2V3ZXJ0ZXQgd2VyZGVuIHVuZCBvYiBlaW4genVzw6R0emxpY2hlciBSw7xja2JsaWNrIEFyYmVpdCBzcGFydC4gUHJvZHVrdHZhcmlhbnRlbiB1bmQgYmVzb25kZXJlIFp1dGF0ZW4gZ2V0cmVubnQgbGFzc2VuOyBlaW4gbmllZHJpZ2VyZXIgUHJlaXMgYWxsZWluIGJlZ3LDvG5kZXQga2VpbmVuIExpZWZlcmFudGVud2VjaHNlbC4KCiMjIyBPcmlnaW5hbHF1ZWxsZW4KCi0gaHR0cHM6Ly92ZWdldGFyaWEtY2F0ZXJpbmcuZGUvbWl0dGFnc3Rpc2NoLWZpcm1lbi8KLSBodHRwczovL3ZlZ2V0YXJpYS1jYXRlcmluZy5kZS93aXJfdWViZXJfdW5zLwoKR2VwcsO8ZnQ6IDIwMjYtMTAtMTMK",
+        "bytes": 2370,
+        "sha256": "440ee9272ea327bc802ff9c72720b503bbbc5e12b536600dddbd9d200ab719fc"
+      },
+      "sha256": "62a02acf132b93208f1125e739ab7b6227e517eb27f55a125142e62314f7bd9c",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-3-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample.html",
+        "title": "sample.html",
+        "description": "Vollständige kostenlose Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "text/html",
+        "lead_ids": [
+          "billedok-vegetaria-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImRlIj48aGVhZD48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT5FaW4gcmVjaGVyY2hpZXJ0ZXIgQ2F0ZXJpbmctQmV0cmllYiBmw7xyIEJpbGxlZE9LPC90aXRsZT48c3R5bGU+KiwqOmJlZm9yZSwqOmFmdGVye2JveC1zaXppbmc6Ym9yZGVyLWJveH1ib2R5e21hcmdpbjowO2JhY2tncm91bmQ6I2Y0ZjRmNDtjb2xvcjojMjIyO2ZvbnQ6MTZweC8xLjYgc3lzdGVtLXVpLC1hcHBsZS1zeXN0ZW0sU2Vnb2UgVUksc2Fucy1zZXJpZn1tYWlue21heC13aWR0aDo5ODBweDttYXJnaW46YXV0bztwYWRkaW5nOjM2cHggMjRweH1oMXtmb250LXNpemU6MzBweDtsaW5lLWhlaWdodDoxLjI7bWFyZ2luOjAgMCAxOHB4fWgye2ZvbnQtc2l6ZToyNHB4O2xpbmUtaGVpZ2h0OjEuMzttYXJnaW46MCAwIDE4cHh9aDN7Zm9udC1zaXplOjE2cHg7bGluZS1oZWlnaHQ6MS40O21hcmdpbjoyMnB4IDAgNnB4fXB7bWFyZ2luOjAgMCAxNHB4O3doaXRlLXNwYWNlOnByZS1saW5lfWF7Y29sb3I6IzIyMjt0ZXh0LWRlY29yYXRpb246dW5kZXJsaW5lO292ZXJmbG93LXdyYXA6YW55d2hlcmV9aGVhZGVyLGFydGljbGV7YmFja2dyb3VuZDp3aGl0ZTtib3JkZXI6MXB4IHNvbGlkICNjNWM1YzU7cGFkZGluZzoyNnB4O21hcmdpbjowIDAgMjRweH1uYXZ7bWFyZ2luOjIycHggMH1uYXYgYXtkaXNwbGF5OmJsb2NrO3BhZGRpbmc6NnB4IDB9dWx7cGFkZGluZy1sZWZ0OjIycHh9bGl7bWFyZ2luOjhweCAwfS5vcGVuaW5ne2JvcmRlci1sZWZ0OjNweCBzb2xpZCAjNzc3O2JhY2tncm91bmQ6I2Y0ZjRmNDtwYWRkaW5nOjE2cHh9Lm1ldGF7Y29sb3I6IzQ4NDg0ODtmb250LXNpemU6MTRweH1mb290ZXJ7Ym9yZGVyLXRvcDoxcHggc29saWQgI2JiYjtwYWRkaW5nLXRvcDoyMHB4fUBtZWRpYShtYXgtd2lkdGg6NjAwcHgpe21haW57cGFkZGluZzoxNnB4IDEycHh9aGVhZGVyLGFydGljbGV7cGFkZGluZzoyMHB4IDE2cHh9aDF7Zm9udC1zaXplOjI1cHh9aDJ7Zm9udC1zaXplOjIycHh9fUBtZWRpYSBwcmludHtib2R5e2JhY2tncm91bmQ6d2hpdGV9bWFpbnttYXgtd2lkdGg6bm9uZTtwYWRkaW5nOjB9bmF2e2Rpc3BsYXk6bm9uZX1hcnRpY2xle2JyZWFrLWluc2lkZTphdm9pZH1he2NvbG9yOiMyMjJ9fTwvc3R5bGU+PC9oZWFkPjxib2R5PjxtYWluPjxoZWFkZXI+PHAgY2xhc3M9Im1ldGEiPkJpbGxlZE9LIMK3IFJlY2hlcmNoZSB2b20gMTMuIE9rdG9iZXIgMjAyNjwvcD48aDE+RWluIHJlY2hlcmNoaWVydGVyIENhdGVyaW5nLUJldHJpZWIgZsO8ciBCaWxsZWRPSzwvaDE+PHA+S29zdGVubG9zZXMgTXVzdGVycHJvZmlsLjwvcD48cD5EaWUgw7ZmZmVudGxpY2hlbiBRdWVsbGVuIGJlbGVnZW4gZGVuIGJlc2NocmllYmVuZW4gQmV0cmllYiB1bmQgc2VpbmVuIEFibGF1Zi4gRGVyIHZvcmdlc2NobGFnZW5lIEVpbnNhdHogaXN0IGVpbmUgR2VzcHLDpGNoc2h5cG90aGVzZTsgZGllIHBhc3NlbmRlIFBlcnNvbiBiZXN0w6R0aWd0IEJlZGFyZiB1bmQgVm9yZ2VoZW4uPC9wPjxuYXYgYXJpYS1sYWJlbD0iVW50ZXJuZWhtZW5zcHJvZmlsZSI+PGEgaHJlZj0iI3ZlZ2V0YXJpYSI+VmVnZXRhcmlhIENhdGVyaW5nIFNlcnZpY2UgR21iSDwvYT48L25hdj48L2hlYWRlcj48YXJ0aWNsZSBpZD0idmVnZXRhcmlhIj48aDI+VmVnZXRhcmlhIENhdGVyaW5nIFNlcnZpY2UgR21iSDwvaDI+PGgzPlJlZ2lvbjwvaDM+PHA+Rmluc2luZyAvIEdyb8OfcmF1bSBNw7xuY2hlbiwgRGV1dHNjaGxhbmQ8L3A+PGgzPkdlc2Now6RmdHNrb250YWt0PC9oMz48cD5QaW5vIFNjaGVmZXIgwrcgRWlnZW50w7xtZXIgLyBHZXNjaMOkZnRzZsO8aHJlcgppbmZvQHZlZ2V0YXJpYS1jYXRlcmluZy5jb20gwrcgKzQ5IDg5IDIwMzQ0ODcxPC9wPjxoMz7DlmZmZW50bGljaCBiZW9iYWNodGV0ZXIgQWJsYXVmPC9oMz48cD5WZWdldGFyaWEgbGllZmVydCB2ZWdldGFyaXNjaGUgRmlybWVuLU1pdHRhZ3NtZW7DvHMgaW0gR3Jvw59yYXVtIE3DvG5jaGVuLiBEaWUgZWlnZW5lIFVudGVybmVobWVuc3NlaXRlIGJlc2NocmVpYnQgdMOkZ2xpY2ggZnJpc2NoZSBadXRhdGVuIHZvbiBhdXNnZXfDpGhsdGVuIExpZWZlcmFudGVuIHVuZCBGYWNoaMOkbmRsZXJuIHNvd2llIFRyb2NrZW53YXJlbiwgT2JzdCB1bmQgR2Vtw7xzZS4gUGlubyBTY2hlZmVyIHdpcmQgYWxzIEVpZ2VudMO8bWVyIHVuZCBHZXNjaMOkZnRzZsO8aHJlciBnZW5hbm50LjwvcD48aDM+QmVzdGVoZW5kZXIgUHJvemVzczwvaDM+PHA+QXVmIFd1bnNjaCDDvGJlcm5pbW10IFZlZ2V0YXJpYSBMaWVmZXJ1bmcsIFRoZWtlbmF1ZmJhdSwgQWJyZWNobnVuZyB1bmQgQWJob2x1bmcuIERlciBLb250YWt0IGzDpHVmdCDDvGJlciBkYXMgdmVyw7ZmZmVudGxpY2h0ZSBCw7xyby1Qb3N0ZmFjaDsgZGllIFdlYnNpdGUgbnV0enQgLmRlLCBkYXMgYmVzdMOkdGlndGUgUG9zdGZhY2ggLmNvbS48L3A+PGgzPk3DtmdsaWNoZXIgQmlsbGVkT0stQW5zYXR6PC9oMz48cD5FaW4gYWJnZWdyZW56dGVyIFLDvGNrYmxpY2sgYXVmIHdpZWRlcmtlaHJlbmRlIFp1dGF0ZW4ga8O2bm50ZSBQcmVpc8OkbmRlcnVuZ2VuIGplIGtnIG9kZXIgU3TDvGNrIHplaWdlbiwgb2huZSBNZW7DvHBsYW51bmcsIExpZWZlcmFudGVuYXVzd2FobCBvZGVyIFF1YWxpdMOkdHN2b3JnYWJlbiB6dSB2ZXLDpG5kZXJuLjwvcD48aDM+Vm9yZ2VzY2hsYWdlbmUga2xlaW5lIERlbW9uc3RyYXRpb248L2gzPjxwPkVpbmUgZnJlaWdlZ2ViZW5lIFJlY2hudW5nc3NlcmllIGVpbmVzIExpZWZlcmFudGVuIHZlcndlbmRlbjsgZHJlaSBow6R1ZmlnZSBBcnRpa2VsIMO8YmVyIG1laHJlcmUgVGVybWluZSB2ZXJmb2xnZW4uIEdlYmluZGVncsO2w59lLCBCaW8tL1F1YWxpdMOkdHNrbGFzc2UsIE5ldHRvLS9CcnV0dG9iYXNpcyB1bmQgR3V0c2NocmlmdGVuIHByw7xmZW4sIGJldm9yIFByZWlzZSB2ZXJnbGljaGVuIHdlcmRlbi48L3A+PGgzPlZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnPC9oMz48cCBjbGFzcz0ib3BlbmluZyI+R3V0ZW4gVGFnIEhlcnIgU2NoZWZlciwgSWhyZSBXZWJzaXRlIGJlc2NocmVpYnQgZGVuIHTDpGdsaWNoZW4gRWlua2F1ZiBmcmlzY2hlciBadXRhdGVuIGJlaSBhdXNnZXfDpGhsdGVuIFBhcnRuZXJuLiBXw6RyZSBlaW4ga3VyemVyIFZlcmdsZWljaCBoaWxmcmVpY2gsIGRlciBiZWkgZHJlaSB3aWVkZXJrZWhyZW5kZW4gQXJ0aWtlbG4gYXVzIGVpbmVyIGZyZWlnZWdlYmVuZW4gUmVjaG51bmdzc2VyaWUgZGllIFByZWlzZW50d2lja2x1bmcgcHJvIGtnIG9kZXIgU3TDvGNrIHplaWd0PyBJaHJlIFF1YWxpdMOkdHMtIHVuZCBMaWVmZXJhbnRlbnZvcmdhYmVuIGJsZWliZW4gZGFiZWkgZXJoYWx0ZW4uPC9wPjxoMz5Wb3IgZGVtIFZlcnN1Y2gga2zDpHJlbjwvaDM+PHA+TWl0IEdlc2Now6RmdHNmw7xocnVuZyBvZGVyIEVpbmthdWYga2zDpHJlbiwgd2llIFJlY2hudW5nc3Bvc2l0aW9uZW4gaGV1dGUgYXVzZ2V3ZXJ0ZXQgd2VyZGVuIHVuZCBvYiBlaW4genVzw6R0emxpY2hlciBSw7xja2JsaWNrIEFyYmVpdCBzcGFydC4gUHJvZHVrdHZhcmlhbnRlbiB1bmQgYmVzb25kZXJlIFp1dGF0ZW4gZ2V0cmVubnQgbGFzc2VuOyBlaW4gbmllZHJpZ2VyZXIgUHJlaXMgYWxsZWluIGJlZ3LDvG5kZXQga2VpbmVuIExpZWZlcmFudGVud2VjaHNlbC48L3A+PGgzPk9yaWdpbmFscXVlbGxlbjwvaDM+PHVsPjxsaT48YSBocmVmPSJodHRwczovL3ZlZ2V0YXJpYS1jYXRlcmluZy5kZS9taXR0YWdzdGlzY2gtZmlybWVuLyI+aHR0cHM6Ly92ZWdldGFyaWEtY2F0ZXJpbmcuZGUvbWl0dGFnc3Rpc2NoLWZpcm1lbi88L2E+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly92ZWdldGFyaWEtY2F0ZXJpbmcuZGUvd2lyX3VlYmVyX3Vucy8iPmh0dHBzOi8vdmVnZXRhcmlhLWNhdGVyaW5nLmRlL3dpcl91ZWJlcl91bnMvPC9hPjwvbGk+PC91bD48cCBjbGFzcz0ibWV0YSI+R2VwcsO8ZnQ6IDIwMjYtMTAtMTM8L3A+PC9hcnRpY2xlPjxmb290ZXI+PHA+RsO8ciBkZW4gZXJzdGVuIEtvbnRha3QgZGVuIHZlcsO2ZmZlbnRsaWNodGVuIEdlc2Now6RmdHNrYW5hbCBudXR6ZW4gdW5kIGRlbiBWb3JzY2hsYWcgYXVmIGRlbiBha3R1ZWxsZW4gQmV0cmllYiB6dXNjaG5laWRlbi4gUXVhbGl0w6R0LCBFaW5oZWl0ZW4sIEd1dHNjaHJpZnRlbiB1bmQgdm9yaGFuZGVuZSBFaW5rYXVmc3dlcmt6ZXVnZSBpbSBnZW1laW5zYW1lbiBWZXJnbGVpY2ggYmVyw7xja3NpY2h0aWdlbi48L3A+PC9mb290ZXI+PC9tYWluPjwvYm9keT48L2h0bWw+Cg==",
+        "bytes": 4345,
+        "sha256": "8bc1d0f2d9855aa2f48b3ce156c22f11574b9d4a96a7eb179827a0412629e04a"
+      },
+      "sha256": "aff6e14b17d8b391cee6508bf37ca05ba475e2e7e92fd55912043fe38d9bc10a",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-4-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "sample-edition.json",
+        "title": "sample-edition.json",
+        "description": "Vollständige kostenlose Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "application/json",
+        "lead_ids": [
+          "billedok-vegetaria-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "ewogICJ2ZXJzaW9uIjogImRlYWxzY291dC5sZWFkLXBhY2sudjEiLAogICJ0aXRsZSI6ICJGcmVlIGxlYWQgc2FtcGxlIiwKICAiY3VzdG9tZXIiOiAiQmlsbGVkT0siLAogICJwcmVwYXJlZF9hdCI6ICIyMDI2LTEwLTEzVDExOjA5OjAwLjAwMFoiLAogICJkZWxpdmVyeV90eXBlIjogInNhbXBsZSIsCiAgImNyaXRlcmlhIjogIkVpbiBrb3N0ZW5sb3NlcyB2b2xsc3TDpG5kaWdlcyBVbnRlcm5laG1lbnNwcm9maWwgdW5kIGbDvG5mIHdlaXRlcmUgZGV1dHNjaGUgQ2F0ZXJpbmctQmV0cmllYmUgbWl0IHZlcsO2ZmZlbnRsaWNodGVtIEdlc2Now6RmdHNrb250YWt0LCBrb25rcmV0ZW0gRWlua2F1ZnMtIG9kZXIgS8O8Y2hlbmFibGF1ZiwgT3JpZ2luYWxxdWVsbGVuIHVuZCBpbmRpdmlkdWVsbCB2b3JiZXJlaXRldGVtIEdlc3Byw6RjaHNlaW5zdGllZy4iLAogICJnZW9ncmFwaHkiOiAiRGV1dHNjaGxhbmQiLAogICJza2lsbHMiOiBbCiAgICAiQ2F0ZXJpbmctRWlua2F1ZiIsCiAgICAiTGllZmVyYW50ZW5yZWNobnVuZ2VuIiwKICAgICJBcnRpa2VscHJlaXN2ZXJnbGVpY2giCiAgXSwKICAicXVhbnRpdHkiOiAxLAogICJjdXJyZW5jeSI6ICJVU0QiLAogICJwcmljZV9taW5vciI6IDAsCiAgImxlYWRzIjogWwogICAgewogICAgICAib3JnYW5pemF0aW9uIjogIlZlZ2V0YXJpYSBDYXRlcmluZyBTZXJ2aWNlIEdtYkgiLAogICAgICAiY29tcGFueV91cmwiOiAiaHR0cHM6Ly92ZWdldGFyaWEtY2F0ZXJpbmcuZGUvIiwKICAgICAgInBlcnNvbiI6ICJQaW5vIFNjaGVmZXIiLAogICAgICAiYnVzaW5lc3NfbmVlZCI6ICJWZWdldGFyaWEgbGllZmVydCB2ZWdldGFyaXNjaGUgRmlybWVuLU1pdHRhZ3NtZW7DvHMgaW0gR3Jvw59yYXVtIE3DvG5jaGVuLiBEaWUgZWlnZW5lIFVudGVybmVobWVuc3NlaXRlIGJlc2NocmVpYnQgdMOkZ2xpY2ggZnJpc2NoZSBadXRhdGVuIHZvbiBhdXNnZXfDpGhsdGVuIExpZWZlcmFudGVuIHVuZCBGYWNoaMOkbmRsZXJuIHNvd2llIFRyb2NrZW53YXJlbiwgT2JzdCB1bmQgR2Vtw7xzZS4gUGlubyBTY2hlZmVyIHdpcmQgYWxzIEVpZ2VudMO8bWVyIHVuZCBHZXNjaMOkZnRzZsO8aHJlciBnZW5hbm50LiIsCiAgICAgICJzb3VyY2VfdXJsIjogImh0dHBzOi8vdmVnZXRhcmlhLWNhdGVyaW5nLmRlL21pdHRhZ3N0aXNjaC1maXJtZW4vIiwKICAgICAgIm9yaWdpbmFsX3JlcXVlc3RfZGF0ZSI6ICIiLAogICAgICAibGFzdF9idXllcl91cGRhdGUiOiAiIiwKICAgICAgInNvdXJjZV9jaGVja2VkX2F0IjogIjIwMjYtMTAtMTNUMTE6MDk6MDAuMDAwWiIsCiAgICAgICJzaWduYWxfdHlwZSI6ICJjb21wYW55X2ZpdCIsCiAgICAgICJkZWFkbGluZSI6ICIiLAogICAgICAiY29udGFjdF9yb3V0ZSI6ICJtYWlsdG86aW5mb0B2ZWdldGFyaWEtY2F0ZXJpbmcuY29tIiwKICAgICAgImNvbnRhY3RfaW5zdHJ1Y3Rpb25zIjogIlZlcsO2ZmZlbnRsaWNodGVzIFVudGVybmVobWVuc3Bvc3RmYWNoLiBLb250YWt0cXVlbGxlOiBodHRwczovL3ZlZ2V0YXJpYS1jYXRlcmluZy5kZS93aXJfdWViZXJfdW5zLyIsCiAgICAgICJnZW9ncmFwaHkiOiAiRmluc2luZyAvIEdyb8OfcmF1bSBNw7xuY2hlbiwgRGV1dHNjaGxhbmQiLAogICAgICAicHVibGlzaGVkX2J1ZGdldCI6ICIiLAogICAgICAid2h5X2l0X2ZpdHMiOiAiRWluIGFiZ2VncmVuenRlciBSw7xja2JsaWNrIGF1ZiB3aWVkZXJrZWhyZW5kZSBadXRhdGVuIGvDtm5udGUgUHJlaXPDpG5kZXJ1bmdlbiBqZSBrZyBvZGVyIFN0w7xjayB6ZWlnZW4sIG9obmUgTWVuw7xwbGFudW5nLCBMaWVmZXJhbnRlbmF1c3dhaGwgb2RlciBRdWFsaXTDpHRzdm9yZ2FiZW4genUgdmVyw6RuZGVybi4iLAogICAgICAib3BlbmluZ19tZXNzYWdlIjogIkd1dGVuIFRhZyBIZXJyIFNjaGVmZXIsIElocmUgV2Vic2l0ZSBiZXNjaHJlaWJ0IGRlbiB0w6RnbGljaGVuIEVpbmthdWYgZnJpc2NoZXIgWnV0YXRlbiBiZWkgYXVzZ2V3w6RobHRlbiBQYXJ0bmVybi4gV8OkcmUgZWluIGt1cnplciBWZXJnbGVpY2ggaGlsZnJlaWNoLCBkZXIgYmVpIGRyZWkgd2llZGVya2VocmVuZGVuIEFydGlrZWxuIGF1cyBlaW5lciBmcmVpZ2VnZWJlbmVuIFJlY2hudW5nc3NlcmllIGRpZSBQcmVpc2VudHdpY2tsdW5nIHBybyBrZyBvZGVyIFN0w7xjayB6ZWlndD8gSWhyZSBRdWFsaXTDpHRzLSB1bmQgTGllZmVyYW50ZW52b3JnYWJlbiBibGVpYmVuIGRhYmVpIGVyaGFsdGVuLiIsCiAgICAgICJzb3VyY2Vfc3RhdHVzIjogIm9wZW4iLAogICAgICAic3RhdHVzX25vdGUiOiAiTWl0IEdlc2Now6RmdHNmw7xocnVuZyBvZGVyIEVpbmthdWYga2zDpHJlbiwgd2llIFJlY2hudW5nc3Bvc2l0aW9uZW4gaGV1dGUgYXVzZ2V3ZXJ0ZXQgd2VyZGVuIHVuZCBvYiBlaW4genVzw6R0emxpY2hlciBSw7xja2JsaWNrIEFyYmVpdCBzcGFydC4gUHJvZHVrdHZhcmlhbnRlbiB1bmQgYmVzb25kZXJlIFp1dGF0ZW4gZ2V0cmVubnQgbGFzc2VuOyBlaW4gbmllZHJpZ2VyZXIgUHJlaXMgYWxsZWluIGJlZ3LDvG5kZXQga2VpbmVuIExpZWZlcmFudGVud2VjaHNlbC4iCiAgICB9CiAgXQp9Cg==",
+        "bytes": 2551,
+        "sha256": "639a4b3b7964ed075d0a7e184d4116193f5bc64be1c8afd4cfbe25d26472e12c"
+      },
+      "sha256": "d1d957fe8a890597cb7d460d23b5a665e72e26a501075cc2d4b8f92fe7f0c3d1",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-5-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid.csv",
+        "title": "paid.csv",
+        "description": "Vollständige zusätzliche Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "text/csv",
+        "lead_ids": [
+          "billedok-caterlove-20261013",
+          "billedok-kleine-kantine-20261013",
+          "billedok-gaumenfreunde-20261013",
+          "billedok-barbaras-kueche-20261013",
+          "billedok-unikorn-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "IlVudGVybmVobWVuIiwiUmVnaW9uIiwiQW5zcHJlY2hwYXJ0bmVyIiwiUm9sbGUiLCJFLU1haWwiLCJUZWxlZm9uIiwiQmVvYmFjaHRldGVyIEFibGF1ZiIsIkJlc3RlaGVuZGVyIFByb3plc3MiLCJNw7ZnbGljaGVyIEFuc2F0eiIsIktsZWluZSBEZW1vbnN0cmF0aW9uIiwiR2VzcHLDpGNoc2VpbnN0aWVnIiwiUXVhbGlmaXppZXJ1bmciLCJIYXVwdHF1ZWxsZSIsIktvbnRha3RxdWVsbGUiLCJXZWl0ZXJlIFF1ZWxsZW4iLCJQcsO8ZmRhdHVtIg0KIkNhdGVybG92ZSIsIkhhbWJ1cmcgdW5kIFVtbGFuZCwgRGV1dHNjaGxhbmQiLCJOZWdpc3NhIEdob3JqYW5pIiwiSW5oYWJlcmluIHVuZCBHcsO8bmRlcmluIiwia29udGFrdEBjYXRlcmxvdmUuZGUiLCIrNDkgMTU3NyA1MDc2OTUwIiwiQ2F0ZXJsb3ZlIHBsYW50IEVpbmthdWYsIEvDvGNoZSB1bmQgTG9naXN0aWsgZsO8ciBqZWRlbiBBdWZ0cmFnIG5ldSB1bmQgcHJvZHV6aWVydCBhdWYgZGVuIFZlcmFuc3RhbHR1bmdzdGVybWluLiBEYXMgVW50ZXJuZWhtZW4gdmVyYmluZGV0IEZpbmdlcmZvb2QgdW5kIHBlcnNpc2NoZSBLw7xjaGU7IE5lZ2lzc2EgR2hvcmphbmkgaXN0IGRpZSB2ZXLDtmZmZW50bGljaHRlIEdyw7xuZGVyaW4uIiwiQnVzaW5lc3MtQW5nZWJvdGUgd2VyZGVuIG5hY2ggR8Okc3RlemFobCwgQWJsYXVmIHVuZCBCdWRnZXQgenVzYW1tZW5nZXN0ZWxsdC4gRGllIFdlYnNpdGUgbmVubnQgNDjigJM3MiBTdHVuZGVuIGbDvHIgZWluIGluZGl2aWR1ZWxsZXMgQW5nZWJvdCB1bmQgdmVyw7ZmZmVudGxpY2h0IGVpbiBkaXJla3RlcyBLb250YWt0cG9zdGZhY2guIiwiVm9yIGVpbmVtIG5ldWVuIEFuZ2Vib3Qga8O2bm50ZSBlaW4ga3VyemVyIEJsaWNrIGF1ZiB3aWVkZXJrZWhyZW5kZSBFaW5rYXVmc2FydGlrZWwgemVpZ2VuLCBvYiBkaWUgYmlzaGVyaWdlIFp1dGF0ZW5iYXNpcyBub2NoIHp1IGRlbiBqw7xuZ3N0ZW4gRWlua2F1ZnNwcmVpc2VuIHBhc3N0LiIsIkVpbiBmcmVpZ2VnZWJlbmVzIGZyw7xoZXJlcyBNZW7DvCB1bmQgZWluaWdlIGRhenVnZWjDtnJpZ2UgTGllZmVyYW50ZW5yZWNobnVuZ2VuIGFscyBHZXNwcsOkY2hzZ3J1bmRsYWdlIG5laG1lbi4gRHJlaSB0YXRzw6RjaGxpY2ggd2llZGVya2VocmVuZGUgQXJ0aWtlbCBuYWNoIGdsZWljaGVyIEVpbmhlaXQgdW5kIFNwZXppZmlrYXRpb24gdmVyZ2xlaWNoZW47IEJpbGxlZE9LcyBQcmVpc8O8YmVyc2ljaHQgdW50ZXJzdMO8dHp0IGRpZSBiZXN0ZWhlbmRlIEFuZ2Vib3Rza2Fsa3VsYXRpb24uIiwiR3V0ZW4gVGFnIEZyYXUgR2hvcmphbmksIFNpZSBwbGFuZW4gZGVuIEVpbmthdWYgZsO8ciBqZWRlcyBDYXRlcmluZyBuZXUuIFfDpHJlIGVpbmUga3VyemUgw5xiZXJzaWNodCBoaWxmcmVpY2gsIGRpZSB2b3IgZGVtIG7DpGNoc3RlbiBBbmdlYm90IGJlaSBkcmVpIHdpZWRlcmtlaHJlbmRlbiBadXRhdGVuIGRpZSBqw7xuZ3N0ZW4gRWlua2F1ZnNwcmVpc2UgbWl0IGRlbiBiaXNoZXJpZ2VuIHZlcmdsZWljaHQ/IElocmUgTWVuw7xhdXN3YWhsLCBIYWxhbC1Wb3JnYWJlbiB1bmQgcGVyc8O2bmxpY2hlIEthbGt1bGF0aW9uIGJsZWliZW4gbWHDn2dlYmxpY2guIiwiRXJzdCBrbMOkcmVuLCB3ZWxjaGUgQXJ0aWtlbCB0YXRzw6RjaGxpY2ggd2llZGVya2VocmVuIHVuZCBvYiBkaWUgRWlua2F1ZnNhdXN3ZXJ0dW5nIGJlcmVpdHMgYWJnZWRlY2t0IGlzdC4gWmVydGlmaXppZXJ0ZSB1bmQgYW5kZXJlIFF1YWxpdMOkdGVuIG5pY2h0IGFsbGVpbiB3ZWdlbiDDpGhubGljaGVyIEJlemVpY2hudW5nZW4gZ2xlaWNoc2V0emVuLiBLZWluZSBhdXRvbWF0aXNjaGUgUmV6ZXB0LSBvZGVyIEV2ZW50a2Fsa3VsYXRpb24gdmVyc3ByZWNoZW4uIiwiaHR0cHM6Ly93d3cuY2F0ZXJsb3ZlLmRlL2RlL2J1c2luZXNzLWNhdGVyaW5nIiwiaHR0cHM6Ly93d3cuY2F0ZXJsb3ZlLmRlL2RlL3VlYmVyLXVucyIsImh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS9kZS91ZWJlci11bnMiLCIyMDI2LTEwLTEzIg0KIkRpZSBrbGVpbmUgS2FudGluZSIsIkhhbWJ1cmctUmFobHN0ZWR0LCBEZXV0c2NobGFuZCIsIkdlc2Now6RmdHNmw7xocnVuZyAvIEvDvGNoZW50ZWFtIiwiQmV0cmllYnMtIG9kZXIgRWlua2F1ZnN2ZXJhbnR3b3J0bGljaGUiLCJrb250YWt0QGRpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZSIsIis0OSA0MCAzMDg1MzEwMCIsIkRpZSBrbGVpbmUgS2FudGluZSBrb2NodCB0w6RnbGljaCB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggdW5kIGJpZXRldCB6dXPDpHR6bGljaCBCdXNpbmVzcy0gdW5kIEV2ZW50LUNhdGVyaW5nLiBGbGVpc2NoLCBNb2xrZXJlaSwgT2JzdCB1bmQgR2Vtw7xzZSBrb21tZW4gbGF1dCBlaWdlbmVyIFNlaXRlIHZvbiBQYXJ0bmVybiBhdXMgSGFtYnVyZyB1bmQgVW1nZWJ1bmcuIiwiQ2F0ZXJpbmcgd2lyZCBwYXNzZW5kIHp1IEFubGFzcywgR8Okc3RlemFobCB1bmQgQnVkZ2V0IGFuZ2Vib3RlbjsgZGllIHZlcsO2ZmZlbnRsaWNodGUgS29udGFrdGFkcmVzc2UgZsO8aHJ0IHp1bSBUZWFtLiBEaWUgYmVpbSBBYnJ1ZiBzaWNodGJhcmUgV29jaGVua2FydGUgdHLDpGd0IGVpbiBTZXB0ZW1iZXJkYXR1bSB1bmQgd2lyZCBoaWVyIG5pY2h0IGFscyBha3R1ZWxsZXIgU3BlaXNlcGxhbiB2ZXJ3ZW5kZXQuIiwiRWluZSBnZW1laW5zYW1lIFByZWlzw7xiZXJzaWNodCB3aWVkZXJrZWhyZW5kZXIgWnV0YXRlbiBrw7ZubnRlIGRlbiBFaW5rYXVmIGbDvHIgTWl0dGFnc3Rpc2NoIHVuZCBDYXRlcmluZyB1bnRlcnN0w7x0emVuLCB3w6RocmVuZCBkaWUgdm9yaGFuZGVuZSBNZW7DvC0gdW5kIEFuZ2Vib3RzcGxhbnVuZyBiZXN0ZWhlbiBibGVpYnQuIiwiRWluZSBmcmVpZ2VnZWJlbmUgUmVjaG51bmdzcmVpaGUgZWluZXMgR2Vtw7xzZS0gb2RlciBNb2xrZXJlaXBhcnRuZXJzIGJldHJhY2h0ZW4uIERyZWkgd2llZGVya2VocmVuZGUgUG9zaXRpb25lbiBuYWNoIHZlcmdsZWljaGJhcmVyIEVpbmhlaXQgdW5kIFF1YWxpdMOkdCBzb3J0aWVyZW4gdW5kIGF1ZmbDpGxsaWdlIMOEbmRlcnVuZ2VuIGbDvHIgZGllIEvDvGNoZW5sZWl0dW5nIG1hcmtpZXJlbi4iLCJHdXRlbiBUYWcgYW4gZGFzIFRlYW0gZGVyIGtsZWluZW4gS2FudGluZSwgU2llIHZlcmJpbmRlbiB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggbWl0IENhdGVyaW5nIHVuZCBiZXppZWhlbiBadXRhdGVuIHZvbiByZWdpb25hbGVuIFBhcnRuZXJuLiBXw6RyZSBlaW4ga3VyemVyIFJlY2hudW5nc3ZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGJlaSBlaW5pZ2VuIHJlZ2VsbcOkw59pZyBnZWthdWZ0ZW4gQXJ0aWtlbG4gZGllIFByZWlzZW50d2lja2x1bmcgc2ljaHRiYXIgbWFjaHQgdW5kIElocmUgYmVzdGVoZW5kZSBNZW7DvHBsYW51bmcgZXJnw6RuenQ/IiwiRGVuIGhldXRpZ2VuIFJlY2hudW5ncy0gdW5kIEVpbmthdWZzcHJvemVzcyBzb3dpZSBkZW4genVzdMOkbmRpZ2VuIEFuc3ByZWNocGFydG5lciBmZXN0c3RlbGxlbi4gUmVnaW9uYWxlIEhlcmt1bmZ0IHVuZCBRdWFsaXTDpHQgYmxlaWJlbiBBdXN3YWhsa3JpdGVyaWVuLiBTY2h3YW5rZW5kZSBNZW5nZW4sIFNhaXNvbmFsaXTDpHQgdW5kIExpZWZlcmtvc3RlbiBnZXRyZW5udCB2b24gU3TDvGNrcHJlaXPDpG5kZXJ1bmdlbiBiZXRyYWNodGVuLiIsImh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlL21pdHRhZ3N0aXNjaC8iLCJodHRwczovL2RpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZS9jYXRlcmluZy8iLCJodHRwczovL2RpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZS9jYXRlcmluZy8gfCBodHRwczovL2RpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZS91YmVyLXVucy8iLCIyMDI2LTEwLTEzIg0KIkdhdW1lbmZyZXVuZGUgSGFtYnVyZyDigJMgQ2F0ZXJpbmcgJiBFdmVudHMiLCJIYW1idXJnLCBEZXV0c2NobGFuZCIsIkRhdmUgU3RlaW5oYXJkdCIsIkluaGFiZXIiLCJpbmZvQGdhdW1lbmZyZXVuZGUtaGFtYnVyZy5kZSIsIis0OSA0MCA1MDY4MDEyOSIsIkdhdW1lbmZyZXVuZGUgdmVyw7ZmZmVudGxpY2h0IGtvbmtyZXRlIEJ1c2luZXNzLUx1bmNoLU1lbsO8cyBtaXQgdW50ZXJzY2hpZWRsaWNoZW4gWnV0YXRlbiBzb3dpZSBCdWZmZXQtLCBCQlEtIHVuZCBGaW5nZXJmb29kLUFuZ2Vib3RlLiBEYXZlIFN0ZWluaGFyZHQgaXN0IGFscyBJbmhhYmVyIG1pdCBkaXJla3RlbSBVbnRlcm5laG1lbnNwb3N0ZmFjaCBhdWZnZWbDvGhydC4iLCJEaWUgV2Vic2l0ZSBiaWV0ZXQgZWluIEFuZnJhZ2Vmb3JtdWxhciB1bmQgcGVyc8O2bmxpY2hlIENhdGVyaW5nLVBsYW51bmcuIERpZSDDtmZmZW50bGljaCBnZW5hbm50ZW4gQmVpc3BpZWxtZW7DvHMgbGllZmVybiBlaW5lbiBrb25rcmV0ZW4gR2VzcHLDpGNoc2VpbnN0aWVnOyBBbmdlYm90c3ByZWlzZSBzb2xsdGVuIGFrdHVlbGwgYmVzdMOkdGlndCB3ZXJkZW4uIiwiV2llZGVya2VocmVuZGUgWnV0YXRlbiBhdXMgbWVocmVyZW4gVmVyYW5zdGFsdHVuZ3Nmb3JtYXRlbiBrw7ZubnRlbiBpbiBlaW5lbSBrbGVpbmVuIFJlY2hudW5nc3LDvGNrYmxpY2sgZ2VtZWluc2FtIGF1ZiBQcmVpc8OkbmRlcnVuZ2VuIGdlcHLDvGZ0IHdlcmRlbi4iLCJEcmVpIHRhdHPDpGNobGljaCByZWdlbG3DpMOfaWcgYmVzdGVsbHRlIEFydGlrZWwgYXVzIGZyw7xoZXJlbiBCdXNpbmVzcy1MdW5jaC1BdWZ0csOkZ2VuIHfDpGhsZW4uIFZlcmdsZWljaGJhcmUgUmVjaG51bmdzbWVuZ2VuIHVuZCBFaW5oZWl0ZW4gbmViZW5laW5hbmRlcnN0ZWxsZW47IGRpZSB2b3JoYW5kZW5lIE1lbsO8LSB1bmQgRXZlbnRrYWxrdWxhdGlvbiBibGVpYnQgZGFzIGbDvGhyZW5kZSBWZXJmYWhyZW4uIiwiR3V0ZW4gVGFnIEhlcnIgU3RlaW5oYXJkdCwgSWhyZSBCdXNpbmVzcy1MdW5jaC1NZW7DvHMgemVpZ2VuIGVpbmUga29ua3JldGUgQXVzd2FobCBhbiBadXRhdGVuLiBXw6RyZSBlaW4ga3VyemVyIFZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGFuaGFuZCBmcmVpZ2VnZWJlbmVyIExpZWZlcmFudGVucmVjaG51bmdlbiBkaWUgUHJlaXNlbnR3aWNrbHVuZyBlaW5pZ2VyIGRpZXNlciBBcnRpa2VsIG5hY2h2b2xsemllaGJhciBtYWNodCwgYmV2b3IgU2llIGRhcyBuw6RjaHN0ZSBpbmRpdmlkdWVsbGUgQW5nZWJvdCBrYWxrdWxpZXJlbj8iLCJXaWVkZXJob2x1bmdzZnJlcXVlbnogdW5kIGFrdHVlbGxlIEVpbmthdWZzc29mdHdhcmUgZXJmcmFnZW4uIEVpbmUgdmVyw7ZmZmVudGxpY2h0ZSBNZW7DvHNlaXRlIGJld2Vpc3Qgd2VkZXIgZWluZW4gS29zdGVuYW5zdGllZyBub2NoIHVuZ2VudXR6dGUgRWluc3BhcnVuZ2VuLiBGaXNjaC0sIEZsZWlzY2gtIHVuZCBhbmRlcmUgUXVhbGl0w6R0c3ZhcmlhbnRlbiBudXIgbmFjaCBmYWNobGljaGVyIEZyZWlnYWJlIHZlcmdsZWljaGVuLiIsImh0dHBzOi8vd3d3LmdhdW1lbmZyZXVuZGUtaGFtYnVyZy5kZS9ldmVudC1jYXRlcmluZy9idXNpbmVzcy1jYXRlcmluZy8iLCJodHRwczovL3d3dy5nYXVtZW5mcmV1bmRlLWhhbWJ1cmcuZGUvZXZlbnQtY2F0ZXJpbmcvYnVzaW5lc3MtY2F0ZXJpbmcvIiwiIiwiMjAyNi0xMC0xMyINCiJCYXJiYXJhcyBLw7xjaGUiLCJDYXRlcmluZyBmw7xyIEJlcmxpbjsgQ2Fmw6kgaW4gVHJlYm5pdHosIERldXRzY2hsYW5kIiwiQmFyYmFyYXMtS8O8Y2hlLVRlYW0iLCJLw7xjaGVuLSBvZGVyIEVpbmthdWZzdmVyYW50d29ydGxpY2hlIiwiaW5mb0BiYXJiYXJhc2t1ZWNoZS5kZSIsIis0OSAxNzIgNjg1NzE5MiIsIkJhcmJhcmFzIEvDvGNoZSBiZXNjaHJlaWJ0IHJlZ2lvbmFsZSB1bmQgc2Fpc29uYWxlIFNwZWlzZW4sIEJ1c2luZXNzLUNhdGVyaW5nIGFiIDQwIFBvcnRpb25lbiwgaGFuZGdlbWFjaHRlIE1hdWx0YXNjaGVuIHVuZCBlaW4gQ2Fmw6kgaW4gVHJlYm5pdHouIERhcyBVbnRlcm5laG1lbiB2ZXLDtmZmZW50bGljaHQgZWluIGRpcmVrdGVzIFBvc3RmYWNoIHVuZCBlaW5lIE1vYmlsbnVtbWVyLiIsIkNhdGVyaW5nIHdpcmQgZGlyZWt0IHBlciBFLU1haWwgYW5nZWZyYWd0LiBEaWUgZWlnZW5lIEhvbWVwYWdlIHZlcmJpbmRldCBkYXMgQ2F0ZXJpbmctQW5nZWJvdCBtaXQgZGVtIENhZsOpOyBkaWUgYWt0dWVsbGUgTGllZmVycmVnaW9uIGlzdCBpbSBlcnN0ZW4gR2VzcHLDpGNoIHp1IGJlc3TDpHRpZ2VuLiIsIkVpbiBrbGVpbmVyIFByZWlzcsO8Y2tibGljayBhdWYgWnV0YXRlbiBlaW5lcyBow6R1ZmlnIHByb2R1emllcnRlbiBHZXJpY2h0cyBrw7ZubnRlIGJlaSBkZXIgbsOkY2hzdGVuIENhdGVyaW5nLUthbGt1bGF0aW9uIGhlbGZlbiwgb2huZSBSZXplcHQgb2RlciByZWdpb25hbGUgQmVzY2hhZmZ1bmcgenUgdmVyw6RuZGVybi4iLCJGw7xyIGVpbiB0YXRzw6RjaGxpY2ggd2llZGVya2VocmVuZGVzIEdlcmljaHQgendlaSBiaXMgZHJlaSBadXRhdGVuIGF1c3fDpGhsZW4gdW5kIGVpbmUgZnJlaWdlZ2ViZW5lIFJlY2hudW5nc3NlcmllIGJldHJhY2h0ZW4uIEVyc3QgZ2xlaWNoZSBFaW5oZWl0ZW4sIE1lbmdlbmJhc2lzIHVuZCBadXRhdGVucXVhbGl0w6R0IGJlc3TDpHRpZ2VuOyBhbnNjaGxpZcOfZW5kIG51ciBkaWUgYmVvYmFjaHRldGUgUHJlaXNlbnR3aWNrbHVuZyB6ZWlnZW4uIiwiR3V0ZW4gVGFnIGFuIGRhcyBUZWFtIHZvbiBCYXJiYXJhcyBLw7xjaGUsIElocmUgaGFuZGdlbWFjaHRlbiBNYXVsdGFzY2hlbiB1bmQgZGFzIENhdGVyaW5nIGFiIDQwIFBvcnRpb25lbiBiaWV0ZW4gZWluZW4ga29ua3JldGVuIEFuc2F0eiBmw7xyIGVpbmVuIGtsZWluZW4gRWlua2F1ZnNwcmVpc3ZlcmdsZWljaC4gV8OkcmUgZWluZSDDnGJlcnNpY2h0IHp1IHdlbmlnZW4gcmVnZWxtw6TDn2lnIGdla2F1ZnRlbiBadXRhdGVuIGhpbGZyZWljaCwgYmV2b3IgU2llIGRhcyBuw6RjaHN0ZSBDYXRlcmluZy1BbmdlYm90IGthbGt1bGllcmVuPyIsIkFrdHVlbGxlbiBDYXRlcmluZy1CZXRyaWViLCBMaWVmZXJyZWdpb24gdW5kIEVudHNjaGVpZHVuZ3N2ZXJhbnR3b3J0bGljaGUgYmVzdMOkdGlnZW4uIFByw7xmZW4sIG9iIGRpZSB0YXRzw6RjaGxpY2hlIFJlY2hudW5nc21lbmdlIGVpbmVuIHp1c8OkdHpsaWNoZW4gQXVzd2VydHVuZ3NzY2hyaXR0IHJlY2h0ZmVydGlndC4gS2VpbmUgcGVyc29uZW5iZXpvZ2VuZW4gR8Okc3RlZGF0ZW4gb2RlciBBbGxlcmdpZWFuZ2FiZW4gZsO8ciBkaWUgTGllZmVyYW50ZW5hbmFseXNlIHZlcndlbmRlbi4iLCJodHRwczovL2JhcmJhcmFza3VlY2hlLmRlLyIsImh0dHBzOi8vYmFyYmFyYXNrdWVjaGUuZGUvIiwiaHR0cHM6Ly9iYXJiYXJhc2t1ZWNoZS5kZS9jYXRlcmluZy1iZXJsaW4vIiwiMjAyNi0xMC0xMyINCiJVTklLT1JOIENhdGVyaW5nICYgRXZlbnRzIiwiTcO8bmNoZW4sIERldXRzY2hsYW5kIiwiR2VvcmdlIEthbGxtYW4gLyBHYWJyaWVsbGEgRmV1ZXJtYW5uIiwiQmV0cmllYnNsZWl0ZXIgLyBHZXNjaMOkZnRzZsO8aHJlcmluIiwiaW5mb0B1bmlrb3JuY2F0ZXJpbmcuZGUiLCIrNDkgODkgNzg1OTc3MTUiLCJVTklLT1JOIGJpZXRldCBCw7xyby1DYXRlcmluZyBiaXMgenVyIHJlZ2VsbcOkw59pZ2VuIE1pdGFyYmVpdGVydmVycGZsZWd1bmcgc293aWUgZ3LDtsOfZXJlIFZlcmFuc3RhbHR1bmdlbi4gR2VvcmdlIEthbGxtYW4gaXN0IGFscyBCZXRyaWVic2xlaXRlciB1bmQgR2FicmllbGxhIEZldWVybWFubiBhbHMgR2VzY2jDpGZ0c2bDvGhyZXJpbiBnZW5hbm50LiBBbmZyYWdlbiB1bmQgQmVzdGVsbHVuZ2VuIHNpbmQgYmVyZWl0cyBtaXQgQ2F0ZXJzbWFydCB2ZXJrbsO8cGZ0LiIsIkRpZSBiZXN0ZWhlbmRlbiBDYXRlcnNtYXJ0LUJlc3RlbGwtIHVuZCBBbmZyYWdld2VnZSBibGVpYmVuIGVyaGFsdGVuLiBEYXMgdmVyw7ZmZmVudGxpY2h0ZSBhbGxnZW1laW5lIFBvc3RmYWNoIGthbm4gYW4gQmV0cmllYnNsZWl0dW5nIG9kZXIgRWlua2F1ZiB3ZWl0ZXJsZWl0ZW4uIiwiRWluZSBlcmfDpG56ZW5kZSBBdXN3ZXJ0dW5nIGZyZWlnZWdlYmVuZXIgTGllZmVyYW50ZW5yZWNobnVuZ2VuIGvDtm5udGUgd2llZGVya2VocmVuZGUgQXJ0aWtlbHByZWlzZSBmw7xyIELDvHJvdmVycGZsZWd1bmcgdW5kIFZlcmFuc3RhbHR1bmdlbiBzaWNodGJhciBtYWNoZW4uIiwiRWluZW4gcmVnZWxtw6TDn2lnIGdlbnV0enRlbiBMaWVmZXJhbnRlbiB1bmQgZWluaWdlIGVjaHRlIHdpZWRlcmtlaHJlbmRlIEFydGlrZWwgYXVzd8OkaGxlbi4gQmlsbGVkT0tzIFJlY2hudW5nc2F1c3dlcnR1bmcgbmViZW4gZGVtIGJlc3RlaGVuZGVuIEJlc3RlbGwtL0V2ZW50cHJvemVzcyB6ZWlnZW4gdW5kIHByw7xmZW4sIG9iIHNpZSB6dXPDpHR6bGljaGUgcmVsZXZhbnRlIEVya2VubnRuaXNzZSBsaWVmZXJ0LiIsIkd1dGVuIFRhZyBhbiBkaWUgVU5JS09STi1CZXRyaWVic2xlaXR1bmcsIFNpZSBiaWV0ZW4gcmVnZWxtw6TDn2lnZSBCw7xyb3ZlcnBmbGVndW5nIHVuZCBudXR6ZW4gYmVyZWl0cyBDYXRlcnNtYXJ0IGbDvHIgQW5mcmFnZW4gdW5kIEJlc3RlbGx1bmdlbi4gV8OkcmUgZWluIGFiZ2VncmVuenRlciBWZXJnbGVpY2ggdm9uIExpZWZlcmFudGVucmVjaG51bmdlbiBoaWxmcmVpY2gsIGRlciB3aWVkZXJrZWhyZW5kZSBBcnRpa2VscHJlaXNlIGVyZ8Okbnp0LCBvaG5lIElocmVuIGJlc3RlaGVuZGVuIEJlc3RlbGwtIHVuZCBFdmVudHByb3plc3MgdW16dXN0ZWxsZW4/IiwiWnVlcnN0IHZvcmhhbmRlbmUgRWlua2F1ZnMtLCBFUlAtIHVuZCBDYXRlcnNtYXJ0LUF1c3dlcnR1bmdlbiBrbMOkcmVuLiBOdXIgZWluZW4gdGF0c8OkY2hsaWNoIHp1c8OkdHpsaWNoZW4gTnV0emVuIGFuYmlldGVuOyBrZWluZSBkaXJla3RlIENhdGVyc21hcnQtSW50ZWdyYXRpb24gdm9yYXVzc2V0emVuLiBBdWZncnVuZCBkZXMgZ3LDtsOfZXJlbiBUZWFtcyBlaWduZXQgc2ljaCBlaW4ga2xhciBhYmdlZ3Jlbnp0ZXIgTGllZmVyYW50ZW4tUGlsb3QuIiwiaHR0cHM6Ly91bmlrb3JuY2F0ZXJpbmcuZGUvYnVlcm8tY2F0ZXJpbmctbXVlbmNoZW4vIiwiaHR0cHM6Ly91bmlrb3JuY2F0ZXJpbmcuZGUvZGFzLXRlYW0vIiwiaHR0cHM6Ly91bmlrb3JuY2F0ZXJpbmcuZGUvZGFzLXRlYW0vIiwiMjAyNi0xMC0xMyINCg==",
+        "bytes": 9016,
+        "sha256": "50153940a9b6faddb8daf171d4d31c33b73029a2ee8b1a0f1db65a5be1f0ef13"
+      },
+      "sha256": "f8bf67fa6d90f485102ed99c7c8a89d38c016f39b0a3faf7ae504cc4525b6a36",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-6-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid.md",
+        "title": "paid.md",
+        "description": "Vollständige zusätzliche Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "text/markdown",
+        "lead_ids": [
+          "billedok-caterlove-20261013",
+          "billedok-kleine-kantine-20261013",
+          "billedok-gaumenfreunde-20261013",
+          "billedok-barbaras-kueche-20261013",
+          "billedok-unikorn-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "IyBGw7xuZiB3ZWl0ZXJlIENhdGVyaW5nLUJldHJpZWJlIGbDvHIgQmlsbGVkT0sKClN0YW5kOiAxMy4gT2t0b2JlciAyMDI2LiBGw7xuZiB6dXPDpHR6bGljaGUgVW50ZXJuZWhtZW5zcHJvZmlsZSDCtyAyMCBVU0QgaW5zZ2VzYW10LgoKRGllIMO2ZmZlbnRsaWNoZW4gUXVlbGxlbiBiZWxlZ2VuIGRlbiBiZXNjaHJpZWJlbmVuIEJldHJpZWIgdW5kIHNlaW5lbiBBYmxhdWYuIERlciB2b3JnZXNjaGxhZ2VuZSBFaW5zYXR6IGlzdCBlaW5lIEdlc3Byw6RjaHNoeXBvdGhlc2U7IGRpZSBwYXNzZW5kZSBQZXJzb24gYmVzdMOkdGlndCBCZWRhcmYgdW5kIFZvcmdlaGVuLgoKIyMgQ2F0ZXJsb3ZlCgojIyMgUmVnaW9uCgpIYW1idXJnIHVuZCBVbWxhbmQsIERldXRzY2hsYW5kCgojIyMgR2VzY2jDpGZ0c2tvbnRha3QKCk5lZ2lzc2EgR2hvcmphbmkgwrcgSW5oYWJlcmluIHVuZCBHcsO8bmRlcmluCmtvbnRha3RAY2F0ZXJsb3ZlLmRlIMK3ICs0OSAxNTc3IDUwNzY5NTAKCiMjIyDDlmZmZW50bGljaCBiZW9iYWNodGV0ZXIgQWJsYXVmCgpDYXRlcmxvdmUgcGxhbnQgRWlua2F1ZiwgS8O8Y2hlIHVuZCBMb2dpc3RpayBmw7xyIGplZGVuIEF1ZnRyYWcgbmV1IHVuZCBwcm9kdXppZXJ0IGF1ZiBkZW4gVmVyYW5zdGFsdHVuZ3N0ZXJtaW4uIERhcyBVbnRlcm5laG1lbiB2ZXJiaW5kZXQgRmluZ2VyZm9vZCB1bmQgcGVyc2lzY2hlIEvDvGNoZTsgTmVnaXNzYSBHaG9yamFuaSBpc3QgZGllIHZlcsO2ZmZlbnRsaWNodGUgR3LDvG5kZXJpbi4KCiMjIyBCZXN0ZWhlbmRlciBQcm96ZXNzCgpCdXNpbmVzcy1BbmdlYm90ZSB3ZXJkZW4gbmFjaCBHw6RzdGV6YWhsLCBBYmxhdWYgdW5kIEJ1ZGdldCB6dXNhbW1lbmdlc3RlbGx0LiBEaWUgV2Vic2l0ZSBuZW5udCA0OOKAkzcyIFN0dW5kZW4gZsO8ciBlaW4gaW5kaXZpZHVlbGxlcyBBbmdlYm90IHVuZCB2ZXLDtmZmZW50bGljaHQgZWluIGRpcmVrdGVzIEtvbnRha3Rwb3N0ZmFjaC4KCiMjIyBNw7ZnbGljaGVyIEJpbGxlZE9LLUFuc2F0egoKVm9yIGVpbmVtIG5ldWVuIEFuZ2Vib3Qga8O2bm50ZSBlaW4ga3VyemVyIEJsaWNrIGF1ZiB3aWVkZXJrZWhyZW5kZSBFaW5rYXVmc2FydGlrZWwgemVpZ2VuLCBvYiBkaWUgYmlzaGVyaWdlIFp1dGF0ZW5iYXNpcyBub2NoIHp1IGRlbiBqw7xuZ3N0ZW4gRWlua2F1ZnNwcmVpc2VuIHBhc3N0LgoKIyMjIFZvcmdlc2NobGFnZW5lIGtsZWluZSBEZW1vbnN0cmF0aW9uCgpFaW4gZnJlaWdlZ2ViZW5lcyBmcsO8aGVyZXMgTWVuw7wgdW5kIGVpbmlnZSBkYXp1Z2Vow7ZyaWdlIExpZWZlcmFudGVucmVjaG51bmdlbiBhbHMgR2VzcHLDpGNoc2dydW5kbGFnZSBuZWhtZW4uIERyZWkgdGF0c8OkY2hsaWNoIHdpZWRlcmtlaHJlbmRlIEFydGlrZWwgbmFjaCBnbGVpY2hlciBFaW5oZWl0IHVuZCBTcGV6aWZpa2F0aW9uIHZlcmdsZWljaGVuOyBCaWxsZWRPS3MgUHJlaXPDvGJlcnNpY2h0IHVudGVyc3TDvHR6dCBkaWUgYmVzdGVoZW5kZSBBbmdlYm90c2thbGt1bGF0aW9uLgoKIyMjIFZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnCgpHdXRlbiBUYWcgRnJhdSBHaG9yamFuaSwgU2llIHBsYW5lbiBkZW4gRWlua2F1ZiBmw7xyIGplZGVzIENhdGVyaW5nIG5ldS4gV8OkcmUgZWluZSBrdXJ6ZSDDnGJlcnNpY2h0IGhpbGZyZWljaCwgZGllIHZvciBkZW0gbsOkY2hzdGVuIEFuZ2Vib3QgYmVpIGRyZWkgd2llZGVya2VocmVuZGVuIFp1dGF0ZW4gZGllIGrDvG5nc3RlbiBFaW5rYXVmc3ByZWlzZSBtaXQgZGVuIGJpc2hlcmlnZW4gdmVyZ2xlaWNodD8gSWhyZSBNZW7DvGF1c3dhaGwsIEhhbGFsLVZvcmdhYmVuIHVuZCBwZXJzw7ZubGljaGUgS2Fsa3VsYXRpb24gYmxlaWJlbiBtYcOfZ2VibGljaC4KCiMjIyBWb3IgZGVtIFZlcnN1Y2gga2zDpHJlbgoKRXJzdCBrbMOkcmVuLCB3ZWxjaGUgQXJ0aWtlbCB0YXRzw6RjaGxpY2ggd2llZGVya2VocmVuIHVuZCBvYiBkaWUgRWlua2F1ZnNhdXN3ZXJ0dW5nIGJlcmVpdHMgYWJnZWRlY2t0IGlzdC4gWmVydGlmaXppZXJ0ZSB1bmQgYW5kZXJlIFF1YWxpdMOkdGVuIG5pY2h0IGFsbGVpbiB3ZWdlbiDDpGhubGljaGVyIEJlemVpY2hudW5nZW4gZ2xlaWNoc2V0emVuLiBLZWluZSBhdXRvbWF0aXNjaGUgUmV6ZXB0LSBvZGVyIEV2ZW50a2Fsa3VsYXRpb24gdmVyc3ByZWNoZW4uCgojIyMgT3JpZ2luYWxxdWVsbGVuCgotIGh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS9kZS9idXNpbmVzcy1jYXRlcmluZwotIGh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS9kZS91ZWJlci11bnMKCkdlcHLDvGZ0OiAyMDI2LTEwLTEzCgotLS0KCiMjIERpZSBrbGVpbmUgS2FudGluZQoKIyMjIFJlZ2lvbgoKSGFtYnVyZy1SYWhsc3RlZHQsIERldXRzY2hsYW5kCgojIyMgR2VzY2jDpGZ0c2tvbnRha3QKCkdlc2Now6RmdHNmw7xocnVuZyAvIEvDvGNoZW50ZWFtIMK3IEJldHJpZWJzLSBvZGVyIEVpbmthdWZzdmVyYW50d29ydGxpY2hlCmtvbnRha3RAZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlIMK3ICs0OSA0MCAzMDg1MzEwMAoKIyMjIMOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWYKCkRpZSBrbGVpbmUgS2FudGluZSBrb2NodCB0w6RnbGljaCB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggdW5kIGJpZXRldCB6dXPDpHR6bGljaCBCdXNpbmVzcy0gdW5kIEV2ZW50LUNhdGVyaW5nLiBGbGVpc2NoLCBNb2xrZXJlaSwgT2JzdCB1bmQgR2Vtw7xzZSBrb21tZW4gbGF1dCBlaWdlbmVyIFNlaXRlIHZvbiBQYXJ0bmVybiBhdXMgSGFtYnVyZyB1bmQgVW1nZWJ1bmcuCgojIyMgQmVzdGVoZW5kZXIgUHJvemVzcwoKQ2F0ZXJpbmcgd2lyZCBwYXNzZW5kIHp1IEFubGFzcywgR8Okc3RlemFobCB1bmQgQnVkZ2V0IGFuZ2Vib3RlbjsgZGllIHZlcsO2ZmZlbnRsaWNodGUgS29udGFrdGFkcmVzc2UgZsO8aHJ0IHp1bSBUZWFtLiBEaWUgYmVpbSBBYnJ1ZiBzaWNodGJhcmUgV29jaGVua2FydGUgdHLDpGd0IGVpbiBTZXB0ZW1iZXJkYXR1bSB1bmQgd2lyZCBoaWVyIG5pY2h0IGFscyBha3R1ZWxsZXIgU3BlaXNlcGxhbiB2ZXJ3ZW5kZXQuCgojIyMgTcO2Z2xpY2hlciBCaWxsZWRPSy1BbnNhdHoKCkVpbmUgZ2VtZWluc2FtZSBQcmVpc8O8YmVyc2ljaHQgd2llZGVya2VocmVuZGVyIFp1dGF0ZW4ga8O2bm50ZSBkZW4gRWlua2F1ZiBmw7xyIE1pdHRhZ3N0aXNjaCB1bmQgQ2F0ZXJpbmcgdW50ZXJzdMO8dHplbiwgd8OkaHJlbmQgZGllIHZvcmhhbmRlbmUgTWVuw7wtIHVuZCBBbmdlYm90c3BsYW51bmcgYmVzdGVoZW4gYmxlaWJ0LgoKIyMjIFZvcmdlc2NobGFnZW5lIGtsZWluZSBEZW1vbnN0cmF0aW9uCgpFaW5lIGZyZWlnZWdlYmVuZSBSZWNobnVuZ3NyZWloZSBlaW5lcyBHZW3DvHNlLSBvZGVyIE1vbGtlcmVpcGFydG5lcnMgYmV0cmFjaHRlbi4gRHJlaSB3aWVkZXJrZWhyZW5kZSBQb3NpdGlvbmVuIG5hY2ggdmVyZ2xlaWNoYmFyZXIgRWluaGVpdCB1bmQgUXVhbGl0w6R0IHNvcnRpZXJlbiB1bmQgYXVmZsOkbGxpZ2Ugw4RuZGVydW5nZW4gZsO8ciBkaWUgS8O8Y2hlbmxlaXR1bmcgbWFya2llcmVuLgoKIyMjIFZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnCgpHdXRlbiBUYWcgYW4gZGFzIFRlYW0gZGVyIGtsZWluZW4gS2FudGluZSwgU2llIHZlcmJpbmRlbiB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggbWl0IENhdGVyaW5nIHVuZCBiZXppZWhlbiBadXRhdGVuIHZvbiByZWdpb25hbGVuIFBhcnRuZXJuLiBXw6RyZSBlaW4ga3VyemVyIFJlY2hudW5nc3ZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGJlaSBlaW5pZ2VuIHJlZ2VsbcOkw59pZyBnZWthdWZ0ZW4gQXJ0aWtlbG4gZGllIFByZWlzZW50d2lja2x1bmcgc2ljaHRiYXIgbWFjaHQgdW5kIElocmUgYmVzdGVoZW5kZSBNZW7DvHBsYW51bmcgZXJnw6RuenQ/CgojIyMgVm9yIGRlbSBWZXJzdWNoIGtsw6RyZW4KCkRlbiBoZXV0aWdlbiBSZWNobnVuZ3MtIHVuZCBFaW5rYXVmc3Byb3plc3Mgc293aWUgZGVuIHp1c3TDpG5kaWdlbiBBbnNwcmVjaHBhcnRuZXIgZmVzdHN0ZWxsZW4uIFJlZ2lvbmFsZSBIZXJrdW5mdCB1bmQgUXVhbGl0w6R0IGJsZWliZW4gQXVzd2FobGtyaXRlcmllbi4gU2Nod2Fua2VuZGUgTWVuZ2VuLCBTYWlzb25hbGl0w6R0IHVuZCBMaWVmZXJrb3N0ZW4gZ2V0cmVubnQgdm9uIFN0w7xja3ByZWlzw6RuZGVydW5nZW4gYmV0cmFjaHRlbi4KCiMjIyBPcmlnaW5hbHF1ZWxsZW4KCi0gaHR0cHM6Ly9kaWVrbGVpbmVrYW50aW5lLWhhbWJ1cmcuZGUvbWl0dGFnc3Rpc2NoLwotIGh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlL2NhdGVyaW5nLwotIGh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlL3ViZXItdW5zLwoKR2VwcsO8ZnQ6IDIwMjYtMTAtMTMKCi0tLQoKIyMgR2F1bWVuZnJldW5kZSBIYW1idXJnIOKAkyBDYXRlcmluZyAmIEV2ZW50cwoKIyMjIFJlZ2lvbgoKSGFtYnVyZywgRGV1dHNjaGxhbmQKCiMjIyBHZXNjaMOkZnRza29udGFrdAoKRGF2ZSBTdGVpbmhhcmR0IMK3IEluaGFiZXIKaW5mb0BnYXVtZW5mcmV1bmRlLWhhbWJ1cmcuZGUgwrcgKzQ5IDQwIDUwNjgwMTI5CgojIyMgw5ZmZmVudGxpY2ggYmVvYmFjaHRldGVyIEFibGF1ZgoKR2F1bWVuZnJldW5kZSB2ZXLDtmZmZW50bGljaHQga29ua3JldGUgQnVzaW5lc3MtTHVuY2gtTWVuw7xzIG1pdCB1bnRlcnNjaGllZGxpY2hlbiBadXRhdGVuIHNvd2llIEJ1ZmZldC0sIEJCUS0gdW5kIEZpbmdlcmZvb2QtQW5nZWJvdGUuIERhdmUgU3RlaW5oYXJkdCBpc3QgYWxzIEluaGFiZXIgbWl0IGRpcmVrdGVtIFVudGVybmVobWVuc3Bvc3RmYWNoIGF1ZmdlZsO8aHJ0LgoKIyMjIEJlc3RlaGVuZGVyIFByb3plc3MKCkRpZSBXZWJzaXRlIGJpZXRldCBlaW4gQW5mcmFnZWZvcm11bGFyIHVuZCBwZXJzw7ZubGljaGUgQ2F0ZXJpbmctUGxhbnVuZy4gRGllIMO2ZmZlbnRsaWNoIGdlbmFubnRlbiBCZWlzcGllbG1lbsO8cyBsaWVmZXJuIGVpbmVuIGtvbmtyZXRlbiBHZXNwcsOkY2hzZWluc3RpZWc7IEFuZ2Vib3RzcHJlaXNlIHNvbGx0ZW4gYWt0dWVsbCBiZXN0w6R0aWd0IHdlcmRlbi4KCiMjIyBNw7ZnbGljaGVyIEJpbGxlZE9LLUFuc2F0egoKV2llZGVya2VocmVuZGUgWnV0YXRlbiBhdXMgbWVocmVyZW4gVmVyYW5zdGFsdHVuZ3Nmb3JtYXRlbiBrw7ZubnRlbiBpbiBlaW5lbSBrbGVpbmVuIFJlY2hudW5nc3LDvGNrYmxpY2sgZ2VtZWluc2FtIGF1ZiBQcmVpc8OkbmRlcnVuZ2VuIGdlcHLDvGZ0IHdlcmRlbi4KCiMjIyBWb3JnZXNjaGxhZ2VuZSBrbGVpbmUgRGVtb25zdHJhdGlvbgoKRHJlaSB0YXRzw6RjaGxpY2ggcmVnZWxtw6TDn2lnIGJlc3RlbGx0ZSBBcnRpa2VsIGF1cyBmcsO8aGVyZW4gQnVzaW5lc3MtTHVuY2gtQXVmdHLDpGdlbiB3w6RobGVuLiBWZXJnbGVpY2hiYXJlIFJlY2hudW5nc21lbmdlbiB1bmQgRWluaGVpdGVuIG5lYmVuZWluYW5kZXJzdGVsbGVuOyBkaWUgdm9yaGFuZGVuZSBNZW7DvC0gdW5kIEV2ZW50a2Fsa3VsYXRpb24gYmxlaWJ0IGRhcyBmw7xocmVuZGUgVmVyZmFocmVuLgoKIyMjIFZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnCgpHdXRlbiBUYWcgSGVyciBTdGVpbmhhcmR0LCBJaHJlIEJ1c2luZXNzLUx1bmNoLU1lbsO8cyB6ZWlnZW4gZWluZSBrb25rcmV0ZSBBdXN3YWhsIGFuIFp1dGF0ZW4uIFfDpHJlIGVpbiBrdXJ6ZXIgVmVyZ2xlaWNoIGludGVyZXNzYW50LCBkZXIgYW5oYW5kIGZyZWlnZWdlYmVuZXIgTGllZmVyYW50ZW5yZWNobnVuZ2VuIGRpZSBQcmVpc2VudHdpY2tsdW5nIGVpbmlnZXIgZGllc2VyIEFydGlrZWwgbmFjaHZvbGx6aWVoYmFyIG1hY2h0LCBiZXZvciBTaWUgZGFzIG7DpGNoc3RlIGluZGl2aWR1ZWxsZSBBbmdlYm90IGthbGt1bGllcmVuPwoKIyMjIFZvciBkZW0gVmVyc3VjaCBrbMOkcmVuCgpXaWVkZXJob2x1bmdzZnJlcXVlbnogdW5kIGFrdHVlbGxlIEVpbmthdWZzc29mdHdhcmUgZXJmcmFnZW4uIEVpbmUgdmVyw7ZmZmVudGxpY2h0ZSBNZW7DvHNlaXRlIGJld2Vpc3Qgd2VkZXIgZWluZW4gS29zdGVuYW5zdGllZyBub2NoIHVuZ2VudXR6dGUgRWluc3BhcnVuZ2VuLiBGaXNjaC0sIEZsZWlzY2gtIHVuZCBhbmRlcmUgUXVhbGl0w6R0c3ZhcmlhbnRlbiBudXIgbmFjaCBmYWNobGljaGVyIEZyZWlnYWJlIHZlcmdsZWljaGVuLgoKIyMjIE9yaWdpbmFscXVlbGxlbgoKLSBodHRwczovL3d3dy5nYXVtZW5mcmV1bmRlLWhhbWJ1cmcuZGUvZXZlbnQtY2F0ZXJpbmcvYnVzaW5lc3MtY2F0ZXJpbmcvCgpHZXByw7xmdDogMjAyNi0xMC0xMwoKLS0tCgojIyBCYXJiYXJhcyBLw7xjaGUKCiMjIyBSZWdpb24KCkNhdGVyaW5nIGbDvHIgQmVybGluOyBDYWbDqSBpbiBUcmVibml0eiwgRGV1dHNjaGxhbmQKCiMjIyBHZXNjaMOkZnRza29udGFrdAoKQmFyYmFyYXMtS8O8Y2hlLVRlYW0gwrcgS8O8Y2hlbi0gb2RlciBFaW5rYXVmc3ZlcmFudHdvcnRsaWNoZQppbmZvQGJhcmJhcmFza3VlY2hlLmRlIMK3ICs0OSAxNzIgNjg1NzE5MgoKIyMjIMOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWYKCkJhcmJhcmFzIEvDvGNoZSBiZXNjaHJlaWJ0IHJlZ2lvbmFsZSB1bmQgc2Fpc29uYWxlIFNwZWlzZW4sIEJ1c2luZXNzLUNhdGVyaW5nIGFiIDQwIFBvcnRpb25lbiwgaGFuZGdlbWFjaHRlIE1hdWx0YXNjaGVuIHVuZCBlaW4gQ2Fmw6kgaW4gVHJlYm5pdHouIERhcyBVbnRlcm5laG1lbiB2ZXLDtmZmZW50bGljaHQgZWluIGRpcmVrdGVzIFBvc3RmYWNoIHVuZCBlaW5lIE1vYmlsbnVtbWVyLgoKIyMjIEJlc3RlaGVuZGVyIFByb3plc3MKCkNhdGVyaW5nIHdpcmQgZGlyZWt0IHBlciBFLU1haWwgYW5nZWZyYWd0LiBEaWUgZWlnZW5lIEhvbWVwYWdlIHZlcmJpbmRldCBkYXMgQ2F0ZXJpbmctQW5nZWJvdCBtaXQgZGVtIENhZsOpOyBkaWUgYWt0dWVsbGUgTGllZmVycmVnaW9uIGlzdCBpbSBlcnN0ZW4gR2VzcHLDpGNoIHp1IGJlc3TDpHRpZ2VuLgoKIyMjIE3DtmdsaWNoZXIgQmlsbGVkT0stQW5zYXR6CgpFaW4ga2xlaW5lciBQcmVpc3LDvGNrYmxpY2sgYXVmIFp1dGF0ZW4gZWluZXMgaMOkdWZpZyBwcm9kdXppZXJ0ZW4gR2VyaWNodHMga8O2bm50ZSBiZWkgZGVyIG7DpGNoc3RlbiBDYXRlcmluZy1LYWxrdWxhdGlvbiBoZWxmZW4sIG9obmUgUmV6ZXB0IG9kZXIgcmVnaW9uYWxlIEJlc2NoYWZmdW5nIHp1IHZlcsOkbmRlcm4uCgojIyMgVm9yZ2VzY2hsYWdlbmUga2xlaW5lIERlbW9uc3RyYXRpb24KCkbDvHIgZWluIHRhdHPDpGNobGljaCB3aWVkZXJrZWhyZW5kZXMgR2VyaWNodCB6d2VpIGJpcyBkcmVpIFp1dGF0ZW4gYXVzd8OkaGxlbiB1bmQgZWluZSBmcmVpZ2VnZWJlbmUgUmVjaG51bmdzc2VyaWUgYmV0cmFjaHRlbi4gRXJzdCBnbGVpY2hlIEVpbmhlaXRlbiwgTWVuZ2VuYmFzaXMgdW5kIFp1dGF0ZW5xdWFsaXTDpHQgYmVzdMOkdGlnZW47IGFuc2NobGllw59lbmQgbnVyIGRpZSBiZW9iYWNodGV0ZSBQcmVpc2VudHdpY2tsdW5nIHplaWdlbi4KCiMjIyBWb3JiZXJlaXRldGVyIEdlc3Byw6RjaHNlaW5zdGllZwoKR3V0ZW4gVGFnIGFuIGRhcyBUZWFtIHZvbiBCYXJiYXJhcyBLw7xjaGUsIElocmUgaGFuZGdlbWFjaHRlbiBNYXVsdGFzY2hlbiB1bmQgZGFzIENhdGVyaW5nIGFiIDQwIFBvcnRpb25lbiBiaWV0ZW4gZWluZW4ga29ua3JldGVuIEFuc2F0eiBmw7xyIGVpbmVuIGtsZWluZW4gRWlua2F1ZnNwcmVpc3ZlcmdsZWljaC4gV8OkcmUgZWluZSDDnGJlcnNpY2h0IHp1IHdlbmlnZW4gcmVnZWxtw6TDn2lnIGdla2F1ZnRlbiBadXRhdGVuIGhpbGZyZWljaCwgYmV2b3IgU2llIGRhcyBuw6RjaHN0ZSBDYXRlcmluZy1BbmdlYm90IGthbGt1bGllcmVuPwoKIyMjIFZvciBkZW0gVmVyc3VjaCBrbMOkcmVuCgpBa3R1ZWxsZW4gQ2F0ZXJpbmctQmV0cmllYiwgTGllZmVycmVnaW9uIHVuZCBFbnRzY2hlaWR1bmdzdmVyYW50d29ydGxpY2hlIGJlc3TDpHRpZ2VuLiBQcsO8ZmVuLCBvYiBkaWUgdGF0c8OkY2hsaWNoZSBSZWNobnVuZ3NtZW5nZSBlaW5lbiB6dXPDpHR6bGljaGVuIEF1c3dlcnR1bmdzc2Nocml0dCByZWNodGZlcnRpZ3QuIEtlaW5lIHBlcnNvbmVuYmV6b2dlbmVuIEfDpHN0ZWRhdGVuIG9kZXIgQWxsZXJnaWVhbmdhYmVuIGbDvHIgZGllIExpZWZlcmFudGVuYW5hbHlzZSB2ZXJ3ZW5kZW4uCgojIyMgT3JpZ2luYWxxdWVsbGVuCgotIGh0dHBzOi8vYmFyYmFyYXNrdWVjaGUuZGUvCi0gaHR0cHM6Ly9iYXJiYXJhc2t1ZWNoZS5kZS9jYXRlcmluZy1iZXJsaW4vCgpHZXByw7xmdDogMjAyNi0xMC0xMwoKLS0tCgojIyBVTklLT1JOIENhdGVyaW5nICYgRXZlbnRzCgojIyMgUmVnaW9uCgpNw7xuY2hlbiwgRGV1dHNjaGxhbmQKCiMjIyBHZXNjaMOkZnRza29udGFrdAoKR2VvcmdlIEthbGxtYW4gLyBHYWJyaWVsbGEgRmV1ZXJtYW5uIMK3IEJldHJpZWJzbGVpdGVyIC8gR2VzY2jDpGZ0c2bDvGhyZXJpbgppbmZvQHVuaWtvcm5jYXRlcmluZy5kZSDCtyArNDkgODkgNzg1OTc3MTUKCiMjIyDDlmZmZW50bGljaCBiZW9iYWNodGV0ZXIgQWJsYXVmCgpVTklLT1JOIGJpZXRldCBCw7xyby1DYXRlcmluZyBiaXMgenVyIHJlZ2VsbcOkw59pZ2VuIE1pdGFyYmVpdGVydmVycGZsZWd1bmcgc293aWUgZ3LDtsOfZXJlIFZlcmFuc3RhbHR1bmdlbi4gR2VvcmdlIEthbGxtYW4gaXN0IGFscyBCZXRyaWVic2xlaXRlciB1bmQgR2FicmllbGxhIEZldWVybWFubiBhbHMgR2VzY2jDpGZ0c2bDvGhyZXJpbiBnZW5hbm50LiBBbmZyYWdlbiB1bmQgQmVzdGVsbHVuZ2VuIHNpbmQgYmVyZWl0cyBtaXQgQ2F0ZXJzbWFydCB2ZXJrbsO8cGZ0LgoKIyMjIEJlc3RlaGVuZGVyIFByb3plc3MKCkRpZSBiZXN0ZWhlbmRlbiBDYXRlcnNtYXJ0LUJlc3RlbGwtIHVuZCBBbmZyYWdld2VnZSBibGVpYmVuIGVyaGFsdGVuLiBEYXMgdmVyw7ZmZmVudGxpY2h0ZSBhbGxnZW1laW5lIFBvc3RmYWNoIGthbm4gYW4gQmV0cmllYnNsZWl0dW5nIG9kZXIgRWlua2F1ZiB3ZWl0ZXJsZWl0ZW4uCgojIyMgTcO2Z2xpY2hlciBCaWxsZWRPSy1BbnNhdHoKCkVpbmUgZXJnw6RuemVuZGUgQXVzd2VydHVuZyBmcmVpZ2VnZWJlbmVyIExpZWZlcmFudGVucmVjaG51bmdlbiBrw7ZubnRlIHdpZWRlcmtlaHJlbmRlIEFydGlrZWxwcmVpc2UgZsO8ciBCw7xyb3ZlcnBmbGVndW5nIHVuZCBWZXJhbnN0YWx0dW5nZW4gc2ljaHRiYXIgbWFjaGVuLgoKIyMjIFZvcmdlc2NobGFnZW5lIGtsZWluZSBEZW1vbnN0cmF0aW9uCgpFaW5lbiByZWdlbG3DpMOfaWcgZ2VudXR6dGVuIExpZWZlcmFudGVuIHVuZCBlaW5pZ2UgZWNodGUgd2llZGVya2VocmVuZGUgQXJ0aWtlbCBhdXN3w6RobGVuLiBCaWxsZWRPS3MgUmVjaG51bmdzYXVzd2VydHVuZyBuZWJlbiBkZW0gYmVzdGVoZW5kZW4gQmVzdGVsbC0vRXZlbnRwcm96ZXNzIHplaWdlbiB1bmQgcHLDvGZlbiwgb2Igc2llIHp1c8OkdHpsaWNoZSByZWxldmFudGUgRXJrZW5udG5pc3NlIGxpZWZlcnQuCgojIyMgVm9yYmVyZWl0ZXRlciBHZXNwcsOkY2hzZWluc3RpZWcKCkd1dGVuIFRhZyBhbiBkaWUgVU5JS09STi1CZXRyaWVic2xlaXR1bmcsIFNpZSBiaWV0ZW4gcmVnZWxtw6TDn2lnZSBCw7xyb3ZlcnBmbGVndW5nIHVuZCBudXR6ZW4gYmVyZWl0cyBDYXRlcnNtYXJ0IGbDvHIgQW5mcmFnZW4gdW5kIEJlc3RlbGx1bmdlbi4gV8OkcmUgZWluIGFiZ2VncmVuenRlciBWZXJnbGVpY2ggdm9uIExpZWZlcmFudGVucmVjaG51bmdlbiBoaWxmcmVpY2gsIGRlciB3aWVkZXJrZWhyZW5kZSBBcnRpa2VscHJlaXNlIGVyZ8Okbnp0LCBvaG5lIElocmVuIGJlc3RlaGVuZGVuIEJlc3RlbGwtIHVuZCBFdmVudHByb3plc3MgdW16dXN0ZWxsZW4/CgojIyMgVm9yIGRlbSBWZXJzdWNoIGtsw6RyZW4KClp1ZXJzdCB2b3JoYW5kZW5lIEVpbmthdWZzLSwgRVJQLSB1bmQgQ2F0ZXJzbWFydC1BdXN3ZXJ0dW5nZW4ga2zDpHJlbi4gTnVyIGVpbmVuIHRhdHPDpGNobGljaCB6dXPDpHR6bGljaGVuIE51dHplbiBhbmJpZXRlbjsga2VpbmUgZGlyZWt0ZSBDYXRlcnNtYXJ0LUludGVncmF0aW9uIHZvcmF1c3NldHplbi4gQXVmZ3J1bmQgZGVzIGdyw7bDn2VyZW4gVGVhbXMgZWlnbmV0IHNpY2ggZWluIGtsYXIgYWJnZWdyZW56dGVyIExpZWZlcmFudGVuLVBpbG90LgoKIyMjIE9yaWdpbmFscXVlbGxlbgoKLSBodHRwczovL3VuaWtvcm5jYXRlcmluZy5kZS9idWVyby1jYXRlcmluZy1tdWVuY2hlbi8KLSBodHRwczovL3VuaWtvcm5jYXRlcmluZy5kZS9kYXMtdGVhbS8KCkdlcHLDvGZ0OiAyMDI2LTEwLTEzCg==",
+        "bytes": 10177,
+        "sha256": "20ee6e65908a3ded44ef93998c22612c998612d7d6a9387760baefca48264c89"
+      },
+      "sha256": "dc92e1fb2c09717da7ffd232fde857f49a0d5c50bef94c5b722988dc94eb0bbb",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-7-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid.html",
+        "title": "paid.html",
+        "description": "Vollständige zusätzliche Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "text/html",
+        "lead_ids": [
+          "billedok-caterlove-20261013",
+          "billedok-kleine-kantine-20261013",
+          "billedok-gaumenfreunde-20261013",
+          "billedok-barbaras-kueche-20261013",
+          "billedok-unikorn-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "PCFkb2N0eXBlIGh0bWw+CjxodG1sIGxhbmc9ImRlIj48aGVhZD48bWV0YSBjaGFyc2V0PSJ1dGYtOCI+PG1ldGEgbmFtZT0idmlld3BvcnQiIGNvbnRlbnQ9IndpZHRoPWRldmljZS13aWR0aCxpbml0aWFsLXNjYWxlPTEiPjx0aXRsZT5Gw7xuZiB3ZWl0ZXJlIENhdGVyaW5nLUJldHJpZWJlIGbDvHIgQmlsbGVkT0s8L3RpdGxlPjxzdHlsZT4qLCo6YmVmb3JlLCo6YWZ0ZXJ7Ym94LXNpemluZzpib3JkZXItYm94fWJvZHl7bWFyZ2luOjA7YmFja2dyb3VuZDojZjRmNGY0O2NvbG9yOiMyMjI7Zm9udDoxNnB4LzEuNiBzeXN0ZW0tdWksLWFwcGxlLXN5c3RlbSxTZWdvZSBVSSxzYW5zLXNlcmlmfW1haW57bWF4LXdpZHRoOjk4MHB4O21hcmdpbjphdXRvO3BhZGRpbmc6MzZweCAyNHB4fWgxe2ZvbnQtc2l6ZTozMHB4O2xpbmUtaGVpZ2h0OjEuMjttYXJnaW46MCAwIDE4cHh9aDJ7Zm9udC1zaXplOjI0cHg7bGluZS1oZWlnaHQ6MS4zO21hcmdpbjowIDAgMThweH1oM3tmb250LXNpemU6MTZweDtsaW5lLWhlaWdodDoxLjQ7bWFyZ2luOjIycHggMCA2cHh9cHttYXJnaW46MCAwIDE0cHg7d2hpdGUtc3BhY2U6cHJlLWxpbmV9YXtjb2xvcjojMjIyO3RleHQtZGVjb3JhdGlvbjp1bmRlcmxpbmU7b3ZlcmZsb3ctd3JhcDphbnl3aGVyZX1oZWFkZXIsYXJ0aWNsZXtiYWNrZ3JvdW5kOndoaXRlO2JvcmRlcjoxcHggc29saWQgI2M1YzVjNTtwYWRkaW5nOjI2cHg7bWFyZ2luOjAgMCAyNHB4fW5hdnttYXJnaW46MjJweCAwfW5hdiBhe2Rpc3BsYXk6YmxvY2s7cGFkZGluZzo2cHggMH11bHtwYWRkaW5nLWxlZnQ6MjJweH1saXttYXJnaW46OHB4IDB9Lm9wZW5pbmd7Ym9yZGVyLWxlZnQ6M3B4IHNvbGlkICM3Nzc7YmFja2dyb3VuZDojZjRmNGY0O3BhZGRpbmc6MTZweH0ubWV0YXtjb2xvcjojNDg0ODQ4O2ZvbnQtc2l6ZToxNHB4fWZvb3Rlcntib3JkZXItdG9wOjFweCBzb2xpZCAjYmJiO3BhZGRpbmctdG9wOjIwcHh9QG1lZGlhKG1heC13aWR0aDo2MDBweCl7bWFpbntwYWRkaW5nOjE2cHggMTJweH1oZWFkZXIsYXJ0aWNsZXtwYWRkaW5nOjIwcHggMTZweH1oMXtmb250LXNpemU6MjVweH1oMntmb250LXNpemU6MjJweH19QG1lZGlhIHByaW50e2JvZHl7YmFja2dyb3VuZDp3aGl0ZX1tYWlue21heC13aWR0aDpub25lO3BhZGRpbmc6MH1uYXZ7ZGlzcGxheTpub25lfWFydGljbGV7YnJlYWstaW5zaWRlOmF2b2lkfWF7Y29sb3I6IzIyMn19PC9zdHlsZT48L2hlYWQ+PGJvZHk+PG1haW4+PGhlYWRlcj48cCBjbGFzcz0ibWV0YSI+QmlsbGVkT0sgwrcgUmVjaGVyY2hlIHZvbSAxMy4gT2t0b2JlciAyMDI2PC9wPjxoMT5Gw7xuZiB3ZWl0ZXJlIENhdGVyaW5nLUJldHJpZWJlIGbDvHIgQmlsbGVkT0s8L2gxPjxwPkbDvG5mIHp1c8OkdHpsaWNoZSBVbnRlcm5laG1lbnNwcm9maWxlIMK3IDIwIFVTRCBpbnNnZXNhbXQuPC9wPjxwPkRpZSDDtmZmZW50bGljaGVuIFF1ZWxsZW4gYmVsZWdlbiBkZW4gYmVzY2hyaWViZW5lbiBCZXRyaWViIHVuZCBzZWluZW4gQWJsYXVmLiBEZXIgdm9yZ2VzY2hsYWdlbmUgRWluc2F0eiBpc3QgZWluZSBHZXNwcsOkY2hzaHlwb3RoZXNlOyBkaWUgcGFzc2VuZGUgUGVyc29uIGJlc3TDpHRpZ3QgQmVkYXJmIHVuZCBWb3JnZWhlbi48L3A+PG5hdiBhcmlhLWxhYmVsPSJVbnRlcm5laG1lbnNwcm9maWxlIj48YSBocmVmPSIjY2F0ZXJsb3ZlIj5DYXRlcmxvdmU8L2E+PGEgaHJlZj0iI2tsZWluZS1rYW50aW5lIj5EaWUga2xlaW5lIEthbnRpbmU8L2E+PGEgaHJlZj0iI2dhdW1lbmZyZXVuZGUiPkdhdW1lbmZyZXVuZGUgSGFtYnVyZyDigJMgQ2F0ZXJpbmcgJmFtcDsgRXZlbnRzPC9hPjxhIGhyZWY9IiNiYXJiYXJhcy1rdWVjaGUiPkJhcmJhcmFzIEvDvGNoZTwvYT48YSBocmVmPSIjdW5pa29ybiI+VU5JS09STiBDYXRlcmluZyAmYW1wOyBFdmVudHM8L2E+PC9uYXY+PC9oZWFkZXI+PGFydGljbGUgaWQ9ImNhdGVybG92ZSI+PGgyPkNhdGVybG92ZTwvaDI+PGgzPlJlZ2lvbjwvaDM+PHA+SGFtYnVyZyB1bmQgVW1sYW5kLCBEZXV0c2NobGFuZDwvcD48aDM+R2VzY2jDpGZ0c2tvbnRha3Q8L2gzPjxwPk5lZ2lzc2EgR2hvcmphbmkgwrcgSW5oYWJlcmluIHVuZCBHcsO8bmRlcmluCmtvbnRha3RAY2F0ZXJsb3ZlLmRlIMK3ICs0OSAxNTc3IDUwNzY5NTA8L3A+PGgzPsOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWY8L2gzPjxwPkNhdGVybG92ZSBwbGFudCBFaW5rYXVmLCBLw7xjaGUgdW5kIExvZ2lzdGlrIGbDvHIgamVkZW4gQXVmdHJhZyBuZXUgdW5kIHByb2R1emllcnQgYXVmIGRlbiBWZXJhbnN0YWx0dW5nc3Rlcm1pbi4gRGFzIFVudGVybmVobWVuIHZlcmJpbmRldCBGaW5nZXJmb29kIHVuZCBwZXJzaXNjaGUgS8O8Y2hlOyBOZWdpc3NhIEdob3JqYW5pIGlzdCBkaWUgdmVyw7ZmZmVudGxpY2h0ZSBHcsO8bmRlcmluLjwvcD48aDM+QmVzdGVoZW5kZXIgUHJvemVzczwvaDM+PHA+QnVzaW5lc3MtQW5nZWJvdGUgd2VyZGVuIG5hY2ggR8Okc3RlemFobCwgQWJsYXVmIHVuZCBCdWRnZXQgenVzYW1tZW5nZXN0ZWxsdC4gRGllIFdlYnNpdGUgbmVubnQgNDjigJM3MiBTdHVuZGVuIGbDvHIgZWluIGluZGl2aWR1ZWxsZXMgQW5nZWJvdCB1bmQgdmVyw7ZmZmVudGxpY2h0IGVpbiBkaXJla3RlcyBLb250YWt0cG9zdGZhY2guPC9wPjxoMz5Nw7ZnbGljaGVyIEJpbGxlZE9LLUFuc2F0ejwvaDM+PHA+Vm9yIGVpbmVtIG5ldWVuIEFuZ2Vib3Qga8O2bm50ZSBlaW4ga3VyemVyIEJsaWNrIGF1ZiB3aWVkZXJrZWhyZW5kZSBFaW5rYXVmc2FydGlrZWwgemVpZ2VuLCBvYiBkaWUgYmlzaGVyaWdlIFp1dGF0ZW5iYXNpcyBub2NoIHp1IGRlbiBqw7xuZ3N0ZW4gRWlua2F1ZnNwcmVpc2VuIHBhc3N0LjwvcD48aDM+Vm9yZ2VzY2hsYWdlbmUga2xlaW5lIERlbW9uc3RyYXRpb248L2gzPjxwPkVpbiBmcmVpZ2VnZWJlbmVzIGZyw7xoZXJlcyBNZW7DvCB1bmQgZWluaWdlIGRhenVnZWjDtnJpZ2UgTGllZmVyYW50ZW5yZWNobnVuZ2VuIGFscyBHZXNwcsOkY2hzZ3J1bmRsYWdlIG5laG1lbi4gRHJlaSB0YXRzw6RjaGxpY2ggd2llZGVya2VocmVuZGUgQXJ0aWtlbCBuYWNoIGdsZWljaGVyIEVpbmhlaXQgdW5kIFNwZXppZmlrYXRpb24gdmVyZ2xlaWNoZW47IEJpbGxlZE9LcyBQcmVpc8O8YmVyc2ljaHQgdW50ZXJzdMO8dHp0IGRpZSBiZXN0ZWhlbmRlIEFuZ2Vib3Rza2Fsa3VsYXRpb24uPC9wPjxoMz5Wb3JiZXJlaXRldGVyIEdlc3Byw6RjaHNlaW5zdGllZzwvaDM+PHAgY2xhc3M9Im9wZW5pbmciPkd1dGVuIFRhZyBGcmF1IEdob3JqYW5pLCBTaWUgcGxhbmVuIGRlbiBFaW5rYXVmIGbDvHIgamVkZXMgQ2F0ZXJpbmcgbmV1LiBXw6RyZSBlaW5lIGt1cnplIMOcYmVyc2ljaHQgaGlsZnJlaWNoLCBkaWUgdm9yIGRlbSBuw6RjaHN0ZW4gQW5nZWJvdCBiZWkgZHJlaSB3aWVkZXJrZWhyZW5kZW4gWnV0YXRlbiBkaWUgasO8bmdzdGVuIEVpbmthdWZzcHJlaXNlIG1pdCBkZW4gYmlzaGVyaWdlbiB2ZXJnbGVpY2h0PyBJaHJlIE1lbsO8YXVzd2FobCwgSGFsYWwtVm9yZ2FiZW4gdW5kIHBlcnPDtm5saWNoZSBLYWxrdWxhdGlvbiBibGVpYmVuIG1hw59nZWJsaWNoLjwvcD48aDM+Vm9yIGRlbSBWZXJzdWNoIGtsw6RyZW48L2gzPjxwPkVyc3Qga2zDpHJlbiwgd2VsY2hlIEFydGlrZWwgdGF0c8OkY2hsaWNoIHdpZWRlcmtlaHJlbiB1bmQgb2IgZGllIEVpbmthdWZzYXVzd2VydHVuZyBiZXJlaXRzIGFiZ2VkZWNrdCBpc3QuIFplcnRpZml6aWVydGUgdW5kIGFuZGVyZSBRdWFsaXTDpHRlbiBuaWNodCBhbGxlaW4gd2VnZW4gw6RobmxpY2hlciBCZXplaWNobnVuZ2VuIGdsZWljaHNldHplbi4gS2VpbmUgYXV0b21hdGlzY2hlIFJlemVwdC0gb2RlciBFdmVudGthbGt1bGF0aW9uIHZlcnNwcmVjaGVuLjwvcD48aDM+T3JpZ2luYWxxdWVsbGVuPC9oMz48dWw+PGxpPjxhIGhyZWY9Imh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS9kZS9idXNpbmVzcy1jYXRlcmluZyI+aHR0cHM6Ly93d3cuY2F0ZXJsb3ZlLmRlL2RlL2J1c2luZXNzLWNhdGVyaW5nPC9hPjwvbGk+PGxpPjxhIGhyZWY9Imh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS9kZS91ZWJlci11bnMiPmh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS9kZS91ZWJlci11bnM8L2E+PC9saT48L3VsPjxwIGNsYXNzPSJtZXRhIj5HZXByw7xmdDogMjAyNi0xMC0xMzwvcD48L2FydGljbGU+PGFydGljbGUgaWQ9ImtsZWluZS1rYW50aW5lIj48aDI+RGllIGtsZWluZSBLYW50aW5lPC9oMj48aDM+UmVnaW9uPC9oMz48cD5IYW1idXJnLVJhaGxzdGVkdCwgRGV1dHNjaGxhbmQ8L3A+PGgzPkdlc2Now6RmdHNrb250YWt0PC9oMz48cD5HZXNjaMOkZnRzZsO8aHJ1bmcgLyBLw7xjaGVudGVhbSDCtyBCZXRyaWVicy0gb2RlciBFaW5rYXVmc3ZlcmFudHdvcnRsaWNoZQprb250YWt0QGRpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZSDCtyArNDkgNDAgMzA4NTMxMDA8L3A+PGgzPsOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWY8L2gzPjxwPkRpZSBrbGVpbmUgS2FudGluZSBrb2NodCB0w6RnbGljaCB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggdW5kIGJpZXRldCB6dXPDpHR6bGljaCBCdXNpbmVzcy0gdW5kIEV2ZW50LUNhdGVyaW5nLiBGbGVpc2NoLCBNb2xrZXJlaSwgT2JzdCB1bmQgR2Vtw7xzZSBrb21tZW4gbGF1dCBlaWdlbmVyIFNlaXRlIHZvbiBQYXJ0bmVybiBhdXMgSGFtYnVyZyB1bmQgVW1nZWJ1bmcuPC9wPjxoMz5CZXN0ZWhlbmRlciBQcm96ZXNzPC9oMz48cD5DYXRlcmluZyB3aXJkIHBhc3NlbmQgenUgQW5sYXNzLCBHw6RzdGV6YWhsIHVuZCBCdWRnZXQgYW5nZWJvdGVuOyBkaWUgdmVyw7ZmZmVudGxpY2h0ZSBLb250YWt0YWRyZXNzZSBmw7xocnQgenVtIFRlYW0uIERpZSBiZWltIEFicnVmIHNpY2h0YmFyZSBXb2NoZW5rYXJ0ZSB0csOkZ3QgZWluIFNlcHRlbWJlcmRhdHVtIHVuZCB3aXJkIGhpZXIgbmljaHQgYWxzIGFrdHVlbGxlciBTcGVpc2VwbGFuIHZlcndlbmRldC48L3A+PGgzPk3DtmdsaWNoZXIgQmlsbGVkT0stQW5zYXR6PC9oMz48cD5FaW5lIGdlbWVpbnNhbWUgUHJlaXPDvGJlcnNpY2h0IHdpZWRlcmtlaHJlbmRlciBadXRhdGVuIGvDtm5udGUgZGVuIEVpbmthdWYgZsO8ciBNaXR0YWdzdGlzY2ggdW5kIENhdGVyaW5nIHVudGVyc3TDvHR6ZW4sIHfDpGhyZW5kIGRpZSB2b3JoYW5kZW5lIE1lbsO8LSB1bmQgQW5nZWJvdHNwbGFudW5nIGJlc3RlaGVuIGJsZWlidC48L3A+PGgzPlZvcmdlc2NobGFnZW5lIGtsZWluZSBEZW1vbnN0cmF0aW9uPC9oMz48cD5FaW5lIGZyZWlnZWdlYmVuZSBSZWNobnVuZ3NyZWloZSBlaW5lcyBHZW3DvHNlLSBvZGVyIE1vbGtlcmVpcGFydG5lcnMgYmV0cmFjaHRlbi4gRHJlaSB3aWVkZXJrZWhyZW5kZSBQb3NpdGlvbmVuIG5hY2ggdmVyZ2xlaWNoYmFyZXIgRWluaGVpdCB1bmQgUXVhbGl0w6R0IHNvcnRpZXJlbiB1bmQgYXVmZsOkbGxpZ2Ugw4RuZGVydW5nZW4gZsO8ciBkaWUgS8O8Y2hlbmxlaXR1bmcgbWFya2llcmVuLjwvcD48aDM+Vm9yYmVyZWl0ZXRlciBHZXNwcsOkY2hzZWluc3RpZWc8L2gzPjxwIGNsYXNzPSJvcGVuaW5nIj5HdXRlbiBUYWcgYW4gZGFzIFRlYW0gZGVyIGtsZWluZW4gS2FudGluZSwgU2llIHZlcmJpbmRlbiB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggbWl0IENhdGVyaW5nIHVuZCBiZXppZWhlbiBadXRhdGVuIHZvbiByZWdpb25hbGVuIFBhcnRuZXJuLiBXw6RyZSBlaW4ga3VyemVyIFJlY2hudW5nc3ZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGJlaSBlaW5pZ2VuIHJlZ2VsbcOkw59pZyBnZWthdWZ0ZW4gQXJ0aWtlbG4gZGllIFByZWlzZW50d2lja2x1bmcgc2ljaHRiYXIgbWFjaHQgdW5kIElocmUgYmVzdGVoZW5kZSBNZW7DvHBsYW51bmcgZXJnw6RuenQ/PC9wPjxoMz5Wb3IgZGVtIFZlcnN1Y2gga2zDpHJlbjwvaDM+PHA+RGVuIGhldXRpZ2VuIFJlY2hudW5ncy0gdW5kIEVpbmthdWZzcHJvemVzcyBzb3dpZSBkZW4genVzdMOkbmRpZ2VuIEFuc3ByZWNocGFydG5lciBmZXN0c3RlbGxlbi4gUmVnaW9uYWxlIEhlcmt1bmZ0IHVuZCBRdWFsaXTDpHQgYmxlaWJlbiBBdXN3YWhsa3JpdGVyaWVuLiBTY2h3YW5rZW5kZSBNZW5nZW4sIFNhaXNvbmFsaXTDpHQgdW5kIExpZWZlcmtvc3RlbiBnZXRyZW5udCB2b24gU3TDvGNrcHJlaXPDpG5kZXJ1bmdlbiBiZXRyYWNodGVuLjwvcD48aDM+T3JpZ2luYWxxdWVsbGVuPC9oMz48dWw+PGxpPjxhIGhyZWY9Imh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlL21pdHRhZ3N0aXNjaC8iPmh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlL21pdHRhZ3N0aXNjaC88L2E+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly9kaWVrbGVpbmVrYW50aW5lLWhhbWJ1cmcuZGUvY2F0ZXJpbmcvIj5odHRwczovL2RpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZS9jYXRlcmluZy88L2E+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly9kaWVrbGVpbmVrYW50aW5lLWhhbWJ1cmcuZGUvdWJlci11bnMvIj5odHRwczovL2RpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZS91YmVyLXVucy88L2E+PC9saT48L3VsPjxwIGNsYXNzPSJtZXRhIj5HZXByw7xmdDogMjAyNi0xMC0xMzwvcD48L2FydGljbGU+PGFydGljbGUgaWQ9ImdhdW1lbmZyZXVuZGUiPjxoMj5HYXVtZW5mcmV1bmRlIEhhbWJ1cmcg4oCTIENhdGVyaW5nICZhbXA7IEV2ZW50czwvaDI+PGgzPlJlZ2lvbjwvaDM+PHA+SGFtYnVyZywgRGV1dHNjaGxhbmQ8L3A+PGgzPkdlc2Now6RmdHNrb250YWt0PC9oMz48cD5EYXZlIFN0ZWluaGFyZHQgwrcgSW5oYWJlcgppbmZvQGdhdW1lbmZyZXVuZGUtaGFtYnVyZy5kZSDCtyArNDkgNDAgNTA2ODAxMjk8L3A+PGgzPsOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWY8L2gzPjxwPkdhdW1lbmZyZXVuZGUgdmVyw7ZmZmVudGxpY2h0IGtvbmtyZXRlIEJ1c2luZXNzLUx1bmNoLU1lbsO8cyBtaXQgdW50ZXJzY2hpZWRsaWNoZW4gWnV0YXRlbiBzb3dpZSBCdWZmZXQtLCBCQlEtIHVuZCBGaW5nZXJmb29kLUFuZ2Vib3RlLiBEYXZlIFN0ZWluaGFyZHQgaXN0IGFscyBJbmhhYmVyIG1pdCBkaXJla3RlbSBVbnRlcm5laG1lbnNwb3N0ZmFjaCBhdWZnZWbDvGhydC48L3A+PGgzPkJlc3RlaGVuZGVyIFByb3plc3M8L2gzPjxwPkRpZSBXZWJzaXRlIGJpZXRldCBlaW4gQW5mcmFnZWZvcm11bGFyIHVuZCBwZXJzw7ZubGljaGUgQ2F0ZXJpbmctUGxhbnVuZy4gRGllIMO2ZmZlbnRsaWNoIGdlbmFubnRlbiBCZWlzcGllbG1lbsO8cyBsaWVmZXJuIGVpbmVuIGtvbmtyZXRlbiBHZXNwcsOkY2hzZWluc3RpZWc7IEFuZ2Vib3RzcHJlaXNlIHNvbGx0ZW4gYWt0dWVsbCBiZXN0w6R0aWd0IHdlcmRlbi48L3A+PGgzPk3DtmdsaWNoZXIgQmlsbGVkT0stQW5zYXR6PC9oMz48cD5XaWVkZXJrZWhyZW5kZSBadXRhdGVuIGF1cyBtZWhyZXJlbiBWZXJhbnN0YWx0dW5nc2Zvcm1hdGVuIGvDtm5udGVuIGluIGVpbmVtIGtsZWluZW4gUmVjaG51bmdzcsO8Y2tibGljayBnZW1laW5zYW0gYXVmIFByZWlzw6RuZGVydW5nZW4gZ2VwcsO8ZnQgd2VyZGVuLjwvcD48aDM+Vm9yZ2VzY2hsYWdlbmUga2xlaW5lIERlbW9uc3RyYXRpb248L2gzPjxwPkRyZWkgdGF0c8OkY2hsaWNoIHJlZ2VsbcOkw59pZyBiZXN0ZWxsdGUgQXJ0aWtlbCBhdXMgZnLDvGhlcmVuIEJ1c2luZXNzLUx1bmNoLUF1ZnRyw6RnZW4gd8OkaGxlbi4gVmVyZ2xlaWNoYmFyZSBSZWNobnVuZ3NtZW5nZW4gdW5kIEVpbmhlaXRlbiBuZWJlbmVpbmFuZGVyc3RlbGxlbjsgZGllIHZvcmhhbmRlbmUgTWVuw7wtIHVuZCBFdmVudGthbGt1bGF0aW9uIGJsZWlidCBkYXMgZsO8aHJlbmRlIFZlcmZhaHJlbi48L3A+PGgzPlZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnPC9oMz48cCBjbGFzcz0ib3BlbmluZyI+R3V0ZW4gVGFnIEhlcnIgU3RlaW5oYXJkdCwgSWhyZSBCdXNpbmVzcy1MdW5jaC1NZW7DvHMgemVpZ2VuIGVpbmUga29ua3JldGUgQXVzd2FobCBhbiBadXRhdGVuLiBXw6RyZSBlaW4ga3VyemVyIFZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGFuaGFuZCBmcmVpZ2VnZWJlbmVyIExpZWZlcmFudGVucmVjaG51bmdlbiBkaWUgUHJlaXNlbnR3aWNrbHVuZyBlaW5pZ2VyIGRpZXNlciBBcnRpa2VsIG5hY2h2b2xsemllaGJhciBtYWNodCwgYmV2b3IgU2llIGRhcyBuw6RjaHN0ZSBpbmRpdmlkdWVsbGUgQW5nZWJvdCBrYWxrdWxpZXJlbj88L3A+PGgzPlZvciBkZW0gVmVyc3VjaCBrbMOkcmVuPC9oMz48cD5XaWVkZXJob2x1bmdzZnJlcXVlbnogdW5kIGFrdHVlbGxlIEVpbmthdWZzc29mdHdhcmUgZXJmcmFnZW4uIEVpbmUgdmVyw7ZmZmVudGxpY2h0ZSBNZW7DvHNlaXRlIGJld2Vpc3Qgd2VkZXIgZWluZW4gS29zdGVuYW5zdGllZyBub2NoIHVuZ2VudXR6dGUgRWluc3BhcnVuZ2VuLiBGaXNjaC0sIEZsZWlzY2gtIHVuZCBhbmRlcmUgUXVhbGl0w6R0c3ZhcmlhbnRlbiBudXIgbmFjaCBmYWNobGljaGVyIEZyZWlnYWJlIHZlcmdsZWljaGVuLjwvcD48aDM+T3JpZ2luYWxxdWVsbGVuPC9oMz48dWw+PGxpPjxhIGhyZWY9Imh0dHBzOi8vd3d3LmdhdW1lbmZyZXVuZGUtaGFtYnVyZy5kZS9ldmVudC1jYXRlcmluZy9idXNpbmVzcy1jYXRlcmluZy8iPmh0dHBzOi8vd3d3LmdhdW1lbmZyZXVuZGUtaGFtYnVyZy5kZS9ldmVudC1jYXRlcmluZy9idXNpbmVzcy1jYXRlcmluZy88L2E+PC9saT48L3VsPjxwIGNsYXNzPSJtZXRhIj5HZXByw7xmdDogMjAyNi0xMC0xMzwvcD48L2FydGljbGU+PGFydGljbGUgaWQ9ImJhcmJhcmFzLWt1ZWNoZSI+PGgyPkJhcmJhcmFzIEvDvGNoZTwvaDI+PGgzPlJlZ2lvbjwvaDM+PHA+Q2F0ZXJpbmcgZsO8ciBCZXJsaW47IENhZsOpIGluIFRyZWJuaXR6LCBEZXV0c2NobGFuZDwvcD48aDM+R2VzY2jDpGZ0c2tvbnRha3Q8L2gzPjxwPkJhcmJhcmFzLUvDvGNoZS1UZWFtIMK3IEvDvGNoZW4tIG9kZXIgRWlua2F1ZnN2ZXJhbnR3b3J0bGljaGUKaW5mb0BiYXJiYXJhc2t1ZWNoZS5kZSDCtyArNDkgMTcyIDY4NTcxOTI8L3A+PGgzPsOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWY8L2gzPjxwPkJhcmJhcmFzIEvDvGNoZSBiZXNjaHJlaWJ0IHJlZ2lvbmFsZSB1bmQgc2Fpc29uYWxlIFNwZWlzZW4sIEJ1c2luZXNzLUNhdGVyaW5nIGFiIDQwIFBvcnRpb25lbiwgaGFuZGdlbWFjaHRlIE1hdWx0YXNjaGVuIHVuZCBlaW4gQ2Fmw6kgaW4gVHJlYm5pdHouIERhcyBVbnRlcm5laG1lbiB2ZXLDtmZmZW50bGljaHQgZWluIGRpcmVrdGVzIFBvc3RmYWNoIHVuZCBlaW5lIE1vYmlsbnVtbWVyLjwvcD48aDM+QmVzdGVoZW5kZXIgUHJvemVzczwvaDM+PHA+Q2F0ZXJpbmcgd2lyZCBkaXJla3QgcGVyIEUtTWFpbCBhbmdlZnJhZ3QuIERpZSBlaWdlbmUgSG9tZXBhZ2UgdmVyYmluZGV0IGRhcyBDYXRlcmluZy1BbmdlYm90IG1pdCBkZW0gQ2Fmw6k7IGRpZSBha3R1ZWxsZSBMaWVmZXJyZWdpb24gaXN0IGltIGVyc3RlbiBHZXNwcsOkY2ggenUgYmVzdMOkdGlnZW4uPC9wPjxoMz5Nw7ZnbGljaGVyIEJpbGxlZE9LLUFuc2F0ejwvaDM+PHA+RWluIGtsZWluZXIgUHJlaXNyw7xja2JsaWNrIGF1ZiBadXRhdGVuIGVpbmVzIGjDpHVmaWcgcHJvZHV6aWVydGVuIEdlcmljaHRzIGvDtm5udGUgYmVpIGRlciBuw6RjaHN0ZW4gQ2F0ZXJpbmctS2Fsa3VsYXRpb24gaGVsZmVuLCBvaG5lIFJlemVwdCBvZGVyIHJlZ2lvbmFsZSBCZXNjaGFmZnVuZyB6dSB2ZXLDpG5kZXJuLjwvcD48aDM+Vm9yZ2VzY2hsYWdlbmUga2xlaW5lIERlbW9uc3RyYXRpb248L2gzPjxwPkbDvHIgZWluIHRhdHPDpGNobGljaCB3aWVkZXJrZWhyZW5kZXMgR2VyaWNodCB6d2VpIGJpcyBkcmVpIFp1dGF0ZW4gYXVzd8OkaGxlbiB1bmQgZWluZSBmcmVpZ2VnZWJlbmUgUmVjaG51bmdzc2VyaWUgYmV0cmFjaHRlbi4gRXJzdCBnbGVpY2hlIEVpbmhlaXRlbiwgTWVuZ2VuYmFzaXMgdW5kIFp1dGF0ZW5xdWFsaXTDpHQgYmVzdMOkdGlnZW47IGFuc2NobGllw59lbmQgbnVyIGRpZSBiZW9iYWNodGV0ZSBQcmVpc2VudHdpY2tsdW5nIHplaWdlbi48L3A+PGgzPlZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnPC9oMz48cCBjbGFzcz0ib3BlbmluZyI+R3V0ZW4gVGFnIGFuIGRhcyBUZWFtIHZvbiBCYXJiYXJhcyBLw7xjaGUsIElocmUgaGFuZGdlbWFjaHRlbiBNYXVsdGFzY2hlbiB1bmQgZGFzIENhdGVyaW5nIGFiIDQwIFBvcnRpb25lbiBiaWV0ZW4gZWluZW4ga29ua3JldGVuIEFuc2F0eiBmw7xyIGVpbmVuIGtsZWluZW4gRWlua2F1ZnNwcmVpc3ZlcmdsZWljaC4gV8OkcmUgZWluZSDDnGJlcnNpY2h0IHp1IHdlbmlnZW4gcmVnZWxtw6TDn2lnIGdla2F1ZnRlbiBadXRhdGVuIGhpbGZyZWljaCwgYmV2b3IgU2llIGRhcyBuw6RjaHN0ZSBDYXRlcmluZy1BbmdlYm90IGthbGt1bGllcmVuPzwvcD48aDM+Vm9yIGRlbSBWZXJzdWNoIGtsw6RyZW48L2gzPjxwPkFrdHVlbGxlbiBDYXRlcmluZy1CZXRyaWViLCBMaWVmZXJyZWdpb24gdW5kIEVudHNjaGVpZHVuZ3N2ZXJhbnR3b3J0bGljaGUgYmVzdMOkdGlnZW4uIFByw7xmZW4sIG9iIGRpZSB0YXRzw6RjaGxpY2hlIFJlY2hudW5nc21lbmdlIGVpbmVuIHp1c8OkdHpsaWNoZW4gQXVzd2VydHVuZ3NzY2hyaXR0IHJlY2h0ZmVydGlndC4gS2VpbmUgcGVyc29uZW5iZXpvZ2VuZW4gR8Okc3RlZGF0ZW4gb2RlciBBbGxlcmdpZWFuZ2FiZW4gZsO8ciBkaWUgTGllZmVyYW50ZW5hbmFseXNlIHZlcndlbmRlbi48L3A+PGgzPk9yaWdpbmFscXVlbGxlbjwvaDM+PHVsPjxsaT48YSBocmVmPSJodHRwczovL2JhcmJhcmFza3VlY2hlLmRlLyI+aHR0cHM6Ly9iYXJiYXJhc2t1ZWNoZS5kZS88L2E+PC9saT48bGk+PGEgaHJlZj0iaHR0cHM6Ly9iYXJiYXJhc2t1ZWNoZS5kZS9jYXRlcmluZy1iZXJsaW4vIj5odHRwczovL2JhcmJhcmFza3VlY2hlLmRlL2NhdGVyaW5nLWJlcmxpbi88L2E+PC9saT48L3VsPjxwIGNsYXNzPSJtZXRhIj5HZXByw7xmdDogMjAyNi0xMC0xMzwvcD48L2FydGljbGU+PGFydGljbGUgaWQ9InVuaWtvcm4iPjxoMj5VTklLT1JOIENhdGVyaW5nICZhbXA7IEV2ZW50czwvaDI+PGgzPlJlZ2lvbjwvaDM+PHA+TcO8bmNoZW4sIERldXRzY2hsYW5kPC9wPjxoMz5HZXNjaMOkZnRza29udGFrdDwvaDM+PHA+R2VvcmdlIEthbGxtYW4gLyBHYWJyaWVsbGEgRmV1ZXJtYW5uIMK3IEJldHJpZWJzbGVpdGVyIC8gR2VzY2jDpGZ0c2bDvGhyZXJpbgppbmZvQHVuaWtvcm5jYXRlcmluZy5kZSDCtyArNDkgODkgNzg1OTc3MTU8L3A+PGgzPsOWZmZlbnRsaWNoIGJlb2JhY2h0ZXRlciBBYmxhdWY8L2gzPjxwPlVOSUtPUk4gYmlldGV0IELDvHJvLUNhdGVyaW5nIGJpcyB6dXIgcmVnZWxtw6TDn2lnZW4gTWl0YXJiZWl0ZXJ2ZXJwZmxlZ3VuZyBzb3dpZSBncsO2w59lcmUgVmVyYW5zdGFsdHVuZ2VuLiBHZW9yZ2UgS2FsbG1hbiBpc3QgYWxzIEJldHJpZWJzbGVpdGVyIHVuZCBHYWJyaWVsbGEgRmV1ZXJtYW5uIGFscyBHZXNjaMOkZnRzZsO8aHJlcmluIGdlbmFubnQuIEFuZnJhZ2VuIHVuZCBCZXN0ZWxsdW5nZW4gc2luZCBiZXJlaXRzIG1pdCBDYXRlcnNtYXJ0IHZlcmtuw7xwZnQuPC9wPjxoMz5CZXN0ZWhlbmRlciBQcm96ZXNzPC9oMz48cD5EaWUgYmVzdGVoZW5kZW4gQ2F0ZXJzbWFydC1CZXN0ZWxsLSB1bmQgQW5mcmFnZXdlZ2UgYmxlaWJlbiBlcmhhbHRlbi4gRGFzIHZlcsO2ZmZlbnRsaWNodGUgYWxsZ2VtZWluZSBQb3N0ZmFjaCBrYW5uIGFuIEJldHJpZWJzbGVpdHVuZyBvZGVyIEVpbmthdWYgd2VpdGVybGVpdGVuLjwvcD48aDM+TcO2Z2xpY2hlciBCaWxsZWRPSy1BbnNhdHo8L2gzPjxwPkVpbmUgZXJnw6RuemVuZGUgQXVzd2VydHVuZyBmcmVpZ2VnZWJlbmVyIExpZWZlcmFudGVucmVjaG51bmdlbiBrw7ZubnRlIHdpZWRlcmtlaHJlbmRlIEFydGlrZWxwcmVpc2UgZsO8ciBCw7xyb3ZlcnBmbGVndW5nIHVuZCBWZXJhbnN0YWx0dW5nZW4gc2ljaHRiYXIgbWFjaGVuLjwvcD48aDM+Vm9yZ2VzY2hsYWdlbmUga2xlaW5lIERlbW9uc3RyYXRpb248L2gzPjxwPkVpbmVuIHJlZ2VsbcOkw59pZyBnZW51dHp0ZW4gTGllZmVyYW50ZW4gdW5kIGVpbmlnZSBlY2h0ZSB3aWVkZXJrZWhyZW5kZSBBcnRpa2VsIGF1c3fDpGhsZW4uIEJpbGxlZE9LcyBSZWNobnVuZ3NhdXN3ZXJ0dW5nIG5lYmVuIGRlbSBiZXN0ZWhlbmRlbiBCZXN0ZWxsLS9FdmVudHByb3plc3MgemVpZ2VuIHVuZCBwcsO8ZmVuLCBvYiBzaWUgenVzw6R0emxpY2hlIHJlbGV2YW50ZSBFcmtlbm50bmlzc2UgbGllZmVydC48L3A+PGgzPlZvcmJlcmVpdGV0ZXIgR2VzcHLDpGNoc2VpbnN0aWVnPC9oMz48cCBjbGFzcz0ib3BlbmluZyI+R3V0ZW4gVGFnIGFuIGRpZSBVTklLT1JOLUJldHJpZWJzbGVpdHVuZywgU2llIGJpZXRlbiByZWdlbG3DpMOfaWdlIELDvHJvdmVycGZsZWd1bmcgdW5kIG51dHplbiBiZXJlaXRzIENhdGVyc21hcnQgZsO8ciBBbmZyYWdlbiB1bmQgQmVzdGVsbHVuZ2VuLiBXw6RyZSBlaW4gYWJnZWdyZW56dGVyIFZlcmdsZWljaCB2b24gTGllZmVyYW50ZW5yZWNobnVuZ2VuIGhpbGZyZWljaCwgZGVyIHdpZWRlcmtlaHJlbmRlIEFydGlrZWxwcmVpc2UgZXJnw6RuenQsIG9obmUgSWhyZW4gYmVzdGVoZW5kZW4gQmVzdGVsbC0gdW5kIEV2ZW50cHJvemVzcyB1bXp1c3RlbGxlbj88L3A+PGgzPlZvciBkZW0gVmVyc3VjaCBrbMOkcmVuPC9oMz48cD5adWVyc3Qgdm9yaGFuZGVuZSBFaW5rYXVmcy0sIEVSUC0gdW5kIENhdGVyc21hcnQtQXVzd2VydHVuZ2VuIGtsw6RyZW4uIE51ciBlaW5lbiB0YXRzw6RjaGxpY2ggenVzw6R0emxpY2hlbiBOdXR6ZW4gYW5iaWV0ZW47IGtlaW5lIGRpcmVrdGUgQ2F0ZXJzbWFydC1JbnRlZ3JhdGlvbiB2b3JhdXNzZXR6ZW4uIEF1ZmdydW5kIGRlcyBncsO2w59lcmVuIFRlYW1zIGVpZ25ldCBzaWNoIGVpbiBrbGFyIGFiZ2VncmVuenRlciBMaWVmZXJhbnRlbi1QaWxvdC48L3A+PGgzPk9yaWdpbmFscXVlbGxlbjwvaDM+PHVsPjxsaT48YSBocmVmPSJodHRwczovL3VuaWtvcm5jYXRlcmluZy5kZS9idWVyby1jYXRlcmluZy1tdWVuY2hlbi8iPmh0dHBzOi8vdW5pa29ybmNhdGVyaW5nLmRlL2J1ZXJvLWNhdGVyaW5nLW11ZW5jaGVuLzwvYT48L2xpPjxsaT48YSBocmVmPSJodHRwczovL3VuaWtvcm5jYXRlcmluZy5kZS9kYXMtdGVhbS8iPmh0dHBzOi8vdW5pa29ybmNhdGVyaW5nLmRlL2Rhcy10ZWFtLzwvYT48L2xpPjwvdWw+PHAgY2xhc3M9Im1ldGEiPkdlcHLDvGZ0OiAyMDI2LTEwLTEzPC9wPjwvYXJ0aWNsZT48Zm9vdGVyPjxwPkbDvHIgZGVuIGVyc3RlbiBLb250YWt0IGRlbiB2ZXLDtmZmZW50bGljaHRlbiBHZXNjaMOkZnRza2FuYWwgbnV0emVuIHVuZCBkZW4gVm9yc2NobGFnIGF1ZiBkZW4gYWt0dWVsbGVuIEJldHJpZWIgenVzY2huZWlkZW4uIFF1YWxpdMOkdCwgRWluaGVpdGVuLCBHdXRzY2hyaWZ0ZW4gdW5kIHZvcmhhbmRlbmUgRWlua2F1ZnN3ZXJremV1Z2UgaW0gZ2VtZWluc2FtZW4gVmVyZ2xlaWNoIGJlcsO8Y2tzaWNodGlnZW4uPC9wPjwvZm9vdGVyPjwvbWFpbj48L2JvZHk+PC9odG1sPgo=",
+        "bytes": 13457,
+        "sha256": "f504b3043f60614dff7eb185ee5ddb8f8b47ba0263abb5a005c36df16f9712d0"
+      },
+      "sha256": "c9ca9e7db601e444f1f215a932f1f0d8f9126380829525afa0feb1ef57edcfad",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-8-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "paid-edition.json",
+        "title": "paid-edition.json",
+        "description": "Vollständige zusätzliche Profil-Ausgabe mit Quellen und vorbereitetem Gesprächseinstieg.",
+        "type": "application/json",
+        "lead_ids": [
+          "billedok-caterlove-20261013",
+          "billedok-kleine-kantine-20261013",
+          "billedok-gaumenfreunde-20261013",
+          "billedok-barbaras-kueche-20261013",
+          "billedok-unikorn-20261013"
+        ],
+        "source_url": "",
+        "content_base64": "ewogICJ2ZXJzaW9uIjogImRlYWxzY291dC5sZWFkLXBhY2sudjEiLAogICJ0aXRsZSI6ICJGw7xuZiB3ZWl0ZXJlIHJlY2hlcmNoaWVydGUgQ2F0ZXJpbmctQmV0cmllYmUgZsO8ciBCaWxsZWRPSyIsCiAgImN1c3RvbWVyIjogIkJpbGxlZE9LIiwKICAicHJlcGFyZWRfYXQiOiAiMjAyNi0xMC0xM1QxMTowOTowMC4wMDBaIiwKICAiZGVsaXZlcnlfdHlwZSI6ICJwYWlkIiwKICAiY3JpdGVyaWEiOiAiRWluIGtvc3Rlbmxvc2VzIHZvbGxzdMOkbmRpZ2VzIFVudGVybmVobWVuc3Byb2ZpbCB1bmQgZsO8bmYgd2VpdGVyZSBkZXV0c2NoZSBDYXRlcmluZy1CZXRyaWViZSBtaXQgdmVyw7ZmZmVudGxpY2h0ZW0gR2VzY2jDpGZ0c2tvbnRha3QsIGtvbmtyZXRlbSBFaW5rYXVmcy0gb2RlciBLw7xjaGVuYWJsYXVmLCBPcmlnaW5hbHF1ZWxsZW4gdW5kIGluZGl2aWR1ZWxsIHZvcmJlcmVpdGV0ZW0gR2VzcHLDpGNoc2VpbnN0aWVnLiIsCiAgImdlb2dyYXBoeSI6ICJEZXV0c2NobGFuZCIsCiAgInNraWxscyI6IFsKICAgICJDYXRlcmluZy1FaW5rYXVmIiwKICAgICJMaWVmZXJhbnRlbnJlY2hudW5nZW4iLAogICAgIkFydGlrZWxwcmVpc3ZlcmdsZWljaCIKICBdLAogICJxdWFudGl0eSI6IDUsCiAgImN1cnJlbmN5IjogIlVTRCIsCiAgInByaWNlX21pbm9yIjogMjAwMCwKICAibGVhZHMiOiBbCiAgICB7CiAgICAgICJvcmdhbml6YXRpb24iOiAiQ2F0ZXJsb3ZlIiwKICAgICAgImNvbXBhbnlfdXJsIjogImh0dHBzOi8vd3d3LmNhdGVybG92ZS5kZS8iLAogICAgICAicGVyc29uIjogIk5lZ2lzc2EgR2hvcmphbmkiLAogICAgICAiYnVzaW5lc3NfbmVlZCI6ICJDYXRlcmxvdmUgcGxhbnQgRWlua2F1ZiwgS8O8Y2hlIHVuZCBMb2dpc3RpayBmw7xyIGplZGVuIEF1ZnRyYWcgbmV1IHVuZCBwcm9kdXppZXJ0IGF1ZiBkZW4gVmVyYW5zdGFsdHVuZ3N0ZXJtaW4uIERhcyBVbnRlcm5laG1lbiB2ZXJiaW5kZXQgRmluZ2VyZm9vZCB1bmQgcGVyc2lzY2hlIEvDvGNoZTsgTmVnaXNzYSBHaG9yamFuaSBpc3QgZGllIHZlcsO2ZmZlbnRsaWNodGUgR3LDvG5kZXJpbi4iLAogICAgICAic291cmNlX3VybCI6ICJodHRwczovL3d3dy5jYXRlcmxvdmUuZGUvZGUvYnVzaW5lc3MtY2F0ZXJpbmciLAogICAgICAib3JpZ2luYWxfcmVxdWVzdF9kYXRlIjogIiIsCiAgICAgICJsYXN0X2J1eWVyX3VwZGF0ZSI6ICIiLAogICAgICAic291cmNlX2NoZWNrZWRfYXQiOiAiMjAyNi0xMC0xM1QxMTowOTowMC4wMDBaIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzprb250YWt0QGNhdGVybG92ZS5kZSIsCiAgICAgICJjb250YWN0X2luc3RydWN0aW9ucyI6ICJWZXLDtmZmZW50bGljaHRlcyBVbnRlcm5laG1lbnNwb3N0ZmFjaC4gS29udGFrdHF1ZWxsZTogaHR0cHM6Ly93d3cuY2F0ZXJsb3ZlLmRlL2RlL3VlYmVyLXVucyIsCiAgICAgICJnZW9ncmFwaHkiOiAiSGFtYnVyZyB1bmQgVW1sYW5kLCBEZXV0c2NobGFuZCIsCiAgICAgICJwdWJsaXNoZWRfYnVkZ2V0IjogIiIsCiAgICAgICJ3aHlfaXRfZml0cyI6ICJWb3IgZWluZW0gbmV1ZW4gQW5nZWJvdCBrw7ZubnRlIGVpbiBrdXJ6ZXIgQmxpY2sgYXVmIHdpZWRlcmtlaHJlbmRlIEVpbmthdWZzYXJ0aWtlbCB6ZWlnZW4sIG9iIGRpZSBiaXNoZXJpZ2UgWnV0YXRlbmJhc2lzIG5vY2ggenUgZGVuIGrDvG5nc3RlbiBFaW5rYXVmc3ByZWlzZW4gcGFzc3QuIiwKICAgICAgIm9wZW5pbmdfbWVzc2FnZSI6ICJHdXRlbiBUYWcgRnJhdSBHaG9yamFuaSwgU2llIHBsYW5lbiBkZW4gRWlua2F1ZiBmw7xyIGplZGVzIENhdGVyaW5nIG5ldS4gV8OkcmUgZWluZSBrdXJ6ZSDDnGJlcnNpY2h0IGhpbGZyZWljaCwgZGllIHZvciBkZW0gbsOkY2hzdGVuIEFuZ2Vib3QgYmVpIGRyZWkgd2llZGVya2VocmVuZGVuIFp1dGF0ZW4gZGllIGrDvG5nc3RlbiBFaW5rYXVmc3ByZWlzZSBtaXQgZGVuIGJpc2hlcmlnZW4gdmVyZ2xlaWNodD8gSWhyZSBNZW7DvGF1c3dhaGwsIEhhbGFsLVZvcmdhYmVuIHVuZCBwZXJzw7ZubGljaGUgS2Fsa3VsYXRpb24gYmxlaWJlbiBtYcOfZ2VibGljaC4iLAogICAgICAic291cmNlX3N0YXR1cyI6ICJvcGVuIiwKICAgICAgInN0YXR1c19ub3RlIjogIkVyc3Qga2zDpHJlbiwgd2VsY2hlIEFydGlrZWwgdGF0c8OkY2hsaWNoIHdpZWRlcmtlaHJlbiB1bmQgb2IgZGllIEVpbmthdWZzYXVzd2VydHVuZyBiZXJlaXRzIGFiZ2VkZWNrdCBpc3QuIFplcnRpZml6aWVydGUgdW5kIGFuZGVyZSBRdWFsaXTDpHRlbiBuaWNodCBhbGxlaW4gd2VnZW4gw6RobmxpY2hlciBCZXplaWNobnVuZ2VuIGdsZWljaHNldHplbi4gS2VpbmUgYXV0b21hdGlzY2hlIFJlemVwdC0gb2RlciBFdmVudGthbGt1bGF0aW9uIHZlcnNwcmVjaGVuLiIKICAgIH0sCiAgICB7CiAgICAgICJvcmdhbml6YXRpb24iOiAiRGllIGtsZWluZSBLYW50aW5lIiwKICAgICAgImNvbXBhbnlfdXJsIjogImh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlLyIsCiAgICAgICJwZXJzb24iOiAiR2VzY2jDpGZ0c2bDvGhydW5nIC8gS8O8Y2hlbnRlYW0iLAogICAgICAiYnVzaW5lc3NfbmVlZCI6ICJEaWUga2xlaW5lIEthbnRpbmUga29jaHQgdMOkZ2xpY2ggd2VjaHNlbG5kZW4gTWl0dGFnc3Rpc2NoIHVuZCBiaWV0ZXQgenVzw6R0emxpY2ggQnVzaW5lc3MtIHVuZCBFdmVudC1DYXRlcmluZy4gRmxlaXNjaCwgTW9sa2VyZWksIE9ic3QgdW5kIEdlbcO8c2Uga29tbWVuIGxhdXQgZWlnZW5lciBTZWl0ZSB2b24gUGFydG5lcm4gYXVzIEhhbWJ1cmcgdW5kIFVtZ2VidW5nLiIsCiAgICAgICJzb3VyY2VfdXJsIjogImh0dHBzOi8vZGlla2xlaW5la2FudGluZS1oYW1idXJnLmRlL21pdHRhZ3N0aXNjaC8iLAogICAgICAib3JpZ2luYWxfcmVxdWVzdF9kYXRlIjogIiIsCiAgICAgICJsYXN0X2J1eWVyX3VwZGF0ZSI6ICIiLAogICAgICAic291cmNlX2NoZWNrZWRfYXQiOiAiMjAyNi0xMC0xM1QxMTowOTowMC4wMDBaIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzprb250YWt0QGRpZWtsZWluZWthbnRpbmUtaGFtYnVyZy5kZSIsCiAgICAgICJjb250YWN0X2luc3RydWN0aW9ucyI6ICJWZXLDtmZmZW50bGljaHRlcyBVbnRlcm5laG1lbnNwb3N0ZmFjaC4gS29udGFrdHF1ZWxsZTogaHR0cHM6Ly9kaWVrbGVpbmVrYW50aW5lLWhhbWJ1cmcuZGUvY2F0ZXJpbmcvIiwKICAgICAgImdlb2dyYXBoeSI6ICJIYW1idXJnLVJhaGxzdGVkdCwgRGV1dHNjaGxhbmQiLAogICAgICAicHVibGlzaGVkX2J1ZGdldCI6ICIiLAogICAgICAid2h5X2l0X2ZpdHMiOiAiRWluZSBnZW1laW5zYW1lIFByZWlzw7xiZXJzaWNodCB3aWVkZXJrZWhyZW5kZXIgWnV0YXRlbiBrw7ZubnRlIGRlbiBFaW5rYXVmIGbDvHIgTWl0dGFnc3Rpc2NoIHVuZCBDYXRlcmluZyB1bnRlcnN0w7x0emVuLCB3w6RocmVuZCBkaWUgdm9yaGFuZGVuZSBNZW7DvC0gdW5kIEFuZ2Vib3RzcGxhbnVuZyBiZXN0ZWhlbiBibGVpYnQuIiwKICAgICAgIm9wZW5pbmdfbWVzc2FnZSI6ICJHdXRlbiBUYWcgYW4gZGFzIFRlYW0gZGVyIGtsZWluZW4gS2FudGluZSwgU2llIHZlcmJpbmRlbiB3ZWNoc2VsbmRlbiBNaXR0YWdzdGlzY2ggbWl0IENhdGVyaW5nIHVuZCBiZXppZWhlbiBadXRhdGVuIHZvbiByZWdpb25hbGVuIFBhcnRuZXJuLiBXw6RyZSBlaW4ga3VyemVyIFJlY2hudW5nc3ZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGJlaSBlaW5pZ2VuIHJlZ2VsbcOkw59pZyBnZWthdWZ0ZW4gQXJ0aWtlbG4gZGllIFByZWlzZW50d2lja2x1bmcgc2ljaHRiYXIgbWFjaHQgdW5kIElocmUgYmVzdGVoZW5kZSBNZW7DvHBsYW51bmcgZXJnw6RuenQ/IiwKICAgICAgInNvdXJjZV9zdGF0dXMiOiAib3BlbiIsCiAgICAgICJzdGF0dXNfbm90ZSI6ICJEZW4gaGV1dGlnZW4gUmVjaG51bmdzLSB1bmQgRWlua2F1ZnNwcm96ZXNzIHNvd2llIGRlbiB6dXN0w6RuZGlnZW4gQW5zcHJlY2hwYXJ0bmVyIGZlc3RzdGVsbGVuLiBSZWdpb25hbGUgSGVya3VuZnQgdW5kIFF1YWxpdMOkdCBibGVpYmVuIEF1c3dhaGxrcml0ZXJpZW4uIFNjaHdhbmtlbmRlIE1lbmdlbiwgU2Fpc29uYWxpdMOkdCB1bmQgTGllZmVya29zdGVuIGdldHJlbm50IHZvbiBTdMO8Y2twcmVpc8OkbmRlcnVuZ2VuIGJldHJhY2h0ZW4uIgogICAgfSwKICAgIHsKICAgICAgIm9yZ2FuaXphdGlvbiI6ICJHYXVtZW5mcmV1bmRlIEhhbWJ1cmcg4oCTIENhdGVyaW5nICYgRXZlbnRzIiwKICAgICAgImNvbXBhbnlfdXJsIjogImh0dHBzOi8vd3d3LmdhdW1lbmZyZXVuZGUtaGFtYnVyZy5kZS8iLAogICAgICAicGVyc29uIjogIkRhdmUgU3RlaW5oYXJkdCIsCiAgICAgICJidXNpbmVzc19uZWVkIjogIkdhdW1lbmZyZXVuZGUgdmVyw7ZmZmVudGxpY2h0IGtvbmtyZXRlIEJ1c2luZXNzLUx1bmNoLU1lbsO8cyBtaXQgdW50ZXJzY2hpZWRsaWNoZW4gWnV0YXRlbiBzb3dpZSBCdWZmZXQtLCBCQlEtIHVuZCBGaW5nZXJmb29kLUFuZ2Vib3RlLiBEYXZlIFN0ZWluaGFyZHQgaXN0IGFscyBJbmhhYmVyIG1pdCBkaXJla3RlbSBVbnRlcm5laG1lbnNwb3N0ZmFjaCBhdWZnZWbDvGhydC4iLAogICAgICAic291cmNlX3VybCI6ICJodHRwczovL3d3dy5nYXVtZW5mcmV1bmRlLWhhbWJ1cmcuZGUvZXZlbnQtY2F0ZXJpbmcvYnVzaW5lc3MtY2F0ZXJpbmcvIiwKICAgICAgIm9yaWdpbmFsX3JlcXVlc3RfZGF0ZSI6ICIiLAogICAgICAibGFzdF9idXllcl91cGRhdGUiOiAiIiwKICAgICAgInNvdXJjZV9jaGVja2VkX2F0IjogIjIwMjYtMTAtMTNUMTE6MDk6MDAuMDAwWiIsCiAgICAgICJzaWduYWxfdHlwZSI6ICJjb21wYW55X2ZpdCIsCiAgICAgICJkZWFkbGluZSI6ICIiLAogICAgICAiY29udGFjdF9yb3V0ZSI6ICJtYWlsdG86aW5mb0BnYXVtZW5mcmV1bmRlLWhhbWJ1cmcuZGUiLAogICAgICAiY29udGFjdF9pbnN0cnVjdGlvbnMiOiAiVmVyw7ZmZmVudGxpY2h0ZXMgVW50ZXJuZWhtZW5zcG9zdGZhY2ggZGVzIEluaGFiZXJzLiBLb250YWt0cXVlbGxlOiBodHRwczovL3d3dy5nYXVtZW5mcmV1bmRlLWhhbWJ1cmcuZGUvZXZlbnQtY2F0ZXJpbmcvYnVzaW5lc3MtY2F0ZXJpbmcvIiwKICAgICAgImdlb2dyYXBoeSI6ICJIYW1idXJnLCBEZXV0c2NobGFuZCIsCiAgICAgICJwdWJsaXNoZWRfYnVkZ2V0IjogIiIsCiAgICAgICJ3aHlfaXRfZml0cyI6ICJXaWVkZXJrZWhyZW5kZSBadXRhdGVuIGF1cyBtZWhyZXJlbiBWZXJhbnN0YWx0dW5nc2Zvcm1hdGVuIGvDtm5udGVuIGluIGVpbmVtIGtsZWluZW4gUmVjaG51bmdzcsO8Y2tibGljayBnZW1laW5zYW0gYXVmIFByZWlzw6RuZGVydW5nZW4gZ2VwcsO8ZnQgd2VyZGVuLiIsCiAgICAgICJvcGVuaW5nX21lc3NhZ2UiOiAiR3V0ZW4gVGFnIEhlcnIgU3RlaW5oYXJkdCwgSWhyZSBCdXNpbmVzcy1MdW5jaC1NZW7DvHMgemVpZ2VuIGVpbmUga29ua3JldGUgQXVzd2FobCBhbiBadXRhdGVuLiBXw6RyZSBlaW4ga3VyemVyIFZlcmdsZWljaCBpbnRlcmVzc2FudCwgZGVyIGFuaGFuZCBmcmVpZ2VnZWJlbmVyIExpZWZlcmFudGVucmVjaG51bmdlbiBkaWUgUHJlaXNlbnR3aWNrbHVuZyBlaW5pZ2VyIGRpZXNlciBBcnRpa2VsIG5hY2h2b2xsemllaGJhciBtYWNodCwgYmV2b3IgU2llIGRhcyBuw6RjaHN0ZSBpbmRpdmlkdWVsbGUgQW5nZWJvdCBrYWxrdWxpZXJlbj8iLAogICAgICAic291cmNlX3N0YXR1cyI6ICJvcGVuIiwKICAgICAgInN0YXR1c19ub3RlIjogIldpZWRlcmhvbHVuZ3NmcmVxdWVueiB1bmQgYWt0dWVsbGUgRWlua2F1ZnNzb2Z0d2FyZSBlcmZyYWdlbi4gRWluZSB2ZXLDtmZmZW50bGljaHRlIE1lbsO8c2VpdGUgYmV3ZWlzdCB3ZWRlciBlaW5lbiBLb3N0ZW5hbnN0aWVnIG5vY2ggdW5nZW51dHp0ZSBFaW5zcGFydW5nZW4uIEZpc2NoLSwgRmxlaXNjaC0gdW5kIGFuZGVyZSBRdWFsaXTDpHRzdmFyaWFudGVuIG51ciBuYWNoIGZhY2hsaWNoZXIgRnJlaWdhYmUgdmVyZ2xlaWNoZW4uIgogICAgfSwKICAgIHsKICAgICAgIm9yZ2FuaXphdGlvbiI6ICJCYXJiYXJhcyBLw7xjaGUiLAogICAgICAiY29tcGFueV91cmwiOiAiaHR0cHM6Ly9iYXJiYXJhc2t1ZWNoZS5kZS8iLAogICAgICAicGVyc29uIjogIkJhcmJhcmFzLUvDvGNoZS1UZWFtIiwKICAgICAgImJ1c2luZXNzX25lZWQiOiAiQmFyYmFyYXMgS8O8Y2hlIGJlc2NocmVpYnQgcmVnaW9uYWxlIHVuZCBzYWlzb25hbGUgU3BlaXNlbiwgQnVzaW5lc3MtQ2F0ZXJpbmcgYWIgNDAgUG9ydGlvbmVuLCBoYW5kZ2VtYWNodGUgTWF1bHRhc2NoZW4gdW5kIGVpbiBDYWbDqSBpbiBUcmVibml0ei4gRGFzIFVudGVybmVobWVuIHZlcsO2ZmZlbnRsaWNodCBlaW4gZGlyZWt0ZXMgUG9zdGZhY2ggdW5kIGVpbmUgTW9iaWxudW1tZXIuIiwKICAgICAgInNvdXJjZV91cmwiOiAiaHR0cHM6Ly9iYXJiYXJhc2t1ZWNoZS5kZS8iLAogICAgICAib3JpZ2luYWxfcmVxdWVzdF9kYXRlIjogIiIsCiAgICAgICJsYXN0X2J1eWVyX3VwZGF0ZSI6ICIiLAogICAgICAic291cmNlX2NoZWNrZWRfYXQiOiAiMjAyNi0xMC0xM1QxMTowOTowMC4wMDBaIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzppbmZvQGJhcmJhcmFza3VlY2hlLmRlIiwKICAgICAgImNvbnRhY3RfaW5zdHJ1Y3Rpb25zIjogIlZlcsO2ZmZlbnRsaWNodGVzIFVudGVybmVobWVuc3Bvc3RmYWNoLiBLb250YWt0cXVlbGxlOiBodHRwczovL2JhcmJhcmFza3VlY2hlLmRlLyIsCiAgICAgICJnZW9ncmFwaHkiOiAiQ2F0ZXJpbmcgZsO8ciBCZXJsaW47IENhZsOpIGluIFRyZWJuaXR6LCBEZXV0c2NobGFuZCIsCiAgICAgICJwdWJsaXNoZWRfYnVkZ2V0IjogIiIsCiAgICAgICJ3aHlfaXRfZml0cyI6ICJFaW4ga2xlaW5lciBQcmVpc3LDvGNrYmxpY2sgYXVmIFp1dGF0ZW4gZWluZXMgaMOkdWZpZyBwcm9kdXppZXJ0ZW4gR2VyaWNodHMga8O2bm50ZSBiZWkgZGVyIG7DpGNoc3RlbiBDYXRlcmluZy1LYWxrdWxhdGlvbiBoZWxmZW4sIG9obmUgUmV6ZXB0IG9kZXIgcmVnaW9uYWxlIEJlc2NoYWZmdW5nIHp1IHZlcsOkbmRlcm4uIiwKICAgICAgIm9wZW5pbmdfbWVzc2FnZSI6ICJHdXRlbiBUYWcgYW4gZGFzIFRlYW0gdm9uIEJhcmJhcmFzIEvDvGNoZSwgSWhyZSBoYW5kZ2VtYWNodGVuIE1hdWx0YXNjaGVuIHVuZCBkYXMgQ2F0ZXJpbmcgYWIgNDAgUG9ydGlvbmVuIGJpZXRlbiBlaW5lbiBrb25rcmV0ZW4gQW5zYXR6IGbDvHIgZWluZW4ga2xlaW5lbiBFaW5rYXVmc3ByZWlzdmVyZ2xlaWNoLiBXw6RyZSBlaW5lIMOcYmVyc2ljaHQgenUgd2VuaWdlbiByZWdlbG3DpMOfaWcgZ2VrYXVmdGVuIFp1dGF0ZW4gaGlsZnJlaWNoLCBiZXZvciBTaWUgZGFzIG7DpGNoc3RlIENhdGVyaW5nLUFuZ2Vib3Qga2Fsa3VsaWVyZW4/IiwKICAgICAgInNvdXJjZV9zdGF0dXMiOiAib3BlbiIsCiAgICAgICJzdGF0dXNfbm90ZSI6ICJBa3R1ZWxsZW4gQ2F0ZXJpbmctQmV0cmllYiwgTGllZmVycmVnaW9uIHVuZCBFbnRzY2hlaWR1bmdzdmVyYW50d29ydGxpY2hlIGJlc3TDpHRpZ2VuLiBQcsO8ZmVuLCBvYiBkaWUgdGF0c8OkY2hsaWNoZSBSZWNobnVuZ3NtZW5nZSBlaW5lbiB6dXPDpHR6bGljaGVuIEF1c3dlcnR1bmdzc2Nocml0dCByZWNodGZlcnRpZ3QuIEtlaW5lIHBlcnNvbmVuYmV6b2dlbmVuIEfDpHN0ZWRhdGVuIG9kZXIgQWxsZXJnaWVhbmdhYmVuIGbDvHIgZGllIExpZWZlcmFudGVuYW5hbHlzZSB2ZXJ3ZW5kZW4uIgogICAgfSwKICAgIHsKICAgICAgIm9yZ2FuaXphdGlvbiI6ICJVTklLT1JOIENhdGVyaW5nICYgRXZlbnRzIiwKICAgICAgImNvbXBhbnlfdXJsIjogImh0dHBzOi8vdW5pa29ybmNhdGVyaW5nLmRlLyIsCiAgICAgICJwZXJzb24iOiAiR2VvcmdlIEthbGxtYW4gLyBHYWJyaWVsbGEgRmV1ZXJtYW5uIiwKICAgICAgImJ1c2luZXNzX25lZWQiOiAiVU5JS09STiBiaWV0ZXQgQsO8cm8tQ2F0ZXJpbmcgYmlzIHp1ciByZWdlbG3DpMOfaWdlbiBNaXRhcmJlaXRlcnZlcnBmbGVndW5nIHNvd2llIGdyw7bDn2VyZSBWZXJhbnN0YWx0dW5nZW4uIEdlb3JnZSBLYWxsbWFuIGlzdCBhbHMgQmV0cmllYnNsZWl0ZXIgdW5kIEdhYnJpZWxsYSBGZXVlcm1hbm4gYWxzIEdlc2Now6RmdHNmw7xocmVyaW4gZ2VuYW5udC4gQW5mcmFnZW4gdW5kIEJlc3RlbGx1bmdlbiBzaW5kIGJlcmVpdHMgbWl0IENhdGVyc21hcnQgdmVya27DvHBmdC4iLAogICAgICAic291cmNlX3VybCI6ICJodHRwczovL3VuaWtvcm5jYXRlcmluZy5kZS9idWVyby1jYXRlcmluZy1tdWVuY2hlbi8iLAogICAgICAib3JpZ2luYWxfcmVxdWVzdF9kYXRlIjogIiIsCiAgICAgICJsYXN0X2J1eWVyX3VwZGF0ZSI6ICIiLAogICAgICAic291cmNlX2NoZWNrZWRfYXQiOiAiMjAyNi0xMC0xM1QxMTowOTowMC4wMDBaIiwKICAgICAgInNpZ25hbF90eXBlIjogImNvbXBhbnlfZml0IiwKICAgICAgImRlYWRsaW5lIjogIiIsCiAgICAgICJjb250YWN0X3JvdXRlIjogIm1haWx0bzppbmZvQHVuaWtvcm5jYXRlcmluZy5kZSIsCiAgICAgICJjb250YWN0X2luc3RydWN0aW9ucyI6ICJWZXLDtmZmZW50bGljaHRlcyBhbGxnZW1laW5lcyBVbnRlcm5laG1lbnNwb3N0ZmFjaC4gS29udGFrdHF1ZWxsZTogaHR0cHM6Ly91bmlrb3JuY2F0ZXJpbmcuZGUvZGFzLXRlYW0vIiwKICAgICAgImdlb2dyYXBoeSI6ICJNw7xuY2hlbiwgRGV1dHNjaGxhbmQiLAogICAgICAicHVibGlzaGVkX2J1ZGdldCI6ICIiLAogICAgICAid2h5X2l0X2ZpdHMiOiAiRWluZSBlcmfDpG56ZW5kZSBBdXN3ZXJ0dW5nIGZyZWlnZWdlYmVuZXIgTGllZmVyYW50ZW5yZWNobnVuZ2VuIGvDtm5udGUgd2llZGVya2VocmVuZGUgQXJ0aWtlbHByZWlzZSBmw7xyIELDvHJvdmVycGZsZWd1bmcgdW5kIFZlcmFuc3RhbHR1bmdlbiBzaWNodGJhciBtYWNoZW4uIiwKICAgICAgIm9wZW5pbmdfbWVzc2FnZSI6ICJHdXRlbiBUYWcgYW4gZGllIFVOSUtPUk4tQmV0cmllYnNsZWl0dW5nLCBTaWUgYmlldGVuIHJlZ2VsbcOkw59pZ2UgQsO8cm92ZXJwZmxlZ3VuZyB1bmQgbnV0emVuIGJlcmVpdHMgQ2F0ZXJzbWFydCBmw7xyIEFuZnJhZ2VuIHVuZCBCZXN0ZWxsdW5nZW4uIFfDpHJlIGVpbiBhYmdlZ3Jlbnp0ZXIgVmVyZ2xlaWNoIHZvbiBMaWVmZXJhbnRlbnJlY2hudW5nZW4gaGlsZnJlaWNoLCBkZXIgd2llZGVya2VocmVuZGUgQXJ0aWtlbHByZWlzZSBlcmfDpG56dCwgb2huZSBJaHJlbiBiZXN0ZWhlbmRlbiBCZXN0ZWxsLSB1bmQgRXZlbnRwcm96ZXNzIHVtenVzdGVsbGVuPyIsCiAgICAgICJzb3VyY2Vfc3RhdHVzIjogIm9wZW4iLAogICAgICAic3RhdHVzX25vdGUiOiAiWnVlcnN0IHZvcmhhbmRlbmUgRWlua2F1ZnMtLCBFUlAtIHVuZCBDYXRlcnNtYXJ0LUF1c3dlcnR1bmdlbiBrbMOkcmVuLiBOdXIgZWluZW4gdGF0c8OkY2hsaWNoIHp1c8OkdHpsaWNoZW4gTnV0emVuIGFuYmlldGVuOyBrZWluZSBkaXJla3RlIENhdGVyc21hcnQtSW50ZWdyYXRpb24gdm9yYXVzc2V0emVuLiBBdWZncnVuZCBkZXMgZ3LDtsOfZXJlbiBUZWFtcyBlaWduZXQgc2ljaCBlaW4ga2xhciBhYmdlZ3Jlbnp0ZXIgTGllZmVyYW50ZW4tUGlsb3QuIgogICAgfQogIF0KfQo=",
+        "bytes": 9680,
+        "sha256": "df053321a14508f86e81142911a4c87e83dc26f0e8966fb58e20bc767efb669c"
+      },
+      "sha256": "08a6135cc345d72bde484301f4e09499731506cde7a8438eeeb790e0351ac3b8",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    },
+    {
+      "id": "billedok-file-9-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "revision": 1,
+      "document": {
+        "name": "START-HERE.md",
+        "title": "START-HERE.md",
+        "description": "Anleitung für die vollständigen recherchierten Profile.",
+        "type": "text/markdown",
+        "lead_ids": [],
+        "source_url": "",
+        "content_base64": "IyBCaWxsZWRPSyDCtyBTbyBudXR6ZW4gU2llIGRpZSByZWNoZXJjaGllcnRlbiBVbnRlcm5laG1lbnNwcm9maWxlCgpTdGFuZDogMTMuIE9rdG9iZXIgMjAyNi4KCiMjIEluaGFsdCB1bmQgQXVzd2FobAoKRGFzIE11c3RlciBlbnRow6RsdCBWZWdldGFyaWEuIERhcyB6dXPDpHR6bGljaGUgUGFrZXQgZW50aMOkbHQgZsO8bmYgd2VpdGVyZSBDYXRlcmluZy1CZXRyaWViZS4gSmVkZXIgQmV0cmllYiBoYXQgZWluZW4gdmVyw7ZmZmVudGxpY2h0ZW4gR2VzY2jDpGZ0c2tvbnRha3QsIGtvbmtyZXRlIE9yaWdpbmFscXVlbGxlbiwgZWluZW4gYmVvYmFjaHRldGVuIEFibGF1ZiwgZWluZW4gZW5nIGdlZmFzc3RlbiBtw7ZnbGljaGVuIEVpbnNhdHogdW5kIGVpbmVuIGluZGl2aWR1ZWxsIHZvcmJlcmVpdGV0ZW4gR2VzcHLDpGNoc2VpbnN0aWVnLgoKIyMgw5ZmZm5lbiB1bmQgd2VpdGVyYXJiZWl0ZW4KCsOWZmZuZW4gU2llIHp1ZXJzdCBkaWUgSFRNTC1EYXRlaSBpbSBCcm93c2VyLiBTaWUgZW50aMOkbHQgZGVuIHZvbGxzdMOkbmRpZ2VuIEJlcmljaHQsIGVpbmUgVW50ZXJuZWhtZW5zbmF2aWdhdGlvbiB1bmQgYW5rbGlja2JhcmUgUXVlbGxlbjsgc2llIGJlbsO2dGlndCBrZWluZSBBbm1lbGR1bmcgb2RlciBJbnN0YWxsYXRpb24uIERpZSBnbGVpY2huYW1pZ2UgTWFya2Rvd24tRGF0ZWkgZW50aMOkbHQgZGVuc2VsYmVuIHZvbGxzdMOkbmRpZ2VuIFRleHQuIERpZSBVVEYtOC1DU1YgbMOkc3N0IHNpY2ggbWl0IEtvbW1hIGFscyBUcmVubnplaWNoZW4gaW4gZWluZXIgVGFiZWxsZW5rYWxrdWxhdGlvbiDDtmZmbmVuLiBEaWUgSlNPTi1EYXRlaSBlbnRow6RsdCBkaWUgdW52ZXLDpG5kZXJ0ZSBhdXNnZXfDpGhsdGUgRGF0ZW5hdXNnYWJlIG1pdCBLb250YWt0ZW4sIFF1ZWxsZW4gdW5kIEdlc3Byw6RjaHN2b3JzY2hsw6RnZW4uCgojIyBFcnN0ZXMgR2VzcHLDpGNoIHVuZCBrbGVpbmVyIFZlcnN1Y2gKCjEuIMOWZmZuZW4gU2llIGRpZSBhbmdlZ2ViZW5lbiBPcmlnaW5hbHNlaXRlbiBlcm5ldXQgdW5kIGJlc3TDpHRpZ2VuIFNpZSBkZW4gYWt0dWVsbGVuIEdlc2Now6RmdHNiZXJlaWNoIHNvd2llIGRlbiB2ZXLDtmZmZW50bGljaHRlbiBLb250YWt0LgoyLiBOdXR6ZW4gU2llIGRlbiBpbmRpdmlkdWVsbGVuIEVpbnN0aWVnIHVuZCBrbMOkcmVuIFNpZSBkaWUgRWlua2F1ZnN6dXN0w6RuZGlna2VpdCwgSMOkdWZpZ2tlaXQgZGVyIFJlY2hudW5nZW4gdW5kIHZvcmhhbmRlbmUgQXVzd2VydHVuZy4KMy4gVmVyZWluYmFyZW4gU2llIGJlaSBJbnRlcmVzc2UgZWluZW4ga2xlaW5lbiBWZXJnbGVpY2ggd2VuaWdlciByZWdlbG3DpMOfaWcgZ2VrYXVmdGVyIEFydGlrZWwgYXVzIGZyZWl3aWxsaWcgdW5kIGJlcmVjaHRpZ3QgYmVyZWl0Z2VzdGVsbHRlbiBMaWVmZXJhbnRlbnJlY2hudW5nZW4uIExhc3NlbiBTaWUgbm90d2VuZGlnZSBWZXJ0cmF1bGljaGtlaXRzLSB1bmQgRGF0ZW5zY2h1dHpmcmFnZW4gdm9yIGRlbSBCZXJlaXRzdGVsbGVuIGtsw6RyZW4uCjQuIFByw7xmZW4gU2llIEFydGlrZWx6dW9yZG51bmcsIE1lbmdlbiB1bmQgUGFja3VuZ3NncsO2w59lbiBzb3dpZSBOZXR0by0vQnJ1dHRvYmFzaXMsIFF1YWxpdMOkdCwgWnVzY2hsw6RnZSwgUmFiYXR0ZSB1bmQgR3V0c2NocmlmdGVuIGdlbWVpbnNhbS4gRWluIG5pZWRyaWdlcmVyIEVpbnplbHByZWlzIGFsbGVpbiBlbnRzY2hlaWRldCBuaWNodCDDvGJlciBlaW5lbiBMaWVmZXJhbnRlbndlY2hzZWwuCjUuIEJlaGFsdGVuIFNpZSB2b3JoYW5kZW5lIEJlc3RlbGx1bmcsIFNwZWlzZXBsYW51bmcsIEJ1Y2hoYWx0dW5nIHVuZCBPcmlnaW5hbGJlbGVnYWJsYWdlIGJlaS4gVm9yaGFuZGVuZSBCZXN0ZWxsLSB1bmQgQW5mcmFnZXdlcmt6ZXVnZSBibGVpYmVuIGJlc3RlaGVuOyBtw7ZnbGljaGUgSW50ZWdyYXRpb25lbiBzaW5kIGdlc29uZGVydCB6dSBrbMOkcmVuLgoKIyMgVW1mYW5nIGRlcyBBbmdlYm90cwoKRWluIHZvbGxzdMOkbmRpZ2VzIE11c3RlcnByb2ZpbCBpc3Qga29zdGVubG9zLiBGw7xuZiB6dXPDpHR6bGljaGUgcmVjaGVyY2hpZXJ0ZSBVbnRlcm5laG1lbnNwcm9maWxlIGtvc3RlbiB6dXNhbW1lbiAyMCBVU0QuIEJlaSBlaW5lbSBzYWNobGljaGVuIEZlaGxlciBvZGVyIGVpbmVtIHVuYnJhdWNoYmFyZW4gdmVyw7ZmZmVudGxpY2h0ZW4gS29udGFrdCB1bWZhc3N0IGRhcyBQYWtldCBlaW5lIEtvcnJla3R1ciBvZGVyIGVpbiBFcnNhdHpwcm9maWwgaW5uZXJoYWxiIHZvbiBzaWViZW4gVGFnZW4gbmFjaCBMaWVmZXJ1bmcuIERpZXNlIFJlY2hlcmNoZSBiZXNjaHJlaWJ0IHBhc3NlbmRlIFVudGVybmVobWVuIHVuZCDDtmZmZW50bGljaGUgQWJsw6R1ZmU7IE5hY2hmcmFnZSwgQnVkZ2V0LCBCZWxlZ3p1Z2FuZyB1bmQgWnVzdMOkbmRpZ2tlaXQgZXJnZWJlbiBzaWNoIGF1cyBkZW0gamV3ZWlsaWdlbiBHZXNwcsOkY2guCg==",
+        "bytes": 2437,
+        "sha256": "ea698869ed55426473891195b35cac0e6500af7a9b490030ef3f78f27b53df86"
+      },
+      "sha256": "f53ea5e2eb34e4ba241d59301501e7b13c00eb6a41bb13140873422f8c4dde9b",
+      "updated_at": "2026-10-13T11:09:00.000Z",
+      "history": []
+    }
+  ],
+  "customer_packages": [
+    {
+      "version": "dealscout.lead-customer-package.v1",
+      "id": "billedok-sample-customer-package-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "edition_id": "billedok-free-vegetaria-20261013",
+      "edition_sha256": "ce2899a4f9b03a31d9ad178da558765378ef7b430ef4325c95bb53532d3c39cc",
+      "title": "Ein recherchierter Catering-Betrieb für BilledOK",
+      "instructions": "Öffnen Sie START-HERE.md und die vollständige HTML-Datei. CSV, Markdown und JSON enthalten die weitere verwendbare Ausgabe. Originalquellen vor dem individuellen Geschäftskontakt erneut öffnen.",
+      "prepared_at": "2026-10-13T11:09:00.000Z",
+      "files": [
+        {
+          "id": "billedok-file-1-20261013",
+          "revision": 1,
+          "sha256": "57a6e0fd6dfbba196bcc07fc1a5d95f685ee44b7a914103d4d00687869ddaa0b"
+        },
+        {
+          "id": "billedok-file-2-20261013",
+          "revision": 1,
+          "sha256": "62a02acf132b93208f1125e739ab7b6227e517eb27f55a125142e62314f7bd9c"
+        },
+        {
+          "id": "billedok-file-3-20261013",
+          "revision": 1,
+          "sha256": "aff6e14b17d8b391cee6508bf37ca05ba475e2e7e92fd55912043fe38d9bc10a"
+        },
+        {
+          "id": "billedok-file-4-20261013",
+          "revision": 1,
+          "sha256": "d1d957fe8a890597cb7d460d23b5a665e72e26a501075cc2d4b8f92fe7f0c3d1"
+        },
+        {
+          "id": "billedok-file-9-20261013",
+          "revision": 1,
+          "sha256": "f53ea5e2eb34e4ba241d59301501e7b13c00eb6a41bb13140873422f8c4dde9b"
+        }
+      ],
+      "supersedes": "",
+      "reason": "",
+      "sha256": "bca79e82a6cc99e5b8f89e8bec4edf60227a40211f9cab3a073fb8b5c6c212fb"
+    },
+    {
+      "version": "dealscout.lead-customer-package.v1",
+      "id": "billedok-paid-customer-package-20261013",
+      "pack_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+      "edition_id": "billedok-paid-five-20261013",
+      "edition_sha256": "3fa413c792bd1438da1e1d90d07af186c4c75b73946ac64d77759b6e960825b4",
+      "title": "Fünf weitere Catering-Betriebe für BilledOK",
+      "instructions": "Öffnen Sie START-HERE.md und die vollständige HTML-Datei. CSV, Markdown und JSON enthalten die weitere verwendbare Ausgabe. Originalquellen vor dem individuellen Geschäftskontakt erneut öffnen.",
+      "prepared_at": "2026-10-13T11:09:00.000Z",
+      "files": [
+        {
+          "id": "billedok-file-5-20261013",
+          "revision": 1,
+          "sha256": "f8bf67fa6d90f485102ed99c7c8a89d38c016f39b0a3faf7ae504cc4525b6a36"
+        },
+        {
+          "id": "billedok-file-6-20261013",
+          "revision": 1,
+          "sha256": "dc92e1fb2c09717da7ffd232fde857f49a0d5c50bef94c5b722988dc94eb0bbb"
+        },
+        {
+          "id": "billedok-file-7-20261013",
+          "revision": 1,
+          "sha256": "c9ca9e7db601e444f1f215a932f1f0d8f9126380829525afa0feb1ef57edcfad"
+        },
+        {
+          "id": "billedok-file-8-20261013",
+          "revision": 1,
+          "sha256": "08a6135cc345d72bde484301f4e09499731506cde7a8438eeeb790e0351ac3b8"
+        },
+        {
+          "id": "billedok-file-9-20261013",
+          "revision": 1,
+          "sha256": "f53ea5e2eb34e4ba241d59301501e7b13c00eb6a41bb13140873422f8c4dde9b"
+        }
+      ],
+      "supersedes": "",
+      "reason": "",
+      "sha256": "4d604533487e8adaf8b81657a9e248b3aa079ba6651d4f2ff16ec5c96c6e7f0e"
+    }
+  ],
+  "sha256": "e916e7f67d1ee71244da355963c46b3ac7a1907712bc2e63c0faeb0af4a46353"
+}

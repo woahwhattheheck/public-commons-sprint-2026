@@ -1,0 +1,39 @@
+{
+  "version": "dealscout.lead-pack.v1",
+  "title": "Free lead sample",
+  "customer": "BilledOK",
+  "prepared_at": "2026-10-13T11:09:00.000Z",
+  "delivery_type": "sample",
+  "criteria": "Ein kostenloses vollständiges Unternehmensprofil und fünf weitere deutsche Catering-Betriebe mit veröffentlichtem Geschäftskontakt, konkretem Einkaufs- oder Küchenablauf, Originalquellen und individuell vorbereitetem Gesprächseinstieg.",
+  "geography": "Deutschland",
+  "skills": [
+    "Catering-Einkauf",
+    "Lieferantenrechnungen",
+    "Artikelpreisvergleich"
+  ],
+  "quantity": 1,
+  "currency": "USD",
+  "price_minor": 0,
+  "leads": [
+    {
+      "organization": "Vegetaria Catering Service GmbH",
+      "company_url": "https://vegetaria-catering.de/",
+      "person": "Pino Schefer",
+      "business_need": "Vegetaria liefert vegetarische Firmen-Mittagsmenüs im Großraum München. Die eigene Unternehmensseite beschreibt täglich frische Zutaten von ausgewählten Lieferanten und Fachhändlern sowie Trockenwaren, Obst und Gemüse. Pino Schefer wird als Eigentümer und Geschäftsführer genannt.",
+      "source_url": "https://vegetaria-catering.de/mittagstisch-firmen/",
+      "original_request_date": "",
+      "last_buyer_update": "",
+      "source_checked_at": "2026-10-13T11:09:00.000Z",
+      "signal_type": "company_fit",
+      "deadline": "",
+      "contact_route": "mailto:info@vegetaria-catering.com",
+      "contact_instructions": "Veröffentlichtes Unternehmenspostfach. Kontaktquelle: https://vegetaria-catering.de/wir_ueber_uns/",
+      "geography": "Finsing / Großraum München, Deutschland",
+      "published_budget": "",
+      "why_it_fits": "Ein abgegrenzter Rückblick auf wiederkehrende Zutaten könnte Preisänderungen je kg oder Stück zeigen, ohne Menüplanung, Lieferantenauswahl oder Qualitätsvorgaben zu verändern.",
+      "opening_message": "Guten Tag Herr Schefer, Ihre Website beschreibt den täglichen Einkauf frischer Zutaten bei ausgewählten Partnern. Wäre ein kurzer Vergleich hilfreich, der bei drei wiederkehrenden Artikeln aus einer freigegebenen Rechnungsserie die Preisentwicklung pro kg oder Stück zeigt? Ihre Qualitäts- und Lieferantenvorgaben bleiben dabei erhalten.",
+      "source_status": "open",
+      "status_note": "Mit Geschäftsführung oder Einkauf klären, wie Rechnungspositionen heute ausgewertet werden und ob ein zusätzlicher Rückblick Arbeit spart. Produktvarianten und besondere Zutaten getrennt lassen; ein niedrigerer Preis allein begründet keinen Lieferantenwechsel."
+    }
+  ]
+}

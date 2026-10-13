@@ -1,0 +1,192 @@
+{
+  "schema": "commons.billedok-research-input.v1",
+  "case_id": "BILLEDOK-CATERING-PROSPECT-PACK-379A-20261013",
+  "prepared_at": "2026-10-13T11:09:00Z",
+  "buyer": {
+    "name": "BilledOK",
+    "founder": "Marco Jehle",
+    "company": "Thought for GmbH",
+    "domain": "billedok.de",
+    "contact_url": "https://billedok.de/impressum",
+    "primary_sources": [
+      "https://billedok.de/",
+      "https://billedok.de/impressum",
+      "https://billedok.de/einkaufspreise-senken/gastronomie-catering"
+    ]
+  },
+  "records": [
+    {
+      "slug": "vegetaria",
+      "company": "Vegetaria Catering Service GmbH",
+      "company_domain": "vegetaria-catering.de",
+      "company_url": "https://vegetaria-catering.de/",
+      "area": "Finsing / Großraum München, Deutschland",
+      "contact_name": "Pino Schefer",
+      "role": "Eigentümer / Geschäftsführer",
+      "email": "info@vegetaria-catering.com",
+      "phone": "+49 89 20344871",
+      "contact_source": "https://vegetaria-catering.de/wir_ueber_uns/",
+      "source_url": "https://vegetaria-catering.de/mittagstisch-firmen/",
+      "additional_sources": [
+        "https://vegetaria-catering.de/wir_ueber_uns/"
+      ],
+      "source_refs": [
+        "turn322view2",
+        "turn325view1"
+      ],
+      "source_support": "Daily supplier purchasing and ingredient categories: team page lines80–90,139–141. Current managing director:35–38. Business lunch operations: lunch page25–35. Published .com inbox:53–59.",
+      "observed": "Vegetaria liefert vegetarische Firmen-Mittagsmenüs im Großraum München. Die eigene Unternehmensseite beschreibt täglich frische Zutaten von ausgewählten Lieferanten und Fachhändlern sowie Trockenwaren, Obst und Gemüse. Pino Schefer wird als Eigentümer und Geschäftsführer genannt.",
+      "booking": "Auf Wunsch übernimmt Vegetaria Lieferung, Thekenaufbau, Abrechnung und Abholung. Der Kontakt läuft über das veröffentlichte Büro-Postfach; die Website nutzt .de, das bestätigte Postfach .com.",
+      "fit_hypothesis": "Ein abgegrenzter Rückblick auf wiederkehrende Zutaten könnte Preisänderungen je kg oder Stück zeigen, ohne Menüplanung, Lieferantenauswahl oder Qualitätsvorgaben zu verändern.",
+      "proposed_demo": "Eine freigegebene Rechnungsserie eines Lieferanten verwenden; drei häufige Artikel über mehrere Termine verfolgen. Gebindegröße, Bio-/Qualitätsklasse, Netto-/Bruttobasis und Gutschriften prüfen, bevor Preise verglichen werden.",
+      "opening": "Guten Tag Herr Schefer, Ihre Website beschreibt den täglichen Einkauf frischer Zutaten bei ausgewählten Partnern. Wäre ein kurzer Vergleich hilfreich, der bei drei wiederkehrenden Artikeln aus einer freigegebenen Rechnungsserie die Preisentwicklung pro kg oder Stück zeigt? Ihre Qualitäts- und Lieferantenvorgaben bleiben dabei erhalten.",
+      "qualification": "Mit Geschäftsführung oder Einkauf klären, wie Rechnungspositionen heute ausgewertet werden und ob ein zusätzlicher Rückblick Arbeit spart. Produktvarianten und besondere Zutaten getrennt lassen; ein niedrigerer Preis allein begründet keinen Lieferantenwechsel.",
+      "contact_type": "Veröffentlichtes Unternehmenspostfach",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "caterlove",
+      "company": "Caterlove",
+      "company_domain": "caterlove.de",
+      "company_url": "https://www.caterlove.de/",
+      "area": "Hamburg und Umland, Deutschland",
+      "contact_name": "Negissa Ghorjani",
+      "role": "Inhaberin und Gründerin",
+      "email": "kontakt@caterlove.de",
+      "phone": "+49 1577 5076950",
+      "contact_source": "https://www.caterlove.de/de/ueber-uns",
+      "source_url": "https://www.caterlove.de/de/business-catering",
+      "additional_sources": [
+        "https://www.caterlove.de/de/ueber-uns"
+      ],
+      "source_refs": [
+        "turn322view0",
+        "turn325view2"
+      ],
+      "source_support": "Owner44–51 and per-order procurement63–65 on about page. Custom corporate packages and48–72h quote on business page53–88. Published contact same pages.",
+      "observed": "Caterlove plant Einkauf, Küche und Logistik für jeden Auftrag neu und produziert auf den Veranstaltungstermin. Das Unternehmen verbindet Fingerfood und persische Küche; Negissa Ghorjani ist die veröffentlichte Gründerin.",
+      "booking": "Business-Angebote werden nach Gästezahl, Ablauf und Budget zusammengestellt. Die Website nennt 48–72 Stunden für ein individuelles Angebot und veröffentlicht ein direktes Kontaktpostfach.",
+      "fit_hypothesis": "Vor einem neuen Angebot könnte ein kurzer Blick auf wiederkehrende Einkaufsartikel zeigen, ob die bisherige Zutatenbasis noch zu den jüngsten Einkaufspreisen passt.",
+      "proposed_demo": "Ein freigegebenes früheres Menü und einige dazugehörige Lieferantenrechnungen als Gesprächsgrundlage nehmen. Drei tatsächlich wiederkehrende Artikel nach gleicher Einheit und Spezifikation vergleichen; BilledOKs Preisübersicht unterstützt die bestehende Angebotskalkulation.",
+      "opening": "Guten Tag Frau Ghorjani, Sie planen den Einkauf für jedes Catering neu. Wäre eine kurze Übersicht hilfreich, die vor dem nächsten Angebot bei drei wiederkehrenden Zutaten die jüngsten Einkaufspreise mit den bisherigen vergleicht? Ihre Menüauswahl, Halal-Vorgaben und persönliche Kalkulation bleiben maßgeblich.",
+      "qualification": "Erst klären, welche Artikel tatsächlich wiederkehren und ob die Einkaufsauswertung bereits abgedeckt ist. Zertifizierte und andere Qualitäten nicht allein wegen ähnlicher Bezeichnungen gleichsetzen. Keine automatische Rezept- oder Eventkalkulation versprechen.",
+      "contact_type": "Veröffentlichtes Unternehmenspostfach",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "kleine-kantine",
+      "company": "Die kleine Kantine",
+      "company_domain": "diekleinekantine-hamburg.de",
+      "company_url": "https://diekleinekantine-hamburg.de/",
+      "area": "Hamburg-Rahlstedt, Deutschland",
+      "contact_name": "Geschäftsführung / Küchenteam",
+      "role": "Betriebs- oder Einkaufsverantwortliche",
+      "email": "kontakt@diekleinekantine-hamburg.de",
+      "phone": "+49 40 30853100",
+      "contact_source": "https://diekleinekantine-hamburg.de/catering/",
+      "source_url": "https://diekleinekantine-hamburg.de/mittagstisch/",
+      "additional_sources": [
+        "https://diekleinekantine-hamburg.de/catering/",
+        "https://diekleinekantine-hamburg.de/uber-uns/"
+      ],
+      "source_refs": [
+        "turn325view3",
+        "turn323view0",
+        "turn325view4"
+      ],
+      "source_support": "Daily changing lunch and local meat/dairy/produce suppliers: lunch21–25. Catering and published contact: catering16–39,100–108. Displayed menu date21–25Sep2026 is retained as an older example, not current weekly schedule.",
+      "observed": "Die kleine Kantine kocht täglich wechselnden Mittagstisch und bietet zusätzlich Business- und Event-Catering. Fleisch, Molkerei, Obst und Gemüse kommen laut eigener Seite von Partnern aus Hamburg und Umgebung.",
+      "booking": "Catering wird passend zu Anlass, Gästezahl und Budget angeboten; die veröffentlichte Kontaktadresse führt zum Team. Die beim Abruf sichtbare Wochenkarte trägt ein Septemberdatum und wird hier nicht als aktueller Speiseplan verwendet.",
+      "fit_hypothesis": "Eine gemeinsame Preisübersicht wiederkehrender Zutaten könnte den Einkauf für Mittagstisch und Catering unterstützen, während die vorhandene Menü- und Angebotsplanung bestehen bleibt.",
+      "proposed_demo": "Eine freigegebene Rechnungsreihe eines Gemüse- oder Molkereipartners betrachten. Drei wiederkehrende Positionen nach vergleichbarer Einheit und Qualität sortieren und auffällige Änderungen für die Küchenleitung markieren.",
+      "opening": "Guten Tag an das Team der kleinen Kantine, Sie verbinden wechselnden Mittagstisch mit Catering und beziehen Zutaten von regionalen Partnern. Wäre ein kurzer Rechnungsvergleich interessant, der bei einigen regelmäßig gekauften Artikeln die Preisentwicklung sichtbar macht und Ihre bestehende Menüplanung ergänzt?",
+      "qualification": "Den heutigen Rechnungs- und Einkaufsprozess sowie den zuständigen Ansprechpartner feststellen. Regionale Herkunft und Qualität bleiben Auswahlkriterien. Schwankende Mengen, Saisonalität und Lieferkosten getrennt von Stückpreisänderungen betrachten.",
+      "contact_type": "Veröffentlichtes Unternehmenspostfach",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "gaumenfreunde",
+      "company": "Gaumenfreunde Hamburg – Catering & Events",
+      "company_domain": "gaumenfreunde-hamburg.de",
+      "company_url": "https://www.gaumenfreunde-hamburg.de/",
+      "area": "Hamburg, Deutschland",
+      "contact_name": "Dave Steinhardt",
+      "role": "Inhaber",
+      "email": "info@gaumenfreunde-hamburg.de",
+      "phone": "+49 40 50680129",
+      "contact_source": "https://www.gaumenfreunde-hamburg.de/event-catering/business-catering/",
+      "source_url": "https://www.gaumenfreunde-hamburg.de/event-catering/business-catering/",
+      "additional_sources": [],
+      "source_refs": [
+        "turn323view1"
+      ],
+      "source_support": "Two concrete business lunch menus:26–58. Owner/contact:96–105. Public posted prices are intentionally omitted from offer because the page crawl predates this check.",
+      "observed": "Gaumenfreunde veröffentlicht konkrete Business-Lunch-Menüs mit unterschiedlichen Zutaten sowie Buffet-, BBQ- und Fingerfood-Angebote. Dave Steinhardt ist als Inhaber mit direktem Unternehmenspostfach aufgeführt.",
+      "booking": "Die Website bietet ein Anfrageformular und persönliche Catering-Planung. Die öffentlich genannten Beispielmenüs liefern einen konkreten Gesprächseinstieg; Angebotspreise sollten aktuell bestätigt werden.",
+      "fit_hypothesis": "Wiederkehrende Zutaten aus mehreren Veranstaltungsformaten könnten in einem kleinen Rechnungsrückblick gemeinsam auf Preisänderungen geprüft werden.",
+      "proposed_demo": "Drei tatsächlich regelmäßig bestellte Artikel aus früheren Business-Lunch-Aufträgen wählen. Vergleichbare Rechnungsmengen und Einheiten nebeneinanderstellen; die vorhandene Menü- und Eventkalkulation bleibt das führende Verfahren.",
+      "opening": "Guten Tag Herr Steinhardt, Ihre Business-Lunch-Menüs zeigen eine konkrete Auswahl an Zutaten. Wäre ein kurzer Vergleich interessant, der anhand freigegebener Lieferantenrechnungen die Preisentwicklung einiger dieser Artikel nachvollziehbar macht, bevor Sie das nächste individuelle Angebot kalkulieren?",
+      "qualification": "Wiederholungsfrequenz und aktuelle Einkaufssoftware erfragen. Eine veröffentlichte Menüseite beweist weder einen Kostenanstieg noch ungenutzte Einsparungen. Fisch-, Fleisch- und andere Qualitätsvarianten nur nach fachlicher Freigabe vergleichen.",
+      "contact_type": "Veröffentlichtes Unternehmenspostfach des Inhabers",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "barbaras-kueche",
+      "company": "Barbaras Küche",
+      "company_domain": "barbaraskueche.de",
+      "company_url": "https://barbaraskueche.de/",
+      "area": "Catering für Berlin; Café in Trebnitz, Deutschland",
+      "contact_name": "Barbaras-Küche-Team",
+      "role": "Küchen- oder Einkaufsverantwortliche",
+      "email": "info@barbaraskueche.de",
+      "phone": "+49 172 6857192",
+      "contact_source": "https://barbaraskueche.de/",
+      "source_url": "https://barbaraskueche.de/",
+      "additional_sources": [
+        "https://barbaraskueche.de/catering-berlin/"
+      ],
+      "source_refs": [
+        "turn322view1",
+        "turn324view3"
+      ],
+      "source_support": "Current homepage5–18: regional seasonal food, business catering minimum40portions, Trebnitz café, handmade Maultaschen and direct email. Catering page was initially returned; later timed out, so selection rests on complete homepage.",
+      "observed": "Barbaras Küche beschreibt regionale und saisonale Speisen, Business-Catering ab 40 Portionen, handgemachte Maultaschen und ein Café in Trebnitz. Das Unternehmen veröffentlicht ein direktes Postfach und eine Mobilnummer.",
+      "booking": "Catering wird direkt per E-Mail angefragt. Die eigene Homepage verbindet das Catering-Angebot mit dem Café; die aktuelle Lieferregion ist im ersten Gespräch zu bestätigen.",
+      "fit_hypothesis": "Ein kleiner Preisrückblick auf Zutaten eines häufig produzierten Gerichts könnte bei der nächsten Catering-Kalkulation helfen, ohne Rezept oder regionale Beschaffung zu verändern.",
+      "proposed_demo": "Für ein tatsächlich wiederkehrendes Gericht zwei bis drei Zutaten auswählen und eine freigegebene Rechnungsserie betrachten. Erst gleiche Einheiten, Mengenbasis und Zutatenqualität bestätigen; anschließend nur die beobachtete Preisentwicklung zeigen.",
+      "opening": "Guten Tag an das Team von Barbaras Küche, Ihre handgemachten Maultaschen und das Catering ab 40 Portionen bieten einen konkreten Ansatz für einen kleinen Einkaufspreisvergleich. Wäre eine Übersicht zu wenigen regelmäßig gekauften Zutaten hilfreich, bevor Sie das nächste Catering-Angebot kalkulieren?",
+      "qualification": "Aktuellen Catering-Betrieb, Lieferregion und Entscheidungsverantwortliche bestätigen. Prüfen, ob die tatsächliche Rechnungsmenge einen zusätzlichen Auswertungsschritt rechtfertigt. Keine personenbezogenen Gästedaten oder Allergieangaben für die Lieferantenanalyse verwenden.",
+      "contact_type": "Veröffentlichtes Unternehmenspostfach",
+      "checked_date": "2026-10-13"
+    },
+    {
+      "slug": "unikorn",
+      "company": "UNIKORN Catering & Events",
+      "company_domain": "unikorncatering.de",
+      "company_url": "https://unikorncatering.de/",
+      "area": "München, Deutschland",
+      "contact_name": "George Kallman / Gabriella Feuermann",
+      "role": "Betriebsleiter / Geschäftsführerin",
+      "email": "info@unikorncatering.de",
+      "phone": "+49 89 78597715",
+      "contact_source": "https://unikorncatering.de/das-team/",
+      "source_url": "https://unikorncatering.de/buero-catering-muenchen/",
+      "additional_sources": [
+        "https://unikorncatering.de/das-team/"
+      ],
+      "source_refs": [
+        "turn323view2",
+        "turn325view5"
+      ],
+      "source_support": "Office offering including daily/regular staff catering:office18–30. Existing Catersmart links12,25–31. Namedoperations/director:team31–42; publishedgeneralcontact0.",
+      "observed": "UNIKORN bietet Büro-Catering bis zur regelmäßigen Mitarbeiterverpflegung sowie größere Veranstaltungen. George Kallman ist als Betriebsleiter und Gabriella Feuermann als Geschäftsführerin genannt. Anfragen und Bestellungen sind bereits mit Catersmart verknüpft.",
+      "booking": "Die bestehenden Catersmart-Bestell- und Anfragewege bleiben erhalten. Das veröffentlichte allgemeine Postfach kann an Betriebsleitung oder Einkauf weiterleiten.",
+      "fit_hypothesis": "Eine ergänzende Auswertung freigegebener Lieferantenrechnungen könnte wiederkehrende Artikelpreise für Büroverpflegung und Veranstaltungen sichtbar machen.",
+      "proposed_demo": "Einen regelmäßig genutzten Lieferanten und einige echte wiederkehrende Artikel auswählen. BilledOKs Rechnungsauswertung neben dem bestehenden Bestell-/Eventprozess zeigen und prüfen, ob sie zusätzliche relevante Erkenntnisse liefert.",
+      "opening": "Guten Tag an die UNIKORN-Betriebsleitung, Sie bieten regelmäßige Büroverpflegung und nutzen bereits Catersmart für Anfragen und Bestellungen. Wäre ein abgegrenzter Vergleich von Lieferantenrechnungen hilfreich, der wiederkehrende Artikelpreise ergänzt, ohne Ihren bestehenden Bestell- und Eventprozess umzustellen?",
+      "qualification": "Zuerst vorhandene Einkaufs-, ERP- und Catersmart-Auswertungen klären. Nur einen tatsächlich zusätzlichen Nutzen anbieten; keine direkte Catersmart-Integration voraussetzen. Aufgrund des größeren Teams eignet sich ein klar abgegrenzter Lieferanten-Pilot.",
+      "contact_type": "Veröffentlichtes allgemeines Unternehmenspostfach",
+      "checked_date": "2026-10-13"
+    }
+  ]
+}
