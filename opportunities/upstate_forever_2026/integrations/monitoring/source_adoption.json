@@ -126,10 +126,12 @@
     {
       "source": "src/opportunities/upstate_forever_2026/operator/monitoring_receiving.py",
       "path": "operator/monitoring_receiving.py",
-      "bytes": 5296,
-      "sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7",
+      "bytes": 16918,
+      "sha256": "7dbc67d5c58ce4bdffed8482ddd04f3ba030ee5ed845d16973f355e06f367155",
       "original_bytes": 5296,
-      "original_sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7"
+      "original_sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7",
+      "previous_bytes": 5296,
+      "previous_sha256": "653662eb9825533c7ba26f4de2610c576b9a638df9ebc5c6c4fdae39dc7458f7"
     },
     {
       "source": "src/opportunities/upstate_forever_2026/operator/static/monitoring.js",
@@ -187,6 +189,13 @@
       "path": "model/MONITORING_OBSERVED_CONTEXT.md",
       "bytes": 11799,
       "sha256": "18a222a0269cd333713041854d4be2a9811912664c7b082589f5c9ae6e319992"
+    },
+    {
+      "source": "integrations/monitoring/RECEIVING.md",
+      "source_role": "current_application_source",
+      "path": "integrations/monitoring/RECEIVING.md",
+      "bytes": 12853,
+      "sha256": "c8a3d22111a0195b73937cc086ffb77fad8180a812a9bcbc9bb830944996bd8e"
     }
   ],
   "host": "operator/extension_registry.py",
@@ -242,6 +251,18 @@
         "Capture report preparation under its root lock during complete Workspace transfer"
       ],
       "preserved": "Original ASTRA-MONITOR12 solver, native campaign and field history; current water-study handoff; ES26 observed-context source and browser reads; ES-EXP campaign-to-Implementation fieldwork mounting, updates and detach"
+    },
+    {
+      "operation_id": "ES26-MONITORING-OBSERVED-RECEIVING-20261013",
+      "version": "1.3.1",
+      "guide": "integrations/monitoring/RECEIVING.md",
+      "changes": [
+        "Reuse exact saved network, plan or campaign in the original receiving command",
+        "Import and retain original observation manifest and companions",
+        "Preview, save, inspect and export immutable observed context with the original field package",
+        "Verify complete source and record identities after native archive restore and independent receiving revision"
+      ],
+      "preserved": "Original network/design/campaign workflow, actual source station mapping and dates, native Workspace archive/restore, and current receiving-water/report owners"
     }
   ],
   "observational_context": {
