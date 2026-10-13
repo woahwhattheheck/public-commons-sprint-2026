@@ -431,7 +431,10 @@ def _decorate(operator, workspace_key, kind, original):
         return body
 
     previews, view_links = {}, dict(links)
-    for path, item in sorted(members.items(), key=lambda pair: (pair[0].startswith("receptor-experiments/"), pair[0])):
+    # Captured child reports must receive their preview links before parents;
+    # comparison indexes still follow their original inventory report groups.
+    for path, item in sorted(members.items(), key=lambda pair: (
+            pair[0].startswith("receptor-experiments/"), -pair[0].count("/"), pair[0])):
         if not path.endswith("/index.html"):
             continue
         source = read_member(path, HTML_LIMIT).decode("utf-8")
