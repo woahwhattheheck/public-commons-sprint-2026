@@ -38,13 +38,17 @@ All identifiers and source variables above come from the existing authorized ope
 
 The complete request is copied synchronously before the first awaited validator or journal callback. Later caller mutations cannot change the source that the plan identifies or the text sent to the native Doc.
 
-The optional `bindings` object maps logical actions `profile`, `metadata`, `document` and `writeDocument` to actual discovered normal tool names. Use it only to bind the same ordinary operations exposed by the runtime; it is not a route-selection or retry mechanism.
+The optional `bindings` object maps logical actions `profile`, `metadata`, `document`, `fullDocument` and `writeDocument` to actual discovered normal tool names. Use it only to bind the same ordinary operations exposed by the runtime; it is not a route-selection or retry mechanism.
 
 ## Actual document behavior
 
 The helper verifies the connected actor's email and stable account ID, the original Doc ID/MIME type, and current edit capability. It reads the complete native paragraph and its revision before deciding whether a write is needed.
 
 The accepted layout is exactly one plain ASCII JSON paragraph. The original paragraph must start at index 1, and its returned end/start indices must match its full text length. A native final newline is preserved. A normal native tab such as `t.0` is retained and supplied explicitly in both the delete range and insertion location. Rich or ambiguous layouts produce `DOCUMENT_LAYOUT`; the helper never guesses an index or silently drops another paragraph.
+
+A newly created native Doc can return `paragraphs: []` from the flattened text reader. That result alone does not establish an empty writable document. Only for this response, the helper reads the complete original Doc with `fullDocument` (`google_drive_get_document`) and requires the same document ID and revision. It admits exactly one top-level native tab (or an unambiguous original default body), no child tabs, headers, footers, footnotes, images, positioned content or suggestions (the native `suggestionsViewMode: SUGGESTIONS_INLINE` metadata is allowed), and the actual empty final paragraph: section boundary ending at index 1, followed by a single newline text run spanning indices 1–2. Its actual tab ID is retained; no tab ID or paragraph is invented. The original provider metadata `suggestionsViewMode: 'SUGGESTIONS_INLINE'` is admitted as a display mode; nonempty actual suggested changes and IDs remain rejected. The write then consists of an insertion at index 1 in that tab, with no deletion. If the complete body changed, contains additional text or has an ambiguous layout, no write is issued.
+
+The full-body fallback is not used for existing nonempty text. Their original flattened paragraph/index validation, preimage guard, tab retention and whole post-write readback remain unchanged.
 
 If the entire Doc already equals the selected packet, `run` returns the same verified source without another write. Otherwise it checks the complete preimage hash and performs one native batch with:
 
@@ -138,7 +142,7 @@ The helper never automatically retries a mutation. It refuses a second concurren
 
 ## Actual product use
 
-The final authoring module ran against the already-delivered complete source Doc through the real profile, metadata and full Doc actions. It matched a 189,132-character packet, validated all three outer and 27 nested source members, retained the original `t.0` tab and returned `DOCUMENT_READY` in three native calls without changing the delivered source. The original source had already passed complete Library readback and actual materialization. This validates the real already-authored continuation. The exact range/revision write follows the same native mutation contract used to repair the original Doc.
+The final authoring module ran against the already-delivered complete source Doc through the real profile, metadata and full Doc actions. It matched a 189,132-character packet, validated all three outer and 27 nested source members, retained the original `t.0` tab and returned `DOCUMENT_READY` in three native calls without changing the delivered source. The original source had already passed complete Library readback and actual materialization. This validates the real already-authored continuation. A subsequent actual multi-part original source delivery exposed the new-Doc `paragraphs: []` response; its complete native body retained the single `t.0` tab and literal empty newline paragraph. The guarded empty-body admission described above addresses that returned shape. Focused execution of the authored helper checks the original empty-body insertion and rejects changed revisions, extra tabs/content and unresolved suggestions before mutation. These checks are source-level validation; the original accepting native transfer remains responsible for the actual document write, receiving and product use. The exact range/revision write follows the same native mutation contract used to repair the original Doc.
 
 These source checks do not replace running, rendering and using the actual delivered product. Keep the accepting native worker and its original application/Workspace operation. Return its concrete source path, command result, first exception or produced artifact into that same course.
 

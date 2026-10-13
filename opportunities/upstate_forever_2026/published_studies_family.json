@@ -2374,6 +2374,12 @@
         "schema": "upstate.published-review-admission/v1",
         "scope": "Explicit captured original ZIP into maintained review importer/editor; current study head preserved; immutable admission/source retained in revised-only Study exports",
         "owner_direction": "CURRENT_OWNER_DIRECTION.md version 2026-10-13.3"
+      },
+      "public_registration": {
+        "base": "4cd09695d721ed6e185b88ad8702338d6cae8978",
+        "issue": 4094,
+        "scope": "Exact seven original guarded imports/calls plus declared assets/styles composed into current original readers/controller; current Economic and other source controls retained",
+        "installation": "The original guarded installer composes these registrations into the recipient's current shared files; the family does not overwrite shared peer bodies."
       }
     },
     "selected_microbial_activities": {
