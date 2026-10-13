@@ -12,7 +12,7 @@ import subprocess
 import tempfile
 
 MANIFEST = "MEASUREMENT_RETURNED_REVIEWS_SOURCE.json"
-PREFIXES = ("measurement_workspace/engine/returned_review", "verification/returned_review", "source_tools/print_measurement_return.py")
+PREFIXES = ("measurement_workspace/engine/returned_review", "checks/returned_review", "source_tools/print_measurement_return.py")
 EXACT = {"install_measurement_returned_reviews.py", "MEASUREMENT_RETURNED_REVIEWS.md", "integration/component_fragments/measurement-returned-reviews.json"}
 
 
