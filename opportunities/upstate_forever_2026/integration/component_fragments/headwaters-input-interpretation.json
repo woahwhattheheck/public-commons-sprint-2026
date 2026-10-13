@@ -1,5 +1,6 @@
 {
   "schema": "upstate.application-component-fragment/v1",
+  "id": "headwaters-input-interpretation",
   "components": {
     "headwaters-input-interpretation": {
       "title": "Original headwaters source and placement interpretation",
