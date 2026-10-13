@@ -1,0 +1,74 @@
+{
+  "schema": "tjlabs.forms-workbench.complete-source-package.v1",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "product_source_directory": "tools/forms-migration-e258-20261013",
+  "artifact_directory": "operations/forms-migration-receiving-e258-20261013",
+  "source_banks": {
+    "base20": "aa298626e75f456e1d7221129b4b857c5eddcd34",
+    "root5": "dfec673e3c49fec4598042dab976597b07df6713",
+    "capture3": "e4ba66d58fd512fd9df84f9f0144ef0cf3756565",
+    "inspector_receiving_examples5": "8af112589388a0533c17feeb5594ba1df68dab6f"
+  },
+  "archive": {
+    "path": "Forms_Source.zip",
+    "bytes": 202855,
+    "sha256": "8c5630af47d80a198b26175251fa621a0c1ac04be562668d6c50110528680e32"
+  },
+  "manifest": {
+    "path": "SOURCE_SELECTION.json",
+    "bytes": 8649,
+    "sha256": "897e021a00c597b81914ff0fa907024e43ead2682a814784cc2e0db1d15a67c5"
+  },
+  "guide": {
+    "path": "README.md",
+    "bytes": 12341,
+    "sha256": "49f6610351c713388e0b0680dd4a49c7f8951312f5c292fb83137001fdbf3c30"
+  },
+  "product_files": 33,
+  "archive_files": 33,
+  "source_bytes": 1006907,
+  "application_files": [
+    "discovery_engine.py",
+    "discovery_cli.py",
+    "README.md",
+    "OPERATOR_GUIDE.md",
+    "migration_reconciliation.py",
+    "migration_report.py",
+    "migration_server.py",
+    "MIGRATION_RECONCILIATION.md",
+    "MIGRATION_SELECTION_API.json",
+    "MIGRATION_HTTP_API.json",
+    "MIGRATION_RESULT_API.json",
+    "MIGRATION_SOURCE_PROVENANCE.json",
+    "LICENSE",
+    "forms_workbench.py",
+    "forms_server.py",
+    "forms_report.py",
+    "forms_capture.py",
+    "FORMS_WORKBENCH.md",
+    "FORMS_INTAKE_API.json",
+    "FORMS_HTTP_API.json",
+    "FORMS_CAPTURE.md",
+    "FORMS_CAPTURE_API.json",
+    "receiving_forms.py",
+    "receiving_forms_browser.mjs",
+    "FORMS_RECEIVING.md",
+    "FORMS_EXAMPLES.json"
+  ],
+  "verification": {
+    "status": "SOURCE_PACKAGED",
+    "all_original11_bytes_preserved": true,
+    "all_original_migration20_bytes_preserved": true,
+    "all_members_independently_inflated_crc_sha_mode_checked": true,
+    "native_receiving": "EXISTING_ORIGINAL_COORDINATED_OPERATION",
+    "browser_receiving": "ACTUAL_A_AND_C_RECEIPTS_REQUIRED",
+    "actual_visual_review": "PENDING_ORIGINAL_PRODUCED_FILES"
+  },
+  "license": {
+    "path": "LICENSE",
+    "mode": "100644",
+    "bytes": 1091,
+    "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
+    "git_blob_sha": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
+  }
+}

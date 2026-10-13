@@ -1,0 +1,58 @@
+{
+  "schema": "tjlabs.migration-reconciliation.http.v1",
+  "origin": "http://127.0.0.1:<selected ephemeral or supplied port>/<access token>/",
+  "routes": {
+    "": "industrial HTML",
+    "api/summary": "GET -> result.json",
+    "api/rows": "GET pair=<id optional>&classification=<exact optional>&search=<literal key text optional>&offset=0&limit=40 -> {total,offset,limit,rows:[complete ABI row with row_id]}; maximum page500",
+    "api/row": "GET id=<positive int> -> complete ABI row with row_id",
+    "api/source": "GET table=<original table id>&record=<positive ordinal afterheader> -> {table,record,headers,values,source:{table,retained_path,bytes,sha256}}; actual csv.reader values including [] for blank physical record",
+    "api/manifest": "GET original manifest normalized JSON",
+    "api/source-report": "GET complete original report.json",
+    "download/rows.jsonl": "GET full exact retained export when no query; with pair/classification/search filters, stream ALL matching records, never just the visible page; offset/limit rejected.",
+    "download/rows.csv": "GET full exact retained export when no query; with pair/classification/search filters, stream ALL matching records, never just the visible page; offset/limit rejected.",
+    "download/result.json": "GET whole summary JSON",
+    "download/source-report.json": "GET whole original report JSON",
+    "download/manifest.original.json": "GET original manifest bytes",
+    "download/case.zip": "GET verified complete prepacked ZIP (409 if absent; command in UI guide)",
+    "api/totals": "GET pair=<optional>&field=<optional>&status=<optional>&search=<literal dimensions text>&offset=0&limit=40 -> {total,offset,limit,rows:[complete total record with total_id,pair,dimensions,field,source,target,difference,status,meaning]}; max500",
+    "api/total": "GET id=<positive int> -> complete total record",
+    "api/capabilities": "GET -> {schema:'tjlabs.migration-reconciliation.capabilities.v1',read_only:true,archive_available:boolean,archive:{bytes,sha256}|null}",
+    "download/totals.csv": "GET full exact retained export when no query; with pair/field/status/search filters, stream ALL matching records, never just the visible page; offset/limit rejected.",
+    "download/totals.jsonl": "GET full exact retained export when no query; with pair/field/status/search filters, stream ALL matching records, never just the visible page; offset/limit rejected."
+  },
+  "errors": {
+    "shape": {
+      "status": "ERROR",
+      "code": "stable_code",
+      "message": "operator-readable detail"
+    },
+    "statuses": {
+      "400": "invalid request or changed immutable member",
+      "403": "wrong localhost Host/Origin",
+      "404": "unknown path/record",
+      "405": "read-only route",
+      "409": "unavailable case/archive"
+    }
+  },
+  "receiving": {
+    "command": "python migration_server.py --case /absolute/case --archive /absolute/Case.zip --receipt /absolute/new-server.json --port 0",
+    "schema": "tjlabs.migration-reconciliation.server.v1",
+    "fields": {
+      "origin": "http://127.0.0.1:<actual port>/<unpredictable token>/",
+      "case": "actual complete case",
+      "archive": "{path,bytes,sha256} or null",
+      "pid": "actual native process",
+      "source_run_identity": "actual source run",
+      "read_only": true
+    },
+    "shutdown": "The original launching operator terminates its own process; no remote write/stop API."
+  },
+  "security": {
+    "binding": "127.0.0.1 only",
+    "access": "unpredictable per-process path token; exact Host, same Origin when supplied, cross-site browser requests rejected",
+    "storage": "no mutating HTTP methods; downloaded files chosen by operator",
+    "logs": "request paths, keys and access tokens excluded from default HTTP logs",
+    "source": "actual original CSV reader with header and exact full record, including empty records"
+  }
+}

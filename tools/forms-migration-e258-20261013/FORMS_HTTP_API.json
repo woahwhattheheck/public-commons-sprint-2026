@@ -1,0 +1,53 @@
+{
+  "schema": "tjlabs.forms-workbench.http-contract.v1",
+  "receipt": {
+    "schema": "tjlabs.forms-workbench.server.v1",
+    "origin": "http://127.0.0.1:port/TOKEN/",
+    "workspace_url": "http://127.0.0.1:port/TOKEN/workspace/",
+    "project_identity": "...",
+    "source_run_identity": "...",
+    "pid": 0,
+    "read_only": true,
+    "archive": "path/bytes/sha256 or null"
+  },
+  "root": "Original migration inspector and all unchanged original migration API routes under token prefix.",
+  "workspace": "workspace/ serves new forms_report.py rendered HTML; use ../ for full migration inspector.",
+  "forms_summary": "api/forms/summary -> complete bounded result summary; class summary includes content_state counts and scope_state, separate from comparison status; each class includes examined_asset_count,unexamined_asset_count,unexamined_assets_route. Unexamined original findings kind=asset_coverage carry asset_id/asset_side for navigation.",
+  "forms_assets": "api/forms/assets?asset_class&side&availability&search&offset&limit -> {total,offset,limit,rows:[asset objects with asset_id,retained_path,table_ids,parent linkage separate]}",
+  "forms_asset": "api/forms/asset?id=asset_id -> complete asset object",
+  "forms_findings": "api/forms/findings?asset_class&kind&status&search&offset&limit -> paged finding objects {finding_id,asset_class,kind,status,key,source_entries,target_entries,issues,reference}",
+  "forms_finding": "api/forms/finding?id=positive_int",
+  "forms_attachments": "api/forms/attachments?side&availability&search&offset&limit -> paged complete explicit attachments, with actual body status and verified parent record",
+  "forms_attachment": "api/forms/attachment?id=entry_id",
+  "forms_intake": "api/forms/intake -> complete original intake JSON",
+  "downloads": [
+    "download/forms/original?id=asset_id (force binary attachment; PRESENT only)",
+    "download/forms/assets.jsonl",
+    "download/forms/assets.csv",
+    "download/forms/attachments.jsonl",
+    "download/forms/attachments.csv",
+    "download/forms/findings.jsonl",
+    "download/forms/findings.csv",
+    "download/forms/result.json",
+    "download/forms/intake.original.json",
+    "download/forms/intake.receiving.json",
+    "download/forms/project.zip (when supplied exact complete verified archive)"
+  ],
+  "paging": "default40,max500; full downloads never take page limits. All source data/filter values escaped/lossless. Same original private token/Host/Origin controls.",
+  "asset_fields": "All original plan asset fields plus asset_id=id, retained_path, actual_bytes,actual_sha256,table_ids; unavailable has null retained/actual.; content_state is distinct from body availability, defaults UNASSESSED. No total migration acceptance is inferred from whole retained bytes.",
+  "attachment_fields": "All original explicit fields plus body {availability,bytes,sha256,asset_id} and parent_status MATCHED|MISSING_RECORD|KEY_MISMATCH|INVALID_LINK; missing/ref mismatch retained as findings.; parent_status also includes SIDE_MISMATCH or CLASS_MISMATCH. Parent asset_class defaults responses; a different class requires explicit reference.",
+  "status_vocab": [
+    "MATCHED",
+    "DIFFERENCE",
+    "SOURCE_ONLY",
+    "TARGET_ONLY",
+    "AMBIGUOUS",
+    "UNAVAILABLE",
+    "PARENT_MISMATCH",
+    "UNEXAMINED",
+    "EXCLUDED",
+    "DEFERRED"
+  ],
+  "forms_intake_receiving": "api/forms/intake-receiving -> complete intake with PRESENT asset paths rewritten to retained originals, runnable with input-root=received project",
+  "forms_capabilities": "api/forms/capabilities -> {schema:tjlabs.forms-workbench.capabilities.v1,project_identity,read_only:true,archive_available:boolean,archive:{bytes,sha256}|null}"
+}
