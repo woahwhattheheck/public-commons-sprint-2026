@@ -1,0 +1,39 @@
+{
+  "version": "dealscout.lead-pack.v1",
+  "title": "Free lead sample",
+  "customer": "JSON Support",
+  "prepared_at": "2026-10-13T08:08:00.000Z",
+  "delivery_type": "sample",
+  "criteria": "One free complete example and five additional source-qualified automation/integration and spreadsheet-service prospects, with published business contacts, their existing workflows and a tailored JSON/CSV/XLSX comparison.",
+  "geography": "International, English-language business contact",
+  "skills": [
+    "API integration",
+    "Spreadsheet reporting",
+    "Workflow automation"
+  ],
+  "quantity": 1,
+  "currency": "USD",
+  "price_minor": 0,
+  "leads": [
+    {
+      "organization": "SmoothWork",
+      "company_url": "https://smoothwork.ai/",
+      "person": "Milan, Automation and Airtable consultant",
+      "business_need": "SmoothWork explicitly offers API integrations that collect data and build reports, alongside code and no-code workflows, Airtable implementations and ongoing support. Its own n8n guide covers authenticated HTTP requests and JSON responses.",
+      "source_url": "https://smoothwork.ai/custom-api-integration-services/",
+      "original_request_date": "",
+      "last_buyer_update": "",
+      "source_checked_at": "2026-10-13",
+      "signal_type": "company_fit",
+      "deadline": "",
+      "contact_route": "mailto:hello@smoothwork.ai",
+      "contact_instructions": "Published business email hello@smoothwork.ai; +36 30 367 9742. The service page names Milan as its automation and Airtable consultant and lists 1053 Budapest, Ferenciek Square 2.",
+      "geography": "Budapest, Hungary; remote clients across markets",
+      "published_budget": "",
+      "why_it_fits": "Offer a short comparison for one existing API-to-spreadsheet report: post an approved small JSON response to JSON Support, receive the XLSX and compare column expansion, dates, numbers and file handoff with SmoothWork's current implementation. For recurring client delivery, compare the Pro inbound webhook's emailed workbook with the existing n8n or scripted delivery step. Keep data preparation and client-specific business logic in SmoothWork's existing workflow.",
+      "opening_message": "Your API integration service already covers collecting data and building reports, and your n8n guide walks through authenticated JSON requests. Would a small JSON-to-XLSX comparison be useful for a client workflow where the last step is delivering a spreadsheet? We can compare it with the component you already use.",
+      "source_status": "unconfirmed",
+      "status_note": "First-party service and contact sources reviewed on 13 October 2026. Product fit and comparison suggestions are research judgments for qualification."
+    }
+  ]
+}

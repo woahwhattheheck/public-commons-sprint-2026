@@ -29,7 +29,7 @@
     {
       "path": "complete-document-receipt.json",
       "bytes": 13708,
-      "sha256": "2b078d9fbd9973a6c91aa6f365bd5f3f00a74c3073e52a8a6c375c17d93e69ed"
+      "sha256": "c03c3d6794fabb2385527322733fa696fe9530621414bc66515a2d10d25aaaf7"
     },
     {
       "path": "customer-package-receipt.json",
@@ -118,13 +118,13 @@
     },
     {
       "path": "customer/Unlost-complete-paid-documents.html",
-      "bytes": 218558,
-      "sha256": "40ddb525fe1330589cc03f897503df70f0aee4cfdfb77c4f94a2969601ae5923"
+      "bytes": 219798,
+      "sha256": "515f9a81c7d4658bd0c13374fd68d7074dc88a4434ebf650ecb942ca96743748"
     },
     {
       "path": "customer/Unlost-complete-sample-documents.html",
-      "bytes": 162248,
-      "sha256": "3b160c46649b34be169e22ddbf693e0b9c406c43cd2611e6268731fdb3d4de7d"
+      "bytes": 163532,
+      "sha256": "5b53c384a80bbb0d62cdcfa250468125a291f9f63182efef633e61f13620d0fa"
     },
     {
       "path": "first-offer.json",
@@ -173,8 +173,8 @@
     },
     {
       "path": "localization/package-documents.mjs",
-      "bytes": 4528,
-      "sha256": "1bc811a583de12d0bf83f0582eb5a55d8f9a28438a7705790b944f9ccfa94a80"
+      "bytes": 4586,
+      "sha256": "d2ccf3b8482395ff5d7c92b12811eebc464da3610d2f9d0a56a9f900084dd64e"
     },
     {
       "path": "localization/product-context.json",
@@ -208,8 +208,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 11845,
-      "sha256": "032f66a4b897e829a24c8fe11c681e5db15b9fdb10a22b5a1663847be594ccbd"
+      "bytes": 12408,
+      "sha256": "88885a2046aca76a88f6a3515775bf48795414341081c9fce551e521afd8a5ae"
     },
     {
       "path": "rebuild-original.cjs",
@@ -325,6 +325,11 @@
       "path": "working-record.json",
       "bytes": 913538,
       "sha256": "8981598331a515c51e0172bf1eafc3890f2e2287a7fef2681171654bc95752f5"
+    },
+    {
+      "path": "localization/customer-document-viewer.mjs",
+      "bytes": 3442,
+      "sha256": "7c9d93fa6dce339802f86dc71b64822b828c9702880a4f02a48504fda72ac747"
     }
   ],
   "ownerInstruction": "Bryce requires the producing peer to open and use the exact final application, download and reopen the complete customer artifacts, and personally view every actual desktop and narrow-screen image before marking the package visually reviewed. Retain the original source and current customer record. Fix visible defects in the same original product; do not replace this operation with a screenshot-only claim or a parallel application.",
@@ -333,6 +338,7 @@
     "archive_members_equal": true,
     "archive_member_occurrences": 16,
     "source_module": "localization/package-documents.mjs",
-    "receipt": "complete-document-receipt.json"
+    "receipt": "complete-document-receipt.json",
+    "complete_package_root_styles": true
   }
 }
