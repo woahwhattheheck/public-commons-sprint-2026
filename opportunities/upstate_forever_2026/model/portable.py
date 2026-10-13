@@ -21,9 +21,16 @@ APPLICATION_FILES = ("README.md", "audit.py", "raster_checks.py", "package_deliv
                      "ENSEMBLES.md", "requirements-ensemble.txt",
                      "install_programmes.py", "requirements-paired-ensemble.txt",
                      "PUBLISHED_STUDIES.md", "install_published_studies.py",
-                     "receive_published_studies.py", "tools/attach_published_report.py")
+                     "receive_published_studies.py", "tools/attach_published_report.py",
+                     "RFP_RESPONSE_MAP.md", "WORKSHARE.md", "GURA_NATIVE_WORKFLOW.md",
+                     "GIS_SOURCE.json", "README_RECEIVING.md", "CHEMISTRY.md",
+                     "LANDCOVER_LEDGER.md", "SOURCE_REFRESH.md", "receive_decision_source.py",
+                     "install_gis_projects.py", "install_chemistry.py", "install_economic_desk.py",
+                     "install_landcover.py", "install_source_refresh.py",
+                     "requirements-chemistry.txt", "requirements-landcover.txt")
 APPLICATION_DIRECTORIES = ("model", "operator", "source_tools", "source", "source_data", "ecsa_runs",
-                           "measurement_workspace", "observations")
+                           "measurement_workspace", "observations",
+                           "eco_intelligence", "integration", "receiving", "tools", "checks", "tests")
 MAX_MANIFEST = 64 * 1024 * 1024
 
 def member_name(value):

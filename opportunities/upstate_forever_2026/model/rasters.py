@@ -495,13 +495,20 @@ def combined_priority(inputs, destination, *, weights, percentile=95, selected_c
                     if float(weights[key]) == 0:
                         continue
                     data = raster.read(1, window=window, masked=True)
-                    invalid |= np.ma.getmaskarray(data) | ~np.isfinite(np.ma.getdata(data))
+                    raw = np.asarray(np.ma.getdata(data), dtype="float64")
+                    valid = ~np.ma.getmaskarray(data) & np.isfinite(raw)
+                    invalid |= ~valid
+                    if np.any(raw[valid] < 0):
+                        raise ValueError("Annual physical export contains a negative value: " + key)
+                    if caps[key] == 0 and np.any(raw[valid] > 0):
+                        raise ValueError("Positive export requires a positive priority cap: " + key)
                     if caps[key] > 0:
-                        score += float(weights[key]) * np.clip(np.ma.filled(data, 0) / caps[key], 0, 1)
+                        score += float(weights[key]) * np.clip(np.where(valid, raw, 0) / caps[key], 0, 1)
                 score /= weight_sum
                 score[invalid] = first.nodata
                 out.write(score.astype(profile["dtype"]), 1, window=window)
             out.update_tags(units="dimensionless", method="weighted clipped baseline positive-cell percentile normalization")
     return {"method": "sum(weight * clip(export / positive-cell percentile, 0, 1)) / sum(weights)",
             "percentile": float(percentile) if selected_caps is None else None, "caps": caps, "weights": weights,
+            "zero_cap_policy": "A zero cap requires zero valid export for a positively weighted pollutant",
             "units": "dimensionless", "interpretation": "relative export priority within the retained reporting mask"}
