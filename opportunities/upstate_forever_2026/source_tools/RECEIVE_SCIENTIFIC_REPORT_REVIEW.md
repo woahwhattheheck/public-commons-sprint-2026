@@ -203,6 +203,8 @@ The receiving source deliberately leaves the original `receive(...)` API and
 its complete-course result unchanged. The optional continuation is a separate
 phase of that same retained operation. Existing consumers such as
 `receive_observed_scientific_review.py` can finish their ordinary course first
-and pass its actual result receipt to this command. Never substitute a fabricated
-edition, review or response ID. Install the current Customer review Study-transfer
+and pass its actual result receipt to this command. In that wrapper's completed
+result JSON, the correct nested receipt is `review.receipt`; the outer workflow
+receipt has a different schema. Use the nested path unchanged with
+`--continue-receipt`. Never substitute a fabricated edition, review or response ID. Install the current Customer review Study-transfer
 component and its original native review dependencies before enabling this leg.
