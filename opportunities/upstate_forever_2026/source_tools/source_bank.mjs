@@ -121,8 +121,8 @@ export function createSourceBankToolkit(options = {}) {
         if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) ||
             !Number.isSafeInteger(metadata.bytes) || metadata.bytes < 0 ||
             typeof metadata.sha256 !== "string" || !shaPattern.test(metadata.sha256) ||
-            !["100644", "100755"].includes(metadata.mode))
-          fail("source-map metadata needs original bytes, SHA-256 and regular-file mode: " + path);
+            (metadata.mode !== undefined && !["100644", "100755"].includes(metadata.mode)))
+          fail("source-map metadata needs original bytes, SHA-256 and an optional regular-file mode: " + path);
         return { path, content: bank.files[path], bytes: metadata.bytes,
                  sha256: metadata.sha256, mode: metadata.mode, declaredMetadata: metadata };
       });
@@ -263,8 +263,59 @@ export function createSourceBankToolkit(options = {}) {
     }
     return summarize("zip", files, { archiveSha256: codec.sha256(a), archiveBytes: a.length, directoryCount: rows.filter(r => r.directory).length });
   }
+  function carrierJson(text) {
+    // Slack may replace indentation spaces with NBSP. Preserve every quoted
+    // source character and keep hashing the original carrier before this parse.
+    if (!text.includes("\u00a0")) return JSON.parse(text);
+    let quoted = false, escaped = false, start = 0;
+    const spans = [];
+    for (let index = 0; index < text.length; index++) {
+      const character = text[index];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (character === "\\") escaped = true;
+        else if (character === '"') quoted = false;
+      } else {
+        if (character === '"') quoted = true;
+        if (character === "\u00a0") {
+          spans.push(text.slice(start, index), " ");
+          start = index + 1;
+        }
+      }
+    }
+    return JSON.parse(spans.length ? spans.join("") + text.slice(start) : text);
+  }
+  function gzipEnvelope(value, depth) {
+    if (value.encoding !== "base64+gzip" || !Array.isArray(value.chunks) ||
+        !value.chunks.length || value.chunks.length > limits.maxMembers ||
+        value.chunks.some(part => typeof part !== "string"))
+      fail("gzip source envelope needs ordered base64 chunks");
+    for (const key of ["compressed_bytes", "decoded_bytes"])
+      if (!Number.isSafeInteger(value[key]) || value[key] < 0)
+        fail("gzip source envelope needs " + key);
+    for (const key of ["compressed_sha256", "decoded_sha256"])
+      if (typeof value[key] !== "string" || !shaPattern.test(value[key]))
+        fail("gzip source envelope needs " + key);
+    const encodedLength = value.chunks.reduce((n, part) => n + part.length, 0);
+    if (encodedLength > Math.ceil(limits.maxInputBytes / 3) * 4 + 4 ||
+        value.compressed_bytes > limits.maxInputBytes ||
+        value.decoded_bytes > limits.maxOutputBytes)
+      fail("gzip source envelope exceeds byte limits");
+    const packed = decodeBase64(value.chunks.join(""), limits.maxInputBytes, "gzip source envelope");
+    count(packed.length, value.compressed_bytes, "compressed source envelope");
+    const compressedSha256 = hash(packed, value.compressed_sha256, "compressed source envelope");
+    const raw = codec.gunzip(packed, { maxOutputBytes: value.decoded_bytes, maxMembers: limits.maxGzipMembers });
+    count(raw.length, value.decoded_bytes, "decoded source envelope");
+    const payloadSha256 = hash(raw, value.decoded_sha256, "decoded source envelope");
+    const result = unwrapJson(carrierJson(codec.utf8Decode(raw)), depth + 1);
+    return { ...result, compressedBytes: packed.length, compressedSha256, payloadSha256,
+      envelope: { schema: value.schema, encoding: value.encoding,
+                  compressedBytes: packed.length, decodedBytes: raw.length,
+                  compressedSha256, decodedSha256: payloadSha256 } };
+  }
   function unwrapJson(value, depth = 0) {
     if (depth > 4) fail("archive envelope nesting exceeds limit");
+    if (value?.schema === "commons.gzip-source-bank/v1") return gzipEnvelope(value, depth);
     if (value?.schema === "commons.artifact-base64/v1") {
       const data = decodeBase64(value.content_base64, limits.maxInputBytes, "artifact envelope");
       count(data.length, value.bytes, "artifact envelope");
@@ -290,7 +341,7 @@ export function createSourceBankToolkit(options = {}) {
       });
       count(raw.length, value.bytes, "source-bank payload");
       const payloadSha256 = hash(raw, value.sha256, "source-bank payload");
-      const result = sourceBank(JSON.parse(codec.utf8Decode(raw)));
+      const result = sourceBank(carrierJson(codec.utf8Decode(raw)));
       return { ...result, envelope: {
         schema: value.schema, encoding: value.encoding,
         bytes: raw.length, sha256: payloadSha256,
@@ -343,7 +394,7 @@ export function createSourceBankToolkit(options = {}) {
     const raw = codec.gunzip(packed, { maxOutputBytes: limits.maxOutputBytes, maxMembers: limits.maxGzipMembers });
     count(raw.length, first.payload_bytes, "source packet payload");
     hash(raw, first.payload_sha256, "source packet payload");
-    const result = sourceBank(JSON.parse(codec.utf8Decode(raw)));
+    const result = sourceBank(carrierJson(codec.utf8Decode(raw)));
     count(result.memberCount, first.files, "source packet files");
     count(result.totalBytes, first.source_bytes, "source packet source");
     return { ...result, carrierEdition: first.edition, payloadSha256: codec.sha256(raw),
@@ -353,12 +404,12 @@ export function createSourceBankToolkit(options = {}) {
     if (depth > 4) fail("archive envelope nesting exceeds limit");
     if (utf8Length(text) > limits.maxInputBytes) fail("carrier exceeds maxInputBytes");
     const blocks = [...text.matchAll(/(?:^|\n)[ \t]*\x60{3}json[ \t]*\r?\n([\s\S]*?)\r?\n[ \t]*\x60{3}[ \t]*(?=\r?\n|$)/g)].map(match => {
-      try { return JSON.parse(match[1]); }
+      try { return carrierJson(match[1]); }
       catch (error) {
         if (!canvasEscapes) throw error;
         // Native Slack Canvas reads escape Markdown punctuation inside code blocks.
         // Remove one documented transport layer only in an identified Canvas result.
-        return JSON.parse(match[1].replace(/\\([\\/"\x60*_{}\[\]()#+\-.!>])/g, "$1"));
+        return carrierJson(match[1].replace(/\\([\\/"\x60*_{}\[\]()#+\-.!>])/g, "$1"));
       }
     });
     if (!blocks.length) fail("carrier contains no supported JSON fences");
@@ -375,13 +426,13 @@ export function createSourceBankToolkit(options = {}) {
     if (a.length >= 4 && [0x04034b50, 0x06054b50].includes(u32(a, 0))) result = zip(a);
     else if (a.length >= 2 && a[0] === 31 && a[1] === 139) {
       const raw = codec.gunzip(a, { maxOutputBytes: limits.maxOutputBytes, maxMembers: limits.maxGzipMembers });
-      result = unwrapJson(JSON.parse(codec.utf8Decode(raw)), depth + 1);
+      result = unwrapJson(carrierJson(codec.utf8Decode(raw)), depth + 1);
       result.payloadSha256 = codec.sha256(raw);
       result.gzipBytes = a.length;
     } else {
       const text = codec.utf8Decode(a);
       if (text.trimStart().startsWith("{") || text.trimStart().startsWith("[")) {
-        const value = JSON.parse(text);
+        const value = carrierJson(text);
         result = Array.isArray(value) ? packets(value) : unwrapJson(value, depth);
       } else result = markdown(text, depth);
     }
