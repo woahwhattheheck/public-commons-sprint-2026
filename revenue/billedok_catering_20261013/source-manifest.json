@@ -59,8 +59,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 8324,
-      "sha256": "2a713ce3b91e3fb8c042ffa4dd18f5bc477b29efea5f389f7e7e856ec2882ff8"
+      "bytes": 8789,
+      "sha256": "f91b742ddcfa6a7279c01288a1d13128dd3cc1739c720c7cc16bab90f745e42d"
     },
     {
       "path": "customer/sample.csv",
@@ -174,8 +174,8 @@
     },
     {
       "path": "package-viewer.mjs",
-      "bytes": 3294,
-      "sha256": "85e12505965366cd18cab641a5dbcfa7be0718b7256894ad9ea695b3109b9975"
+      "bytes": 4555,
+      "sha256": "74388f21a84e4d47f9648f7615f717e87af0d330526b079d88919858b9d474f4"
     },
     {
       "path": "package-viewer-input.json",
@@ -189,13 +189,13 @@
     },
     {
       "path": "browser-packages.mjs",
-      "bytes": 9495,
-      "sha256": "c870978f3a0c5e37d51b82a77d7148a30fa54508b1b9800edef7f732d4c2ea97"
+      "bytes": 11248,
+      "sha256": "c249072e860834a67c6e23c01243880b8db0bf11cb0e494e75b2f015caa3ea51"
     },
     {
       "path": "BilledOK-complete-packages.html",
-      "bytes": 46621,
-      "sha256": "44557338bc04d3d3fa7344cddcf764512738ce859f80f1d5961a08b12a23cd6a"
+      "bytes": 47492,
+      "sha256": "087c79446dfde5a6b1faa3fb1e50a7b6f9edff5e1053f4991bc8b2d50548c8c4"
     }
   ]
 }
