@@ -50,16 +50,17 @@ def _copy_file(source, directory, member, descriptor):
     path = Path(temporary)
     try:
         size, checksum = 0, hashlib.sha256()
-        with Path(source).open("rb") as original, os.fdopen(fd, "wb") as output:
+        with os.fdopen(fd, "wb") as output, Path(source).open("rb") as original:
             for chunk in iter(lambda: original.read(1024 * 1024), b""):
                 output.write(chunk); size += len(chunk); checksum.update(chunk)
             output.flush(); os.fsync(output.fileno())
         if size != expected["bytes"] or checksum.hexdigest() != expected["sha256"]:
             raise ValueError("An original utility monitoring source changed")
         os.replace(path, target)
-        parent = os.open(target.parent, os.O_RDONLY)
-        try: os.fsync(parent)
-        finally: os.close(parent)
+        if os.name != "nt":
+            parent = os.open(target.parent, os.O_RDONLY)
+            try: os.fsync(parent)
+            finally: os.close(parent)
     finally:
         path.unlink(missing_ok=True)
     return expected
