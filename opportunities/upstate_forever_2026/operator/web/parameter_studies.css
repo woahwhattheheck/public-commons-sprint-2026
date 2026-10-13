@@ -19,8 +19,8 @@
 .parameter-study-workbench .technical .definition{max-width:460px}
 .parameter-study-workbench .row-detail{max-width:400px}
 .parameter-study-workbench .row-detail dd{font-variant-numeric:tabular-nums}
-.parameter-study-workbench [data-experiment-results]>.note{margin-bottom:16px}
-.parameter-study-workbench [data-experiment-results] .filters{margin-top:18px}
+.parameter-study-workbench [data-parameter-study-results]>.note{margin-bottom:16px}
+.parameter-study-workbench [data-parameter-study-results] .filters{margin-top:18px}
 .parameter-study-workbench .file-list{margin-top:20px;border-top:1px solid var(--line)}
 .parameter-study-axis-heading{display:flex;gap:14px;align-items:flex-end;margin-bottom:16px}
 .parameter-study-axis-heading>label{flex:1}
@@ -31,8 +31,8 @@
 .parameter-study-draft .parameter-study-baseline{margin:18px 0}
 .parameter-study-draft textarea{min-height:82px}
 .parameter-study-draft .parameter-study-map-choice{margin:20px 0}
-.parameter-study-draft [data-experiment-preview]{margin-top:18px}
-.parameter-study-draft [data-experiment-areas]{margin-top:14px}
+.parameter-study-draft [data-parameter-study-preview]{margin-top:18px}
+.parameter-study-draft [data-parameter-study-areas]{margin-top:14px}
 .parameter-study-workbench .status.partial{background:#f2f1ed;color:#514d42;border-color:#b8b3a6}
 @media(max-width:1000px){.parameter-study-provenance{grid-template-columns:repeat(2,minmax(0,1fr))}.parameter-study-summary{gap:12px}}
 @media(max-width:600px){.parameter-study-provenance{grid-template-columns:1fr}.parameter-study-axis-heading{align-items:stretch;flex-direction:column}.parameter-study-axis-heading>button{align-self:flex-start}.parameter-study-pager{padding:12px}.parameter-study-filter{width:100%}}
