@@ -68,6 +68,7 @@ def prepare(selection):
 
 def source_records(workspace, grid, profile, records):
     """Append the actual domain, reporting polygon and native biophysical table."""
+    from .fgdc_metadata import retained_source_metadata
     records = {item["id"]: dict(item) for item in records}
     collection = grid["spec"]["source_collection_id"]
     selections = {
@@ -81,6 +82,7 @@ def source_records(workspace, grid, profile, records):
             "id": role, "source_collection_id": collection_id, "source_id": entry["id"],
             "title": entry["title"], "vintage": entry["vintage"], "uri": entry["uri"],
             "sha256": entry["body"]["sha256"],
+            "source_metadata": retained_source_metadata(entry),
         }
         if role in records and records[role]["sha256"] != item["sha256"]:
             raise ValueError("Native study source role differs from the original " + role)
