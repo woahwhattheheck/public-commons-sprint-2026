@@ -51,7 +51,8 @@ Additional controls:
 | --headed | Show the actual browser while operating the workflow. |
 | --browser-channel NAME | Select an installed Playwright browser channel. |
 | --task-timeout-seconds NUMBER | Observe the same original queued task for this explicit period. Default 3600 seconds. |
-| --output DIRECTORY | Save the actual journal, screenshots, recording and downloaded originals here. |
+| --output DIRECTORY | Save the actual journal, screenshots, recording, downloaded originals and private request state here. |
+| --resume | Continue the original tasks in the same explicit output directory, using identical scientific input files and selections. |
 
 ## Operated workflow
 
@@ -71,6 +72,21 @@ The native engine's transfer changes receiving case/run record IDs while preserv
 
 The output directory contains journey.json, screenshots of actual operated pages, original downloaded reports/packages under exports/, and optional video/. Each download is checked against its original native ticket byte count and SHA-256. The journal records original task, case, run and receiving identities together with actual success or failure. Startup URL and capability are redacted from journal/error output.
 
-A failed/interrupted native task remains in the original operator. Its concrete task ID and error appear in the journal so the same saved operation can be continued through the desk. Source selection, model preparation and compute continue to use the existing native stores and original task queue.
+### Restart the same operated journey
+
+Repeat the original command with the same input files, selections and output directory, adding --resume:
+
+    node source/run_chemistry_browser.mjs \
+      --url-file /actual/private/operator-url.txt \
+      --workspace ORIGINAL_OPERATOR_WORKSPACE_KEY \
+      --case-id ORIGINAL_CHEMISTRY_CASE_ID \
+      --receive --transfer --video \
+      --output /actual/chemistry-browser --resume
+
+Before a browser action reaches the operator, the driver flushes its complete original request body into request-state.json using an atomic file replacement. It flushes the returned task ID before observing progress. Resume reads that same task; when an HTTP response was lost, it resends the original operation ID and payload. Failed, interrupted or cancelled tasks continue through the original /api/task/resume action. The same saved child is reopened before analysis, and original completed exports, source intake, editable receive, backup and restore tasks are reused within this journey.
+
+The continuation checks the original workspace and source/case choice, exact edited-project and analysis-request file hashes, reason and receive/transfer selections. A changed scientific request belongs in a new output directory. Input file bytes are read once and frozen for the current attempt. A fresh invocation refuses to overwrite an existing journey; --resume requires its original durable request state. Earlier journals created before this feature can still be continued manually through their retained operator task IDs.
+
+request-state.json is a private local continuation file, created with owner-only permissions. It may contain original scientific selections, upload identities and local file-ticket references; keep it with the receiving worker and omit it from human-facing delivery packages. Authentication headers and startup capability are never written into this file. The public journey.json retains redacted operator references. Use one worker per output directory. Source selection, model preparation and compute continue through the existing native stores and task queue.
 
 This driver is part of the current public application and therefore travels in the existing portable source export. The Reach chemistry interface and scientific input contract are documented in operator/CHEMISTRY_OPERATOR.md and the original model/reach_chemistry documentation.

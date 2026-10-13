@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Operate a retained chemical project through the original scientific operator. */
 import { chromium } from 'playwright';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, open, rename } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, join, relative, basename } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -10,21 +10,66 @@ const {values:args}=parseArgs({options:{
  'url-file':{type:'string'},workspace:{type:'string'},'case-id':{type:'string'},
  'source-collection':{type:'string'},'source-id':{type:'string'},'edited-project':{type:'string'},
  request:{type:'string'},reason:{type:'string'},output:{type:'string'},
- receive:{type:'boolean',default:false},transfer:{type:'boolean',default:false},
+ receive:{type:'boolean',default:false},transfer:{type:'boolean',default:false},resume:{type:'boolean',default:false},
  video:{type:'boolean',default:false},headed:{type:'boolean',default:false},
  'browser-channel':{type:'string'},'task-timeout-seconds':{type:'string',default:'3600'},
  help:{type:'boolean',default:false}
 }});
 if(args.help){
- console.log('node source/run_chemistry_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY (--case-id RETAINED_CASE | --source-collection COLLECTION --source-id PROJECT_SOURCE) [--edited-project ACTUAL_PROJECT.json --reason SCIENTIFIC_EDIT] [--request ACTUAL_REQUEST.json] [--receive] [--transfer] [--video] [--output DIRECTORY]');
+ console.log('node source/run_chemistry_browser.mjs --url-file PRIVATE_URL_FILE --workspace OPERATOR_KEY (--case-id RETAINED_CASE | --source-collection COLLECTION --source-id PROJECT_SOURCE) [--edited-project ACTUAL_PROJECT.json --reason SCIENTIFIC_EDIT] [--request ACTUAL_REQUEST.json] [--receive] [--transfer] [--video] [--output DIRECTORY] [--resume]');
  process.exit(0);
 }
 const output=resolve(args.output||join('artifacts','chemistry-browser',new Date().toISOString().replace(/[:.]/g,'-')));
-const journal={schema:'upstate.chemistry-browser/v1',prepared_by:'TokenJunkieLabs engineering',started_at:new Date().toISOString(),status:'running',steps:[],screenshots:[],downloads:[],browser_errors:[]};
+let journal={schema:'upstate.chemistry-browser/v1',prepared_by:'TokenJunkieLabs engineering',started_at:new Date().toISOString(),status:'running',steps:[],screenshots:[],downloads:[],browser_errors:[]};
 const hash=value=>createHash('sha256').update(value).digest('hex');
 const canonical=value=>JSON.stringify(value,(_key,item)=>item&&!Array.isArray(item)&&typeof item==='object'?Object.fromEntries(Object.keys(item).sort().map(key=>[key,item[key]])):item);
 const required=(value,message)=>{if(!value)throw Error(message);};
 let browser,context,page,privateURL='',origin='',capability='',currentWorkspace='',savedCase,completedRun;
+let requestState, journalWritable=false, preparedProject=null, preparedRequest=null;
+const stopped=new Set(['failed','interrupted','cancelled']);
+async function readOptional(path){
+ try{return await readFile(path,'utf8');}catch(error){if(error.code==='ENOENT')return null;throw error;}
+}
+async function persistRequests(){
+ const path=join(output,'request-state.json'),temporary=path+'.'+process.pid+'.tmp';
+ const file=await open(temporary,'w',0o600);
+ try{await file.writeFile(JSON.stringify(requestState,null,2)+'\n');await file.sync();}finally{await file.close();}
+ await rename(temporary,path);
+ const directory=await open(output,'r');
+ try{await directory.sync();}finally{await directory.close();}
+}
+async function initializeContinuation(){
+ required(!args.resume||args.output,'Resume with the original explicit --output directory.');
+ const projectBytes=args['edited-project']?await readFile(resolve(args['edited-project'])):null;
+ const requestBytes=args.request?await readFile(resolve(args.request)):null;
+ preparedProject=projectBytes?JSON.parse(projectBytes.toString('utf8')):null;
+ preparedRequest=requestBytes?JSON.parse(requestBytes.toString('utf8')):null;
+ const input={workspace:args.workspace,case_id:args['case-id']||null,
+  source_collection_id:args['source-collection']||null,source_id:args['source-id']||null,
+  edited_project_sha256:projectBytes?hash(projectBytes):null,
+  request_sha256:requestBytes?hash(requestBytes):null,
+  reason:args.reason||'Retained working continuation of the original chemical scenario.',
+  receive:args.receive,transfer:args.transfer};
+ const retained=await readOptional(join(output,'request-state.json'));
+ const previous=await readOptional(join(output,'journey.json'));
+ if(args.resume){
+  required(retained,'This output has no durable chemistry request state; select its original operation in the operator.');
+  requestState=JSON.parse(retained);
+  required(requestState.schema==='upstate.chemistry-browser-requests/v1','Choose the original chemistry request-state file.');
+  required(canonical(requestState.input)===canonical(input),'The resumed scientific selection differs; keep its original input files and choices or use a new output directory.');
+  required(requestState.requests&&typeof requestState.requests==='object'&&!Array.isArray(requestState.requests),'Original queued request state is missing.');
+  if(previous){journal=JSON.parse(previous);required(journal.schema==='upstate.chemistry-browser/v1','Choose the original chemistry journey.');}
+  journal.attempts=journal.attempts||[];
+  journal.attempts.push({resumed_at:new Date().toISOString(),previous_status:journal.status,previous_error:journal.error||null});
+  journal.status='running';journal.browser_errors=[];delete journal.error;delete journal.finished_at;
+ }else{
+  required(!retained&&!previous,'This output already contains a journey. Use --resume to continue its original tasks, or choose a new output directory.');
+  requestState={schema:'upstate.chemistry-browser-requests/v1',created_at:new Date().toISOString(),input,requests:{}};
+ }
+ journal.workspace_key=args.workspace;journalWritable=true;
+ await persistRequests();await writeJournal();
+}
+function hasRequest(action){return Boolean(requestState.requests[action]);}
 const errors=error=>journal.browser_errors.push(redact(error.message));
 function redact(value){
  let result=String(value);
@@ -32,6 +77,7 @@ function redact(value){
  return result.replace(/#token=[^\s"'<>]+/g,'#token=[redacted]');
 }
 async function writeJournal(){
+ if(!journalWritable)return;
  await writeFile(join(output,'journey.json'),redact(JSON.stringify(journal,null,2))+'\n');
 }
 async function record(name,details={}){
@@ -45,10 +91,13 @@ function bodyOf(response){try{return response.request().postDataJSON()||{};}catc
 function actionResponse(action){return response=>new URL(response.url()).pathname==='/api/actions'&&bodyOf(response).action===action;}
 async function json(response,label){
  required(response.ok(),label+' returned HTTP '+response.status());
- const value=await response.json();required(!value.error,label+': '+redact(value.error?.message||value.error||''));return value;
+ const value=await response.json();required(!value.error||(value.schema==='upstate.operator-task/v1'&&value.id&&value.action),label+': '+redact(value.error?.message||value.error||''));return value;
 }
 async function apiGet(path,params={}){
- return json(await page.request.get(origin+path+'?'+new URLSearchParams(params),{headers:{Authorization:'Bearer '+capability}}),path);
+ return json(await page.request.get(origin+path+'?'+new URLSearchParams(params),{headers:{Authorization:'Bearer '+capability},maxRedirects:0}),path);
+}
+async function apiPost(path,body){
+ return json(await page.request.post(origin+path,{headers:{Authorization:'Bearer '+capability},data:body,maxRedirects:0}),path);
 }
 async function chemistry(kind,params={},workspace=currentWorkspace){return apiGet('/api/chemistry/'+kind,{workspace,...params});}
 async function waitTask(id){
@@ -66,11 +115,53 @@ async function waitTask(id){
 async function closeDetail(){
  if(await page.locator('#detail-dialog').isVisible())await page.locator('#detail-dialog [data-action="detail-close"]').click();
 }
+function validateTask(task,request){
+ required(task.id&&task.action===request.action&&task.workspace===request.workspace&&canonical(task.payload)===canonical(request.payload),'The original queued task does not match this retained scientific request.');
+}
+async function keepTask(action,task){
+ const entry=requestState.requests[action];validateTask(task,entry.request);
+ entry.task_id=task.id;entry.accepted_operation_id=task.operation_id;entry.state=task.state;
+ entry.observed_at=new Date().toISOString();await persistRequests();
+}
 async function queue(selector,action){
- const pending=page.waitForResponse(actionResponse(action));await page.locator(selector).click();
- const task=await json(await pending,'Queue '+action);await record('Queued '+action,{task_id:task.id,operation_id:task.operation_id,payload:task.payload});
- await page.locator('#detail-dialog').waitFor({state:'visible'});
- const completed=await waitTask(task.id);await record('Completed '+action,{task_id:completed.id,result:completed.result});
+ let entry=requestState.requests[action],task,fromBrowser=false;
+ if(entry){
+  required(entry.request.action===action&&entry.request.workspace===currentWorkspace,'The retained workflow operation belongs to another action or workspace.');
+  // The original request identity survives a lost HTTP reply and process exit.
+  task=entry.task_id?await apiGet('/api/task',{id:entry.task_id}):await apiPost('/api/actions',entry.request);
+  await keepTask(action,task);
+  if(stopped.has(task.state)){
+   task=await apiPost('/api/task/resume',{id:task.id});await keepTask(action,task);
+  }
+  await record('Reopened original '+action,{task_id:task.id,operation_id:task.operation_id,state:task.state});
+ }else{
+  let intercepted=false,interceptionError;
+  const intercept=async route=>{
+   const request=bodyOf({request:()=>route.request()});
+   if(request.action!==action){await route.continue();return;}
+   try{
+    required(!intercepted,'The same workflow stage submitted two requests.');
+    required(request.workspace===currentWorkspace&&request.operation_id&&request.payload,'The browser did not submit an original workspace operation.');
+    intercepted=true;
+    requestState.requests[action]={request,prepared_at:new Date().toISOString(),state:'prepared'};
+    // Flush the complete original body before any upstream mutation.
+    await persistRequests();await route.continue();
+   }catch(error){interceptionError=error;await route.abort('failed');}
+  };
+  await page.route('**/api/actions',intercept);
+  try{
+   const pending=page.waitForResponse(actionResponse(action));
+   await page.locator(selector).click();
+   task=await json(await pending,'Queue '+action);
+   if(interceptionError)throw interceptionError;
+   required(intercepted,'The original request was not captured before transmission.');
+   await keepTask(action,task);fromBrowser=true;
+   await record('Queued '+action,{task_id:task.id,operation_id:task.operation_id,payload:task.payload});
+  }finally{await page.unroute('**/api/actions',intercept);}
+ }
+ if(fromBrowser)await page.locator('#detail-dialog').waitFor({state:'visible'});
+ const completed=await waitTask(task.id);await keepTask(action,completed);
+ await record('Completed '+action,{task_id:completed.id,result:completed.result});
  await closeDetail();return completed;
 }
 async function openWorkspace(key){
@@ -132,6 +223,7 @@ async function taskDownload(task,suffix,name){
  await link.waitFor();const result=await saveDownload(link,name||basename(ticket.filename),ticket);await closeDetail();return{...result,ticket};
 }
 async function receiveProject(archive){
+ if(!hasRequest('source.import')){
  await page.locator('[data-view="sources"]').click();
  await page.locator('[data-action="source-open"]').first().click();
  await page.locator('#form-dialog select[name="source_mode"]').selectOption('file');
@@ -144,6 +236,7 @@ async function receiveProject(archive){
  const pending=page.waitForResponse(response=>new URL(response.url()).pathname==='/api/source-preview');
  await page.locator('#form-submit').click();await json(await pending,'Previewed original editable project archive');
  await page.locator('#form-submit').filter({hasText:'Import this source edition'}).waitFor();
+ }
  const imported=await queue('#form-submit','source.import');
  const collection=imported.result;required(collection?.id&&collection.entries?.length===1,'Original file intake did not retain exactly the selected archive.');
  await openDesk();
@@ -168,11 +261,13 @@ async function receiveProject(archive){
 async function backupRestore(){
  await page.locator('[data-view="journey"]').click();
  await page.locator('.journey-steps [data-action="journey-step"][data-step="reopen"]').click();
- await page.locator('[data-action="journey-backup"]').click();
+ if(!hasRequest('workspace.backup'))await page.locator('[data-action="journey-backup"]').click();
  const task=await queue('#form-submit','workspace.backup');
  const archive=await taskDownload(task,'.zip','complete-chemistry-workspace.zip');
- await page.locator('[data-action="journey-restore"]').click();
- await page.locator('#form-dialog input[name="restore_file"]').setInputFiles(archive.path);
+ if(!hasRequest('workspace.restore')){
+  await page.locator('[data-action="journey-restore"]').click();
+  await page.locator('#form-dialog input[name="restore_file"]').setInputFiles(archive.path);
+ }
  const restored=await queue('#form-submit','workspace.restore');
  required(restored.result?.identity==='MATCH'&&restored.result?.workspace_key,'Original receiving did not confirm workspace identity.');
  required(restored.result.workspace_key!==currentWorkspace,'Choose an independent receiving workspace.');
@@ -189,6 +284,7 @@ async function main(){
  required(Boolean(args['case-id'])!==Boolean(args['source-collection']||args['source-id']),'Choose a retained case or an original project source.');
  if(!args['case-id'])required(args['source-collection']&&args['source-id'],'Supply both original project source IDs.');
  if(args['edited-project'])required(args.reason?.trim(),'State --reason for the supplied original project edit.');
+ await initializeContinuation();
  privateURL=(await readFile(resolve(args['url-file']),'utf8')).trim();
  const parsed=new URL(privateURL);required(['http:','https:'].includes(parsed.protocol),'Choose the original operator HTTP/HTTPS startup URL.');
  origin=parsed.origin;capability=new URLSearchParams(parsed.hash.slice(1)).get('token')||'';
@@ -199,12 +295,12 @@ async function main(){
  await page.goto(privateURL,{waitUntil:'domcontentloaded'});await openWorkspace(args.workspace);await openDesk();
  let caseId=args['case-id'];
  if(!caseId){
-  await page.locator('.chemistry-panel [data-source]').selectOption(JSON.stringify({source_collection_id:args['source-collection'],source_id:args['source-id']}));
+  if(!hasRequest('chemistry.case.from-source'))await page.locator('.chemistry-panel [data-source]').selectOption(JSON.stringify({source_collection_id:args['source-collection'],source_id:args['source-id']}));
   const imported=await queue('[data-action="chemistry-from-source"]','chemistry.case.from-source');caseId=imported.result?.id;
   required(caseId,'Native source intake returned no retained chemical case.');await refreshDesk();
  }
  const baseline=await chooseCase(caseId);await record('Opened original retained chemical scenario',{case_id:baseline.id,project_sha256:baseline.project_sha256,source_refs:baseline.source_refs});
- let project=args['edited-project']?JSON.parse(await readFile(resolve(args['edited-project']),'utf8')):structuredClone(baseline.project);
+ let project=args['edited-project']?structuredClone(preparedProject):structuredClone(baseline.project);
  const reason=args.reason||'Retained working continuation of the original chemical scenario.';
  // Explicitly test invalid input in the actual editor, then restore the selected original project.
  await page.locator('[data-project]').fill('{');
@@ -213,7 +309,7 @@ async function main(){
  await record('Rejected invalid project JSON in the original editor');
  await page.locator('[data-project]').fill(JSON.stringify(project,null,2));
  await page.locator('[data-reason]').fill(reason);
- const request=args.request?JSON.parse(await readFile(resolve(args.request),'utf8')):{mode:'simulate',sample_days:[0,...new Set((project.phases||[]).map(row=>row.until_day))]};
+ const request=args.request?structuredClone(preparedRequest):{mode:'simulate',sample_days:[0,...new Set((project.phases||[]).map(row=>row.until_day))]};
  await page.locator('[data-request]').fill(JSON.stringify(request,null,2));
  await shot('01-retained-chemical-editor');
  const projectDraft=await page.locator('[data-project]').inputValue(),requestDraft=await page.locator('[data-request]').inputValue();
