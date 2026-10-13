@@ -7,6 +7,8 @@ presents its original preview, saved case and complete source files.
 from __future__ import annotations
 
 from copy import deepcopy
+import hashlib
+import importlib.metadata
 import json
 from pathlib import Path
 
@@ -165,7 +167,19 @@ class GeographyPreparation(SourcePreparation):
 
     def _preview(self, workspace, payload):
         value = native.preview(workspace, selection(payload))
-        basis = {"preview": value, "producer_sha256": file_digest(Path(native.__file__))}
+        # Pin the same complete numerical source family and installed geographic
+        # runtime that the native producer uses to identify a prepared edition.
+        from source_tools.geographic_matched_control import _implementation_snapshot
+        control_sources = _implementation_snapshot()
+        implementation = {
+            "control_source_closure": {name: {"bytes": len(body),
+                "sha256": hashlib.sha256(body).hexdigest()}
+                for name, body in control_sources.items()},
+            "geographic_runtime": {name: importlib.metadata.version(name)
+                for name in ("numpy", "rasterio", "fiona", "shapely", "pyproj")},
+        }
+        basis = {"preview": value, "producer_sha256": file_digest(Path(native.__file__)),
+                 "implementation": implementation}
         return {**basis, "preview_sha256": digest(basis)}
 
     def _case_downloads(self, workspace_key, workspace, case):
