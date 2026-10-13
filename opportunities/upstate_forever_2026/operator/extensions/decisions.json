@@ -2,13 +2,14 @@
   "schema": "upstate.operator-extension/v1",
   "id": "decisions",
   "title": "Scenario decisions",
-  "version": "3",
+  "version": "4",
   "order": 60,
   "assets": [
     "decision_bridge.mjs",
     "scenario_decisions.mjs",
     "scenario_decisions.css",
     "decision_transfer.mjs",
+    "scenario_handoff.mjs",
     "decision_submission.mjs"
   ],
   "backend": {
@@ -112,7 +113,8 @@
       "getState",
       "api",
       "endpoint",
-      "toast"
+      "toast",
+      "openExtension"
     ],
     "styles": [
       "/web/scenario_decisions.css"
