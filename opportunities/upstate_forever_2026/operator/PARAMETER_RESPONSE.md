@@ -16,7 +16,7 @@ For `threshold_flow_accumulation`, the view multiplies the recorded threshold in
 
 The ordinary HTML report includes the same calculation and wording. `response-interpretation.csv` and `response-interpretation.json` retain every original case/area/pollutant identity and the exact source result SHA256. The source result, original native rasters and their recorded sums are preserved. The new files travel inside the ordinary experiment archive and through its existing artifact handling.
 
-An already completed, current study upgrades its interpretation exports through its existing Run/resume action without native execution or raster aggregation. If the original summary/native/export edition also needs updating, the existing study upgrade path remains in control. Partial studies still summarize their actual completed cases using their existing action and cache.
+In an already completed, current study, click **Refresh completed results** to add the interpretation exports from its authenticated saved matrix without native execution or raster aggregation. The existing native Run/resume route supports the same upgrade for source/API callers. If the original summary/native/export edition also needs updating, the existing study upgrade path remains in control. Partial studies still summarize their actual completed cases using their existing action and cache.
 
 Source composition adds `model/parameter_response.py` and preserves the full current API, UI, styles, scientific report and installer. The `parameter-response` component fragment makes that dependency available to Parameter Studies, Calibration, Study transfer and Scientific Report editions. It adds no controller, background worker, model case or recipient obligation.
 
