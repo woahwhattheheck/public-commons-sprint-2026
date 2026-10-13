@@ -253,6 +253,32 @@ def _regions(workspace, prepared, context, grid_record, run_ids):
         raise ValueError("The original HUC feature selection changed")
     if crs != CRS.from_user_input(geographic_headwaters.CRS):
         raise ValueError("Retain the original geographic projected CRS")
+    # Extend reporting to the original boundary across the complete modeled
+    # upstream domain without changing the admitted grid or four-anchor mask.
+    if "model_domain" in domains:
+        boundary_rows, boundary_binding = geographic_headwaters._rows(
+            workspace, prepared["selection"]["reporting_boundary"])
+        if boundary_binding != prepared["geography"]["reporting_boundary"]:
+            raise ValueError("The original reporting-boundary source selection changed")
+        boundary = rasters.polygon_union(boundary_rows)
+        full_boundary = domains["model_domain"].intersection(boundary)
+        if full_boundary.is_empty or not full_boundary.is_valid or full_boundary.area <= 0:
+            raise ValueError("The original reporting boundary has no valid upstream-domain intersection")
+        definitions.append({
+            "id": "whole-model-domain-in-reporting-boundary",
+            "title": "Full upstream domain inside the original reporting boundary",
+            "kind": "boundary_intersection",
+            "relationship": "upstream_model_domain_intersect_original_reporting_boundary",
+            "quantity_scope": "model_domain", "analysis_id": None, "subject_id": None,
+            "boundary_description": prepared["selection"]["reporting_boundary_description"],
+            "model_domain_huc12s": list(prepared["geography"]["model_domain_huc12s"]),
+            "geometry": full_boundary, "mask": None, "pairwise_native_quantities": []})
+        bindings.append({
+            "scope": "model_domain", "region_id": "whole-model-domain-in-reporting-boundary",
+            "original_reporting_boundary": boundary_binding,
+            "geometry_sha256": digest(full_boundary.__geo_interface__),
+            "vector_area_ha": full_boundary.area / 10000.0,
+            "quantity_basis": "Original full-domain native outputs on this boundary intersection"})
     field = prepared["selection"]["huc_field"]
     expected = set(prepared["geography"]["model_domain_huc12s"])
     selected = {}
