@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "nc-water-workspace-opening",
+  "source_reference": "ECO12-NC-WORKSPACE-OPENING-20261013",
+  "extend_components": {
+    "water_source_review": {
+      "paths": [
+        "source_tools/prepare_nc_water_review.py",
+        "source_tools/NC_WATER_REVIEW_OPENING.md",
+        "integration/component_fragments/nc-water-workspace-opening.json"
+      ],
+      "source_manifests": [
+        "nc_classified_water_sources.json"
+      ]
+    }
+  },
+  "required_components": [
+    "water_source_review"
+  ]
+}
