@@ -18,10 +18,19 @@ The producer resolves original document entries in the selected source collectio
 
 - Their exact URI is referenced by an original selected profile.
 - Their body SHA256 equals an explicit `recipe-sha256:` profile reference or a selected input entry's `recipe_sha256`.
+- Their body SHA256 equals a selected source entry's original `control_sha256`.
 
 It preserves each selected document, its companions, source entry and original manifest bytes under `reference-sources/`. The source inventory includes those bindings; `study-source-scope.json` retains the exact grid/selections/classifications/document descriptors. Known original simulated assumption and input-recipe schemas expose their original assumption fields as ordinary report tables. Other referenced documents remain available as complete original files without interpreting their contents.
 
 This closes the real simulated-headwaters profile's `input-assumptions.json` and `input-recipe.json` references. Those documents describe the original input edition. Selected per-case profile tables continue to show actual varied parameters, so an original baseline assumption is not silently substituted for a varied case. The existing scientific collector carries the scope tables and source links through HTML, PDF, complete report data and the ordinary source ZIP.
+
+### Original matched-control conditions
+
+The selected control mask's `control_sha256` binds the complete original matched-control document. The report retains that document unchanged, including every original pair. Its compact appendix displays the declared classification, original recipe hash, matching method, changed input cells/hectares, original class counts, rainfall sums and residuals, and the source author's original interpretation. The table values are read directly from the source document.
+
+For the original `upstate.simulated-matched-control/v1` edition, the source declares 635 changed cells and 57.15 input hectares: 236 cells of class81 and399 of class82, both changed to41. The original matching algorithm preserves those counts/area and minimizes class-stratified rainfall mismatch. Its retained rainfall residuals remain visible; they are input-selection quantities. The complete source also states which physical siting properties are unmatched. Existing native export, paired support and final footprint records retain their distinct meanings and supply the downstream performance calculations.
+
+Only compact geography/source links are placed at the report opening. Full original assumption and matched-control detail follows the quantitative results and original figures, so readers can inspect the actual contrasts first and open the attached input documents directly when needed. The full635-pair original remains in its JSON attachment rather than being flattened into hundreds of report rows.
 
 ### Preserve old and new source editions
 

@@ -405,8 +405,8 @@ def _sections(plan, content, profiles, scenarios, scope=None):
             "and figure keeps the original exact common-support SHA256 and its cell count.",
         ]],
     ]
-    if scope is not None:
-        sections[1:1] = source_scope.sections(scope)
+    scope_sections = source_scope.sections(scope) if scope is not None else []
+    sections[1:1] = scope_sections[:1]
     for field, heading in (("paired_rows", "Land-cover contrasts on common valid cells"),
                            ("parameter_rows", "Parameter sensitivity with land cover held fixed")):
         rows = list(enumerate(content[field]))
@@ -523,6 +523,7 @@ def _sections(plan, content, profiles, scenarios, scope=None):
             ]},
         ]],
     ])
+    sections.extend(scope_sections[1:])
     return sections
 
 

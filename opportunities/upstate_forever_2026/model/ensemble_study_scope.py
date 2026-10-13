@@ -17,6 +17,7 @@ from . import ensemble_scientific_source as shared
 VERSION = 1
 SCOPE_FILE = "study-source-scope.json"
 KNOWN_ASSUMPTIONS = ("upstate.simulated-assumptions/v1", "upstate.simulated-input-recipe/v1")
+CONTROL_SCHEMA = "upstate.simulated-matched-control/v1"
 ASSUMPTION_FIELDS = ("classification", "assumptions", "nutrient_loading", "runoff_scaling",
                      "retention", "sediment", "stream_threshold", "parameter_profile")
 
@@ -37,7 +38,7 @@ def _table(columns, rows, caption):
 
 
 def _references(profiles, bindings):
-    uris, hashes = set(), set()
+    uris, hashes, controls = set(), set(), set()
     for profile in profiles.values():
         for reference in profile.get("references", []):
             if not isinstance(reference, str):
@@ -49,16 +50,17 @@ def _references(profiles, bindings):
                     hashes.add(value)
     for binding in bindings:
         entry = binding["entry"]
-        value = entry.get("recipe_sha256")
-        if isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value):
-            hashes.add(value)
-    return uris, hashes
+        for name, selected in (("recipe_sha256", hashes), ("control_sha256", controls)):
+            value = entry.get(name)
+            if isinstance(value, str) and len(value) == 64 and all(c in "0123456789abcdef" for c in value):
+                selected.add(value)
+    return uris, hashes, controls
 
 
 def capture(workspace, directory, grid, profiles, bindings, collections):
     """Retain explicitly referenced document bodies and the original scope."""
     directory = Path(directory)
-    uris, hashes = _references(profiles, bindings)
+    uris, hashes, controls = _references(profiles, bindings)
     references, extra_bindings, source_records = [], [], []
     already = {(row["source_collection_id"], row["source_id"]) for row in bindings}
     for collection_id, collection in sorted(collections.items()):
@@ -70,6 +72,8 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
                 reasons.append("Exact original profile reference URI")
             if entry.get("body", {}).get("sha256") in hashes:
                 reasons.append("Exact declared original recipe SHA256")
+            if entry.get("body", {}).get("sha256") in controls:
+                reasons.append("Exact declared original matched-control SHA256")
             if not reasons:
                 continue
             source_id = entry["id"]
@@ -90,7 +94,7 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
                 copied.append(item)
                 if body is entry["body"]:
                     original_member = target
-            assertions = {}
+            assertions, original_control = {}, None
             if entry["body"]["bytes"] <= 2 * 1024 * 1024:
                 try:
                     value = json.loads(original_member.read_bytes())
@@ -98,12 +102,24 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
                     value = None
                 if isinstance(value, dict) and value.get("schema") in KNOWN_ASSUMPTIONS:
                     assertions = {key: deepcopy(value[key]) for key in ASSUMPTION_FIELDS if key in value}
+                if isinstance(value, dict) and value.get("schema") == CONTROL_SCHEMA:
+                    original_control = {key: deepcopy(value[key]) for key in (
+                        "schema", "classification", "source_recipe_sha256", "source_mask_role",
+                        "mask_role", "changed_cells", "changed_area_ha", "scenario", "interpretation")
+                        if key in value}
+                    matching = value.get("matching")
+                    if isinstance(matching, dict):
+                        original_control["matching"] = {
+                            key: deepcopy(item) for key, item in matching.items() if key != "pairs"}
+                        pairs = matching.get("pairs")
+                        original_control["matching_pair_count"] = len(pairs) if isinstance(pairs, list) else None
             references.append({
                 "source_collection_id": collection_id, "source_id": source_id,
                 "title": entry.get("title", source_id), "uri": entry.get("uri"),
                 "classification": deepcopy(entry.get("classification")), "reasons": reasons,
                 "body": describe_file(directory, original_member),
                 "members": copied, "original_assumptions": assertions,
+                "original_control": original_control,
             })
             if (collection_id, source_id) not in already:
                 extra_bindings.append({
@@ -156,6 +172,52 @@ def capture(workspace, directory, grid, profiles, bindings, collections):
     return result, extra_bindings, source_records
 
 
+def _control_blocks(document, control):
+    matching = control.get("matching", {})
+    classes = matching.get("by_original_class", [])
+    classes = classes if isinstance(classes, list) else []
+    interpretation = control.get("interpretation", [])
+    interpretation = interpretation if isinstance(interpretation, list) else [interpretation]
+    blocks = [
+        "The following values and interpretation are retained from the original selected "
+        "control-input document. The existing native result sections use the completed runs "
+        "and their actual reporting support.",
+        _table(["Original input property", "Original value"], [
+            ["Source document", document["title"]],
+            ["Declared classification", control.get("classification")],
+            ["Source recipe SHA256", control.get("source_recipe_sha256")],
+            ["Changed input cells", control.get("changed_cells")],
+            ["Changed input area (ha)", control.get("changed_area_ha")],
+            ["Original matching pairs in the attached document", control.get("matching_pair_count")],
+            ["Matching method", matching.get("method")],
+            ["Excluded candidates", matching.get("exclusion")],
+            ["Common input-grid precipitation mean (mm/year)",
+             matching.get("common_grid_precipitation_mean_mm_year")],
+        ], "Retained input design; native final ownership supplies the reported intervention footprint"),
+        _table(["Original code", "Replacement code", "Restoration cells", "Control cells",
+                "Changed input area (ha)"],
+               [[row.get("from_code"), row.get("to_code"), row.get("target_cells"),
+                 row.get("control_cells"), row.get("area_ha")] for row in classes],
+               "Exact original class and changed-area matching"),
+        _table(["Original code", "Restoration precipitation sum", "Control precipitation sum",
+                "Control minus restoration sum"],
+               [[row.get("from_code"), row.get("target_precipitation_sum_mm_year"),
+                 row.get("control_precipitation_sum_mm_year"),
+                 row.get("precipitation_sum_residual_mm_year")] for row in classes],
+               "Sums of original cell precipitation values (mm/year), retained as input-matching quantities"),
+        _table(["Original code", "Mean absolute paired precipitation residual (mm/year)",
+                "Maximum absolute paired precipitation residual (mm/year)"],
+               [[row.get("from_code"), row.get("mean_absolute_paired_precipitation_residual_mm_year"),
+                 row.get("max_absolute_paired_precipitation_residual_mm_year")] for row in classes],
+               "Original pairwise rainfall residuals; complete pairs remain in the attached source"),
+        *[_plain(item) for item in interpretation],
+        {"kind": "links", "items": [
+            {"title": "Complete original matched-control selection and every pair",
+             "path": document["body"]["path"]}]},
+    ]
+    return blocks
+
+
 def sections(scope):
     """Readable source facts in the existing ordered Scientific Reports format."""
     native = scope["native_grid"]
@@ -200,6 +262,8 @@ def sections(scope):
             {"title": "Original source scope and complete document identities", "path": SCOPE_FILE},
             {"title": "Original prepared grid record", "path": "original/grid.json"},
             {"title": "Native input and output inventory", "path": "native-input-inventory.json"},
+            *[{"title": row["title"], "path": row["body"]["path"]}
+              for row in scope["referenced_documents"]],
         ]},
     ]
     result = [["Original geography, source classifications and model endpoint", blocks]]
@@ -215,11 +279,15 @@ def sections(scope):
             _table(["Original document", "Reference relationship", "Original SHA256"],
                    [[row["title"], row["reasons"], row["body"]["sha256"]]
                     for row in scope["referenced_documents"]],
-                   "Source documents selected by original profile URI or declared recipe hash"),
+                   "Source documents selected by original profile URI or declared recipe/control hash"),
         ]
         if statements:
             detail.append(_table(["Original document", "Source field", "Original statement"],
                                  statements, "Original assumptions, without reinterpretation"))
         detail.append({"kind": "links", "items": links})
         result.append(["Original referenced input assumptions and recipes", detail])
+    for document in scope["referenced_documents"]:
+        control = document.get("original_control")
+        if control is not None:
+            result.append(["Original matched-control input selection", _control_blocks(document, control)])
     return result
