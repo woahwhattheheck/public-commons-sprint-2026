@@ -1,0 +1,4 @@
+"payment_id","account_id","canonical_account","payment_date","currency","signed_amount"
+"Y001","A001","A001","2025-07-10","GBP","-100.25"
+"Y002","A002","A002","2025-07-10","GBP","-60.00"
+"Y003","A003","A003","2025-12-31","GBP","-10.50"

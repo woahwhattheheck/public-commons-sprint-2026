@@ -1,0 +1,704 @@
+{
+  "schema": "tjlabs.migration-reconciliation.selection.v1",
+  "label": "Demonstration complete water migration scope",
+  "interpretation_reference": "DEMO-INTERPRETATION-2025: authored software receiving contract, not a customer's approved mapping or result.",
+  "population_reference": "Complete included CSV files for ten logical source/target pairs plus two complete identifier crosswalks. Frozen 2025-01-01 through2025-12-31 demonstration records; no row filters or claimed customer population.",
+  "pairs": [
+    {
+      "id": "customers",
+      "label": "Demonstration customers",
+      "source": {
+        "table": "source_customers",
+        "keys": [
+          "customer_id"
+        ]
+      },
+      "target": {
+        "table": "target_customers",
+        "keys": [
+          "customer_id"
+        ]
+      },
+      "key_mapping": {
+        "table": "customer_crosswalk",
+        "source_columns": [
+          "old_customer_id"
+        ],
+        "target_columns": [
+          "new_customer_id"
+        ],
+        "reference": "DEMO-KEY-MAPPING-2025: exact supplied original and migrated identifiers; all crosswalk rows participate."
+      },
+      "fields": [
+        {
+          "id": "customer_name",
+          "kind": "text",
+          "source": {
+            "column": "customer_name"
+          },
+          "target": {
+            "column": "customer_name"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "country",
+          "kind": "text",
+          "source": {
+            "column": "country"
+          },
+          "target": {
+            "column": "country"
+          },
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for customers. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "accounts",
+      "label": "Demonstration accounts",
+      "source": {
+        "table": "source_accounts",
+        "keys": [
+          "account_id"
+        ]
+      },
+      "target": {
+        "table": "target_accounts",
+        "keys": [
+          "account_id"
+        ]
+      },
+      "key_mapping": {
+        "table": "account_crosswalk",
+        "source_columns": [
+          "old_account_id"
+        ],
+        "target_columns": [
+          "new_account_id"
+        ],
+        "reference": "DEMO-KEY-MAPPING-2025: exact supplied original and migrated identifiers; all crosswalk rows participate."
+      },
+      "fields": [
+        {
+          "id": "canonical_customer",
+          "kind": "text",
+          "source": {
+            "column": "canonical_customer"
+          },
+          "target": {
+            "column": "canonical_customer"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "status",
+          "kind": "text",
+          "source": {
+            "column": "status"
+          },
+          "target": {
+            "column": "status"
+          },
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "currency"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for accounts. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "premises",
+      "label": "Demonstration premises",
+      "source": {
+        "table": "source_premises",
+        "keys": [
+          "premise_id"
+        ]
+      },
+      "target": {
+        "table": "target_premises",
+        "keys": [
+          "premise_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "canonical_account",
+          "kind": "text",
+          "source": {
+            "column": "canonical_account"
+          },
+          "target": {
+            "column": "canonical_account"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "postcode",
+          "kind": "text",
+          "source": {
+            "column": "postcode"
+          },
+          "target": {
+            "column": "postcode"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "since",
+          "kind": "date",
+          "source": {
+            "column": "since"
+          },
+          "target": {
+            "column": "since"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "unit_label",
+          "kind": "text",
+          "source": {
+            "column": "unit_label"
+          },
+          "target": {
+            "column": "unit_label"
+          },
+          "allow_both_null": true
+        }
+      ],
+      "dimensions": [],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for premises. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "meters",
+      "label": "Demonstration meters",
+      "source": {
+        "table": "source_meters",
+        "keys": [
+          "meter_id"
+        ]
+      },
+      "target": {
+        "table": "target_meters",
+        "keys": [
+          "meter_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "premise_id",
+          "kind": "text",
+          "source": {
+            "column": "premise_id"
+          },
+          "target": {
+            "column": "premise_id"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "serial",
+          "kind": "text",
+          "source": {
+            "column": "serial"
+          },
+          "target": {
+            "column": "serial"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "unit",
+          "kind": "text",
+          "source": {
+            "column": "unit"
+          },
+          "target": {
+            "column": "unit"
+          },
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "unit"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for meters. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "reads",
+      "label": "Demonstration reads",
+      "source": {
+        "table": "source_reads",
+        "keys": [
+          "read_id"
+        ]
+      },
+      "target": {
+        "table": "target_reads",
+        "keys": [
+          "read_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "meter_id",
+          "kind": "text",
+          "source": {
+            "column": "meter_id"
+          },
+          "target": {
+            "column": "meter_id"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "read_date",
+          "kind": "date",
+          "source": {
+            "column": "read_date"
+          },
+          "target": {
+            "column": "read_date"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "quantity",
+          "kind": "decimal",
+          "source": {
+            "column": "quantity"
+          },
+          "target": {
+            "column": "quantity_litres",
+            "multiplier": "1",
+            "divisor": "1000",
+            "offset": "0",
+            "reference": "Invented reviewed source units: target litres /1000 equals source cubic metres; no rounding."
+          },
+          "tolerance": "0",
+          "allow_both_null": false
+        },
+        {
+          "id": "unit",
+          "kind": "text",
+          "source": {
+            "column": "unit"
+          },
+          "target": {
+            "column": "unit"
+          },
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "meter_id",
+        "read_date",
+        "unit"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for reads. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "tariffs",
+      "label": "Demonstration tariffs",
+      "source": {
+        "table": "source_tariffs",
+        "keys": [
+          "tariff_id"
+        ]
+      },
+      "target": {
+        "table": "target_tariffs",
+        "keys": [
+          "tariff_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "valid_from",
+          "kind": "date",
+          "source": {
+            "column": "valid_from"
+          },
+          "target": {
+            "column": "valid_from"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "valid_to",
+          "kind": "date",
+          "source": {
+            "column": "valid_to"
+          },
+          "target": {
+            "column": "valid_to"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "quantity_unit",
+          "kind": "text",
+          "source": {
+            "column": "quantity_unit"
+          },
+          "target": {
+            "column": "quantity_unit"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "rate",
+          "kind": "decimal",
+          "source": {
+            "column": "rate"
+          },
+          "target": {
+            "column": "rate_milli_gbp",
+            "multiplier": "1",
+            "divisor": "1000",
+            "offset": "0",
+            "reference": "Invented reviewed export contract: integer thousandths of GBP per cubic metre /1000."
+          },
+          "tolerance": "0",
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "valid_from",
+        "valid_to",
+        "currency",
+        "quantity_unit"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for tariffs. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "bills",
+      "label": "Demonstration bills",
+      "source": {
+        "table": "source_bills",
+        "keys": [
+          "bill_id"
+        ]
+      },
+      "target": {
+        "table": "target_bills",
+        "keys": [
+          "bill_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "canonical_account",
+          "kind": "text",
+          "source": {
+            "column": "canonical_account"
+          },
+          "target": {
+            "column": "canonical_account"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "tariff_id",
+          "kind": "text",
+          "source": {
+            "column": "tariff_id"
+          },
+          "target": {
+            "column": "tariff_id"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "bill_date",
+          "kind": "date",
+          "source": {
+            "column": "bill_date"
+          },
+          "target": {
+            "column": "bill_date"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "water_charge",
+          "kind": "decimal",
+          "source": {
+            "column": "water_charge"
+          },
+          "target": {
+            "column": "water_charge_minor",
+            "multiplier": "1",
+            "divisor": "100",
+            "offset": "0",
+            "reference": "Invented reviewed GBP export contract: pence /100; exact water-charge component, no tariff recalculation."
+          },
+          "tolerance": "0",
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "canonical_account",
+        "tariff_id",
+        "bill_date",
+        "currency"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for bills. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "payments",
+      "label": "Demonstration payments",
+      "source": {
+        "table": "source_payments",
+        "keys": [
+          "payment_id"
+        ]
+      },
+      "target": {
+        "table": "target_payments",
+        "keys": [
+          "payment_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "canonical_account",
+          "kind": "text",
+          "source": {
+            "column": "canonical_account"
+          },
+          "target": {
+            "column": "canonical_account"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "payment_date",
+          "kind": "date",
+          "source": {
+            "column": "payment_date"
+          },
+          "target": {
+            "column": "payment_date"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "signed_amount",
+          "kind": "decimal",
+          "source": {
+            "column": "signed_amount"
+          },
+          "target": {
+            "column": "credit_minor",
+            "multiplier": "-1",
+            "divisor": "100",
+            "offset": "0",
+            "reference": "Invented reviewed sign convention: target positive credit pence times -1/100 equals source negative payment GBP."
+          },
+          "tolerance": "0",
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "canonical_account",
+        "payment_date",
+        "currency"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for payments. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "allocations",
+      "label": "Demonstration allocations",
+      "source": {
+        "table": "source_allocations",
+        "keys": [
+          "allocation_id"
+        ]
+      },
+      "target": {
+        "table": "target_allocations",
+        "keys": [
+          "allocation_id"
+        ]
+      },
+      "fields": [
+        {
+          "id": "payment_id",
+          "kind": "text",
+          "source": {
+            "column": "payment_id"
+          },
+          "target": {
+            "column": "payment_id"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "bill_id",
+          "kind": "text",
+          "source": {
+            "column": "bill_id"
+          },
+          "target": {
+            "column": "bill_id"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "applied_amount",
+          "kind": "decimal",
+          "source": {
+            "column": "applied_amount"
+          },
+          "target": {
+            "column": "signed_credit_minor",
+            "multiplier": "-1",
+            "divisor": "100",
+            "offset": "0",
+            "reference": "Invented reviewed allocation convention: target negative credit pence times -1/100 equals source positive applied GBP; no allocation is invented."
+          },
+          "tolerance": "0",
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "payment_id",
+        "bill_id",
+        "currency"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for allocations. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    },
+    {
+      "id": "balances",
+      "label": "Demonstration balances",
+      "source": {
+        "table": "source_balances",
+        "keys": [
+          "account_id"
+        ]
+      },
+      "target": {
+        "table": "target_balances",
+        "keys": [
+          "account_id"
+        ]
+      },
+      "key_mapping": {
+        "table": "account_crosswalk",
+        "source_columns": [
+          "old_account_id"
+        ],
+        "target_columns": [
+          "new_account_id"
+        ],
+        "reference": "DEMO-KEY-MAPPING-2025: exact supplied original and migrated identifiers; all crosswalk rows participate."
+      },
+      "fields": [
+        {
+          "id": "currency",
+          "kind": "text",
+          "source": {
+            "column": "currency"
+          },
+          "target": {
+            "column": "currency"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "as_of",
+          "kind": "date",
+          "source": {
+            "column": "as_of"
+          },
+          "target": {
+            "column": "as_of"
+          },
+          "allow_both_null": false
+        },
+        {
+          "id": "balance",
+          "kind": "decimal",
+          "source": {
+            "column": "balance"
+          },
+          "target": {
+            "column": "credit_balance_minor",
+            "multiplier": "-1",
+            "divisor": "100",
+            "offset": "0",
+            "reference": "Invented reviewed ledger convention: target credit-positive pence times -1/100 equals source debit-positive GBP; negative source balance is retained as credit."
+          },
+          "tolerance": "0",
+          "allow_both_null": false
+        }
+      ],
+      "dimensions": [
+        "currency",
+        "as_of"
+      ],
+      "comparison_reference": "DEMONSTRATION reviewed export meanings for balances. Canonical parent-reference columns, when present, are explicit supplied export values backed by retained crosswalks; native FK checks retain actual source/target parent IDs. No identifier rewriting, allocation or tariff calculation is inferred."
+    }
+  ]
+}

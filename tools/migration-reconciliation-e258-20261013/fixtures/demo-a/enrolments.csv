@@ -1,0 +1,12 @@
+enrolment_id,learner_id,programme_id,academic_year,level,mode,outcome,funding,start_date
+e01,L01,P01,2024,FE,full_time,successful,100.10,2024-08-20
+e02,L02,P01,2024,FE,full_time,successful,99.99,2024-08-20
+e03,L03,P02,2024,FE,full_time,partial,200,2024-08-21
+e04,L04,P02,2024,FE,full_time,non_completion,0,2024-08-21
+e05,L05,P99,2024,FE,full_time,non_completion,,2024-08-22
+e06,L06,P01,2024,FE,full_time,successful,100.1,2024-08-22
+e07,L07,P03,2024,HE,full_time,successful,1000,2024-08-23
+e08,L08,P01,2024,FE,part_time,successful,30.000,2024-08-23
+e09,L09,P02,2024,FE,full_time,partial,90,2024-08-24
+e09,L09,P02,2024,FE,full_time,partial,90,2024-08-24
+e00,L00,P03,2023,HE,part_time,non_completion,0,2023-08-20

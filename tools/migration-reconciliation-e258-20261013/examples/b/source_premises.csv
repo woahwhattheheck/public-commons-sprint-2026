@@ -1,0 +1,4 @@
+"premise_id","account_id","canonical_account","postcode","since","unit_label"
+"P001","A001","A001","DEMO-01","2025-01-01",""
+"P002","A002","A002","DEMO-02","2025-01-01","Unit 2"
+"P003","A003","A003","DEMO-03","2025-01-01",""

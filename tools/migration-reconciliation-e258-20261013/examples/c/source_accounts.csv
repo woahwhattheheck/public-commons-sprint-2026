@@ -1,0 +1,4 @@
+"account_id","customer_id","canonical_customer","currency","status"
+"A001","C001","C001","GBP","OPEN"
+"A002","C002","C002","GBP","OPEN"
+"A003","C003","C003","GBP","CLOSED"
