@@ -11,9 +11,20 @@ READ_ACTIONS = {"review.transition.preview", "review.transition.history"}
 WRITE_ACTIONS = {"review.transition.apply"}
 FORMAT = "commons.audit-review-transition.v1"
 FIELDS = {"entityKey", "status", "title", "note", "assignee", "dueDate", "evidence"}
+MAX_PREVIEW = 64 * 1024 * 1024
 
 def encoded(value):
     return (canonical(value) + "\n").encode("utf-8")
+
+def budget(value, used=0):
+    # Bound cumulative complete comparisons before a large selection accumulates
+    # hundreds of repeated document-wide row lists or one huge serialized body.
+    encoder = json.JSONEncoder(ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False)
+    for part in encoder.iterencode(value):
+        for offset in range(0, len(part), 64 * 1024):
+            used += len(part[offset:offset + 64 * 1024].encode("utf-8"))
+            require(used <= MAX_PREVIEW, "transition_capacity", "The complete review comparison exceeds 64 MiB; select fewer reviews.")
+    return used
 
 def entity_scope(model, selected):
     if not selected:
@@ -55,6 +66,7 @@ def preview(ws, db, inputs):
     require(target["sourceId"] == source_id, "transition_target", "The target revision belongs to another source.")
     target_entities = {row["key"]: row for row in target["model"]["entities"]}
     revisions, rows = {}, []
+    used = budget({"targetEntities": target["model"]["entities"], "targetValidation": target["validation"]})
     for review_id in selected:
         review = ws._get(db, "review", review_id)
         require(review["sourceId"] == source_id, "transition_review", "Every selected review must belong to this original source.")
@@ -62,28 +74,32 @@ def preview(ws, db, inputs):
         require(previous["sourceId"] == source_id and previous["number"] < target["number"],
                 "transition_revision", "Select reviews retained on an earlier source revision.")
         if previous["id"] not in revisions:
-            revisions[previous["id"]] = {
+            previous_comparison = {
                 "revision": ws._revision_summary(previous), "validation": previous["validation"],
                 "comparison": compare_models(previous["model"], target["model"]),
             }
+            used = budget(previous_comparison, used)
+            revisions[previous["id"]] = previous_comparison
         selected_entity = review.get("entityKey", "")
         old_entity = next((r for r in previous["model"]["entities"] if r["key"] == selected_entity), None)
         require(not selected_entity or old_entity is not None, "transition_review", "The retained review has an absent original entity.")
         current_entity = target_entities.get(selected_entity)
-        rows.append({"review": copy.deepcopy(review),
+        row = {"review": copy.deepcopy(review),
                      "reviewSha256": digest(encoded(review)),
                      "fromRevisionId": previous["id"], "beforeEntity": old_entity,
                      "samePathEntity": current_entity,
                      "identityChanged": bool(selected_entity and (not current_entity or
                          any(old_entity.get(k) != current_entity.get(k) for k in ("xmlId", "namespace", "kind")))),
-                     "impact": impact(previous["model"], target["model"], selected_entity, revisions[previous["id"]]["comparison"])})
+                     "impact": impact(previous["model"], target["model"], selected_entity, revisions[previous["id"]]["comparison"])}
+        used = budget(row, used)
+        rows.append(row)
     value = {"format": FORMAT, "workspaceId": ws._meta(db)["workspaceId"],
              "version": ws._meta(db)["version"], "sourceId": source_id, "sourceName": source["name"],
              "toRevision": ws._revision_summary(target), "targetValidation": target["validation"],
              "targetEntities": target["model"]["entities"], "fromRevisions": revisions, "reviews": rows,
              "selection": {"sourceId": source_id, "toRevisionId": target_id, "reviewIds": list(selected)}}
     raw = encoded(value)
-    require(len(raw) <= 64 * 1024 * 1024, "transition_capacity",
+    require(len(raw) <= MAX_PREVIEW, "transition_capacity",
             "This complete review comparison exceeds 64 MiB; select fewer reviews.")
     value["previewSha256"] = digest(raw)
     return value
