@@ -669,7 +669,8 @@ class Operator:
         state = ws.overview()
         state = self.extensions.extend_state(workspace, state)
         state["experiments"] = self.experiments.catalog(workspace)
-        state["compute_programmes"] = self.programmes.catalogue(workspace)["programmes"]
+        from programme_activity import ProgrammeActivity
+        state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
         for row in state["observations"]:
             row["row_count"] = len(row["rows"])
             row.pop("rows")
