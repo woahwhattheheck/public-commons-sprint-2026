@@ -7,10 +7,11 @@ import os
 import platform
 import socket
 import sys
+import zipfile
 from pathlib import Path
 
 from model import gauge_support, portable
-from model.common import atomic_bytes, atomic_json, describe_file, file_digest, read_json, now
+from model.common import atomic_bytes, atomic_json, describe_file, file_digest, read_json, now, digest, held
 from model.workspace import Workspace
 
 DAILY_FILES = (
@@ -94,7 +95,107 @@ def _reference(collection, source_id):
             "source_sha256": entry["body"]["sha256"]}
 
 
+
+def _same_file(record, expected):
+    return all(record.get(key) == expected.get(key) for key in ("path", "bytes", "sha256"))
+
+
+def _selection_matches(edition, selection):
+    actual = edition["selection"]
+    for key, value in selection.items():
+        if key == "reporting_huc12s":
+            value = sorted(value)
+        if actual.get(key) != value:
+            raise ValueError("The saved gauge edition belongs to another source selection: " + key)
+
+
+def _selected_members(workspace, edition):
+    """Exact existing records needed to reopen this original report and source choice."""
+    selected = {}
+    def keep(path):
+        path = Path(path)
+        relative = path.relative_to(workspace.root).as_posix()
+        selected["workspace/" + relative] = describe_file(workspace.root, path)
+    keep(workspace.root / "workspace.json")
+    keep(workspace.root / gauge_support.KIND / (edition["id"] + ".json"))
+    station = gauge_support.geography.inspect(workspace, edition["station_edition_id"], verify=True)
+    keep(workspace.root / gauge_support.geography.KIND / (station["id"] + ".json"))
+    collections = set()
+    def keep_collection(key):
+        if key in collections:
+            return
+        collection = workspace._get("sources", key)
+        keep(workspace.root / "sources" / (key + ".json"))
+        for entry in collection["entries"]:
+            for item in [entry["body"], *entry.get("companions", [])]:
+                keep(workspace.root / item["object"])
+        collections.add(key)
+    for row in (edition, station):
+        for item in row["files"]:
+            keep(workspace.root / item["path"])
+        for binding in row["sources"]:
+            gauge_support.geography._source(workspace, binding)
+            keep_collection(binding["collection_id"])
+    if station.get("source_collection_id"):
+        keep_collection(station["source_collection_id"])
+    for key in station.get("observation_ids", []):
+        observation = workspace._get("observations", key)
+        keep(workspace.root / "observations" / (key + ".json"))
+        keep(workspace.root / observation["original"]["object"])
+    regional = workspace.root / "watershed-context" / edition["regional"]["report_id"]
+    for path in sorted(regional.rglob("*")):
+        if path.is_file() and not path.name.endswith((".lock", ".pyc", ".pyo")):
+            keep(path)
+    return selected
+
+
+def _archive_snapshot(path, output, workspace, edition, previous):
+    """Verify the ZIP and its SHA using the maintained same-opened-file reader."""
+    if path.is_symlink() or not path.is_file():
+        raise ValueError("Select the original retained regular Workspace archive")
+    selected = _selected_members(workspace, edition)
+    with path.open("rb") as source:
+        before = portable._archive_identity(source)
+        with zipfile.ZipFile(source) as archive:
+            manifest = portable._inspect_archive(archive, verify=True)
+        sha256 = portable._archive_digest(source, before)
+    descriptor = {"path": path.relative_to(output).as_posix(), "bytes": before[2], "sha256": sha256}
+    if previous and not _same_file(previous["archive"], descriptor):
+        raise ValueError("The saved Workspace archive changed; preserve the original receiving state")
+    if manifest["project"] != workspace.project:
+        raise ValueError("The Workspace archive belongs to another original project")
+    for name, expected in selected.items():
+        actual = manifest["members"].get(name, {})
+        if any(actual.get(key) != expected[key] for key in ("bytes", "sha256")):
+            raise ValueError("The Workspace archive differs from the saved gauge source or report: " + name)
+    application = {name[len("application/"):]: {key: row[key] for key in ("bytes", "sha256")}
+        for name, row in manifest["members"].items() if name.startswith("application/")}
+    return manifest, descriptor, digest(application)
+
+
+def _verify_reopened(root, manifest):
+    """Bind a retained restore, including a lost checkpoint, to every archived member."""
+    root = root.resolve(strict=True)
+    for name, record in manifest["members"].items():
+        relative = portable.member_name(name)
+        path = root.joinpath(*relative.parts)
+        if (path.is_symlink() or not path.is_file() or not path.resolve().is_relative_to(root)
+                or path.stat().st_size != record["bytes"] or file_digest(path) != record["sha256"]):
+            raise ValueError("The reopened Workspace differs from its original archive: " + name)
+
+
 def receive(args):
+    application = Path(__file__).resolve().parents[1]
+    output = Path(args.output).resolve()
+    workspace_root = Path(args.workspace).resolve()
+    if output.is_relative_to(workspace_root) or output.is_relative_to(application):
+        raise ValueError("Choose a receiving output directory outside the application and Workspace")
+    output.mkdir(parents=True, exist_ok=True)
+    with held(output / ".receiving.lock", blocking=False):
+        return _receive(args)
+
+
+def _receive(args):
     application = Path(__file__).resolve().parents[1]
     workspace = Workspace(args.workspace)
     output = Path(args.output).resolve()
@@ -168,17 +269,41 @@ def receive(args):
             receipt["state"] = "prepared"
             atomic_json(receipt_path, receipt)
             return receipt
-        edition = gauge_support.build(workspace, selection)
-        gauge_support.inspect(workspace, edition["id"], verify=True)
+        previous_build = receipt["phases"].get("support_build")
+        if previous_build:
+            edition = gauge_support.inspect(workspace, previous_build["edition_id"], verify=True)
+            _selection_matches(edition, selection)
+            if any(previous_build.get(key) != edition[key]
+                   for key in ("station_edition_id", "build_id", "summary")):
+                raise ValueError("The retained completed gauge build changed")
+        else:
+            edition = gauge_support.build(workspace, selection)
+            gauge_support.inspect(workspace, edition["id"], verify=True)
         checkpoint("support_build", edition_id=edition["id"], station_edition_id=edition["station_edition_id"],
             build_id=edition["build_id"], summary=edition["summary"])
         archive = output / ("gauge-support-workspace-" + edition["id"] + ".zip")
+        previous_backup = receipt["phases"].get("workspace_backup")
         if not archive.exists():
+            if previous_backup:
+                raise ValueError("The saved Workspace archive is missing; preserve its original descriptor")
             portable.backup(workspace, archive)
-        checkpoint("workspace_backup", archive=describe_file(output, archive))
+        manifest, archive_descriptor, application_sha256 = _archive_snapshot(
+            archive, output, workspace, edition, previous_backup)
+        checkpoint("workspace_backup", archive=archive_descriptor,
+            application_sha256=application_sha256, members=len(manifest["members"]))
         restored_root = output / ("reopened-" + edition["id"])
+        previous_reopen = receipt["phases"].get("independent_reopen")
+        if previous_reopen:
+            if (previous_reopen.get("archive_sha256") not in (None, archive_descriptor["sha256"])
+                    or Path(previous_reopen["workspace"]).resolve() != (restored_root / "workspace").resolve()):
+                raise ValueError("The retained reopening belongs to another archive or receiving directory")
         if not restored_root.exists():
-            portable.restore(archive, restored_root)
+            if previous_reopen:
+                raise ValueError("The saved reopened Workspace is missing; preserve its original receipt")
+            restored = portable.restore(archive, restored_root)
+            if restored["archive_sha256"] != archive_descriptor["sha256"]:
+                raise ValueError("The archive changed between verification and original restore")
+        _verify_reopened(restored_root, manifest)
         reopened = Workspace(restored_root / "workspace")
         if reopened.project["id"] != workspace.project["id"]:
             raise ValueError("Reopened Workspace project identity differs")
@@ -187,7 +312,9 @@ def receive(args):
             raise ValueError("Reopened support report differs from its original selection")
         checkpoint("independent_reopen", workspace=str(reopened.root), project_id=reopened.project["id"],
             edition_id=reopened_edition["id"], station_edition_id=reopened_edition["station_edition_id"],
-            regional_report_id=reopened_edition["regional"]["report_id"])
+            regional_report_id=reopened_edition["regional"]["report_id"],
+            archive_sha256=archive_descriptor["sha256"],
+            application_sha256=application_sha256, verified_members=len(manifest["members"]))
         receipt["state"], receipt["completed_at"] = "complete", now()
         atomic_json(receipt_path, receipt)
         return receipt
