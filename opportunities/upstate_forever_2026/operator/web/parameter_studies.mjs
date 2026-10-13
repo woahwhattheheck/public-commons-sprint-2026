@@ -13,6 +13,28 @@ const references = value => (Array.isArray(value) ? value : [value]).filter(Bool
 const modelNames = selection => (selection?.models || ['ndr', 'sdr']).map(value => String(value).toUpperCase()).join(' + ');
 const readLines = value => String(value || '').split(/\r?\n/).map(line => line.trim()).filter(Boolean);
 
+function aggregationProgress(item) {
+  const value = item?.aggregation_progress || item?.aggregation;
+  if (!value) return '';
+  const phase = value.phase || 'preparing';
+  const active = (item.cases || []).find(row => row.id === value.active_case_id);
+  const details = [
+    format(value.completed_pairs || 0) + ' / ' + format(value.total_pairs || 0) + ' case–pollutant pairs',
+    format(value.reused_pairs || 0) + ' retained pairs reused',
+    format(value.resumed_pairs || 0) + ' pairs continued from saved raster windows'
+  ];
+  const windowProgress = Number.isInteger(value.total_windows) && value.total_windows > 0 &&
+    Number.isInteger(value.windows_completed) && value.windows_completed >= 0 && phase === 'aggregating' ?
+    '<p>Original raster windows: ' + format(value.windows_completed) + ' / ' + format(value.total_windows) +
+    '</p><progress max="' + escapeHTML(value.total_windows) + '" value="' +
+    escapeHTML(value.windows_completed) + '" aria-label="Paired raster windows complete"></progress>' : '';
+  return '<div class="note" data-parameter-study-aggregation><strong>Paired result aggregation · ' +
+    escapeHTML(label(phase)) + '</strong><p>' + details.join(' · ') + '</p>' +
+    (value.active_case_id ? '<p>' + escapeHTML(active?.label || short(value.active_case_id)) +
+      ' · ' + escapeHTML(label(value.active_pollutant || '')) + '</p>' : '') +
+    windowProgress + '<small>Each retained result keeps its original input bytes, reporting areas, units and spatial support.</small></div>';
+}
+
 /** Explicit entry only: numbers and native flow-direction choices have no inferred defaults. */
 export function parseParameterStudyValues(text) {
   const tokens = String(text || '').split(/[\r\n,]+/).map(value => value.trim()).filter(Boolean);
@@ -134,6 +156,7 @@ export function attachParameterStudies(host) {
       '</p></div><progress max="' + escapeHTML(progress.total || item.cases.length || 1) + '" value="' +
       escapeHTML(progress.completed || 0) + '" aria-label="Native cases complete"></progress></div>' +
       (activeCase && isBusy ? '<p class="note">Executing ' + escapeHTML(activeCase.label) + ' · native run ' + escapeHTML(short(activeCase.run_id)) + '</p>' : '') +
+      aggregationProgress(item) +
       (item.error ? '<div class="notice error">' + escapeHTML(item.error.message || item.error) + '</div>' : '') +
       '<dl class="parameter-study-provenance">' + provenance(item.baseline_selection) + '</dl>' +
       '<details class="technical"><summary>Selected axes and scientific rationale</summary>' + axesSummary(item.selection.axes) + '</details>' +
