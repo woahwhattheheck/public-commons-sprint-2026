@@ -154,7 +154,12 @@ def _source_interval(row):
     """Use the original Eighteenmile exact-decimal source reader when applicable."""
     raw = row.get("raw", {})
     try:
-        from observations.eighteenmile_stoichiometry_20261013.stoichiometry import concentration, METHODS, CHARACTERS
+        if raw.get("CharacteristicName") not in {"Kjeldahl nitrogen", "Nitrate + Nitrite", "Phosphorus", "Ammonia", "Nitrogen"}:
+            raise KeyError("Not an original Eighteenmile constituent")
+        try:
+            from observations.eighteenmile_stoichiometry_20261013.stoichiometry import concentration, METHODS, CHARACTERS
+        except ImportError as error:
+            raise RuntimeError("Retain the original STOICH source reader with this component") from error
         component = CHARACTERS.get(raw.get("CharacteristicName"))
         if component and raw.get("ResultAnalyticalMethod/MethodIdentifier") == METHODS[component]:
             value = concentration(raw)
@@ -182,10 +187,19 @@ def _bounds(row, selection):
     if row["censor"] == "none":
         raise ValueError("A point result cannot be replaced with censoring bounds")
     _text(override.get("reason"), "source interval review reason")
+    try:
+        known_interval, known_origin = _source_interval(row)
+    except ValueError:
+        known_interval, known_origin = None, None
     lower = _number(override.get("lower_mg_l"), "reviewed source lower bound")
     upper = _number(override.get("upper_mg_l"), "reviewed source upper bound")
     if upper <= lower or type(override.get("lower_closed")) is not bool or type(override.get("upper_closed")) is not bool:
         raise ValueError("A reviewed finite source interval needs ordered bounds and explicit endpoint closure")
+    if known_interval is not None:
+        original = (known_interval["lower"], known_interval["upper"], not known_interval["lower_open"], not known_interval["upper_open"])
+        if (lower, upper, override["lower_closed"], override["upper_closed"]) != original:
+            raise ValueError("Reviewed interval bounds or endpoint closure differ from the original source")
+        return {**known_interval, "review": deepcopy(override)}, known_origin
     if row.get("lower") is not None and lower != row["lower"]:
         raise ValueError("Reviewed lower bound differs from the original normalized source")
     if row.get("upper") is not None and upper != row["upper"]:
@@ -228,6 +242,7 @@ def _role(row, selection):
 
 def _observation(project, row, mapping, station, selection):
     reasons = list(row["eligible"]["reasons"])
+    resolution_notes = []
     resolved = {"reach-unassigned", "unmapped-constituent"}
     # The separate Chemistry assignment does not change the original HUC/source assignment.
     if row["unit"] != "mg/L":
@@ -242,6 +257,10 @@ def _observation(project, row, mapping, station, selection):
         if interval_source == "original-eighteenmile-stoichiometry":
             # The original reader recognizes this exact published condition/method.
             resolved.add("review-detection-condition")
+            review_causes = set(row.get("issues", [])) & {"qualified-result", "review-source-status", "unit-from-single-detection-limit"}
+            if review_causes and review_causes <= {"unit-from-single-detection-limit"}:
+                resolved.add("review-required")
+                resolution_notes.append("original-limit-unit-resolved")
     remaining = [r for r in reasons if r not in resolved]
     if remaining:
         raise ValueError(";".join(remaining))
@@ -257,7 +276,8 @@ def _observation(project, row, mapping, station, selection):
                 "time_precision": row["timePrecision"], "method": row["method"],
                 "fraction": row["fraction"], "reported_unit": row.get("reportedUnit"),
                 "original_exclusions": reasons, "resolved_exclusions": [r for r in reasons if r in resolved],
-                "interval_source": interval_source, "source_interval": interval}}
+                "interval_source": interval_source, "source_interval": interval,
+                "resolution_notes": resolution_notes}}
     if interval["lower"] == interval["upper"]:
         value.update(qualifier="equal", mg_l=interval["lower"])
     else:
@@ -301,6 +321,12 @@ def _derived_nitrogen(project, records, accepted, selection):
                 raise ValueError("component-sampling-context-differs")
             if any(a[k] != b[k] for k in ("reach", "day", "role", "basis")):
                 raise ValueError("component-case-time-role-or-basis-differs")
+            operators = [{c["species"]: c["weight"] for c in row["components"]} for row in (a, b)]
+            if set(operators[0]) & set(operators[1]):
+                raise ValueError("TKN-and-NOx-modeled-pools-overlap")
+            declared = {c["species"]: c["weight"] for c in mapping["components"]}
+            if declared != {**operators[0], **operators[1]}:
+                raise ValueError("total-N-operator-must-equal-original-TKN-plus-NOx-pools-and-weights")
             interval = plus(concentration(ra["raw"]), concentration(rb["raw"])).as_dict()
             value = {"id": identity, "reach": a["reach"], "day": a["day"], "role": a["role"],
                      "measurement": mapping["measurement"], "basis": "N",
@@ -388,8 +414,13 @@ def prepare(workspace, service, selection):
     original = chemistry.get_case(selection["case_id"])
     snap = _snapshot(service, selection.get("filters", {}), selection.get("expected_revision"))
     review = _review(original, snap, selection)
+    from model.reach_chemistry import inference as native_inference
+    original_reader = Path(__file__).resolve().parents[1] / "observations/eighteenmile_stoichiometry_20261013/stoichiometry.py"
+    producer = {"format": "measured-chemistry-producer/v1", "adapter_sha256": file_digest(Path(__file__)),
+                "native_inference_sha256": file_digest(Path(native_inference.__file__)),
+                "original_interval_reader_sha256": file_digest(original_reader) if original_reader.is_file() else None}
     identity = digest({"selection": selection, "case_sha256": original["project_sha256"],
-                       "revision": snap["revision"], "records": snap["records"]})
+                       "revision": snap["revision"], "records": snap["records"], "producer": producer})
     directory = workspace.root / "measurement-chemistry" / identity
     directory.mkdir(parents=True, exist_ok=True)
     with held(directory / ".prepare.lock"):
@@ -408,7 +439,7 @@ def prepare(workspace, service, selection):
             atomic_json(portable_path, portable, immutable=True)
         document = {"format": FORMAT, "title": selection["title"], "selection": selection,
                     "original_case_id": original["id"], "project_sha256": original["project_sha256"],
-                    "source_revision": snap["revision"], "original_records": snap["records"], **review}
+                    "source_revision": snap["revision"], "original_records": snap["records"], "producer": producer, **review}
         atomic_json(directory / "binding-source.json", document, immutable=True)
         source_id = "measured-chemistry-" + identity
         manifest = {"schema": "upstate.sources/v1", "title": selection["title"],
@@ -427,6 +458,7 @@ def prepare(workspace, service, selection):
             "case_id": case["id"], "original_case_id": original["id"],
             "project_sha256": original["project_sha256"], "source_revision": snap["revision"],
             "selection": selection, "source": source, "source_sha256": manifest["entries"][0]["sha256"],
+            "producer": producer,
             "directory": str(directory.relative_to(workspace.root)), **review})
         atomic_json(receipt, {"binding_id": binding["id"]}, immutable=True)
         return get(workspace, binding["id"])
@@ -450,6 +482,7 @@ def native_payload(binding, chemistry, case_id=None):
     request["metadata"] = {**metadata, "measurement_binding": {
         "binding_id": binding["id"], "source": binding["source"], "source_sha256": binding["source_sha256"],
         "source_revision": binding["source_revision"], "original_case_id": binding["original_case_id"],
+        "producer": binding["producer"],
         "selection": binding["selection"], "counts": binding["counts"],
         "accepted": binding["accepted"], "excluded": binding["excluded"],
         "derived": binding["derived"], "derived_excluded": binding["derived_excluded"]}}
@@ -484,7 +517,7 @@ def adopt_source(workspace, payload):
     choice = {k: payload[k] for k in ("source_collection_id", "source_id")}
     if not any(all(ref[k] == choice[k] for k in choice) for ref in case["source_refs"]):
         raise ValueError("Choose an original source retained by the selected received Chemistry case")
-    source_path, entry = workspace.source_file(**choice)
+    source_path, entry = workspace.source_file(choice["source_collection_id"], choice["source_id"])
     document = read_json(source_path)
     if document.get("format") != FORMAT or document.get("project_sha256") != case["project_sha256"]:
         raise ValueError("The original binding does not belong to this received native project")
@@ -494,6 +527,7 @@ def adopt_source(workspace, payload):
     binding = workspace._save(FAMILY, {"format": FORMAT, "title": document["title"],
         "case_id": case["id"], "original_case_id": case["id"], "project_sha256": case["project_sha256"],
         "source_revision": document["source_revision"], "selection": selection,
+        "producer": document["producer"],
         "source": choice, "source_sha256": file_digest(source_path),
         "received_from": {"case_id": document["original_case_id"], "selection": document["selection"]},
         **{key: document[key] for key in ("accepted", "excluded", "derived", "derived_excluded", "counts", "request")}})
