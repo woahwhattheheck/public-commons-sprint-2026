@@ -1052,9 +1052,155 @@ export function attachConservation({
       button("prepare-study", "Save inputs without building", "", ui.busy) +
       "</div></form>";
   }
+
+  function criterionChoices(study = memory().study) {
+    return [["source-context", "Retained geographic context"],
+      ...(study?.mode === "native_model" ? [
+        ["current-export", "Current modeled export"],
+        ["restoration", "Restoration reduction"],
+        ["avoided-conversion", "Development increase avoided"]] : []),
+      ...(study?.spec?.score?.basis === "published_method" && study?.selection?.bindings?.published_method
+        ? [["published-method", "Original published practice points"]] : []),
+      ["source-attribute", "Original planning-unit numeric attribute"]];
+  }
+  function criterionAxes(criterion) {
+    if (criterion.kind === "source-attribute") return [];
+    return optimizationAxes(criterion);
+  }
+  function newCriterion(draft, original = null) {
+    const existing = new Set((draft.criteria || []).map(row => row.id));
+    let n = 1;
+    while (existing.has("criterion_" + n)) n++;
+    const kind = original?.kind && original.kind !== "multi-criteria" ? original.kind : "source-context";
+    const row = { id: "criterion_" + n, label: "", kind, axis: "", basis: "total",
+      scenario_run_id: original?.scenario_run_id || memory().study?.spec?.alternative_run_ids?.[0] || "",
+      field: "", unit: "", reference: "", direction: "maximize", weight: "1" };
+    const axes = criterionAxes(row);
+    row.axis = axes[0]?.[0] || "";
+    row.label = axes[0]?.[1] || "Source attribute";
+    return row;
+  }
+  function criterionForm(draft) {
+    const study = memory().study, alternatives = study?.spec?.alternative_run_ids || [];
+    return '<fieldset><legend>Decision criteria</legend><p>Each criterion uses an original source value or a completed native case. ' +
+      'Weights apply after fixed normalization. Add the physical response and geographic criteria relevant to this decision.</p>' +
+      (draft.criteria || []).map((row, index) => {
+        const prefix = "optimization.criterion." + index + ".", axes = criterionAxes(row);
+        const attribute = row.kind === "source-attribute";
+        const paired = ["restoration", "avoided-conversion"].includes(row.kind);
+        return '<fieldset><legend>' + h(row.label || "Criterion " + (index + 1)) + '</legend><div class="cons-grid">' +
+          input(prefix + "label", "Criterion label", row.label) +
+          select(prefix + "kind", "Value source", row.kind, criterionChoices(study)) +
+          (attribute ? input(prefix + "field", "Exact original attribute field", row.field) +
+            input(prefix + "unit", "Original measurement unit", row.unit) +
+            input(prefix + "reference", "Source meaning and reference", row.reference) +
+            select(prefix + "direction", "Preferred direction", row.direction,
+              [["maximize", "Larger values preferred"], ["minimize", "Smaller values preferred"]]) :
+            select(prefix + "axis", "Original quantity", row.axis,
+              axes.length ? axes.map(([id, label, unit]) => [id, label + " · " + unit]) : [["", "No shared original quantity"]])) +
+          (paired ? select(prefix + "scenario_run_id", "Original alternative case", row.scenario_run_id,
+            [["", "Choose a retained alternative"], ...alternatives.map(id => {
+              const run = runs().find(item => item.id === id); return [id, run?.title || id];
+            })]) : "") +
+          (!attribute && row.kind !== "source-context" ?
+            select(prefix + "basis", "Quantity basis", row.basis,
+              [["total", "Total in the reporting footprint"], ["per-reporting-hectare", "Per reporting hectare"]]) : "") +
+          input(prefix + "weight", "Decision weight", row.weight, 'type="number" min="0" step="any"') +
+          '</div><p class="cons-help">Preference profile key: <code>' + h(row.id) + '</code>' +
+          (attribute ? '. The exact original attribute and source identity remain in the result; absent values stay unavailable.' :
+            '. Original signed changes and measurement support remain visible.') +
+          '</p>' + button("optimization-remove-criterion", "Remove criterion", 'data-index="' + index + '"') + '</fieldset>';
+      }).join("") +
+      button("optimization-add-criterion", "Add decision criterion") + '</fieldset>';
+  }
+  function caseComparisonForm(draft) {
+    if (draft.kind !== "multi-criteria") return "";
+    const paired = (draft.criteria || []).filter(row => ["restoration", "avoided-conversion"].includes(row.kind));
+    if (!paired.length) return '<p class="cons-help">Add a restoration or development criterion to compare original native cases.</p>';
+    const alternatives = memory().study?.spec?.alternative_run_ids || [];
+    return '<fieldset><legend>Native case comparisons</legend><p>Hold weights and resource limits fixed while replacing the explicitly selected native alternatives. ' +
+      'Choose cases representing the scientific assumptions you want to compare; each row retains its own modeled quantities and coverage.</p>' +
+      (draft.scenario_cases || []).map((item, index) => '<fieldset><legend>Case comparison ' + (index + 1) +
+        '</legend><div class="cons-grid">' +
+        input("optimization.case." + index + ".name", "Comparison name", item.name) +
+        paired.map(row => select("optimization.case." + index + ".run." + row.id, row.label || row.id,
+          item.scenario_run_ids?.[row.id] || "",
+          [["", "Keep selected case"], ...alternatives.map(id => {
+            const run = runs().find(candidate => candidate.id === id); return [id, run?.title || id];
+          })])).join("") +
+        '</div>' + button("optimization-remove-case", "Remove comparison", 'data-index="' + index + '"') + '</fieldset>').join("") +
+      button("optimization-add-case", "Add native case comparison") +
+      '<p class="cons-help">Selection frequency describes these explicit cases. A probability requires a separately justified uncertainty model.</p></fieldset>';
+  }
+  function mixedObjective(draft) {
+    const criteria = draft.criteria || [], ids = new Set();
+    if (!criteria.length) throw new Error("Add a source-bound decision criterion.");
+    const choices = new Set(criterionChoices().map(([id]) => id));
+    return criteria.map(row => {
+      if (!/^[A-Za-z][A-Za-z0-9_-]*$/.test(row.id) || ids.has(row.id)) throw new Error("Each criterion needs a distinct stable key.");
+      ids.add(row.id);
+      if (!row.label?.trim()) throw new Error("Give each decision criterion a label.");
+      if (!choices.has(row.kind)) throw new Error("Choose an available original criterion source.");
+      const result = { id: row.id, label: row.label.trim(), kind: row.kind };
+      if (row.kind === "source-attribute") {
+        for (const key of ["field", "unit", "reference"]) {
+          if (!row[key]?.trim()) throw new Error(row.label + " needs its original " + key + ".");
+          result[key] = row[key].trim();
+        }
+        if (!["maximize", "minimize"].includes(row.direction)) throw new Error("Choose the preferred attribute direction.");
+        result.direction = row.direction;
+        result.basis = "total";
+      } else {
+        if (!criterionAxes(row).some(([axis]) => axis === row.axis)) throw new Error(row.label + " needs an available original quantity.");
+        result.axis = row.axis;
+        result.basis = row.kind === "source-context" ? "total" : row.basis;
+        if (["restoration", "avoided-conversion"].includes(row.kind)) {
+          if (!(memory().study?.spec?.alternative_run_ids || []).includes(row.scenario_run_id)) {
+            throw new Error(row.label + " needs its retained alternative case.");
+          }
+          result.scenario_run_id = row.scenario_run_id;
+        }
+      }
+      return result;
+    });
+  }
+  function nativeCaseSelection(draft, criteria) {
+    const paired = new Set(criteria.filter(row => ["restoration", "avoided-conversion"].includes(row.kind)).map(row => row.id));
+    const names = new Set(), alternatives = new Set(memory().study?.spec?.alternative_run_ids || []);
+    const cases = (draft.scenario_cases || []).map(row => {
+      const name = String(row.name || "").trim();
+      if (!name || names.has(name)) throw new Error("Give each native case comparison a distinct name.");
+      names.add(name);
+      const selected = {};
+      for (const [criterion, id] of Object.entries(row.scenario_run_ids || {})) {
+        if (!id) continue;
+        if (!paired.has(criterion)) throw new Error("A case comparison refers to a removed or non-scenario criterion.");
+        if (!alternatives.has(id)) throw new Error("Case comparisons must use this study's retained alternatives.");
+        selected[criterion] = id;
+      }
+      if (!Object.keys(selected).length) throw new Error(name + " needs at least one alternative case selection.");
+      return { name, scenario_run_ids: selected };
+    });
+    return { enabled: cases.length > 0, cases };
+  }
+  function scenarioStabilityView(analysis) {
+    const stability = analysis.scenario_stability;
+    if (!stability?.enabled) return "";
+    return '<details class="cons-disclosure" open><summary>Priority stability across native cases</summary><p>' +
+      h(stability.interpretation || "Comparison of the explicit original cases at fixed decision weights and resource limits.") +
+      '</p><div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Case comparison</th><th>Original alternatives</th>' +
+      '<th>Eligible units</th><th>Selected units</th><th>Solver result</th><th>Relative gap</th></tr></thead><tbody>' +
+      (stability.cases || []).map(row => '<tr><th scope="row">' + h(row.name) + '</th><td>' +
+        Object.entries(row.scenario_run_ids || {}).map(([criterion,id]) => h(criterion) + ': <code>' + h(id) + '</code>').join("<br>") +
+        '</td><td>' + number(row.eligible_count) + '</td><td>' + number(row.selected_ids?.length) + '</td><td>' +
+        h(human(row.optimization?.status)) + '</td><td>' + h(percent(row.optimization?.relative_gap)) + '</td></tr>').join("") +
+      '</tbody></table></div></details>';
+  }
+
   function optimizationAxes(draft = memory().optimization) {
     const study = memory().study, kind = draft?.kind || "source-context";
     const bindings = study?.selection?.bindings || {};
+    if (kind === "multi-criteria") return (draft.criteria || []).map(row => [row.id, row.label || row.id, row.unit || "normalized objective"]);
     if (kind === "published-method") {
       return study?.spec?.score?.basis === "published_method" && bindings.published_method
         ? [["published_points", "Published practice points", draft?.basis === "per-reporting-hectare" ? "points/reporting ha" : "points"]] : [];
@@ -1086,6 +1232,8 @@ export function attachConservation({
       title: request?.title || (study?.title || "Conservation study") + " — optimized portfolio",
       purpose: request?.purpose || "Select land priorities under explicit area, cost and coverage limits.",
       kind, basis: request?.objective?.basis || "total",
+      criteria: (request?.objective?.criteria || []).map(row => ({ ...row, weight: String(request?.weights?.[row.id] ?? 0) })),
+      scenario_cases: (request?.scenario_stability?.cases || []).map(row => ({ name: row.name, scenario_run_ids: { ...row.scenario_run_ids } })),
       scenario_run_id: request?.objective?.scenario_run_id || study?.spec?.score?.alternative_run_id ||
         study?.spec?.alternative_run_ids?.[0] || "",
       area: request?.constraints?.area_ha ?? "", budget: request?.constraints?.budget_usd ?? "",
@@ -1129,10 +1277,13 @@ export function attachConservation({
     if (!d?.title?.trim()) throw new Error("Give this portfolio decision a title.");
     const axes = optimizationAxes(d);
     if (!axes.length) throw new Error("Choose an available objective from the original study and its retained cases.");
-    const weights = Object.fromEntries(axes.map(([axis, label]) =>
+    const criteria = d.kind === "multi-criteria" ? mixedObjective(d) : null;
+    const weights = criteria ? Object.fromEntries(d.criteria.map(row =>
+      [row.id, numeric(row.weight, row.label + " weight")])) : Object.fromEntries(axes.map(([axis, label]) =>
       [axis, numeric(d["weight_" + axis], label + " weight")]));
     if (!Object.values(weights).some(weight => weight > 0)) throw new Error("Give at least one available objective a positive weight.");
-    const objective = { kind: d.kind, basis: d.kind === "source-context" ? "total" : d.basis };
+    const objective = criteria ? { kind: "multi-criteria", criteria } :
+      { kind: d.kind, basis: d.kind === "source-context" ? "total" : d.basis };
     if (["restoration", "avoided-conversion"].includes(d.kind)) {
       if (!(study.spec?.alternative_run_ids || []).includes(d.scenario_run_id)) {
         throw new Error("Choose an original alternative retained by this study.");
@@ -1167,7 +1318,8 @@ export function attachConservation({
         max_protected_fraction: numeric(d.maximum_protected, "Protected fraction", { max: 100 }) / 100,
         source_water: d.source_water, high_quality_water: d.high_quality_water, include_ids, exclude_ids },
       include_ineligible: !!d.include_ineligible, constraints, solver: d.solver,
-      solver_time_limit_seconds: numeric(d.solver_seconds, "Solver time per preference", { min: .001 }), stability };
+      solver_time_limit_seconds: numeric(d.solver_seconds, "Solver time per preference", { min: .001 }), stability,
+      ...(criteria ? { scenario_stability: nativeCaseSelection(d, criteria) } : {}) };
   }
 
   function optimizationForm() {
@@ -1175,7 +1327,7 @@ export function attachConservation({
     ui.optimization ||= optimizationDraft(study);
     const d = ui.optimization, native = study?.mode === "native_model",
       paired = ["restoration", "avoided-conversion"].includes(d.kind), axes = optimizationAxes(d);
-    const choices = [["source-context", "Geographic source context"],
+    const choices = [["multi-criteria", "Combined physical and source-context criteria"], ["source-context", "Geographic source context"],
       ...(study?.spec?.score?.basis === "published_method" && study?.selection?.bindings?.published_method
         ? [["published-method", "Original published practice points"]] : []),
       ...(native ? [["current-export", "Current modeled export"],
@@ -1190,19 +1342,19 @@ export function attachConservation({
       '<div class="cons-grid">' + input("optimization.title", "Portfolio title", d.title, "required") +
       input("optimization.purpose", "Decision purpose", d.purpose) +
       select("optimization.kind", "Decision objective", d.kind, choices) +
-      (d.kind !== "source-context" ? select("optimization.basis", "Quantity basis", d.basis,
+      (!["source-context", "multi-criteria"].includes(d.kind) ? select("optimization.basis", "Quantity basis", d.basis,
         (d.kind === "published-method"
           ? [["total", "Published points from the original practice rule"], ["per-reporting-hectare", "Published points per reporting hectare"]]
           : [["total", "Annual quantity in the reporting footprint"], ["per-reporting-hectare", "Annual quantity per reporting hectare"]])) : "") +
       (paired ? select("optimization.scenario_run_id", "Retained alternative case", d.scenario_run_id,
         [["", "Choose a retained alternative"], ...(study.spec?.alternative_run_ids || []).map(id => {
           const run = runs().find(row => row.id === id); return [id, (run?.title || id) + " · " + runQuantityLabel(run)];
-        })]) : "") + '</div><fieldset><legend>Objective weights</legend><div class="cons-grid">' +
+        })]) : "") + '</div>' + (d.kind === "multi-criteria" ? criterionForm(d) + caseComparisonForm(d) : '<fieldset><legend>Objective weights</legend><div class="cons-grid">' +
       axes.map(([axis,label,unit]) => input("optimization.weight_" + axis, label + " (" + unit + ")",
         d["weight_" + axis], 'type="number" min="0" step="any"')).join("") +
       '</div><p class="cons-help">' + (d.kind === "published-method"
         ? 'The objective uses completed points from the original retained practice rule, with its prerequisites, source definitions and native criterion support. The result retains every criterion and its known or possible points.'
-        : 'Weights apply to normalized quantities from the retained inventory. Only outputs selected by the original cases are available; adverse modeled changes keep their sign.') + '</p></fieldset>' +
+        : 'Weights apply to normalized quantities from the retained inventory. Only outputs selected by the original cases are available; adverse modeled changes keep their sign.') + '</p></fieldset>') +
       '<fieldset><legend>Resource limits</legend><div class="cons-grid">' +
       input("optimization.area", "Maximum area (ha), optional", d.area, 'type="number" min="0" step="any"') +
       select("optimization.area_basis", "Area limit measures", d.area_basis,
@@ -1297,13 +1449,16 @@ export function attachConservation({
     ui.optimizationPage = Math.min(Math.max(1, ui.optimizationPage || 1), pageCount);
     const rows = filteredRows.slice((ui.optimizationPage - 1) * 25, ui.optimizationPage * 25);
     const axes = (a.request.available_axes || []).filter(axis => a.request.weights?.[axis] > 0);
-    const label = axis => POLLUTANTS.find(([name]) => name === axis)?.[1] || human(axis);
+    const label = axis => a.request.objective.criteria?.find(row => row.id === axis)?.label ||
+      POLLUTANTS.find(([name]) => name === axis)?.[1] || human(axis);
     const valueCell = (row, axis) => {
       const support = row.axis_support?.[axis] || {};
       return '<td>' + number(row.objective_values?.[axis]) + '<span class="cons-metric-note">' +
         h(row.objective_units?.[axis] || "") +
         (finite(support.coverage_fraction) ? " · " + h(percent(support.coverage_fraction)) + " coverage" : "") +
         (!support.eligible_support ? " · " + h(support.availability_reason || human(support.availability || "Unavailable")) : "") +
+        (support.source_value !== undefined ? " · original value " + h(support.source_value) : "") +
+        (support.reference ? " · " + h(support.reference) : "") +
         '</span></td>';
     };
     const solver = '<dl class="cons-definitions"><dt>Selection method</dt><dd>' + h(outcome.algorithm || a.request.solver) +
@@ -1333,20 +1488,24 @@ export function attachConservation({
       (a.stability?.profiles || []).map(profile => '<tr><th scope="row">' + h(profile.name) + '</th><td>' +
         number(profile.eligible_count) + '</td><td>' + number(profile.selected_ids?.length) + '</td><td>' +
         h(human(profile.optimization?.status)) + '</td><td>' + h(percent(profile.optimization?.relative_gap)) + '</td></tr>').join("") +
-      '</tbody></table></div></details><div class="cons-filters">' +
+      '</tbody></table></div></details>' + scenarioStabilityView(a) + '<div class="cons-filters">' +
       '<label class="cons-field"><span>Find an original unit</span><input data-optimization-filter="search" value="' +
       h(ui.optimizationSearch || "") + '"></label><label class="cons-field"><span>Candidate view</span>' +
       '<select data-optimization-filter="mode">' + [["all","All retained units"],["selected","Selected"],["eligible","Eligible"],["excluded","Excluded"]]
         .map(([value,label]) => option(value,label,mode)).join("") + '</select></label></div>' +
       '<div class="cons-table-wrap"><table class="cons-table"><thead><tr><th>Original unit</th><th>Selection</th><th>Rank</th>' +
       axes.map(axis => '<th>' + h(label(axis)) + '</th>').join("") +
-      '<th>Preference frequency</th><th>Reasons</th></tr></thead><tbody>' +
+      '<th>Preference frequency</th>' + (a.scenario_stability?.enabled ? '<th>Native case stability</th>' : "") + '<th>Reasons</th></tr></thead><tbody>' +
       rows.map(row => '<tr><th scope="row">' + button("candidate", row.label || row.feature_id,
         'data-candidate="' + h(row.feature_id) + '"') + '<span class="cons-metric-note">' + h(row.feature_id) +
         '</span></th><td>' + (row.selected ? "Selected" : row.eligible ? "Eligible" : "Excluded") + '</td><td>' +
         number(row.rank) + '</td>' + axes.map(axis => valueCell(row,axis)).join("") + '<td>' +
         number(row.preference_stability?.selected_profiles) + " / " + number(row.preference_stability?.profile_count) +
-        '</td><td>' + h((row.exclusions || []).join("; ")) + '</td></tr>').join("") +
+        '</td>' + (a.scenario_stability?.enabled ? '<td>' +
+          number(row.scenario_stability?.selected_cases) + " / " + number(row.scenario_stability?.case_count) +
+          '<span class="cons-metric-note">Rank ' + number(row.scenario_stability?.minimum_rank) + "–" +
+          number(row.scenario_stability?.maximum_rank) + "</span></td>" : "") +
+        '<td>' + h((row.exclusions || []).join("; ")) + '</td></tr>').join("") +
       '</tbody></table></div><div class="cons-actions">' +
       button("optimization-previous", "Previous", "", ui.optimizationPage <= 1) +
       '<span>' + number(filteredRows.length) + ' units · page ' + ui.optimizationPage + ' of ' + pageCount + '</span>' +
@@ -2376,7 +2535,36 @@ export function attachConservation({
     const value = target.type === "checkbox" ? target.checked : target.value;
     if (name.startsWith("optimization.")) {
       const field = name.slice("optimization.".length);
+      if (field.startsWith("criterion.")) {
+        const [, index, key] = field.split(".");
+        const row = ui.optimization.criteria?.[Number(index)];
+        if (!row) return;
+        row[key] = value;
+        if (event.type === "change" && ["kind", "scenario_run_id"].includes(key)) {
+          const axes = criterionAxes(row);
+          if (!axes.some(([axis]) => axis === row.axis)) row.axis = axes[0]?.[0] || "";
+          if (row.kind === "source-context" || row.kind === "source-attribute") row.basis = "total";
+          if (!["restoration", "avoided-conversion"].includes(row.kind)) {
+            for (const item of ui.optimization.scenario_cases || []) delete item.scenario_run_ids?.[row.id];
+          }
+          paint();
+        }
+        return;
+      }
+      if (field.startsWith("case.")) {
+        const [, index, key, criterion] = field.split(".");
+        const row = ui.optimization.scenario_cases?.[Number(index)];
+        if (!row) return;
+        if (key === "name") row.name = value;
+        else if (key === "run") { row.scenario_run_ids ||= {}; row.scenario_run_ids[criterion] = value; }
+        return;
+      }
+      const previousKind = ui.optimization.kind;
       ui.optimization[field] = value;
+      if (field === "kind" && value === "multi-criteria" && !ui.optimization.criteria?.length) {
+        const row = newCriterion(ui.optimization, { kind: previousKind, scenario_run_id: ui.optimization.scenario_run_id });
+        ui.optimization.criteria = [row];
+      }
       if (event.type === "change" && ["kind", "scenario_run_id"].includes(field)) {
         const axes = optimizationAxes(ui.optimization);
         if (axes.length && !axes.some(([axis]) => Number(ui.optimization["weight_" + axis]) > 0)) {
@@ -2451,6 +2639,19 @@ export function attachConservation({
           await transferStudy(node); break;
         case "optimization-new":
           ui.optimization = optimizationDraft(ui.study); ui.form = "optimization"; ui.notice = null; paint(); break;
+        case "optimization-add-criterion":
+          ui.optimization.criteria ||= [];
+          ui.optimization.criteria.push(newCriterion(ui.optimization)); paint(); break;
+        case "optimization-remove-criterion": {
+          const [removed] = ui.optimization.criteria.splice(Number(node.dataset.index), 1);
+          if (removed) for (const item of ui.optimization.scenario_cases || []) delete item.scenario_run_ids?.[removed.id];
+          paint(); break;
+        }
+        case "optimization-add-case":
+          ui.optimization.scenario_cases ||= [];
+          ui.optimization.scenario_cases.push({ name: "", scenario_run_ids: {} }); paint(); break;
+        case "optimization-remove-case":
+          ui.optimization.scenario_cases.splice(Number(node.dataset.index), 1); paint(); break;
         case "optimization-use-checked": {
           if (!checkedCount(ui)) throw new Error("Check original candidate units first.");
           const ids = await checkedCandidateIds();
