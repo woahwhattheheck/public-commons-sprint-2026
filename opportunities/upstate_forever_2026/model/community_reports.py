@@ -454,12 +454,12 @@ def _contents(plan, table, title, revision=None, previous_plan=None):
                             ]))
     imported = plan.get("intervention_import")
     if imported:
-        revision = imported["summary"]
+        import_summary = imported["summary"]
         sections.insert(3, (
             "Received intervention programme",
             ["Original edited CSV", "Rows", "Added", "Changed", "Removed"],
-            [[imported["source"]["filename"], revision["row_count"],
-              len(revision["added_ids"]), len(revision["changed_ids"]), len(revision["removed_ids"])]],
+            [[imported["source"]["filename"], import_summary["row_count"],
+              len(import_summary["added_ids"]), len(import_summary["changed_ids"]), len(import_summary["removed_ids"])]],
         ))
     estimate = plan["cost_summary"]
     cost_statement = (
