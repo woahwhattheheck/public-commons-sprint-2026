@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "headwaters-native-interpretation",
+  "components": {
+    "headwaters-native-interpretation": {
+      "title": "Original native results in the existing headwaters scientific chapter",
+      "paths": [
+        "source_tools/extend_headwaters_native_report.mjs",
+        "source/headwaters_input_interpretation_20261013/NATIVE_RESULTS.md",
+        "integration/component_fragments/headwaters-native-interpretation.json",
+        "CURRENT_OWNER_DIRECTION.md"
+      ],
+      "requires": [
+        "headwaters-input-interpretation",
+        "observed-context"
+      ]
+    }
+  },
+  "required_components": [
+    "headwaters-native-interpretation"
+  ]
+}
