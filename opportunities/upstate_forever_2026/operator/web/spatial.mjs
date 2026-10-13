@@ -78,7 +78,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
   }
 
   function shell(){
-    return '<header class="page-header"><div><p class="eyebrow">UPPER SAVANNAH SCIENTIFIC WORKBENCH</p><h1>Spatial review</h1><p>Review original rasters and vector sources together, inspect native values, and retain the selected view with your scientific delivery.</p></div><div class="page-actions">'+button('refresh-catalog','Refresh sources')+'</div></header>'+
+    return '<header class="page-header"><div><p class="eyebrow">SCIENTIFIC WORKBENCH</p><h1>Spatial review</h1><p>Review original rasters and vector sources together, inspect native values, and retain the selected view with your scientific delivery.</p></div><div class="page-actions">'+button('refresh-catalog','Refresh sources')+'</div></header>'+
     '<div class="notice error" data-spatial-error role="alert" hidden></div>'+
     '<div class="spatial-workbench">'+
       '<section class="spatial-map-area" aria-label="Spatial review workspace">'+
@@ -90,7 +90,7 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
         '</div>'+
         '<div class="spatial-fit-confirm" data-spatial-fit-confirm hidden><p>The source uses another coordinate system. Existing markers use the current map coordinates.</p>'+button('fit-clear-markers','Clear markers and fit source')+button('fit-cancel','Keep this view')+'</div>'+
         '<div class="spatial-canvases" data-spatial-canvases><div class="spatial-map-empty">Loading retained spatial sources…</div></div>'+
-        '<div class="spatial-swipe-control" data-spatial-swipe-control hidden>'+field('Reveal alternative','<input type="range" min="0" max="100" step="1" value="50" data-spatial-input="swipe">')+'</div>'+
+        '<div class="spatial-swipe-control" data-spatial-swipe-control hidden>'+field('Reveal right source on left of divider','<input type="range" min="0" max="100" step="1" value="50" data-spatial-input="swipe">')+'</div>'+
         '<div class="spatial-map-footer"><div data-spatial-legend></div><p data-spatial-status role="status" aria-live="polite">Loading retained spatial sources…</p></div>'+
         '<div class="spatial-view-meta" data-spatial-view-meta></div>'+
         '<div class="spatial-warning" data-spatial-warnings hidden></div>'+
@@ -112,16 +112,16 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const band=(name,value)=>{
       if(!value)return '';
       const row=layer(c,value),key=row?.sha256+':'+selectionKey(value),count=m.descriptions.get(key)?.native?.count||Math.max(1,value.band||1);
-      return field(name==='primary'?'Baseline band':'Alternative band','<select data-spatial-input="'+name+'-band">'+Array.from({length:count},(_,i)=>option(String(i+1),'Band '+(i+1),String(value.band||1))).join('')+'</select>');
+      return field(name==='primary'?'Left source band':'Right source band','<select data-spatial-input="'+name+'-band">'+Array.from({length:count},(_,i)=>option(String(i+1),'Band '+(i+1),String(value.band||1))).join('')+'</select>');
     };
     c.root.querySelector('[data-spatial-source-controls]').innerHTML=
       field('Reference extent / coordinate system','<select data-spatial-input="reference">'+layerOptions(c,null,m.reference?.layer_id)+'</select>',filterText(m.reference?.where))+
       (refNative?.kind==='vector'&&refNative.layers?.length?field('Reference native vector layer','<select data-spatial-input="reference-layer">'+refNative.layers.map(name=>option(name,name,m.reference.layer||refNative.selected_layer)).join('')+'</select>'):'')+
-      field('Baseline raster','<select data-spatial-input="primary">'+layerOptions(c,'raster',m.primary?.layer_id,'Vector-only view')+'</select>')+
-      field('Alternative raster','<select data-spatial-input="comparison">'+layerOptions(c,'raster',m.comparison?.layer_id,'No alternative')+'</select>')+
+      field('Left source raster','<select data-spatial-input="primary">'+layerOptions(c,'raster',m.primary?.layer_id,'Vector-only view')+'</select>')+
+      field('Right source raster','<select data-spatial-input="comparison">'+layerOptions(c,'raster',m.comparison?.layer_id,'No right source')+'</select>')+
       band('primary',m.primary)+band('comparison',m.comparison)+
       field('Display','<select data-spatial-input="mode">'+[
-        ['single','Single raster'],['compare','Linked side by side'],['swipe','Swipe baseline / alternative'],['difference','Alternative minus baseline']
+        ['single','Single raster'],['compare','Linked side by side'],['swipe','Swipe between sources'],['difference','Right source minus left source']
       ].map(([value,title])=>'<option value="'+value+'"'+(m.mode===value?' selected':'')+(value!=='single'&&(!m.primary||!m.comparison)?' disabled':'')+'>'+title+'</option>').join('')+'</select>')+
       field('Raster scale','<select data-spatial-input="scale-mode">'+option('auto','Visible source values','auto'===m.scale.mode?'auto':'fixed')+option('fixed','Fixed physical range',m.scale.mode)+'</select>')+
       (m.scale.mode==='fixed'?field('Minimum','<input type="number" step="any" data-spatial-input="scale-min" value="'+esc(m.scale.minimum??'')+'">')+field('Maximum','<input type="number" step="any" data-spatial-input="scale-max" value="'+esc(m.scale.maximum??'')+'">'):'');
@@ -227,28 +227,29 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     return row.id===target.id;
   }
   function applyAtlasTarget(c,target){
-    const value=target.selection;
+    const value=target.selection,paired=Boolean(target.comparison);
     if(target.project_id!==c.model.catalog.project?.id)throw Error('This atlas panel belongs to another scientific project.');
-    if(!value||value.mode!=='single'||!validView(value.view)||!value.primary||
-       value.comparison!==null||!Array.isArray(value.overlays)||!Array.isArray(target.bindings)){
+    if(!value||!validView(value.view)||!value.primary||
+       (paired?(!['compare','swipe'].includes(value.mode)||!value.comparison):(value.mode!=='single'||value.comparison!==null))||
+       !Array.isArray(value.overlays)||!Array.isArray(target.bindings)){
       throw Error('Open the complete retained atlas panel selection.');
     }
     if(value.scale?.mode!=='fixed'||!finite(value.scale.minimum)||!finite(value.scale.maximum)||
        value.scale.minimum>=value.scale.maximum)throw Error('The atlas panel needs its retained physical display scale.');
     if(value.overlays.length>(c.model.catalog.limits?.overlays??24))throw Error('The atlas panel exceeds the original spatial overlay capacity.');
-    const choices=[value.reference,value.primary,...value.overlays.map(item=>item.selection)];
+    const choices=[value.reference,value.primary,...(paired?[value.comparison]:[]),...value.overlays.map(item=>item.selection)];
     for(const choice of choices){
       const row=layer(c,choice),binding=target.bindings.find(item=>selectionKey(item.selection)===selectionKey(choice));
       if(!row||!binding||row.sha256!==binding.sha256||row.bytes!==binding.bytes||row.kind!==binding.kind){
         throw Error('Restore the exact native atlas source before opening this panel.');
       }
     }
-    if(layer(c,value.primary)?.kind!=='raster'||value.overlays.some(item=>layer(c,item.selection)?.kind!=='vector')){
+    if(layer(c,value.primary)?.kind!=='raster'||(paired&&layer(c,value.comparison)?.kind!=='raster')||value.overlays.some(item=>layer(c,item.selection)?.kind!=='vector')){
       throw Error('The atlas raster and original vector overlays must retain their native layer kinds.');
     }
     stopGroup(c,'drawControl');stopGroup(c,'pointControl');
     Object.assign(c.model,{reference:clone(value.reference),primary:clone(value.primary),
-      comparison:null,mode:'single',view:clone(value.view),scale:clone(value.scale),
+      comparison:clone(value.comparison),mode:value.mode,view:clone(value.view),scale:clone(value.scale),
       overlays:clone(value.overlays),markers:[],title:value.title,notes:value.notes,
       previous_review_id:null,point:null,pendingSave:null,frame:null,swipe:50});
     c.model.exportOptions.review_id='';
@@ -328,16 +329,16 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
     const focusedMap=document.activeElement?.closest?.('[data-spatial-map]'),focusName=focusedMap&&c.root.contains(focusedMap)?focusedMap.dataset.spatialMap:null;
     const m=c.model,frame=m.frame,p=frame.images?.primary,a=frame.images?.comparison,d=frame.images?.difference;
     let html='';
-    if(m.mode==='compare'&&p&&a)html=mapPane(c,'primary','Baseline · '+p.title,p)+mapPane(c,'comparison','Alternative · '+a.title,a);
-    else if(m.mode==='swipe'&&p&&a)html=mapPane(c,'swipe','Baseline / alternative',p,a);
-    else if(m.mode==='difference'&&d)html=mapPane(c,'difference','Alternative minus baseline',d);
+    if(m.mode==='compare'&&p&&a)html=mapPane(c,'primary','Left source · '+p.title,p)+mapPane(c,'comparison','Right source · '+a.title,a);
+    else if(m.mode==='swipe'&&p&&a)html=mapPane(c,'swipe','Swipe · right source revealed on left',p,a);
+    else if(m.mode==='difference'&&d)html=mapPane(c,'difference','Right source minus left source',d);
     else html=mapPane(c,'primary',p?.title||layer(c,m.reference)?.title||'Original vector sources',p);
     const canvases=c.root.querySelector('[data-spatial-canvases]');
     canvases.classList.toggle('spatial-linked',m.mode==='compare'&&!!p&&!!a);canvases.innerHTML=html;
     if(focusName)(canvases.querySelector('[data-spatial-map="'+focusName+'"]')||canvases.querySelector('[data-spatial-map]'))?.focus({preventScroll:true});
     c.root.querySelector('[data-spatial-swipe-control]').hidden=!(m.mode==='swipe'&&p&&a);
     c.root.querySelector('[data-spatial-input="swipe"]').value=m.swipe;
-    const images=m.mode==='difference'&&d?[['Difference',d]]:m.mode!=='single'&&a?[['Baseline',p],['Alternative',a]]:p?[['Raster',p]]:[];
+    const images=m.mode==='difference'&&d?[['Difference',d]]:m.mode!=='single'&&a?[['Left source',p],['Right source',a]]:p?[['Raster',p]]:[];
     c.root.querySelector('[data-spatial-legend]').innerHTML=images.map(([name,image])=>legendHTML(name,image)).join('')+'<span class="spatial-nodata-key">Transparent cells: no native value</span>';
     const bounds=m.view.bounds,ref=layer(c,m.reference);
     c.root.querySelector('[data-spatial-view-meta]').innerHTML='<span><strong>View CRS</strong> '+esc(m.view.crs)+'</span><span><strong>Bounds</strong> '+bounds.map(value=>esc(fmt(value))).join(', ')+'</span><details><summary>Original source identity</summary><p>'+esc(ref?.title||'')+' · '+identity(ref)+'</p>'+images.map(([name,image])=>'<p>'+esc(name)+': '+(image.source_sha256?'<span class="mono">'+esc(image.source_sha256)+'</span>':'<span class="mono">'+esc(JSON.stringify(image.source_sha256s||{}))+'</span>')+'</p>').join('')+'<p>Display cells use nearest sampling. Inspect reads original native cells and exact source attributes.</p></details>';
@@ -495,8 +496,8 @@ export function createSpatialWorkspace({request,getWorkspace,refreshState,showTa
       c.regions?.setFeatures(value.features);
       const difference=value.difference;
       target.innerHTML='<p class="spatial-inspection-location"><strong>Selected point</strong> '+esc(fmt(point.x))+', '+esc(fmt(point.y))+' · '+esc(point.crs)+'</p>'+
-        '<div class="spatial-pixel-columns">'+pixelHTML('Baseline',value.primary)+(c.model.comparison?pixelHTML('Alternative',value.comparison):'')+'</div>'+
-        (difference?'<p class="spatial-difference-value"><strong>Alternative minus baseline</strong> '+esc(difference.value_text??String(difference.value))+' '+esc(difference.units||'')+'</p>':'')+
+        '<div class="spatial-pixel-columns">'+pixelHTML('Left source',value.primary)+(c.model.comparison?pixelHTML('Right source',value.comparison):'')+'</div>'+
+        (difference?'<p class="spatial-difference-value"><strong>Right source minus left source</strong> '+esc(difference.value_text??String(difference.value))+' '+esc(difference.units||'')+'</p>':'')+
         '<div class="spatial-feature-inspection">'+(value.features||[]).map((group,groupIndex)=>'<section><h3>'+esc(group.layer?.title||group.selection?.layer_id)+'</h3>'+(group.features?.length?group.features.map((feature,featureIndex)=>featureHTML(feature,groupIndex,featureIndex)).join(''):'<p class="note">No original features within the selected point tolerance.</p>')+(group.truncated?'<p class="note">Additional nearby features exceed this point response. Zoom in or apply an attribute filter to inspect a smaller selection.</p>':'')+'</section>').join('')+'</div>';
     }catch(error){if(!quiet(error)&&alive(c)){target.innerHTML='<p class="error-text">'+esc(error.message)+'</p>';}}
     finally{release(c,control);if(c.pointControl===control)c.pointControl=null;}

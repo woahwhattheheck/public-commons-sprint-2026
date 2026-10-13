@@ -33,6 +33,7 @@ MAX_MARKERS = 200
 MODES = {"single", "compare", "swipe", "difference"}
 KINDS = ("sources", "grids", "runs", "comparisons", "deliveries")
 DIRECTION = "alternative minus baseline"
+VIEW_DIFFERENCE_DIRECTION = "right source minus left source"
 
 
 def _number(value, label, *, minimum=None, maximum=None):
@@ -739,7 +740,7 @@ class SpatialReview:
 
     def _pair(self, primary, comparison):
         result = {"aligned": False, "comparable": False, "difference_available": False,
-                  "reason": "Select a baseline and an alternative raster", "direction": DIRECTION}
+                  "reason": "Select left and right source rasters", "direction": VIEW_DIFFERENCE_DIRECTION}
         if primary is None or comparison is None:
             return result
         a, b = primary["native"], comparison["native"]
@@ -834,12 +835,12 @@ class SpatialReview:
             data = alternative["data"] - baseline["data"]
             delta = {"data": data, "mask": baseline["mask"] | alternative["mask"] | ~np.isfinite(data),
                      "selection": {"primary": baseline["selection"], "comparison": alternative["selection"]},
-                     "layer": {**alternative["layer"], "title": "Alternative minus baseline",
+                     "layer": {**alternative["layer"], "title": "Right source minus left source",
                                "sha256": None},
                      "units": baseline["units"]}
             delta_scale = self._scale([delta], requested, signed=True)
             images["difference"] = self._image(delta, delta_scale)
-            images["difference"]["direction"] = DIRECTION
+            images["difference"]["direction"] = VIEW_DIFFERENCE_DIRECTION
             images["difference"]["source_sha256s"] = {
                 "baseline": baseline["layer"]["sha256"], "alternative": alternative["layer"]["sha256"]}
         return {"view": view, "size": size, "images": images, "scale": scale,
@@ -1062,7 +1063,7 @@ class SpatialReview:
             value = pixels["comparison"]["value"] - pixels["primary"]["value"]
             if math.isfinite(value):
                 delta = {"value": value, "value_text": _scalar_text(value),
-                         "units": pixels["primary"]["units"], "direction": DIRECTION}
+                         "units": pixels["primary"]["units"], "direction": VIEW_DIFFERENCE_DIRECTION}
         selections = payload.get("overlays", [])
         if not isinstance(selections, list) or len(selections) > MAX_OVERLAYS:
             raise ValueError("Select up to " + str(MAX_OVERLAYS) + " original vector overlays")
