@@ -1,6 +1,7 @@
 """Regional watershed context in the original operator and verified file transport."""
 from __future__ import annotations
 
+import gzip
 import hashlib
 import json
 import re
@@ -10,10 +11,14 @@ from model.common import atomic_bytes, atomic_json, describe_file, held, identif
 from model import watershed_context as context_model
 from model.watershed_brief import BRIEF_FORMAT, write_selection_brief
 
-ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export"})
+ACTIONS = frozenset({"watershed.context.analyze", "watershed.context.export",
+                     "watershed.context.receive"})
 CONTEXT_NAME = "full-domain-water-context.json"
 COVERAGE_NAME = "scdes-domain217-source-coverage.json"
 SCHEMA = "upstate.operator-watershed-context/v1"
+NETWORK_NAMES = ("usgs-wbd-savannah-original-topology-20261013.json",
+                 "native-network.json", "native-network.json.gz", "model-domain.esri.json.gz")
+NETWORK_ROLES = {"NATIVE_HUC_NETWORK", "WBD_HUC12_NETWORK", "HUC12_NETWORK"}
 
 
 def _hash(body):
@@ -89,6 +94,58 @@ class WatershedContextActions:
                 })
         return choices
 
+    def _network_sources(self, ws):
+        choices, seen = [], set()
+        for collection in ws.sources():
+            for entry in collection.get("entries", []):
+                if entry.get("role") not in NETWORK_ROLES and str(entry.get("path") or "").rsplit("/", 1)[-1] not in NETWORK_NAMES:
+                    continue
+                path = Path(ws.source_file(collection["id"], entry["id"])[0]).resolve()
+                body = path.read_bytes()
+                identity = _hash(body)
+                seen.add(identity)
+                choices.append({
+                    "source_collection_id": collection["id"], "source_id": entry["id"],
+                    "title": entry.get("title") or "Retained native HUC12 / ToHUC network",
+                    "sha256": identity, "bytes": len(body), "origin": "workspace",
+                })
+        for root_id, root in self.roots.items():
+            for name in NETWORK_NAMES:
+                for found in sorted(root.rglob(name)):
+                    path = found.resolve()
+                    if not path.is_relative_to(root) or not path.is_file():
+                        continue
+                    body = path.read_bytes()
+                    identity = _hash(body)
+                    if identity in seen:
+                        continue
+                    seen.add(identity)
+                    choices.append({
+                        "source_root_id": root_id, "member_path": path.relative_to(root).as_posix(),
+                        "title": "Original USGS Savannah HUC12 / ToHUC" if name == NETWORK_NAMES[0]
+                                 else "Retained native network / " + path.parent.name,
+                        "sha256": identity, "bytes": len(body), "origin": "registered",
+                    })
+        return choices
+
+    def _selected_network(self, ws, selection):
+        if not isinstance(selection, dict):
+            raise ValueError("Choose an original native network from the regional source catalogue.")
+        if selection.get("source_collection_id") or selection.get("source_id"):
+            path = Path(ws.source_file(selection.get("source_collection_id"), selection.get("source_id"))[0]).resolve()
+        else:
+            path = self._source_path(selection.get("source_root_id"), selection.get("member_path"))
+        body = path.read_bytes()
+        if not selection.get("sha256") or _hash(body) != selection["sha256"]:
+            raise ValueError("The selected original network changed. Refresh the regional source catalogue.")
+        compressed = body.startswith(b"\x1f\x8b")
+        value = json.loads(gzip.decompress(body) if compressed else body)
+        if not isinstance(value, (dict, list)):
+            raise ValueError("Select an original JSON network with HUC12 and ToHUC records.")
+        return value, {"name": "native-network.json.gz" if compressed else "native-network.json",
+                       "path": str(path),
+                       "bytes": len(body), "sha256": _hash(body)}
+
     @staticmethod
     def _summary(record):
         return {key: record.get(key) for key in (
@@ -149,6 +206,7 @@ class WatershedContextActions:
                 "reports": self.snapshot(workspace),
                 "exports": self.export_snapshot(workspace),
                 "sources": self._sources(ws),
+                "networks": self._network_sources(ws),
             }
         if operation == "export":
             key = identifier(value.get("export_id") or value.get("id"))
@@ -252,6 +310,12 @@ class WatershedContextActions:
                 raise ValueError("Choose the retained full-domain watershed source.")
         from source_tools.prepare_watershed_context import load_source_edition
         edition = load_source_edition(context_path.parent)
+        if selection.get("network"):
+            network, network_source = self._selected_network(ws, selection["network"])
+            edition = {**edition, "native_network": network,
+                       "source_files": [row for row in edition["source_files"]
+                                        if row["name"] not in {"native-network.json", "native-network.json.gz"}]
+                                       + [network_source]}
         report = context_model.build_watershed_context(
             edition["source_context"], classification_coverage=edition["classification_coverage"],
             network=edition.get("native_network"),
@@ -320,6 +384,19 @@ class WatershedContextActions:
             atomic_json(record_path, record)
         return self._summary(record)
 
+    def _receive(self, task):
+        from source_tools.receive_watershed_context import receive_completed
+        value = task.get("payload") or {}
+        upload_id = value.get("upload_id")
+        if not isinstance(upload_id, str) or not upload_id:
+            raise ValueError("Choose the completed regional run archive.")
+        upload = self.operator.upload(upload_id)
+        record = receive_completed(
+            self.operator.ws(task["workspace"]), Path(upload["path"]),
+            expected_sha256=upload["sha256"], title=value.get("title"),
+        )
+        return self._summary(record)
+
     def _export(self, task):
         ws = self.operator.ws(task["workspace"])
         value = task.get("payload") or {}
@@ -370,6 +447,8 @@ class WatershedContextActions:
     def invoke(self, task):
         if task.get("action") == "watershed.context.analyze":
             return self._analyze(task)
+        if task.get("action") == "watershed.context.receive":
+            return self._receive(task)
         if task.get("action") == "watershed.context.export":
             return self._export(task)
         raise self.Fault("WATERSHED_ACTION", "Choose a regional watershed operation.", 422)
