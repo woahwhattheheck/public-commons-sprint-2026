@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.source-distribution/v1",
+  "state": "Original source capture recorded; binary materialization is determined by the receiving workspace",
+  "scope": "This file records the original capture below. It is not an inventory of binaries present in this public checkout.",
+  "original_capture": {
+    "schema": "upstate.source-materialization/v1",
+    "state": "Complete original source bytes are published in the private repository object store",
+    "required": [],
+    "completed_at": "2026-10-12T05:42:53.448Z",
+    "method": "The final original SHP was read from the retained capture, transferred in exact sequential chunks, and published with a matching original Git blob identity.",
+    "complete_original_files": 30,
+    "original_bytes": 3289732
+  },
+  "receiving": "Use source/SOURCE_MANIFEST.json for original identities and source/SOURCE_METHODS.md for acquisition provenance. Retain original agency files in the application workspace and confirm each declared input there before native execution."
+}

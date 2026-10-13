@@ -22,7 +22,7 @@ import sys
 import tempfile
 import unicodedata
 
-VERSION = "1.1.0"
+VERSION = "1.2.0"
 SCHEMA = "upstate.classified-water-crosswalk/v1"
 PLANNING_SHA256 = "133bc5369bd0d68bfdb53c61e3df24f9445f799b0d68b301f321d2c49d71eab6"
 FOCUS_HUCS = ("030601010703", "030601010704", "030601020507", "030601020502")
@@ -353,16 +353,22 @@ def load_capture(capture_root, mapping_path, inputs):
     return capture, mapping, loaded
 
 
-def load_geography(project_source, huc_paths, inputs, corrections):
+def load_geography(project_source, huc_paths, inputs, corrections, *,
+                   planning_path=None, focus_path=None):
     import fiona
     from pyproj import CRS
     from shapely.geometry import shape
     from shapely import make_valid, is_valid_reason
     from shapely.ops import unary_union
 
-    source_root = Path(project_source).resolve(strict=True)
+    source_root = None
+    if planning_path is None or focus_path is None:
+        if project_source is None:
+            raise ValueError("Choose the retained planning and four-focus sources, or the original source directory")
+        source_root = Path(project_source).resolve(strict=True)
     analysis_crs = CRS.from_epsg(26917)
-    planning = source_root / "geography/planning_basins2023/PlanningBasins2023.shp"
+    planning = (Path(planning_path).resolve(strict=True) if planning_path is not None else
+                source_root / "geography/planning_basins2023/PlanningBasins2023.shp")
     inputs.add("inputs/planning/PlanningBasins2023.shp", planning, PLANNING_SHA256)
     for suffix in (".shx", ".dbf", ".prj", ".cpg", ".sbn", ".sbx", ".shp.xml"):
         sidecar = planning.with_suffix(suffix)
@@ -425,7 +431,8 @@ def load_geography(project_source, huc_paths, inputs, corrections):
         if huc in FOCUS_HUCS:
             hucs[huc]["roles"].add("focus_huc12")
 
-    focus = source_root / "geography/wbd_20261012/selected-four-huc12.json.gz"
+    focus = (Path(focus_path).resolve(strict=True) if focus_path is not None else
+             source_root / "geography/wbd_20261012/selected-four-huc12.json.gz")
     paths = [focus] + [Path(path).resolve(strict=True) for path in huc_paths]
     for index, path in enumerate(paths):
         prefix = "inputs/huc/%03d" % index
@@ -504,6 +511,8 @@ def load_geography(project_source, huc_paths, inputs, corrections):
                 crs = CRS.from_user_input(collection.crs_wkt or collection.crs)
                 for feature in collection:
                     add_huc(feature, crs, prefix + "/" + path.name, "provided_huc12")
+        if index == 0 and set(hucs) != set(FOCUS_HUCS):
+            raise ValueError("The focus input must contain exactly the four original utility HUC12 identities")
     if not set(FOCUS_HUCS).issubset(hucs):
         raise ValueError("Retained four-focus HUC12 response is missing a required source identity")
     regions = [{"id": "sc-upper-savannah", "kind": "reporting",
@@ -778,8 +787,14 @@ def summarize(groups, regions, statuses, dimensions):
 
 
 def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
-                    huc_paths=(), registry_paths=(), bindings_path=None, workspace_root=None):
-    """Build an immutable source edition and optionally import its local manifest."""
+                    huc_paths=(), registry_paths=(), bindings_path=None, workspace_root=None,
+                    planning_path=None, focus_path=None):
+    """Build an immutable source edition and optionally import its local manifest.
+
+    Explicit planning_path and focus_path can be verified Workspace.source_file
+    paths. When both are supplied, project_source may be None. Original source
+    bodies and native geography checks are identical in either input mode.
+    """
     import fiona
     import pyproj
     import shapely
@@ -789,7 +804,8 @@ def build_crosswalk(capture_root, mapping_path, project_source, output_root, *,
 
     inputs, corrections = Inputs(), []
     capture, configuration, layers = load_capture(capture_root, mapping_path, inputs)
-    regions, geography = load_geography(project_source, huc_paths, inputs, corrections)
+    regions, geography = load_geography(project_source, huc_paths, inputs, corrections,
+                                         planning_path=planning_path, focus_path=focus_path)
     legal = LegalAssociations(registry_paths, bindings_path, inputs)
     inputs.add("inputs/producer/high_quality_water_crosswalk.py", Path(__file__))
     inputs.add("inputs/producer/capture_upstream_network.py",
@@ -1024,7 +1040,9 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--capture", required=True, help="Retained intake capture directory")
     parser.add_argument("--mapping", required=True, help="Actual native field/domain mapping JSON")
-    parser.add_argument("--project-source", required=True, help="Original source data directory containing geography/")
+    parser.add_argument("--project-source", help="Original source data directory containing geography/; optional with both explicit sources")
+    parser.add_argument("--planning-basins", help="Retained original PlanningBasins2023.shp with its original sidecars")
+    parser.add_argument("--focus-hucs", help="Retained original four-focus HUC12 response")
     parser.add_argument("--output", required=True, help="Parent for immutable crosswalk editions")
     parser.add_argument("--huc", action="append", default=[], help="Extra native HUC file or upstream network-selection.json")
     parser.add_argument("--registry", action="append", default=[], help="Current/proposed source reach registry; repeatable")
@@ -1033,7 +1051,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     result = build_crosswalk(args.capture, args.mapping, args.project_source, args.output,
                              huc_paths=args.huc, registry_paths=args.registry,
-                             bindings_path=args.bindings, workspace_root=args.workspace)
+                             bindings_path=args.bindings, workspace_root=args.workspace,
+                             planning_path=args.planning_basins, focus_path=args.focus_hucs)
     print(json.dumps(result, ensure_ascii=False, indent=2))
 
 

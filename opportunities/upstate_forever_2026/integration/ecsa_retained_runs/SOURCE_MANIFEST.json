@@ -1,0 +1,124 @@
+{
+  "package": "ecsa-retained-runs",
+  "version": "0.2.1",
+  "authored_by": "ASTRA-ECO-RUN12",
+  "created_date": "2026-10-12",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 10598,
+      "sha256": "c875388ec2a22ccb8afedcb2c9788e83e3c8429d2aa5226b1345e2f35d98601a"
+    },
+    {
+      "path": "ecsa_runs/__init__.py",
+      "bytes": 212,
+      "sha256": "82fba9e30994fed67425f3ce176150b5806a6874a9b9e863b97608e1e39fc823"
+    },
+    {
+      "path": "ecsa_runs/__main__.py",
+      "bytes": 5219,
+      "sha256": "2300936d22cdba86f2f3b357ec414fc64790b8bb6c4688825034f142929a177f"
+    },
+    {
+      "path": "ecsa_runs/archive.py",
+      "bytes": 8913,
+      "sha256": "7d2f0658ae257c26c21b2fcc2dabc254c24d1a927f0225256416a62b024a2611"
+    },
+    {
+      "path": "ecsa_runs/artifacts.py",
+      "bytes": 2466,
+      "sha256": "914a94a7e7780f530063fffb43f95f34b00d72ee16f340536e5a7d7970ddd8be"
+    },
+    {
+      "path": "ecsa_runs/bindings.py",
+      "bytes": 6604,
+      "sha256": "a27709df14809defb33817193ef79b2b47876055e044b6ee8a5428e16c985990"
+    },
+    {
+      "path": "ecsa_runs/codec.py",
+      "bytes": 6604,
+      "sha256": "d631965b6b3fa6748f4bf37d366fba171bae3e86255bca19210e50c568dd5c3a"
+    },
+    {
+      "path": "ecsa_runs/comparison.py",
+      "bytes": 4738,
+      "sha256": "073cab162206cdee190ecd58b20db6583fa8c8abecaa7baa22b742ee6d748265"
+    },
+    {
+      "path": "ecsa_runs/context.py",
+      "bytes": 1377,
+      "sha256": "50df179e2337961649ad338360f73bc6121655e6453aa6d0268966ccdc7526b4"
+    },
+    {
+      "path": "ecsa_runs/gateway.py",
+      "bytes": 9599,
+      "sha256": "1daacf8b18b6492d71c11e9946c749f98f74018ab36f781e11cf9a2224cbbdff"
+    },
+    {
+      "path": "ecsa_runs/native_tree.py",
+      "bytes": 4939,
+      "sha256": "41ebcbb493d10590a1feb6dbd1e95583d818a22a93d63c99899056bb4493cc74"
+    },
+    {
+      "path": "ecsa_runs/provider.py",
+      "bytes": 11428,
+      "sha256": "e7348b75262a0191ea1b196ff1f697eb866511e64505c4c8e3a7f1ca80983856"
+    },
+    {
+      "path": "ecsa_runs/runner.py",
+      "bytes": 9065,
+      "sha256": "06b64233251be3565023ad257079c590019d374dcce8263a491abf63ac0d86e4"
+    },
+    {
+      "path": "ecsa_runs/store.py",
+      "bytes": 15112,
+      "sha256": "baa371681a08b58330ff94e57d37765e78d680a48971fe741cbc9145e5965873"
+    },
+    {
+      "path": "ecsa_runs/upstate.py",
+      "bytes": 11068,
+      "sha256": "2107c7c3360db9451f7c0c826113207dc3bb352f87224e75ad2f9a6c4aef6caf"
+    },
+    {
+      "path": "ecsa_runs/workspace_adapter.py",
+      "bytes": 6634,
+      "sha256": "6e00d153b4ef642fb57c482f0c90a5ed6243e78e21f632302634d2782caa425c"
+    },
+    {
+      "path": "pyproject.toml",
+      "bytes": 516,
+      "sha256": "1a607aaa488c391610f95c51cb526c46ebd0078e5353791198af4e54880e009d"
+    },
+    {
+      "path": "tests/original_operator_seam.py",
+      "bytes": 6265,
+      "sha256": "8d74ddf1b9247908206bd632ad902bb4aeade0626966d37fc65553aafb335358"
+    },
+    {
+      "path": "tests/provider_fixture.py",
+      "bytes": 1834,
+      "sha256": "5794e3b73479c997b6714e4c85e5913a9734e1302580434b1efb25ee599e0d86"
+    },
+    {
+      "path": "tests/test_existing_workspace.py",
+      "bytes": 3071,
+      "sha256": "088f9c4c32760d31bc2c4972b440892405143af6f466c642fdda900e5fd8f55e"
+    },
+    {
+      "path": "tests/test_journeys.py",
+      "bytes": 10652,
+      "sha256": "7b00f9ab1c56cb1e0c639ec19dce30d5c3a53d45ef2469129fb91a444fd4846e"
+    },
+    {
+      "path": "tests/test_upstate_operator.py",
+      "bytes": 11465,
+      "sha256": "458ce6d7e8813a378af958091b4c6ede82b38155855564d9ab59ba97c5a1a758"
+    },
+    {
+      "path": "upstate-native-retention.patch",
+      "bytes": 587,
+      "sha256": "6b527a26499206da397f0500d3f534fc8954c38e841b3ea098b21a5ae6b5d887"
+    }
+  ],
+  "manifest_scope": "Original ecsa-retained-runs 0.2.1 delivery manifest. Paths and hashes refer to that delivery, not to the maintained ecsa_runs package in this checkout."
+}

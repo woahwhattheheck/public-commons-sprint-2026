@@ -172,3 +172,41 @@ Current public report: source/high_quality_waters/scdes-schydroclass-20261013.do
 The water-designations desk's r2.1 controller copies the complete source-review input into source_context. Its draft and selection functions retain that object; the model normalizer writes it into the saved selection, selected-identities.json and imported source scope. Reopening restores the same context. The related-source panel reads both a legacy legal-record array and the current legal_record_context.records wrapper, and keeps candidate, partial and coextensive association labels. Its Source review JSON export contains the complete original input.
 
 The 1.3.0 caller supplies source_feature_refs with typed feature_id values, explicit id_field/native_oid_field/class_field, expected_source_sha256, the original rule_reference and the full legal context. The desk accepts both the top-level and nested rule reference. Positive measured HUC12s, the original native field/value references and the source coverage scope remain available in source_context throughout the saved workflow.
+
+## Open a completed source-workbench result
+
+Extension version 1.4.0 exposes a whole-source receiving method in addition to
+`openRecord`. The maintained source workbench can open its completed import:
+
+```javascript
+await context.openExtension('water-source-review', 'openSource', {
+  workspace_key: currentWorkspace,
+  collection_id: result.source_collection_id,
+  source_id: 'classified-water-crosswalk',
+  load_native: true
+});
+```
+
+The current source preparation method supplies the actual imported collection
+ID. The original crosswalk source entry is `classified-water-crosswalk`.
+The review uses that entry for its complete retained legal register and native
+geometry context, refreshes the imported-source catalogue, and loads the complete
+captured-feature browser when `load_native` is true. A newer source-opening
+intent or a project change supersedes an older pending navigation. Existing
+`openRecord` callers retain their record and edition selection behavior.
+
+The controller also accepts `source_collection_id` as the collection-key alias.
+When invoked before the view mounts, it retains the selected source for the next
+mount. Hosts exposing only `navigate` can open the same existing view and use its
+normal source selectors. The original designation handoff remains
+`water-designations.openSelection`.
+
+The source-workbench method builds the geographic crosswalk before import.
+A standalone legal registry remains readable independently; the complete native
+browser uses the crosswalk's original captures and geographic associations.
+Crosswalk version 1.2.0 accepts `planning_path` and `focus_path` returned by
+`Workspace.source_file`, with `project_source=None`. The original planning SHP
+and sidecars, original four-focus response, full native network selection and
+its referenced pages remain part of the retained source snapshot. The
+[crosswalk guide](../source_tools/HIGH_QUALITY_WATER_CROSSWALK.md) documents the
+same API and standalone CLI.
