@@ -557,3 +557,63 @@ Pass this rule to child/delegated workers and persist it in owner-controlled pro
 
 Canonical local policy: `C:/Users/lucys/.commons/rendered-product-inspection-policy.md` and `.json`. Portable repository copy: `docs/policies/rendered-product-inspection-policy.md` and `.json` when present. Only Bryce can change this standing rule.
 <!-- bryce-rendered-product-inspection:end -->
+
+## Reopen an assessment through a saved scientific report
+
+Scientific Reports retains the ordered source selection and the complete original
+assessment and station packages. Export the completed scientific report as a
+selected Study and receive that Study in the destination Workspace. In
+**Received Studies**, open the retained report and its **Assessment context and
+original station geography** section.
+
+For a newly captured Study whose editable editions were present in the producing
+Workspace, **Open saved assessment context** opens that exact context.
+**Open Station geography** opens its exact original station edition. When the
+source includes parcel associations, **Open saved parcel associations** opens
+the matching context and parcel edition together. The source collection, source
+ID, body SHA256 and original project/context IDs remain visible beside the
+original maps, report files and complete source packages.
+
+Older report-only Studies and report sources imported from another project still
+retain their original source bytes. Their **Receive editable assessment** action
+uses the existing serial operator queue to receive those complete native packages
+and register editable Station and Assessment records in the current Workspace.
+The completed task opens the actual returned context and optional parcel IDs.
+Its mapping records the source project and original context, station and parcel
+IDs beside their receiving Workspace counterparts. A parcel package that was
+already received elsewhere keeps its own original package context identity;
+receiving follows that package's native context and verifies the selected
+original assessment records and geographic relationship.
+
+This operation reuses the original ZIPs and native receiving methods. It preserves
+the original report edition, map inputs, original assessment dictionaries and
+source body hashes. The selected source's record filter, publisher/computed
+watershed relationship, station selection and selected geometry remain attached
+to the reopened context. Reopening an earlier Study does not add new dependencies
+to that Study's historical capture. Its source-only view can be adopted explicitly
+without rendering another original report or repeating its export.
+
+**Open this report source only** replaces the current composer selection with
+that exact source. **Add to current report** appends it through the maintained
+composer while keeping the existing ordered choices. The completed report's
+original files remain downloadable from the receiving view.
+
+The queued action is `assessment.context.adopt_source`. It requires the exact
+`source_collection_id`, `source_id` and `source_body_sha256`. The task retains
+its source binding, original/receiving ID mapping and the original archive hashes.
+Repeated use of the same source resumes the saved receiving result; original
+assessment rows are identified by their source body SHA and original row/pointer,
+including distinct records across assessment editions.
+
+Inspect the actual outgoing report maps and attachments in the receiving
+Workspace, open the Station and Assessment desks at desktop and narrow widths,
+and reopen the same saved Study after the operator restarts. The existing
+assessment receiving browser course exercises this route alongside the report
+downloads.
+
+Current owner direction is [CURRENT_OWNER_DIRECTION.md](../CURRENT_OWNER_DIRECTION.md),
+version **2026-10-13.3**. Keep this receiving route within the existing scientific
+case and its actual original source scope. For the prepared Upper Savannah
+assessment studies, the retained publisher-HUC selection remains 192 published
+records; its all-editions context retains those records plus 101 draft records.
+Other saved source selections reopen under their own original filters and IDs.

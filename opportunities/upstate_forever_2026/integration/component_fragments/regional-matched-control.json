@@ -19,14 +19,16 @@
         "operation": "UPSTATE-REGIONAL-MATCHED-CONTROL-20261013",
         "coordination": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791888470056569"
       }
-    },
+    }
+  },
+  "required_components": [
+    "regional-matched-control"
+  ],
+  "extend_components": {
     "simulated-headwaters-demo": {
       "requires": [
         "regional-matched-control"
       ]
     }
-  },
-  "required_components": [
-    "regional-matched-control"
-  ]
+  }
 }

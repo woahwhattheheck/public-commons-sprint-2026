@@ -83,7 +83,7 @@ export function attachAssessmentContext(host){
  let parcelEdition=null,selectedParcelEdition=null,parcelQuery='',parcelPage=0;
  let optionsRequest=0,editionRequest=0,parcelRequest=0,pendingEdition=null,optionsLoading=false;
  let reportDelivery='',reportReady=null,reportPreparing=false,reportPreparationRequest=0;
- let catalogRequest=0,geographyRequest=0,geographyOpening=false;
+ let catalogRequest=0,geographyRequest=0,geographyOpening=false,adoptionOpening=null;
  const parcelActions=new Set(['assessment.context.parcels','assessment.context.receive_parcels']);
  const read=(operation,value={})=>host.api('/api/assessment-context/'+operation,{method:'POST',body:{workspace,...value},signal:controller?.signal});
  function persist(){
@@ -339,7 +339,9 @@ export function attachAssessmentContext(host){
   try{const t=await host.api('/api/actions',{method:'POST',body:{workspace,action,payload,operation_id:request.id}});
    if(workspaceNow!==workspace||gen!==epoch)return;currentTask=t.id;persist();await host.refresh({force:true});if(gen!==epoch||workspaceNow!==workspace)return;state=host.getState();
    message='Context operation '+t.state+'.';renderTasks();acceptReport(t);notice();
-   if(t.state==='complete'&&t.result?.id){await loadCatalog();if(gen!==epoch||workspaceNow!==workspace)return;if(parcelActions.has(action))await openParcels(t.result.id);else await openEdition(t.result.id);}
+   if(t.state==='complete'&&action==='assessment.context.adopt_source'){
+    busy=false;await openAdoptedResult(t);
+   }else if(t.state==='complete'&&t.result?.id){await loadCatalog();if(gen!==epoch||workspaceNow!==workspace)return;if(parcelActions.has(action))await openParcels(t.result.id);else await openEdition(t.result.id);}
   }catch(e){if(workspaceNow===workspace&&gen===epoch)fail(e);}finally{if(workspaceNow===workspace&&gen===epoch){busy=false;renderForm();renderParcels();renderResult();renderParcelResult();}}
  }
  function edit(event){
@@ -406,8 +408,75 @@ export function attachAssessmentContext(host){
   if(target.parcels)await openParcels(target.id);else await openEdition(target.id);
   if(pendingEdition===target)pendingEdition=null;
  }
+
+ async function openSavedContext(value){
+  const originalWorkspace=host.getWorkspace()||host.getState()?.workspace_key;
+  const valid=id=>typeof id==='string'&&/^[a-f0-9]{64}$/.test(id);
+  if(!node||!value||value.workspace_key!==workspace||originalWorkspace!==workspace||
+     !valid(value.context_id)||(value.parcel_id!=null&&!valid(value.parcel_id)))
+   throw Error('Open this saved assessment in its receiving Workspace first.');
+  if(busy||reportPreparing)throw Error('Finish submitting the current assessment operation before opening another context.');
+  cancelGeographyOpening();
+  const gen=epoch,request=++editionRequest,parcelTurn=++parcelRequest,catalogTurn=++catalogRequest;
+  ++optionsRequest;pendingEdition=null;currentTask=null;error='';
+  const active=()=>Boolean(node)&&gen===epoch&&workspace===originalWorkspace&&
+   originalWorkspace===(host.getWorkspace()||host.getState()?.workspace_key)&&
+   request===editionRequest&&parcelTurn===parcelRequest&&catalogTurn===catalogRequest;
+  message='Opening the original saved assessment and its retained sources…';notice();
+  try{
+   const [freshCatalog,context,parcels]=await Promise.all([
+    read('catalog'),read('edition',{id:value.context_id}),
+    value.parcel_id?read('parcels',{id:value.parcel_id}):Promise.resolve(null),
+   ]);
+   if(!active())return false;
+   if(context.id!==value.context_id||!list(freshCatalog.editions).some(row=>row.id===context.id)||
+      (parcels&&(parcels.id!==value.parcel_id||parcels.context_id!==context.id)))
+    throw Error('The saved assessment or parcel association differs from the selected original records.');
+   catalog=freshCatalog;edition=context;selectedEdition=context.id;
+   parcelEdition=parcels;selectedParcelEdition=parcels?.id||null;
+   selectedPolygon='';query='';page=0;parcelQuery='';parcelPage=0;
+   reportReady=null;reportDelivery='';
+   node.querySelector('[data-ac-editions]').innerHTML=opts(catalog.editions,selectedEdition,
+    row=>row.title+' · '+row.summary.assessment_row_count+' rows');
+   renderForm();renderResult();renderParcels();renderParcelResult();persist();
+   message='Opened '+context.title+(parcels?' with its saved parcel associations.':'.');notice();
+   return {context_id:context.id,parcel_id:parcels?.id||null};
+  }catch(problem){if(active()){fail(problem);throw problem;}return false;}
+ }
+ async function adoptSource(value){
+  const originalWorkspace=host.getWorkspace()||host.getState()?.workspace_key;
+  const valid=id=>typeof id==='string'&&/^[a-f0-9]{64}$/.test(id);
+  if(!node||!value||value.workspace_key!==workspace||originalWorkspace!==workspace||
+     !valid(value.source_collection_id)||!valid(value.source_body_sha256)||
+     typeof value.source_id!=='string'||!value.source_id)
+   throw Error('Choose the retained assessment source in this receiving Workspace.');
+  if(busy||reportPreparing)throw Error('Finish submitting the current assessment operation before receiving this source.');
+  cancelGeographyOpening();++editionRequest;++parcelRequest;pendingEdition=null;
+  await submit('assessment.context.adopt_source',{
+   source_collection_id:value.source_collection_id,source_id:value.source_id,
+   source_body_sha256:value.source_body_sha256,
+  });
+ }
+ async function openAdoptedResult(task){
+  if(task?.action!=='assessment.context.adopt_source'||task.state!=='complete'||task.workspace!==workspace)return false;
+  const result=task.result;
+  if(!result?.context_id)throw Error('The completed source receiving operation did not retain its assessment context.');
+  const key=workspace+':'+task.id;
+  if(adoptionOpening?.key===key)return adoptionOpening.promise;
+  const opening={key,promise:null};
+  adoptionOpening=opening;
+  opening.promise=openSavedContext({workspace_key:workspace,context_id:result.context_id,
+   ...(result.parcel_id?{parcel_id:result.parcel_id}:{})});
+  try{return await opening.promise;}finally{if(adoptionOpening===opening)adoptionOpening=null;}
+ }
+
  function taskActions(task){
   const current=host.getWorkspace()||host.getState()?.workspace_key;
+  if(task?.state==='complete'&&task.action==='assessment.context.adopt_source'&&task.workspace===current&&
+     /^[a-f0-9]{64}$/.test(String(task.result?.context_id||''))){
+   return '<button type="button" data-action="assessment-context-source-open" data-workspace="'+esc(task.workspace)+
+    '" data-task="'+esc(task.id)+'">Open received assessment context</button>';
+  }
   if(task?.state==='complete'&&task.action==='assessment.context.report'&&task.workspace===current&&task.result?.source){
    return '<button type="button" data-action="assessment-context-report-open" data-workspace="'+esc(task.workspace)+
     '" data-task="'+esc(task.id)+'">Open scientific report</button>'+
@@ -420,6 +489,17 @@ export function attachAssessmentContext(host){
    '" data-id="'+esc(task.result.id)+'" data-parcels="'+(parcelActions.has(task.action)?'1':'0')+'">Open assessment context result</button>';
  }
  async function dispatch(button){
+  if(button?.dataset?.action==='assessment-context-source-open'){
+   const keyNow=host.getWorkspace()||host.getState()?.workspace_key;
+   if(!keyNow||button.dataset.workspace!==keyNow)throw Error('Open the source receiving Workspace first.');
+   const task=list(host.getState()?.tasks).find(item=>item.id===button.dataset.task&&item.workspace===keyNow);
+   if(task?.state!=='complete'||task.action!=='assessment.context.adopt_source')
+    throw Error('Open the completed original source receiving task.');
+   host.closeDetail();
+   await host.openDesk('assessment-context','openSavedContext',{workspace_key:keyNow,context_id:task.result.context_id,
+    ...(task.result.parcel_id?{parcel_id:task.result.parcel_id}:{})});
+   return true;
+  }
   if(['assessment-context-report-open','assessment-context-report-mapped'].includes(button?.dataset?.action)){
    const keyNow=host.getWorkspace()||host.getState()?.workspace_key;
    if(!keyNow||button.dataset.workspace!==keyNow)throw Error('Open the original report-source Workspace first.');
@@ -453,7 +533,9 @@ export function attachAssessmentContext(host){
   if(fingerprint!==taskFingerprint){taskFingerprint=fingerprint;renderTasks();
    const t=ownedTasks().find(t=>t.id===currentTask);
    acceptReport(t);
-   if(t?.state==='complete'&&t.result?.id){
+   if(t?.state==='complete'&&t.action==='assessment.context.adopt_source'){
+    busy=false;openAdoptedResult(t).catch(fail);
+   }else if(t?.state==='complete'&&t.result?.id){
     if(parcelActions.has(t.action)&&t.result.id!==selectedParcelEdition){loadCatalog();openParcels(t.result.id);}
     else if(!parcelActions.has(t.action)&&t.result.id!==selectedEdition){loadCatalog();openEdition(t.result.id);}
    }
@@ -506,5 +588,5 @@ export function attachAssessmentContext(host){
  }
 
  function detach(){geographyRequest++;catalogRequest++;geographyOpening=false;persist();controller?.abort();controller=null;epoch++;node=null;edition=null;parcelEdition=null;options=null;catalog=null;busy=false;optionsLoading=false;}
- return {mount,update,detach,taskActions,dispatch,openForGeography};
+ return {mount,update,detach,taskActions,dispatch,openForGeography,openSavedContext,adoptSource};
 }
