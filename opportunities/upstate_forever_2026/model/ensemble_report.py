@@ -266,7 +266,9 @@ def _alternative_tables(rows, reference_word):
         "<p>Matching masks identify the geographic cells used here; they do not establish "
         "complete reporting-area coverage. Cases with different routing support stay "
         "separate. Full-precision totals, ratios, mask identities, original native run IDs "
-        "and any unavailable comparisons are in alternatives.csv and report.json.</p>")
+        "and any unavailable comparisons are in alternatives.csv and report.json.</p>"
+        '<p><a href="alternatives.csv" download>Download alternative comparisons CSV</a> · '
+        '<a href="report.json" download>Download complete report JSON</a></p>')
     return body
 
 def _csv(rows, fields):
