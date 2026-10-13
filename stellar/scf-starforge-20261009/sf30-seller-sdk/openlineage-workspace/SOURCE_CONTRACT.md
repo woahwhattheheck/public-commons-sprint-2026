@@ -141,10 +141,12 @@ sources. Reviews and results must reference entities that exist in their selecte
 edition.
 
 The export includes the entire portable application. Current packages declare
-applicationVersion 2 and contain all 40 portable files, including the producer
-queue, encoding adapter, typed producer configuration and complete operating
-guides. Receiving still accepts the original 35-file application package without
-applicationVersion. A gzip source requires the current application.
+applicationVersion 7 and contain all 81 portable files, including original
+synchronous and asynchronous clients, schema and quality review, service levels,
+runtime receiving and their operating guides. Receiving retains the complete
+earlier application inventories, including the original 35-file application
+without applicationVersion and the 40-file version 2 application. A gzip source
+requires version 2 or a later complete application.
 
 Receiving checks a compressed source's unchanged object hash, decoded length
 and decoded hash before reconstructing its original event positions. It verifies
@@ -200,3 +202,27 @@ owned directory; repeat that same directory to continue an interrupted stage.
 The OpenLineage originals are Apache-2.0 licensed. OPENLINEAGE_LICENSE contains
 the unchanged upstream license. The application and its own operating programme
 are MIT licensed under LICENSE.
+
+## Saved schema operations
+
+The schema-domain.mjs module compares original projected facets.schema records between two immutable named editions. Every field retains its producer path, original position and metadata; repeated identities and malformed records remain inspectable. A comparison records the original schema event and source location selected within each edition, plus existing explicit and column lineage edges. Original type strings and facet schema URLs remain source facts.
+
+The schema-workflow.mjs module records selected changes, reviewer, decision, reason, assignment, resolution and original evidence through LineageWorkspace.change. Existing operation IDs replay before revision admission. Review updates preserve the original selection and ordered previous versions. Event evidence can retain its original source-location subset when later imports supply another identical event.
+
+The schema-ui.js module participates in the original IndexedDB request journal. A review form binds to its opening revision. A background refresh cannot silently change that write base. The complete pending request remains available through original recovery and explicit reviewed-revision application.
+
+Portable application edition3 adds schema source and complete schema comparisons/reviews. Receiving reconstructs all original events first and then recomputes each retained comparison and validates each staff version and evidence selection. Original application editions1 and2 retain their exact earlier inventories.
+
+## Dataset quality operations
+
+Quality observations retain original metric and assertion facets, physical direction, scope, event paths, schema URLs and complete source positions. Current evaluation uses this application's original run/job projection, including COMPLETE_SNAPSHOT, OTHER and declared job boundary rules. An array position is provenance; a dataset's identity remains its namespace and name within the original run and direction.
+
+Pinned quality adapters follow OpenLineage commit 8ad5c14c63fbab63fedd8ff42f9a208d86ad07fe, plus the retained inline core 1-0-1 contract and published assertions 1-0-0 schema. The recognized modern definitions are DataQualityMetricsDatasetFacet 1-0-0, DataQualityMetricsInputDatasetFacet 1-0-3, DataQualityAssertionsDatasetFacet 1-1-0 and OutputStatisticsOutputDatasetFacet 1-0-2. Scope, field types and required fields follow the selected version. Unrecognized facets and extension values remain inspectable. Only static dataset facets use deletion semantics. SQL/expression text is displayed as original content.
+
+Operator rules use the original revision and operation journal. Saved evaluations retain exact source/event selections and immutable rule versions. Their findings are recomputed during receiving against the complete original sources and named edition. Dispositions retain decision history against the exact saved finding. Browser authoring binds to the displayed workspace, revision, edition and dataset/run selection; preview hashes bind evaluation saves.
+
+Application version 5 carries all ten quality source leaves and preserves exact legacy version 1, 2, both version 3 and version 4 receiving inventories. The portable application contains 76 files; the managed contribution also carries the original application provider. The complete operator workflow is documented in QUALITY_OPERATOR.md.
+
+## Native client runtime receiving
+
+Version 7 adds the complete native client runtime receiving programme to the portable application (81 files), while retaining exact earlier version 6 application receiving. The original Java producer can export its complete successful native runtime, receive all unchanged dependencies into a new local classpath without Maven, and continue its original operations from the delivered application. Original source, POM, dependency order, hashes and preparation provenance remain retained. JAVA_RUNTIME_RECEIVING.mjs operates the released Python and Java SDKs through a complete workspace/runtime handover with exact pending-wire continuation. JAVA_PRODUCER.md describes these original interfaces and the independent runtime package.

@@ -16,6 +16,7 @@
     <div><p class="eyebrow">OpenLineage</p><h1 id="workspace-title">Operations workspace</h1></div>
   </div>
   <div class="header-controls">
+    <a href="/service-levels">Service levels</a>
     <span id="revision-label" class="meta">Connecting…</span>
     <button type="button" id="refresh-button">Refresh</button>
     <button type="button" id="producer-button" aria-haspopup="dialog">Producers</button>
@@ -40,6 +41,7 @@
     <button type="button" data-view="datasets">Datasets <span data-count="datasets">0</span></button>
     <button type="button" data-view="sources">Sources <span data-count="sources">0</span></button>
     <button type="button" data-view="editions">Editions <span data-count="editions">0</span></button>
+    <button type="button" data-view="schema">Schema changes <span data-count="schemaReviews">0</span></button>
     <button type="button" data-view="reviews">Reviews <span data-count="reviews">0</span></button>
     <button type="button" data-view="results">Results <span data-count="results">0</span></button>
     <button type="button" data-view="diagnostics">Attention <span data-count="diagnostics">0</span></button>
@@ -77,6 +79,7 @@
     <section id="producer-status" class="producer-status" aria-label="Current producer status" aria-busy="true"><p class="muted" role="status">Reading producer status…</p></section>
     <form id="producer-config-form" class="producer-config" method="dialog" autocomplete="off">
       <h3>Download client configuration</h3>
+      <p class="field-help">Complete workspace exports include native Python and Java producers with delivery recovery. The received application includes PYTHON_PRODUCER.md and JAVA_PRODUCER.md with runtime setup and operating commands.</p>
       <p class="field-help">The complete JSON file uses this server's address and pins the workspace. The connection continues to work after this server restarts on the same address.</p>
       <label>Client<select id="producer-client"><option value="python">Python OpenLineage client</option><option value="java">Java OpenLineage client</option></select></label>
       <label>Producer token<input id="producer-token" type="password" autocomplete="off" spellcheck="false" maxlength="8192" aria-describedby="producer-token-help"></label>

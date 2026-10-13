@@ -46,6 +46,17 @@ Use `--compression identity` for an uncompressed client. Produce a new settings 
 
 The browser's **Producer intake** control shows this same endpoint, original workspace identity, active queue and server counters. It can create the same complete client settings after the operator enters the selected producer token locally. A downloaded settings file contains that selected token and belongs in the producer's private configuration.
 
+## Operate the included native producers
+
+The complete application includes runnable Python and Java producers pinned to OpenLineage SDK 1.53.0. Both connect to this original endpoint, preserve their input files and the SDK's actual transmitted bytes, and match the saved workspace acknowledgement before completing a delivery. Stable event operation IDs and retained request bodies support continuation after an interrupted send or receiver restart.
+
+| Producer | Installed entry | Preparation and operation |
+| --- | --- | --- |
+| Python | `starforge openlineage native-python emit\|resume\|status` | [PYTHON_PRODUCER.md](PYTHON_PRODUCER.md), Python environment and pinned requirement |
+| Java | `starforge openlineage native-java prepare\|emit` | [JAVA_PRODUCER.md](JAVA_PRODUCER.md), JDK 17 or later and retained Maven classpath |
+
+The received application's `node /absolute/application/cli.mjs` entry exposes these same commands. Use the existing `producer-config` output for an already integrated upstream pipeline, or operate retained original source files through the included producer commands. Producer runtime preparation remains outside the Node receiver's dependency set.
+
 ## Acknowledgement, retries and simultaneous arrivals
 
 The receiver acknowledges an event only after the original source, event references and operation result have been committed through the workspace's atomic writer. Concurrent producer bodies wait in that server's append queue. An unacknowledged body stays the producer's responsibility if the process or connection is lost.
@@ -101,9 +112,9 @@ An operator can import a compressed original through `source.import` with its co
 
 ## Complete customer receiving
 
-Save the reviewed edition and use the original full workspace export. Version 2 application packages include producer reception, typed producer interfaces, decoding, private-configuration authoring and the complete operating programme. Each compressed source is re-decoded and compared with its original decoded hash and source event references during receiving.
+Save the reviewed edition and use the original full workspace export. Version 3 application packages include producer reception, typed producer interfaces, decoding, private-configuration authoring, both native SDK producer implementations and their complete operating guides. Each compressed source is re-decoded and compared with its original decoded hash and source event references during receiving.
 
-The current receiver also accepts complete earlier version 1 application packages with their original 35-file source set. Existing uncompressed originals use their original parser during receiving; new ingress capacities do not invalidate an earlier complete source. That earlier application edition is retained as the received source. A new compressed-source workspace carries its complete version 2 application.
+The current receiver also accepts the original version 1 application packages with their 35-file source set and version 2 packages with their 40-file portable application set. Existing uncompressed originals use their original parser during receiving; new ingress capacities do not invalidate an earlier complete source. The received package retains its original complete application edition.
 
 The tokens and producer configuration files remain outside the exported project. Reopen the received application with the receiving operator's selected host configuration and generate producer settings from its actual new connection.
 

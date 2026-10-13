@@ -1,0 +1,19 @@
+.quality-followup-mode #inspector{display:none}.quality-followup-mode .explorer{grid-template-columns:minmax(0,1fr)}
+.qf-desk{max-width:100%;min-width:0;color:#1a1a1a}.qf-desk h2{font-size:1.5rem}.qf-desk h3{font-size:1.1rem}
+.qf-desk h4{font-size:1rem}.qf-desk p{line-height:1.5}.qf-muted{color:#555}.qf-actions{display:flex;flex-wrap:wrap;gap:.6rem;align-items:center;margin:1rem 0}
+.qf-actions p{margin:0}.qf-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:1rem}
+.qf-field{display:grid;gap:.35rem;margin:.75rem 0;min-width:0}.qf-field>span{font-weight:600}
+.qf-field input,.qf-field select,.qf-field textarea,.qf-desk select{width:100%;min-width:0;max-width:100%;box-sizing:border-box;font:inherit}
+.qf-desk input,.qf-desk select,.qf-desk textarea{padding:.6rem;border:1px solid #888;border-radius:3px;color:#181818;background:white}
+.qf-desk button{padding:.55rem .8rem;border:1px solid #777;background:#f5f5f5;color:#181818;border-radius:3px;font:inherit;cursor:pointer}
+.qf-desk button:disabled{opacity:.55;cursor:default}.qf-desk button[aria-pressed=true]{background:#ddd;border-color:#222}
+.qf-row,.qf-editor{padding:1rem;border:1px solid #aaa;margin:1rem 0;background:#fff}.qf-finding{border-bottom:1px solid #ddd;padding:.6rem 0;overflow-wrap:anywhere}
+.qf-finding p{margin:.35rem 0}.qf-notice{border-left:3px solid #333;padding:.8rem;background:#eee}
+.qf-desk details{margin:.6rem 0}.qf-desk summary{cursor:pointer;font-weight:600}
+.qf-desk pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 monospace;max-height:32rem;overflow:auto;background:#f5f5f5;padding:.75rem}
+.qf-working{border:1px solid #bbb;padding:.8rem}.qf-check{display:flex;align-items:flex-start;gap:.5rem;margin:.6rem 0}
+.qf-check input{width:auto}.qf-desk fieldset{border:1px solid #aaa;margin:1rem 0;padding:.8rem}
+.qf-table{max-width:100%;overflow:auto}.qf-table table{border-collapse:collapse;width:100%}.qf-table td,.qf-table th{border:1px solid #aaa;padding:.5rem;text-align:left}
+@media(max-width:700px){.qf-grid{grid-template-columns:minmax(0,1fr)}.qf-row,.qf-editor{padding:.7rem}.qf-desk button{max-width:100%;white-space:normal}.qf-actions{align-items:stretch}}
+
+.quality-followup-mode .catalog{max-height:none;overflow:visible}.qf-desk{padding:1rem}.quality-followup-mode .filters{display:none}
