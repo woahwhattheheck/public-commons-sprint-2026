@@ -10,7 +10,8 @@
     "conservation.css",
     "conservation_optimization_bridge.mjs",
     "conservation_optimization.mjs",
-    "conservation_optimization.css"
+    "conservation_optimization.css",
+    "conservation_joint_choices.mjs"
   ],
   "backend": {
     "module": "conservation",
