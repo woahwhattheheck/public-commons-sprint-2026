@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import io
 import json
 import math
@@ -80,6 +81,19 @@ def _members(archive: Path, target: Path, wanted: set[str]) -> dict[str, Path]:
             if member.file_size > 512 * 1024 * 1024:
                 raise ValueError("Selected example member exceeds receiving capacity")
             destination = target / native.name
+            if destination.exists():
+                # A received member may be large, and a source-native retry
+                # must not need a second complete member's free disk space.
+                # Reading the original member to EOF still verifies its ZIP
+                # CRC; the SHA256 comparison keeps the exact retained bytes.
+                incoming_digest = hashlib.sha256()
+                with bundle.open(member) as incoming:
+                    for chunk in iter(lambda: incoming.read(1024 * 1024), b""):
+                        incoming_digest.update(chunk)
+                if file_digest(destination) != incoming_digest.hexdigest():
+                    raise ValueError("Retained original member changed: " + str(destination))
+                chosen[basename] = destination
+                continue
             target.mkdir(parents=True, exist_ok=True)
             temporary = destination.with_suffix(destination.suffix + ".receiving")
             with bundle.open(member) as incoming, temporary.open("wb") as outgoing:

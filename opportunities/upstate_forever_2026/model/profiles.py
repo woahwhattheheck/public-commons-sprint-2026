@@ -100,7 +100,7 @@ def scenario_spec(value):
         raise ValueError("Add the actual proposed land-cover changes")
     for patch in patches:
         if not patch.get("mask_source_id"):
-            raise ValueError("Select a retained vector source for each scenario area")
+            raise ValueError("Select a retained vector or aligned binary raster mask for each scenario area")
         if type(patch.get("to_code")) is not int:
             raise ValueError("Each scenario destination must be an integer land-cover code")
         if not isinstance(patch.get("from_codes"), list) or not patch["from_codes"] or any(type(x) is not int for x in patch["from_codes"]):

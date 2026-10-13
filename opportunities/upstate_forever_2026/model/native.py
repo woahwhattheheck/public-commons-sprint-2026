@@ -7,7 +7,7 @@ import inspect
 import logging
 from pathlib import Path
 from .common import (INVEST_SOURCE, INVEST_VERSION, atomic_json, describe_file, digest,
-                     file_digest, held, now, read_json, verify_file)
+                     file_digest, held, identifier, now, read_json, verify_file)
 from . import rasters
 from .model_selection import (models, run_models, required_roles, required_outputs, run_scope,
                               validate_completed_run, common_comparison_outputs)
@@ -38,7 +38,7 @@ def runtime(selection=None):
     return {name: loaded[name] for name in active}, source
 
 
-def execute_run(workspace, key):
+def execute_run(workspace, key, *, reuse_source_run_ids=None):
     directory = workspace.root / "runs" / key
     with held(directory / ".run.lock", blocking=False):
         # Read after acquiring the lock so a completed or resumed operation is
@@ -50,6 +50,18 @@ def execute_run(workspace, key):
             for artifact in state["artifacts"].values():
                 verify_file(directory, artifact)
             return {**state, "reused": True, "model_scope": run_scope(state)}
+        # Donor choices describe execution, not scientific selection. Retain
+        # them outside selection so a resumed run keeps its original item ID.
+        retained_sources = (state.get("reuse_source_run_ids", ())
+                            if reuse_source_run_ids is None else reuse_source_run_ids)
+        if not isinstance(retained_sources, (list, tuple)):
+            raise ValueError("Select original source run IDs as a list or tuple")
+        retained_sources = tuple(dict.fromkeys(identifier(value) for value in retained_sources))
+        if key in retained_sources:
+            raise ValueError("Reuse source runs must differ from the receiving run")
+        if reuse_source_run_ids is not None:
+            state.update(reuse_source_run_ids=list(retained_sources), updated_at=now())
+            atomic_json(directory / "run.json", state)
         modules, runtime_source = runtime(active)
         grid = workspace.get_grid(state["selection"]["grid_id"])
         grid_directory = workspace.root / "grids" / grid["id"]
@@ -97,6 +109,11 @@ def execute_run(workspace, key):
             if scenario["kind"] == "landcover":
                 verified_inputs[str(lulc.resolve())] = state["stages"]["landcover"]["artifact"]
             arguments = build_native_arguments(active, profile, paths, table, lulc)
+            input_matcher = None
+            if retained_sources:
+                from .native_equivalence import NativeInputMatcher
+                input_matcher = NativeInputMatcher(
+                    workspace, key, target_lulc=lulc, target_runtime=runtime_source)
             for name, module in modules.items():
                 args = {**arguments[name], "workspace_dir": str(directory / name)}
                 if name in state["stages"]:
@@ -107,7 +124,9 @@ def execute_run(workspace, key):
                     continue
                 selected = signature(name, args, runtime_source, verified_inputs=verified_inputs)
                 with execution_slot(workspace, selected):
-                    reused, rejected = recover(workspace, key, name, selected, directory, args)
+                    reused, rejected = recover(
+                        workspace, key, name, selected, directory, args,
+                        source_run_ids=retained_sources, matcher=input_matcher)
                     if rejected:
                         state.setdefault("reuse_observations", {})[name] = rejected
                     if reused is not None:
