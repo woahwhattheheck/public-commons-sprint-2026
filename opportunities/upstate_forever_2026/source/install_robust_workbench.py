@@ -21,6 +21,23 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "source_tools/receive_scientific_report_review.py",
+    "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+    "integration/component_fragments/customer-review-receiving.json",
+    "integration/component_fragments/conservation-design-study-transfer.json",
+    "integration/conservation_design_study_transfer_composition.json",
+    "model/CONSERVATION_DESIGN_STUDY_TRANSFER.md",
+    "operator/CONSERVATION_DESIGN_BROWSER.md",
+    "operator/CONSERVATION_DESIGN_RECEIVING.md",
+    "operator/conservation_design_browser_receiving.py",
+    "operator/install_conservation_design.py",
+    "operator/conservation_browser_receiving.py",
+    "model/paired_ensemble_study_transfer.py",
+    "model/paired_ensemble_study_cli.py",
+    "model/PAIRED_ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/paired-ensemble-study-transfer.json",
+    "operator/web/paired_ensemble_desk.mjs",
+    "operator/extensions/paired-ensemble.json",
     "integration/component_fragments/study-transfer-native-lineage.json",
     "model/customer_review_study_transfer.py",
     "model/SCIENTIFIC_REPORT_REVIEW.md",
@@ -115,6 +132,23 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "source_tools/receive_scientific_report_review.py",
+    "source_tools/RECEIVE_SCIENTIFIC_REPORT_REVIEW.md",
+    "integration/component_fragments/customer-review-receiving.json",
+    "integration/component_fragments/conservation-design-study-transfer.json",
+    "integration/conservation_design_study_transfer_composition.json",
+    "model/CONSERVATION_DESIGN_STUDY_TRANSFER.md",
+    "operator/CONSERVATION_DESIGN_BROWSER.md",
+    "operator/CONSERVATION_DESIGN_RECEIVING.md",
+    "operator/conservation_design_browser_receiving.py",
+    "operator/install_conservation_design.py",
+    "operator/conservation_browser_receiving.py",
+    "model/paired_ensemble_study_transfer.py",
+    "model/paired_ensemble_study_cli.py",
+    "model/PAIRED_ENSEMBLE_STUDY_TRANSFER.md",
+    "integration/component_fragments/paired-ensemble-study-transfer.json",
+    "operator/web/paired_ensemble_desk.mjs",
+    "operator/extensions/paired-ensemble.json",
     "integration/component_fragments/study-transfer-native-lineage.json",
     "model/customer_review_study_transfer.py",
     "model/SCIENTIFIC_REPORT_REVIEW.md",
@@ -376,6 +410,7 @@ def verify_composition(application, pending):
                        "community_study_transfer", "conservation_study_transfer",
                        "native_process_study_transfer", "receptor_study_transfer",
                        "customer_review_study_transfer", "conservation_design_study_transfer",
+                       "paired_ensemble_study_transfer",
                        "chemistry_study_transfer", "ensemble_study_transfer",
                        "gauge_study_transfer", "landcover_study_transfer",
                        "published_review_study_transfer", "implementation_report_transfer"):
@@ -449,6 +484,7 @@ def verify_composition(application, pending):
             for module in ("community_study_transfer", "conservation_study_transfer",
                            "native_process_study_transfer", "receptor_study_transfer",
                            "customer_review_study_transfer", "conservation_design_study_transfer",
+                       "paired_ensemble_study_transfer",
                            "chemistry_study_transfer", "ensemble_study_transfer",
                            "gauge_study_transfer", "landcover_study_transfer",
                            "published_review_study_transfer", "implementation_report_transfer"):
@@ -462,6 +498,67 @@ def verify_composition(application, pending):
             monitoring = assembled_data(application, pending, "model/monitoring_study_transfer.py")
             if b"def include_calibration(" not in lineage or b"def include_source(" not in monitoring:
                 raise ValueError("Receive the matching original calibration and Monitoring report lineage helpers")
+    # Optional original receiving companions travel through the same guarded
+    # layer format. Verify their native sources before replacing any file.
+    review_receiver = pending.get("source_tools/receive_scientific_report_review.py")
+    if review_receiver is None:
+        review_receiver = read_existing(application, "source_tools/receive_scientific_report_review.py")
+    if review_receiver is not None:
+        for dependency in ("model/common.py", "model/workspace.py", "model/portable.py",
+                           "model/reviews.py", "model/scientific_report_editions.py",
+                           "model/scientific_report_review.py"):
+            assembled_data(application, pending, dependency)
+        if b"def continue_selected_review(" in review_receiver:
+            if transfer is None or b"customer_review_study_transfer" not in transfer:
+                raise ValueError("Receive the original Customer review Study transfer before its selected receiver")
+            assembled_data(application, pending, "model/customer_review_study_transfer.py")
+            assembled_data(application, pending, "model/scientific_report_study_transfer.py")
+    design_receiver = pending.get("operator/conservation_design_browser_receiving.py")
+    if design_receiver is None:
+        design_receiver = read_existing(application, "operator/conservation_design_browser_receiving.py")
+    if design_receiver is not None:
+        for dependency in ("operator/conservation_browser_receiving.py",
+                           "operator/conservation_design.py", "model/conservation_design.py",
+                           "model/conservation_design_editor.py",
+                           "operator/extensions/conservation-design.json"):
+            assembled_data(application, pending, dependency)
+        if b"--selected-study" in design_receiver:
+            if transfer is None:
+                raise ValueError("Receive the original Study transfer before selected editor receiving")
+            study_tree = ast.parse(transfer.decode("utf-8"), filename="model/study_transfer.py")
+            aliases = {
+                item.asname or item.name
+                for node in ast.walk(study_tree) if isinstance(node, ast.ImportFrom)
+                for item in node.names if item.name == "conservation_design_study_transfer"
+            }
+            calls = {
+                node.func.attr for node in ast.walk(study_tree)
+                if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
+                and isinstance(node.func.value, ast.Name) and node.func.value.id in aliases
+            }
+            if not {"source_snapshot", "capture", "verify"}.issubset(calls):
+                raise ValueError("Receive the complete original selected editor snapshot and receiving joins")
+            assembled_data(application, pending, "model/conservation_design_study_transfer.py")
+            databases = assembled_data(application, pending, "model/portable_databases.py")
+            portable = assembled_data(application, pending, "model/portable.py")
+            if (b"workspace/conservation-design/editor/projects.sqlite" not in databases
+                    or b"frozen_databases" not in portable):
+                raise ValueError("Receive original frozen editor-database support before selected editor receiving")
+    if transfer is not None and b"paired_ensemble_study_transfer" in transfer:
+        for dependency in (
+                "model/paired_ensemble_study_transfer.py", "model/paired_ensemble_study_cli.py",
+                "model/paired_ensemble/__init__.py", "model/paired_ensemble/ensemble_store.py",
+                "model/paired_ensemble/ensemble_workspace.py", "model/paired_ensemble/ensemble_rasters.py",
+                "model/paired_ensemble/ensemble_report.py", "model/paired_ensemble/ensemble_portable.py",
+                "model/paired_ensemble/ensemble_cli.py", "model/paired_ensemble/designs.py",
+                "model/paired_ensemble/ensemble_report_source.py", "model/paired_ensemble/ensemble_report_cli.py",
+                "operator/paired_ensemble_service.py", "operator/paired_ensemble_report_native.py",
+                "operator/extensions/paired-ensemble.json", "operator/extensions/paired-ensemble-report.json",
+                "operator/web/paired_ensemble_desk.mjs", "operator/web/paired_ensemble_desk.css",
+                "operator/web/paired_ensemble_report_desk.mjs", "operator/web/paired_ensemble.html",
+                "operator/web/paired_ensemble.mjs", "operator/web/paired_ensemble.css",
+                "operator/web/paired_ensemble_host.mjs", "operator/web/paired_ensemble_host.css"):
+            assembled_data(application, pending, dependency)
     monitoring_report = pending.get("model/monitoring_report_source.py")
     if monitoring_report is None:
         monitoring_report = read_existing(application, "model/monitoring_report_source.py")
