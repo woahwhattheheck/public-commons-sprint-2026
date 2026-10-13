@@ -237,6 +237,8 @@ def prepare(workspace, programme, *, report_id, zone_id, run_id,
     priced = pricing(programme, catalogue)
     engine = _NativeEconomic(_Context(workspace), ValueError)
     report_path, inspected = engine._source(workspace, report_id)
+    require(inspected.get("project", {}).get("id") == workspace.project["id"],
+            "The retained native report belongs to another original project.")
     packet = decision_analysis.scenario_report_packet(report_path, zone_id)
     comparison = packet["comparisons"][0]
     alternative = next((r for r in comparison["alternatives"] if r["run_id"] == run_id), None)
