@@ -19,6 +19,7 @@ from .common import (atomic_bytes, atomic_json, describe_file, digest, file_dige
 from .ensembles import Ensembles
 from . import ensemble_report, ensemble_scientific_source as shared
 from . import ensemble_scientific_figures as drawing
+from . import ensemble_study_scope as source_scope
 
 VERSION = 2
 DIRECTORY = "ensemble-study-sources"
@@ -132,7 +133,8 @@ def _snapshot(workspace, ensemble_id):
                  "report_id": release["id"], "summary_signature": release["summary_signature"],
                  "run_signature": report["run_signature"],
                  "producer_sha256": file_digest(Path(__file__)),
-                 "figure_helper_sha256": file_digest(Path(drawing.__file__))}
+                 "figure_helper_sha256": file_digest(Path(drawing.__file__)),
+                 "source_scope_helper_sha256": file_digest(Path(source_scope.__file__))}
     return selection, plan, release, original, runs
 
 
@@ -216,6 +218,10 @@ def _package(workspace, directory, plan, release, content, runs):
         if record.get("id") != key:
             raise ValueError("The original comparison record has another identity")
         atomic_json(directory / "original" / "comparisons" / (key + ".json"), record, immutable=True)
+    scope, reference_bindings, reference_records = source_scope.capture(
+        workspace, directory, grid, profiles, bindings, collections)
+    bindings.extend(reference_bindings)
+    source_records.extend(reference_records)
     inventory = {
         "schema": "upstate.ensemble-study-inputs/v1", "ensemble_id": plan["id"],
         "grid_id": grid["id"], "grid": deepcopy(grid["grid"]),
@@ -225,13 +231,14 @@ def _package(workspace, directory, plan, release, content, runs):
         "package_scope": (
             "This scientific source includes every original numeric report row, common-support hash, "
             "native run/comparison/grid record, complete selected profile and scenario record, and "
-            "original biophysical table body with companions. Large original/aligned model rasters "
+            "original biophysical table body and explicitly referenced assumption/recipe documents "
+            "with companions. Large original/aligned model rasters "
             "and scenario geometry remain in the complete Workspace archive under their exact "
             "retained paths, bytes and SHA256 identities. They are not replaced by the report figures."),
     }
     atomic_json(directory / "native-input-inventory.json", inventory, immutable=True)
     atomic_json(directory / "original-source-editions.json", source_records, immutable=True)
-    return source_records, profiles, scenarios
+    return source_records, profiles, scenarios, scope
 
 
 def _figures(directory, content):
@@ -367,7 +374,7 @@ def _figures(directory, content):
     return {"figure_spec": SPEC, "figures": choices, "coverage": spec["coverage"]}
 
 
-def _sections(plan, content, profiles, scenarios):
+def _sections(plan, content, profiles, scenarios, scope=None):
     report = content["report"]
     progress = report.get("progress", {})
     model_scope = report.get("model_scope", {})
@@ -398,6 +405,8 @@ def _sections(plan, content, profiles, scenarios):
             "and figure keeps the original exact common-support SHA256 and its cell count.",
         ]],
     ]
+    if scope is not None:
+        sections[1:1] = source_scope.sections(scope)
     for field, heading in (("paired_rows", "Land-cover contrasts on common valid cells"),
                            ("parameter_rows", "Parameter sensitivity with land cover held fixed")):
         rows = list(enumerate(content[field]))
@@ -557,7 +566,8 @@ def latest(workspace, ensemble_id, *, verify=False):
     source_current = (operation["selection"]["summary_signature"] == ensemble_report.summary_signature(current)
                       and current.get("report_state") in {"current", "partial"}
                       and operation["selection"]["producer_sha256"] == file_digest(Path(__file__))
-                      and operation["selection"]["figure_helper_sha256"] == file_digest(Path(drawing.__file__)))
+                      and operation["selection"]["figure_helper_sha256"] == file_digest(Path(drawing.__file__))
+                      and operation["selection"].get("source_scope_helper_sha256") == file_digest(Path(source_scope.__file__)))
     if verify:
         for item in operation.get("files", {}).values():
             verify_file(workspace.root, item)
@@ -588,10 +598,10 @@ def prepare(workspace, ensemble_id, *, render=True):
             if not operation.get("source"):
                 manifest = source_directory / "sources.json"
                 if not manifest.exists():
-                    source_records, profiles, scenarios = _package(workspace, source_directory, plan, release, content, runs)
+                    source_records, profiles, scenarios, scope = _package(workspace, source_directory, plan, release, content, runs)
                     graphics = _figures(source_directory, content)
                     title = "Native study: " + plan["title"]
-                    _manifest(source_directory, title, selection, _sections(plan, content, profiles, scenarios), graphics)
+                    _manifest(source_directory, title, selection, _sections(plan, content, profiles, scenarios, scope), graphics)
                 recipe = read_json(source_directory / "scientific-report.json")
                 if recipe["basis"] != selection:
                     raise ValueError("Prepared report source has another native study basis")
@@ -606,7 +616,8 @@ def prepare(workspace, ensemble_id, *, render=True):
                                  native_state=content["report"]["state"], progress=content["report"].get("progress", {}))
                 for name, path in (("source_manifest", "sources.json"), ("source_recipe", "scientific-report.json"),
                                    ("figure_specification", SPEC), ("figure_coordinates", COORDINATES),
-                                   ("native_input_inventory", "native-input-inventory.json")):
+                                   ("native_input_inventory", "native-input-inventory.json"),
+                                   ("source_scope", source_scope.SCOPE_FILE)):
                     operation["files"][name] = describe_file(workspace.root, source_directory / path)
                 atomic_json(operation_path, operation)
             else:
