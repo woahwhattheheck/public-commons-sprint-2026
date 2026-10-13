@@ -36,7 +36,12 @@ async function durableDirectory(target){
 async function publish(file,bytes,replace=false){
   bytes=Buffer.isBuffer(bytes)?bytes:Buffer.from(bytes);
   await durableDirectory(path.dirname(file));
-  if(!replace&&await exists(file)){assert((await fs.readFile(file)).equals(bytes),"Retained file differs: "+file);return;}
+  if(!replace&&await exists(file)){
+    assert((await fs.readFile(file)).equals(bytes),"Retained file differs: "+file);
+    const retained=await fs.open(file,"r");try{await retained.sync();}finally{await retained.close();}
+    const parent=await fs.open(path.dirname(file),"r");try{await parent.sync();}finally{await parent.close();}
+    return;
+  }
   const temp=file+".partial-"+randomUUID();const h=await fs.open(temp,"wx",0o600);
   try{await h.writeFile(bytes);await h.sync();}finally{await h.close();}
   try{if(replace)await fs.rename(temp,file);else await fs.link(temp,file);
