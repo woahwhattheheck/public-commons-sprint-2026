@@ -1,0 +1,77 @@
+/* Neutral industrial layout, scoped to the native programme control. */
+.programme-workbench { color: #202428; }
+.programme-workbench h2 { font-size: 1.2rem; margin: 0 0 .4rem; }
+.programme-workbench h3 { font-size: 1rem; }
+.programme-catalogue, .programme-detail {
+  background: #fff; border: 1px solid #ced2d5; border-radius: 4px; margin: 0 0 1.25rem;
+  padding: 1.25rem; min-width: 0;
+}
+.programme-catalogue .section-header, .programme-detail .section-header {
+  display: flex; justify-content: space-between; align-items: start; gap: 1rem; margin-bottom: 1rem;
+}
+.programme-workbench .page-actions, .programme-controls, .programme-row-actions {
+  display: flex; flex-wrap: wrap; gap: .55rem; align-items: center;
+}
+.programme-controls { margin: 1rem 0; }
+.programme-row-actions { min-width: 10rem; }
+.programme-workbench button { min-height: 2.35rem; background: #fff; border: 1px solid #92999f; color: #202428; border-radius: 3px; }
+.programme-workbench button:hover:not(:disabled) { background: #edf0f2; border-color: #4c5359; }
+.programme-workbench button:focus-visible, .programme-workbench input:focus-visible,
+.programme-form input:focus-visible, .programme-form select:focus-visible {
+  outline: 2px solid #30383e; outline-offset: 3px;
+}
+.programme-workbench button:disabled { color: #757e85; background: #f4f5f6; border-color: #c8ced3; cursor: default; }
+.programme-state { display: inline-block; font-size: .78rem; line-height: 1.3; padding: .3rem .5rem; border: 1px solid #adb4b9; background: #f3f4f5; color: #2c3338; white-space: nowrap; }
+.programme-selected { background: #f0f2f3; }
+.programme-catalogue td small, .programme-detail td small { display: block; margin-top: .3rem; color: #50585f; font-size: .78rem; }
+.programme-workbench td { vertical-align: top; overflow-wrap: anywhere; }
+.programme-workbench td:first-child input { min-width: 1.1rem; min-height: 1.1rem; }
+.programme-progress { display: grid; gap: .45rem; margin: 1rem 0; }
+.programme-progress label { font-weight: 600; }
+.programme-progress progress { width: 100%; height: .7rem; accent-color: #535d66; }
+.programme-progress progress::-webkit-progress-bar { background: #e2e6e9; border-radius: 2px; }
+.programme-progress progress::-webkit-progress-value { background: #535d66; border-radius: 2px; }
+.programme-progress p { margin: 0; font-size: .875rem; color: #48525b; }
+.programme-run-error { margin: .5rem 0 0; padding-left: .6rem; border-left: 3px solid #59616a; color: #2c3338; max-width: 32rem; }
+.programme-output { margin-top: 1.4rem; padding-top: 1rem; border-top: 1px solid #d7dce0; }
+.programme-method { font-size: .8rem; color: #515b63; max-width: 80rem; }
+.programme-workbench .technical { margin-top: 1rem; }
+.programme-workbench .json-view { max-height: 35rem; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.programme-form { min-width: 0; display: grid; gap: 1rem; }
+.programme-form label { display: grid; gap: .35rem; }
+.programme-form .form-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1rem; }
+.programme-form input:not([type=radio]), .programme-form select { width: 100%; min-width: 8rem; }
+.programme-form input[type=radio] { min-width: 1rem; min-height: 1rem; }
+.programme-form td { min-width: 8rem; vertical-align: top; }
+.programme-form td:first-child, .programme-form td:last-child { min-width: 3rem; }
+.programme-form td label + label { margin-top: .45rem; }
+.programme-form .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+@media (max-width: 760px) {
+  .programme-catalogue, .programme-detail { padding: .9rem; }
+  .programme-workbench .page-header, .programme-catalogue .section-header,
+  .programme-detail .section-header { display: block; }
+  .programme-workbench .page-actions { margin-top: 1rem; }
+  .programme-form .form-grid { grid-template-columns: 1fr; }
+  .programme-workbench .table-scroll { overflow-x: auto; }
+}
+@media print {
+  .programme-workbench button, .programme-workbench .programme-controls { display: none; }
+  .programme-catalogue, .programme-detail { border: 0; padding: 0; }
+  .programme-workbench .table-scroll { overflow: visible; }
+  .programme-workbench .json-view { max-height: none; }
+}
+
+.programme-form textarea { width: 100%; resize: vertical; min-height: 4.5rem; }
+.programme-form .table-scroll { overflow-x: auto; }
+.programme-form td.programme-execution { min-width: 22rem; max-width: 38rem; }
+.programme-form .programme-source-controls { border-top: 1px solid #d7dce0; padding-top: .7rem; margin-top: .7rem; }
+.programme-form .programme-source-controls[hidden] { display: none; }
+.programme-form td small { display: block; margin-top: .35rem; color: #50585f; overflow-wrap: anywhere; max-width: 38rem; }
+.programme-form .programme-source-controls input { font-family: ui-monospace, monospace; font-size: .8rem; }
+.programme-form .programme-source-controls p { margin: .6rem 0 0; }
+.programme-detail .programme-source-actions { display: flex; gap: .35rem; flex-wrap: wrap; margin-top: .45rem; }
+
+.programme-form .programme-quantity-choices { display: flex; flex-wrap: wrap; gap: 1rem; }
+.programme-form .programme-quantity-choices label { display: flex; align-items: center; gap: .4rem; }
+.programme-form .programme-quantity-choices input { width: auto; min-width: 1rem; }
+.programme-ensemble-form td.mono { font-size: .75rem; overflow-wrap: anywhere; }

@@ -1,0 +1,74 @@
+/* Plain scientific operator controls and physical-unit plots. */
+.calibration-form fieldset{min-width:0}
+.calibration-form .table-scroll{margin:12px 0}
+.calibration-form td input:not([type=checkbox]),.calibration-form td select{min-width:150px;width:100%}
+.calibration-form td input[type=checkbox]{width:18px;height:18px;accent-color:#303030}
+.calibration-form th small{display:block;font-weight:400;margin-top:5px}
+.calibration-form .technical{padding:16px;border:1px solid #c8c8c8;background:#fafafa}
+.calibration-form .technical summary{cursor:pointer;font-weight:600}
+.calibration-filter-row,.calibration-external-row{display:grid;grid-template-columns:1fr 140px 1fr auto;gap:12px;align-items:end;margin:12px 0}
+.calibration-external-row{grid-template-columns:1fr 120px 160px 2fr auto}
+.calibration-filter-row button,.calibration-external-row button{min-height:38px}
+.calibration-source{padding:16px;background:#f7f7f7;border:1px solid #ccc;overflow:hidden}
+.calibration-source h3{margin:0 0 10px}
+.calibration-badge{display:inline-block;border:1px solid #aaa;border-radius:3px;background:#f4f4f4;color:#222;padding:3px 7px;font-size:12px;line-height:1.4}
+.calibration-card-value{display:block;font-size:23px;font-weight:600;line-height:1.3;overflow-wrap:anywhere;margin:8px 0}
+.calibration-reading p{max-width:90ch}
+.calibration-tabs{display:flex;gap:0;flex-wrap:wrap;border-bottom:1px solid #bbb;background:#f4f4f4}
+.calibration-tabs button{background:transparent;color:#333;border:0;border-radius:0;border-bottom:3px solid transparent;padding:12px 14px;white-space:nowrap}
+.calibration-tabs button[aria-selected=true]{background:#fff;border-bottom-color:#333;font-weight:650}
+.calibration-tabs small{margin-left:4px;color:#666}
+.calibration-table-controls{padding:16px 20px;display:flex;justify-content:space-between;border-bottom:1px solid #ddd}
+.calibration-table-controls label{width:min(450px,100%)}
+.calibration-table-controls input{width:100%}
+.calibration-sort{border:0!important;background:transparent!important;color:inherit!important;text-align:left;padding:0!important;min-height:0!important;border-radius:0!important;font:inherit!important;font-weight:600!important}
+.calibration-pagination{padding:14px 20px;display:flex;justify-content:space-between;gap:15px;align-items:center;border-top:1px solid #ddd;font-size:13px}
+.calibration-pagination>div{display:flex;gap:8px}
+.calibration-pagination button:disabled{opacity:.45;cursor:default}
+.calibration-empty{padding:20px;margin:0;color:#555}
+.calibration-plots{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;padding:20px}
+.calibration-scatter{margin:0;min-width:0}
+.calibration-scatter figcaption{font-size:15px;font-weight:650}
+.calibration-scatter figcaption small{font-size:12px;font-weight:400;color:#555}
+.calibration-scatter svg{display:block;width:100%;height:auto;overflow:visible}
+.calibration-scatter text{fill:#555;font:11px system-ui,sans-serif}
+.calibration-grid{stroke:#e4e4e4;stroke-width:.75}
+.calibration-axis{fill:none;stroke:#333;stroke-width:1}
+.calibration-equality{stroke:#666;stroke-width:1.3;stroke-dasharray:5 4}
+.calibration-fit-mark{fill:#333;stroke:#fff;stroke-width:.6;opacity:.8}
+.calibration-validation-mark{fill:#fff;stroke:#111;stroke-width:1.6}
+.calibration-notes{margin:18px 24px;padding-left:20px;max-width:105ch;line-height:1.55}
+.calibration-notes li{margin:9px 0}
+.calibration-tabs button:focus-visible,.calibration-sort:focus-visible{outline:2px solid #555;outline-offset:3px}
+@media(max-width:800px){
+.calibration-filter-row,.calibration-external-row{grid-template-columns:1fr 1fr;border-bottom:1px solid #ccc;padding-bottom:16px}
+.calibration-filter-row button,.calibration-external-row button{justify-self:start}
+.calibration-plots{grid-template-columns:1fr;padding:12px}
+.calibration-tabs{flex-wrap:nowrap;overflow:auto}
+.calibration-tabs button{flex:0 0 auto}
+.calibration-pagination{padding:12px;flex-wrap:wrap}
+}
+@media print{
+.calibration-tabs,.calibration-table-controls,.calibration-pagination{display:none}
+.calibration-plots{grid-template-columns:repeat(3,1fr)}
+.calibration-scatter{break-inside:avoid}
+}
+
+.calibration-gap-plot{margin:16px 0;overflow:auto}
+.calibration-gap-plot figcaption{font-weight:650;margin:8px 0}
+.calibration-gap-plot svg{display:block;width:100%;min-width:680px;height:auto}
+.calibration-gap-plot text{fill:#444;font:12px system-ui,sans-serif}
+.calibration-gap-plot p{font-size:13px;line-height:1.5;color:#555}
+.calibration-gap-range{stroke:#333;stroke-width:2;fill:none}
+.calibration-gap-zero{stroke:#111;stroke-width:1.2;stroke-dasharray:5 4}
+@media print{.calibration-gap-plot svg{min-width:0}}
+
+/* Original-catchment atlas: grayscale scientific source pages. */
+.calibration-map-atlas{display:grid;grid-template-columns:minmax(0,1fr);gap:1.5rem;padding:1rem}
+.calibration-map-page{margin:0;border:1px solid #c7c7c7;background:#fff}
+.calibration-map-page img{display:block;width:100%;height:auto;max-height:90vh;object-fit:contain}
+.calibration-map-page figcaption{padding:.7rem 1rem;border-top:1px solid #d5d5d5;color:#444;font-size:.85rem}
+.calibration-selected-row{background:#ededed}
+@media print{.calibration-map-page{break-inside:avoid}.calibration-map-page img{max-height:none}}
+
+.calibration-review-frame{display:block;width:100%;height:72vh;min-height:480px;border:1px solid var(--line,#bbb);background:#fff}.calibration-review-notes{white-space:pre-wrap}

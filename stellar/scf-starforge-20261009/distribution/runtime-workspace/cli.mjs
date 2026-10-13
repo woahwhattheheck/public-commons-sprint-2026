@@ -5,7 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { createRuntimeWorkspace, openRuntimeWorkspace } from './model.mjs';
 import { startRuntimeWorkspace } from './server.mjs';
 import { readJSON } from './storage.mjs';
-import { fail, json, saveJSON } from './storage.mjs';
+import { fail, json, saveJSON, runtimeWorkspaceError } from './storage.mjs';
 
 import { inspectProductPlanBundle, readProductPlanDocument } from './source-product-plans.mjs';
 import { saveTextExport } from '../discovery/write-json.mjs';
@@ -21,7 +21,9 @@ const HELP = `Starforge customer runtime workspace
   runtime-workspace source-plan-save --workspace DIRECTORY --request COMPLETE_JSON
   runtime-workspace source-plan-open --workspace DIRECTORY --plan-id ID [--binding-id ID]
   runtime-workspace source-plan-refresh --workspace DIRECTORY --plan-id ID [--binding-id ID]
-  runtime-workspace source-plan-briefing --workspace DIRECTORY --plan-id ID [--binding-id ID] [--format markdown|html|json --output NEW_FILE]
+  runtime-workspace source-plan-briefing --workspace DIRECTORY --plan-id ID [--binding-id ID --runtime-id ID] [--format markdown|html|json --output NEW_FILE]
+  runtime-workspace source-plan-runtimes --workspace DIRECTORY --plan-id ID [--binding-id ID --output NEW_FILE]
+  runtime-workspace source-plan-handoff --workspace DIRECTORY --plan-id ID --runtime-id ID [--binding-id ID --output NEW_FILE]
   runtime-workspace source-plan-export --workspace DIRECTORY --plan-id ID [--output NEW_JSON]
   runtime-workspace source-plan-receive --workspace DIRECTORY --document COMPLETE_JSON --repository ABSOLUTE_GIT [--offline true --python python3]
   runtime-workspace source-plan-receiving --workspace DIRECTORY --receipt-id ID [--output NEW_JSON]
@@ -76,7 +78,9 @@ const allowed = {
   'source-plan-open': ['--workspace', '--plan-id', '--binding-id'],
   'source-plan-build': ['--workspace', '--plan-id', '--binding-id'],
   'source-plan-refresh': ['--workspace', '--plan-id', '--binding-id'],
-  'source-plan-briefing': ['--workspace', '--plan-id', '--binding-id', '--format', '--output'],
+  'source-plan-briefing': ['--workspace', '--plan-id', '--binding-id', '--format', '--output', '--runtime-id'],
+  'source-plan-runtimes': ['--workspace', '--plan-id', '--binding-id', '--output'],
+  'source-plan-handoff': ['--workspace', '--plan-id', '--binding-id', '--runtime-id', '--output'],
   'source-plan-export': ['--workspace', '--plan-id', '--output'],
   'source-plan-receive': ['--workspace', '--document', '--repository', '--offline', '--python'],
   'source-plan-receiving': ['--workspace', '--receipt-id', '--output'],
@@ -159,11 +163,27 @@ export async function main(argv = process.argv.slice(2)) {
       ...(options['--binding-id'] ? { bindingId: options['--binding-id'] } : {}) });
     result = { planId: value.plan.planId, bindingId: value.bindingId, operation: await model.begin(value.buildRequest) };
   }
+  else if (['source-plan-runtimes', 'source-plan-handoff'].includes(command)) {
+    if (!options['--plan-id']) fail('PRODUCT_PLAN_ID_REQUIRED');
+    const selected = { planId: options['--plan-id'],
+      ...(options['--binding-id'] ? { bindingId: options['--binding-id'] } : {}) };
+    if (command === 'source-plan-handoff') {
+      if (!options['--runtime-id']) fail('PRODUCT_PLAN_RUNTIME_ID_REQUIRED');
+      result = await model.sourcePlanHandoff({ ...selected, runtimeId: options['--runtime-id'] });
+    } else result = await model.sourcePlanRuntimes(selected);
+    if (options['--output']) {
+      const output = resolve(options['--output']);
+      await saveTextExport(output, JSON.stringify(result, null, 2) + '\n');
+      result = { schema: result.schema, planId: result.planId, bindingId: result.bindingId,
+        ...(result.runtime ? { runtimeId: result.runtime.runtimeId } : {}), output };
+    }
+  }
   else if (command === 'source-plan-briefing') {
     if (!options['--plan-id']) fail('PRODUCT_PLAN_ID_REQUIRED');
     const briefing = await model.sourcePlanBriefing({ planId: options['--plan-id'],
       ...(options['--binding-id'] ? { bindingId: options['--binding-id'] } : {}),
-      ...(options['--format'] ? { format: options['--format'] } : {}) });
+      ...(options['--format'] ? { format: options['--format'] } : {}),
+      ...(options['--runtime-id'] ? { runtimeId: options['--runtime-id'] } : {}) });
     if (options['--output']) {
       const output = resolve(options['--output']); await saveTextExport(output, briefing.content);
       const { content, ...summary } = briefing; result = { ...summary, output };
@@ -277,4 +297,9 @@ export async function main(argv = process.argv.slice(2)) {
   process.stdout.write(json(result));
 }
 if (process.argv[1] && pathToFileURL(resolve(process.argv[1])).href === import.meta.url)
-  main().catch(error => { process.stderr.write(json({ error: error.code ?? 'RUNTIME_WORKSPACE_ERROR', message: error.message })); process.exitCode = 1; });
+  main().catch(error => {
+    const diagnostic = runtimeWorkspaceError(error, 'RUNTIME_WORKSPACE_ERROR', Infinity);
+    process.stderr.write(json({ error: diagnostic.code, message: diagnostic.message,
+      ...(diagnostic.flock ? { flock: diagnostic.flock } : {}) }));
+    process.exitCode = 1;
+  });

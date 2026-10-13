@@ -21,6 +21,7 @@ if _TYPE_CHECKING:
     from .result import AccountingResult, BuyerResult, FileDelivery, FileTransfer, SessionAccountingResult
     from .research_workspace import ResearchWorkspace, ResearchError
     from .research_commerce import ResearchCommerce, ResearchCommerceArchive
+    from .research_quotes import ResearchQuotes, ResearchQuoteExport, ResearchQuoteBundle
     from .research_extraction import ResearchExtraction
     from .research_customer_updates import ResearchCustomerUpdates, ResearchCustomerDelivery
     from .research_customer_receiving import ResearchCustomerCancelled, run_research_customer_delivery
@@ -32,6 +33,7 @@ __all__ = [
     "DbnomicsAnalysisSource", "DbnomicsEconomicWorkflow",
     "ResearchCustomerUpdates", "ResearchCustomerDelivery", "ResearchCustomerCancelled", "run_research_customer_delivery",
     "ResearchCommerce", "ResearchCommerceArchive",
+    "ResearchQuotes", "ResearchQuoteExport", "ResearchQuoteBundle",
     "ResearchWorkspace", "ResearchError", "ResearchExtraction", "ResearchDocuments", "ResearchPipelines",
     "ResearchSelection", "ResearchInputFile", "ResearchDocumentSource",
     "AcquisitionWorkspace", "AcquisitionResult", "AcquisitionProcess", "AcquisitionError",
@@ -52,6 +54,9 @@ _EXPORTS = {
     "ResearchCustomerDelivery": ".research_customer_updates",
     "ResearchCustomerCancelled": ".research_customer_receiving",
     "run_research_customer_delivery": ".research_customer_receiving",
+    "ResearchQuotes": ".research_quotes",
+    "ResearchQuoteExport": ".research_quotes",
+    "ResearchQuoteBundle": ".research_quotes",
     "ResearchCommerce": ".research_commerce",
     "ResearchCommerceArchive": ".research_commerce",
     "ResearchWorkspace": ".research_workspace",

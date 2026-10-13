@@ -427,7 +427,8 @@ export async function receiveOriginalPMTilesProduct(input,{signal}={}){
         const commerceRoot=join(root,'merchant-output');
         outputCommerce=await exercisePMTilesOutputCommerce({sourceRoot:merchantSourceRoot,directory:join(root,'workspace'),
           runtimeProfile:runtimeResult.profilePath,expectedWorkspaceId:workspaceId,root:commerceRoot,
-          operationId:input.operationId,commerce:input.outputCommerce,signal,
+          operationId:input.operationId,commerce:input.outputCommerce,browserDirectory:join(root,'browser-originator'),
+          openBrowser:({url,directory})=>browserAt({url,workspaceId},directory),signal,
           progress:value=>process.stdout.write(JSON.stringify(value)+'\n')});
         need(outputCommerce.status==='PMTILES_OUTPUT_COMMERCE_COMPLETE'&&
           outputCommerce.originalReleaseId===vectorRelease.id&&outputCommerce.workspaceId===workspaceId,

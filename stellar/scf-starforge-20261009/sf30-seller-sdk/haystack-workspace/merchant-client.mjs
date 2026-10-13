@@ -5,6 +5,7 @@ import { open } from "node:fs/promises";
 import { dirname, resolve, basename } from "node:path";
 import { createHash } from "node:crypto";
 import { HaystackClient } from "./client.mjs";
+import { PACKAGE_MAX_BYTES } from "./portable.mjs";
 
 export const HAYSTACK_HOST_SCHEMA = "stellar-forge.haystack-workspace-host.v1";
 const STARTUP_SCHEMA = "commons.haystack.startup.v1";
@@ -58,7 +59,7 @@ export async function readHaystackWorkspaceConfiguration(path) {
   const base = dirname(path), workspaces = Object.create(null), identities = new Set();
   for (const [alias, value] of Object.entries(raw.workspaces)) {
     need(ALIAS.test(alias), "Use a lowercase workspace alias.");
-    fields(value, ["label", "connectionFile", "workspaceId", "tokenFile", "timeoutMs", "maxInputBytes", "inputs"], "workspace");
+    fields(value, ["label", "connectionFile", "workspaceId", "tokenFile", "timeoutMs", "maxInputBytes", "maxReturnBytes", "inputs"], "workspace");
     need(UUID.test(value.workspaceId ?? "") && !identities.has(value.workspaceId), "Pin each original workspace ID under one alias.");
     identities.add(value.workspaceId);
     const entry = {
@@ -67,20 +68,27 @@ export async function readHaystackWorkspaceConfiguration(path) {
       workspaceId: value.workspaceId,
       tokenFile: value.tokenFile === undefined ? null : resolve(base, text(value.tokenFile, "private token file")),
       timeoutMs: value.timeoutMs ?? 120000, maxInputBytes: value.maxInputBytes ?? 32 * 1024 * 1024,
+      maxReturnBytes: value.maxReturnBytes ?? PACKAGE_MAX_BYTES,
       inputs: Object.create(null)
     };
     need(Number.isSafeInteger(entry.timeoutMs) && entry.timeoutMs >= 1000 && entry.timeoutMs <= 3600000, "Select a local timeout from one second to one hour.");
-    need(Number.isSafeInteger(entry.maxInputBytes) && entry.maxInputBytes >= 1 && entry.maxInputBytes <= 32 * 1024 * 1024, "Select an original native grid input capacity up to 32 MiB.");
+    need(Number.isSafeInteger(entry.maxInputBytes) && entry.maxInputBytes >= 1 && entry.maxInputBytes <= 32 * 1024 * 1024, "Select an original grid or point-list input capacity up to 32 MiB.");
+    need(Number.isSafeInteger(entry.maxReturnBytes) && entry.maxReturnBytes >= 1 && entry.maxReturnBytes <= PACKAGE_MAX_BYTES, "Select a complete returned-workspace capacity up to 192 MiB.");
     need(plain(value.inputs ?? {}) && Object.keys(value.inputs ?? {}).length <= 128, "Declare at most 128 original input aliases.");
     for (const [name, input] of Object.entries(value.inputs ?? {})) {
       need(ALIAS.test(name), "Use a lowercase input alias.");
-      fields(input, ["label", "path", "kind", "sha256", "name", "mediaType", "sourceReference"], "input");
-      need(input.kind === "source" && HASH.test(input.sha256 ?? ""), "Pin an original native grid file and its complete SHA-256.");
+      fields(input, ["label", "path", "kind", "sha256", "name", "mediaType", "sourceReference", "format", "delimiter"], "input");
+      need(["source", "point-list", "workspace-return"].includes(input.kind) && HASH.test(input.sha256 ?? ""), "Pin the complete original grid, point list or returned workspace with its SHA-256.");
+      if (input.kind === "point-list") {
+        need(["csv", "tsv"].includes(input.format), "Declare the original point-list format as csv or tsv.");
+        need(input.delimiter === undefined || [",", "\t", ";"].includes(input.delimiter), "Declare the actual comma, tab or semicolon point-list delimiter.");
+      } else need(input.format === undefined && input.delimiter === undefined, "Format and delimiter belong only to a point-list alias.");
       const selected = resolve(base, text(input.path, "original input file"));
       entry.inputs[name] = {
         label: text(input.label ?? name, "input label", 240), path: selected, kind: input.kind,
         sha256: input.sha256, name: text(input.name ?? basename(selected), "input name", 240),
-        mediaType: text(input.mediaType ?? (input.kind === "source" ? "application/json" : "application/octet-stream"), "media type", 160),
+        mediaType: text(input.mediaType ?? (input.kind === "point-list" ? input.format === "tsv" ? "text/tab-separated-values" : "text/csv" : "application/json"), "media type", 160),
+        ...(input.kind === "point-list" ? { format: input.format, ...(input.delimiter === undefined ? {} : { delimiter: input.delimiter }) } : {}),
         sourceReference: input.sourceReference === undefined ? "" : text(input.sourceReference, "source reference")
       };
     }
@@ -90,13 +98,15 @@ export async function readHaystackWorkspaceConfiguration(path) {
 }
 export function haystackInputMetadata(name, input) {
   return { input: name, label: input.label, kind: input.kind, name: input.name, sha256: input.sha256,
-    mediaType: input.mediaType, sourceReference: input.sourceReference };
+    mediaType: input.mediaType, sourceReference: input.sourceReference,
+    ...(input.format === undefined ? {} : { format: input.format }), ...(input.delimiter === undefined ? {} : { delimiter: input.delimiter }) };
 }
-export async function readHaystackHostInput(entry, name, expectedSha256) {
+export async function readHaystackHostInput(entry, name, expectedSha256, expectedKind) {
   const input = entry.inputs[name];
   need(input, "Choose a configured original input alias.", 404, "HAYSTACK_INPUT_UNKNOWN");
+  if (expectedKind !== undefined) need(input.kind === expectedKind, "This original input alias has a different declared purpose.", 409, "HAYSTACK_INPUT_KIND");
   if (expectedSha256 !== undefined) need(input.sha256 === expectedSha256, "The selected input differs from its host-pinned SHA-256.", 409, "HAYSTACK_INPUT_CHANGED");
-  const bytes = await readRegular(input.path, entry.maxInputBytes);
+  const bytes = await readRegular(input.path, input.kind === "workspace-return" ? entry.maxReturnBytes : entry.maxInputBytes);
   need(digest(bytes) === input.sha256, "The original input file changed. Restore the host-pinned source before recovery.", 409, "HAYSTACK_INPUT_CHANGED");
   return { input, bytes, sha256: input.sha256 };
 }

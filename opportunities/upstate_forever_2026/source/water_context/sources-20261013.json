@@ -1,0 +1,220 @@
+{
+  "schema": "upstate.sources/v1",
+  "title": "Upper Savannah original 217-HUC source-water context",
+  "captured_at": "2026-10-13T00:37:00Z",
+  "scope": {
+    "model_domain_huc_count": 217,
+    "model_domain_huc12_identity": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+    "original_domain_decoded_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+    "matched_nrcs_state_huc_rows": 240,
+    "original_nrcs_state_huc_rows": 337,
+    "outside_domain_nrcs_state_huc_rows": 97,
+    "classified_source_features": 1886,
+    "classified_publisher_hucs": 19,
+    "source_context": {
+      "domain": {
+        "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089",
+        "original_path": "/dev/shm/dbc61-upstate-model-domain-20261012/model-domain.esri.json.gz",
+        "body_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+        "selected_huc12_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+      },
+      "nrcs": {
+        "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7",
+        "original_body_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+        "csv_sha256": "27e4169e5ddbd3607c660904e94d2dc938e663a3649734f67353d93e636f09af"
+      },
+      "classified": {
+        "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+        "csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18"
+      },
+      "implementation": {
+        "path": "source_tools/water_context.mjs",
+        "sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+      }
+    }
+  },
+  "notes": [
+    "NRCS FY26 state/HUC programme rows retain their original priority status, source-water system type, resource concern and acreage fields.",
+    "The retained original 217-HUC domain matches 240 state/HUC rows; all 337 original NRCS rows remain in the raw JSON companion.",
+    "State acreage is st_ac; huc12_ac repeats the whole-HUC acreage on every state row. Missing coverage and an explicit Not Selected status remain distinct.",
+    "The classified-reach CSV contains original source attributes. Geographic intersections and contributing land use the existing retained SCDES geometry entry and native receiving-water model.",
+    "Original domain-coverage queries confirm the same 1886 classified feature IDs across the full selected domain. The unchanged coverage companion preserves request URLs, response hashes and the original geometry reference.",
+    "The full-domain context is the exact retained 152659-byte source document; its complete JSON and serialized bytes were independently reproduced with the retained water_context.mjs implementation.",
+    "The coverage document's historical response filenames identify the original source capture; its associated query URLs and response hashes remain explicit. The import companions enumerate every locally supplied file.",
+    "The native-network.json companion preserves the original USGS 303-row huc12/tohuc topology unchanged. Every selected model-domain HUC is represented; the established watershed-context loader receives this companion directly.",
+    "The three original SCDES query/geometry companions are retained under the exact basenames declared by the coverage record and source-edition loader. They preserve all 1886 classified features and query bytes while the core model fingerprint remains context, coverage and native network."
+  ],
+  "entries": [
+    {
+      "id": "nrcs-fy26-upper-savannah-domain217-20261013",
+      "title": "NRCS FY26 priorities for the original 217-HUC domain",
+      "kind": "table",
+      "role": "SOURCE_WATER_PRIORITY_CONTEXT",
+      "path": "20261013/nrcs-domain-fy26.csv",
+      "bytes": 24474,
+      "sha256": "478c36af3e01178b788ead7f474d94c1f3ae58d6ad5f1fa896b3d90e09766be5",
+      "media_type": "text/csv",
+      "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7",
+      "vintage": "FY26; original public source capture 2026-10-12; exact domain join 2026-10-13",
+      "source_format": "CSV",
+      "rows": 240,
+      "original_source_rows": 337,
+      "units": {
+        "st_ac": "acres of the state portion",
+        "huc12_ac": "acres of the whole HUC"
+      },
+      "companions": [
+        {
+          "path": "20261012/raw/nrcs-fy26.json",
+          "bytes": 158251,
+          "sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/domain-huc12s.json",
+          "bytes": 3256,
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261012/source-dictionary.json",
+          "bytes": 16119,
+          "sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b",
+          "media_type": "application/json"
+        }
+      ],
+      "derivation": {
+        "input_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+        "operation": "Exact HUC12 membership filter, preserving complete state-HUC rows",
+        "implementation_sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+      }
+    },
+    {
+      "id": "upper-savannah-water-context-domain217-20261013",
+      "title": "Upper Savannah original 217-HUC domain: FY26 source-water priorities",
+      "kind": "document",
+      "role": "SOURCE_WATER_CONTEXT",
+      "path": "20261013/full-domain-water-context.json",
+      "bytes": 152659,
+      "sha256": "d607c93912102fbb8f28139a5d57b01b0e1886b0155ede16fc1a19d654323566",
+      "media_type": "application/json",
+      "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089",
+      "vintage": "FY26 sources captured 2026-10-12; original 217-HUC coverage confirmed 2026-10-13",
+      "source_format": "JSON",
+      "model_domain_huc_count": 217,
+      "source_reference": {
+        "domain": {
+          "uri": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791850636130089",
+          "original_path": "/dev/shm/dbc61-upstate-model-domain-20261012/model-domain.esri.json.gz",
+          "body_sha256": "2300d9b32a513d70503222a5d2e782e032107297214036a58e8b444a312169af",
+          "selected_huc12_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52"
+        },
+        "nrcs": {
+          "uri": "https://services.arcgis.com/SXbDpmb7xQkk44JV/ArcGIS/rest/services/Source_Water_Protection_Resource_Concern_FY26/FeatureServer/7",
+          "original_body_sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+          "csv_sha256": "27e4169e5ddbd3607c660904e94d2dc938e663a3649734f67353d93e636f09af"
+        },
+        "classified": {
+          "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+          "csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18"
+        },
+        "implementation": {
+          "path": "source_tools/water_context.mjs",
+          "sha256": "45d2485d7dc0613d7fc227316e660e9a43643622358e63bb727da378d9137fbe"
+        }
+      },
+      "companions": [
+        {
+          "path": "20261013/domain-huc12s.json",
+          "bytes": 3256,
+          "sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/nrcs-domain-fy26.csv",
+          "bytes": 24474,
+          "sha256": "478c36af3e01178b788ead7f474d94c1f3ae58d6ad5f1fa896b3d90e09766be5",
+          "media_type": "text/csv"
+        },
+        {
+          "path": "20261012/raw/nrcs-fy26.json",
+          "bytes": 158251,
+          "sha256": "8a5d612f0869eab7011ceeaf116c3150b4717788ae6fe30617ec260c4eca3dcd",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261012/classified-reaches.csv",
+          "bytes": 168811,
+          "sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18",
+          "media_type": "text/csv"
+        },
+        {
+          "path": "20261012/source-dictionary.json",
+          "bytes": 16119,
+          "sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-domain217-source-coverage.json",
+          "bytes": 7043,
+          "sha256": "2ed2f1bd402437d91aa8c1544d583dd5ceaf7da7e202aed1252f1b3ea47b3bcb",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/native-network.json",
+          "bytes": 71787,
+          "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-classified-streams.esri.json",
+          "bytes": 4978867,
+          "sha256": "daae1887ba6ac25affd85fc6e1094a81ec24130e1846bbb538cf21375bdbb394",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-huc8-03060104-to-07-target-class-count.json",
+          "bytes": 11,
+          "sha256": "618de7d9f46f3f697d827a1b6d84974760d5deda62e4e592adaa3c646602a94c",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/scdes-original-domain217-classified-objectids.json",
+          "bytes": 13248,
+          "sha256": "f30b8191b0fa0d044514dbe773e86fddf07192566e1c3c4714d477db2f4ceeab",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/native-network-source.json",
+          "bytes": 1881,
+          "sha256": "79550f219c3c4b422be8fab9e63f46a07616fca5e52b26dac9afc3a235ce5dbc",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/source-context-run.json",
+          "bytes": 6868,
+          "sha256": "72d3b701930d5b23e4bbf6d06db8ca769749bc174e2ef9b213802956edfc1388",
+          "media_type": "application/json"
+        },
+        {
+          "path": "20261013/classified-full-domain-query.json",
+          "bytes": 8603,
+          "sha256": "448e20074d6b136be60d5f03bbbf5f0c9c36530c74c78a9294d4089d97357cef",
+          "media_type": "application/json"
+        }
+      ],
+      "native_network_reference": {
+        "id": "usgs-wbd-savannah-original-topology-20261013",
+        "title": "USGS original Savannah subwatershed topology",
+        "uri": "https://hydro.nationalmap.gov/arcgis/rest/services/wbd/MapServer/6/query?f=json&where=huc12%20LIKE%20'030601%25'&outFields=objectid%2Chuc12%2Cname%2Ctohuc%2Careasqkm%2Careaacres%2Cstates%2Chutype%2Chumod%2Cnoncontributingareasqkm&returnGeometry=false&orderByFields=huc12&resultRecordCount=2000",
+        "vintage": "2026-10-13",
+        "sha256": "2e57f86d1725526f00f16870b1b03d9168b41ea94de6d0016b20dfe15e89bcac",
+        "original_repository_path": "source/receptor-topology/20261013/usgs-wbd-savannah-original-topology-20261013.json",
+        "native_huc_rows": 303,
+        "selected_domain_huc_rows": 217,
+        "selected_domain_huc_rows_missing": 0
+      },
+      "source_fingerprint": "cb8ba9832d60fb47ae64b85d9e4e2c857cc2e25557572c7d251a908005bcd510"
+    }
+  ]
+}

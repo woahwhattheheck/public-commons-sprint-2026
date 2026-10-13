@@ -1,0 +1,179 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "water-designations",
+  "title": "Water designations",
+  "version": "1",
+  "order": 54,
+  "assets": [
+    "water_designations.mjs",
+    "water_designations.css"
+  ],
+  "backend": {
+    "module": "water_designations",
+    "actions": [
+      "water-designation.save"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "operator",
+        "workspace_key",
+        "action",
+        "payload"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/water-designations",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/water-designations/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/water-designations/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/water-designations/item",
+        "operation": "item",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/water-designations/export",
+        "operation": "export",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/water-designations/apply",
+        "operation": "apply",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "water-designations",
+        "operation": "item",
+        "handler": "read",
+        "args": [
+          "operator",
+          "workspace_key",
+          "operation",
+          "payload",
+          "fault"
+        ]
+      }
+    ],
+    "state": {
+      "key": "water_designations",
+      "handler": "overview",
+      "args": [
+        "operator",
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "operator",
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.water_designations",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/water_designations.mjs",
+    "factory": "createWaterDesignationsExtension",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "toast",
+      "openDelivery",
+      "navigate"
+    ],
+    "styles": [
+      "/web/water_designations.css"
+    ],
+    "view": {
+      "id": "water-designations",
+      "title": "Water designations",
+      "after": "sources"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

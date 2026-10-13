@@ -60,6 +60,17 @@ def main():
         def allowed_host(self):
             return self.headers.get("Host") in {"127.0.0.1:"+str(server.server_port),"localhost:"+str(server.server_port)}
 
+        def document_language(self, record, query):
+            from document_reading import language_name
+            requested = parse_qs(query).get("language", [None])[0]
+            if requested is not None:
+                return language_name(requested)
+            if record:
+                actor = {"role":record["role"],"respondent_id":record.get("respondent_id")}
+                preference = workspace.invoke("language.get_preference", {"_actor":actor})
+                return language_name(preference["language"])
+            return None
+
         def do_GET(self):
             try:
                 if not self.allowed_host(): return self.send(403,{"error":"Invalid local host"})
@@ -116,7 +127,8 @@ def main():
                     suffix = path.removeprefix("/public/reports/")
                     key,separator,fmt = suffix.partition(".")
                     fmt = fmt if separator else "html"
-                    data = workspace.report_bytes(key,"public",fmt,public=True)
+                    language = self.document_language(None,parsed.query) if fmt in {"pdf","docx"} else None
+                    data = workspace.report_bytes(key,"public",fmt,public=True,language=language)
                     return self.send(200,data,REPORT_MIMES[fmt])
                 if path.startswith("/api/respondents/"):
                     record = self.session()
@@ -125,13 +137,14 @@ def main():
                     key,_,edition,fmt = parts
                     if not record or record["role"]!="operator" and record.get("respondent_id")!=key:
                         return self.send(401,{"error":"Open the respondent's own session"})
-                    data = workspace.response_bytes(key,edition,fmt)
+                    data = workspace.response_bytes(key,edition,fmt,language=self.document_language(record,parsed.query))
                     return self.send(200,data,REPORT_MIMES[fmt],{"Content-Disposition":"attachment; filename="+edition+"-response."+fmt})
                 if path.startswith("/api/reports/"):
                     record = self.session()
                     if not record or record["role"] != "operator": return self.send(401,{"error":"Operator session required"})
                     key,edition,fmt = path.removeprefix("/api/reports/").split("/")
-                    data = workspace.report_bytes(key,edition,fmt)
+                    language = self.document_language(record,parsed.query) if fmt in {"pdf","docx"} else None
+                    data = workspace.report_bytes(key,edition,fmt,language=language)
                     return self.send(200,data,REPORT_MIMES[fmt],{"Content-Disposition":"attachment; filename="+edition+"."+fmt})
                 return self.send(404,{"error":"Page not found"})
             except Exception as e: self.send(404 if getattr(e,"code","") == "NOT_FOUND" else 400,{"error":{"code":getattr(e,"code","REQUEST"),"message":str(e)}})

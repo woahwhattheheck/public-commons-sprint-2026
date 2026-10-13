@@ -21,6 +21,11 @@ function config(input){
  need(typeof input.operationId==='string'&&/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,150}$/.test(input.operationId)&&Number.isFinite(Date.parse(input.expectedCreatedAt)),'PROPERTY_RECEIVING_INPUT');
  need(input.baseline&&typeof input.baseline.editionId==='string'&&input.baseline.columns&&Number.isSafeInteger(input.baseline.expectedRows)&&input.baseline.expectedRows>0&&typeof input.baseline.actor==='string'&&input.baseline.actor.trim(),'PROPERTY_RECEIVING_BASELINE_INPUT');
  const paid=input.paidDelivery;need(paid&&absolute(paid.path)&&Number.isSafeInteger(paid.bytes)&&paid.bytes>0&&/^[a-f0-9]{64}$/.test(paid.sha256)&&typeof paid.customerId==='string'&&typeof paid.acquisitionId==='string'&&/^[a-f0-9]{64}$/.test(paid.snapshot),'PROPERTY_RECEIVING_PAID_INPUT');
+ if(input.browser!==undefined){
+  need(input.browser&&typeof input.browser==='object'&&!Array.isArray(input.browser)&&Object.keys(input.browser).length===2&&
+   Object.keys(input.browser).every(key=>['playwrightModule','executablePath'].includes(key)),'PROPERTY_RECEIVING_BROWSER_INPUT');
+  absolute(input.browser.playwrightModule);absolute(input.browser.executablePath);
+ }
  const seconds=input.timeoutSeconds??300;need(Number.isSafeInteger(seconds)&&seconds>=30&&seconds<=3600,'PROPERTY_RECEIVING_TIMEOUT');
  separate(input.workspaceDirectory,input.outputDirectory);separate(input.outputDirectory,input.workspaceDirectory);separate(input.runtimeDirectory,input.outputDirectory);separate(input.runtimeWorkspace,input.outputDirectory);
  return {...input,timeoutSeconds:seconds,label:input.label??'Property Operations — original HPD receiving',
@@ -100,8 +105,19 @@ export async function receivePropertyOperations(originalInput){
    }
   }
   let current=await application();
-  if(!current.release){journal.steps.connect??={requestedAt:now()};await save();journal.steps.connect.result=await model.applicationsConnect({applicationId:journal.application.id});await save();
-   current=await poll(application,v=>{need(v.phase!=='UNAVAILABLE'&&!['FAILED','CANCELLED'].includes(v.adoption?.phase),'PROPERTY_RECEIVING_ADOPTION_FAILED');return Boolean(v.release);},{seconds:input.timeoutSeconds,label:'original source adoption'});}
+  if(!current.release){journal.steps.connect??={requestedAt:now()};await save();journal.steps.connect.result=await model.applicationsConnect({applicationId:journal.application.id});await save();}
+  // The release directory becomes visible before the original adoption publishes active.json.
+  // Wait for that same saved operation to close before binding a start review to the home revision.
+  const savedApplication=await readJSON(join(input.runtimeWorkspace,'applications',journal.application.id,'application.json'));
+  const adoptionId=savedApplication.adoption?.requestId??null;
+  current=await poll(async()=>{
+   const value=await application(),state=adoptionId?await model.state():null;
+   const adoption=adoptionId?state.operations.find(x=>x.id===adoptionId):null;
+   need(value.phase!=='UNAVAILABLE'&&!['FAILED','CANCELLED'].includes(adoption?.phase),'PROPERTY_RECEIVING_ADOPTION_FAILED');
+   if(adoptionId)need(adoption&&adoption.operation==='managed-adopt'&&adoption.homeId===savedApplication.homeId,'PROPERTY_RECEIVING_ADOPTION_CHANGED');
+   return {value,adoption};
+  },v=>Boolean(v.value.release)&&(!adoptionId||(v.adoption.phase==='SUCCEEDED'&&!v.adoption.workerActive&&!v.adoption.commandActive)),
+  {seconds:input.timeoutSeconds,label:'original source adoption and owner closure'}).then(v=>v.value);
   if(journal.release)need(same(journal.release,current.release),'PROPERTY_RECEIVING_RELEASE_CHANGED');else{journal.release=current.release;await save();}
   async function history(){
    const rows=[];let cursor=null,total=null;const seen=new Set();
@@ -158,7 +174,8 @@ export async function receivePropertyOperations(originalInput){
    run.receiving={report:result.report,...await identity(result.report),snapshot:result.snapshot,propertyId:result.propertyId,revision:result.propertyRevision};journal.propertyId=result.propertyId;await save();
    if(input.browser&&!run.browser){
     run.browser=await receivePropertyBrowser({url:ready.url,createdAt:input.expectedCreatedAt,propertyId:journal.propertyId,
-     outputDirectory:join(customer,'browser',purpose,run.id),...input.browser});await save();
+     outputDirectory:join(customer,'browser',purpose,run.id),inspectionDirectory:join(output,'private','browser-inspection',purpose,run.id),
+     playwrightModule:input.browser.playwrightModule,executablePath:input.browser.executablePath});await save();
    }
    await closeRun(run,{requireNormal:true});
    const raw=await readJSON(join(input.workspaceDirectory,'workspace.json'));const rawFile=join(customer,'application',purpose+'-workspace.json');await writeJSON(rawFile,raw);

@@ -1,0 +1,227 @@
+{
+  "schema": "upstate.water-quality-inventory/v1",
+  "prepared_at": "2026-10-13",
+  "rfp": {
+    "uri": "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf",
+    "publisher_file_bytes": 7470549,
+    "publisher_file_sha256": "04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf",
+    "received_local_path": "/workspace/scratch/996013b67b92/science-arm/upper-savannah-rfp.pdf"
+  },
+  "existing_domain": {
+    "source_id": "upstate-wbd-upstream-domain-20261012",
+    "retained_archive_file_id": "libfile_cce17e762e948191be1d226b1dbce00d",
+    "archive_bytes": 8800689,
+    "archive_sha256": "1fc35e5d0986e42d93922527d46e38bc5132653db75863934349dbbfaa352c04",
+    "selected_huc12_count": 217,
+    "format": "original Esri polygon JSON and complete topology/feature bindings",
+    "classification_capture_reuse": "scdes-classified-streams-upper-savannah-20261012",
+    "earlier_classification_capture": "scdes-water-classification-provisional-20261012"
+  },
+  "focus_watersheds": [
+    {
+      "huc12": "030601010703",
+      "name": "Upper Six and Twenty Creek",
+      "utility": "ARJWS",
+      "source": "RFP appendix map1,pdfpage12"
+    },
+    {
+      "huc12": "030601010704",
+      "name": "Lower Six and Twenty Creek",
+      "utility": "ARJWS",
+      "source": "RFP appendix map1,pdfpage12"
+    },
+    {
+      "huc12": "030601020502",
+      "name": "Choestoea Creek",
+      "utility": "PRWD",
+      "source": "RFP appendix map1,pdfpage12"
+    },
+    {
+      "huc12": "030601020507",
+      "name": "Lower Tugaloo River",
+      "utility": "PRWD",
+      "source": "RFP appendix map1,pdfpage12"
+    }
+  ],
+  "published_focus_evidence": {
+    "source_uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+    "status_date": "2026-07-28",
+    "source_page": 37,
+    "scope": "Two complete published entries in the Choestoea focus watershed; full-table import is available in the module",
+    "records": [
+      {
+        "site": "SV-108",
+        "huc12": "030601020502",
+        "description": "CHOESTOEA CREEK AT S-37-49",
+        "county": "OCONEE",
+        "use": "REC",
+        "cause": "ECOLI",
+        "use_support": "Not Supported",
+        "tmdl_relation": "InTMDL",
+        "tmdl_report": "0904-12",
+        "approval_date": "2012-08-31"
+      },
+      {
+        "site": "SV-301",
+        "huc12": "030601020502",
+        "description": "NORRIS CK AT S-37-435 1 MI S OF WESTMINSTER",
+        "county": "OCONEE",
+        "use": "REC",
+        "cause": "ECOLI",
+        "use_support": "Not Supported",
+        "tmdl_relation": "InTMDL",
+        "tmdl_report": "0904-12",
+        "approval_date": "2012-08-31"
+      }
+    ]
+  },
+  "integration": {
+    "source_manifest_schema": "upstate.sources/v1",
+    "context_schema": "upstate.water-quality-context/v1",
+    "workspace_kind": "water-quality-contexts",
+    "build_entry": "source_tools.water_quality_context.build_workspace_context(workspace, selection)",
+    "download_descriptors": "model.common.describe_file under record.files",
+    "paired_report_join_key": "watersheds[].huc12"
+  },
+  "current_classification": {
+    "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+    "discovery_uri": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+    "source_page": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+    "source_carrier": "F0C9J6KRJDN",
+    "object_id_field": "OBJECTID",
+    "typed_oid_alias": "OBJECTID_1",
+    "nullable_integer_field": "OBJECTID_1",
+    "mapped_classification_status": "provisional",
+    "capture_date": "2026-10-12",
+    "retained_features": 1886,
+    "class_counts": {
+      "ORW": 1040,
+      "TN": 247,
+      "TPGT": 599
+    },
+    "original_geometry_bytes": 4978867,
+    "attribute_csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18",
+    "source_id": "scdes-classified-streams-upper-savannah-20261012",
+    "source_crs": "EPSG:3857",
+    "classification_field": "H2OCLASS",
+    "publisher_huc_field": "HUC_12",
+    "captured_features": 1886,
+    "publisher_huc_count": 19,
+    "field_identity_note": "Literal OBJECTID is the esriFieldTypeOID (alias OBJECTID_1). Literal OBJECTID_1 is a nullable integer (alias OBJECTID). Use raw field names.",
+    "retained_source_canvas": "F0C9J6KRJDN",
+    "source_dictionary_sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b"
+  },
+  "published_domain_evidence": {
+    "source_uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+    "status_date": "2026-07-28",
+    "source_table_rows": 813,
+    "selected_huc12_count": 217,
+    "matched_site_count": 84,
+    "matched_huc12_count": 44,
+    "not_supported_sites": 79,
+    "fully_supported_sites": 5,
+    "cause_counts": {
+      "ECOLI": 84
+    },
+    "domain_huc_inventory_sha256": "ec0cb3d05a0ede9da1b9238b7c7bff2fa495d94e5a6a0451890b54233edfbd52",
+    "domain_join_sha256": "aeccb2cfc07b01c145b43ee0b7012db12fd939e9b670c2f98ade606e11bd15c4",
+    "source_page": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+    "method": "Complete publisher PDF text joined by exact source HUC12 to all 217 original domain identifiers."
+  },
+  "received_publisher_files": [
+    {
+      "filename": "scdes-tmdl-attainment-status-20260728.pdf",
+      "bytes": 614545,
+      "uri": "https://des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/TMDLAttainmentStatus.pdf",
+      "sha256": "c26a79441d22e8a4a302c9094640654c199c88ec6171875e00bf6cde4a0c0dd7"
+    },
+    {
+      "filename": "scdes-303d-list-2024.xlsx",
+      "bytes": 96620,
+      "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.xlsx",
+      "sha256": "2b78525514c2044278ed170b5587a1a231cf0c99f2aae5f7fef2d2dc18e5e3dc"
+    }
+  ],
+  "native_tmdl_normalization": {
+    "reader": "PyMuPDF",
+    "publisher_pdf_bytes": 614545,
+    "publisher_pdf_sha256": "c26a79441d22e8a4a302c9094640654c199c88ec6171875e00bf6cde4a0c0dd7",
+    "source_table_rows": 813,
+    "complete": true,
+    "unparsed_rows": 0,
+    "cause_counts": {
+      "ECOLI": 661,
+      "PH": 5,
+      "TURBIDITY": 3,
+      "FC": 90,
+      "ENTERO": 11,
+      "DO": 40,
+      "TP": 2,
+      "LEAD": 1
+    }
+  },
+  "published_workbook": {
+    "source_id": "scdes-303d-published-2024",
+    "uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.xlsx",
+    "bytes": 96620,
+    "sha256": "2b78525514c2044278ed170b5587a1a231cf0c99f2aae5f7fef2d2dc18e5e3dc",
+    "sheet": "303D LIST FOR WEB",
+    "header_row": 1,
+    "columns": [
+      "BASIN",
+      "HUC 12",
+      "COUNTY",
+      "SITE",
+      "DESCRIPTION",
+      "IMPAIRED USE",
+      "CAUSE",
+      "PRIORITY RANKING"
+    ],
+    "assessment_rows": 1258,
+    "source_notes": [
+      {
+        "source_table_row": 1260,
+        "marker": "†",
+        "text": "Added to list by USEPA. See addendum for further information."
+      }
+    ],
+    "cause_encoding": "scdes_303d_codes",
+    "code_guide_uri": "https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/303dList2024.pdf",
+    "code_guide_pages": [
+      8,
+      9
+    ],
+    "actual_punctuation_variants": [
+      "TN. TP, ECOLI",
+      "HGF PCB"
+    ]
+  },
+  "classification_source": {
+    "uri": "https://gis.des.sc.gov/gisserver/rest/services/water/SCHydroClass/MapServer/2",
+    "discovery_uri": "https://gis.des.sc.gov/stormwater/js/a_settings.js",
+    "source_page": "https://app.notion.com/p/3f7dd77231008124b767e1dccf8a706e",
+    "source_carrier": "F0C9J6KRJDN",
+    "object_id_field": "OBJECTID",
+    "typed_oid_alias": "OBJECTID_1",
+    "nullable_integer_field": "OBJECTID_1",
+    "mapped_classification_status": "provisional",
+    "capture_date": "2026-10-12",
+    "retained_features": 1886,
+    "class_counts": {
+      "ORW": 1040,
+      "TN": 247,
+      "TPGT": 599
+    },
+    "original_geometry_bytes": 4978867,
+    "attribute_csv_sha256": "ce95ef233822d1205f5fda534e95e361a933147301f787906b509f8b4525cf18",
+    "source_id": "scdes-classified-streams-upper-savannah-20261012",
+    "source_crs": "EPSG:3857",
+    "classification_field": "H2OCLASS",
+    "publisher_huc_field": "HUC_12",
+    "captured_features": 1886,
+    "publisher_huc_count": 19,
+    "field_identity_note": "Literal OBJECTID is the esriFieldTypeOID (alias OBJECTID_1). Literal OBJECTID_1 is a nullable integer (alias OBJECTID). Use raw field names.",
+    "retained_source_canvas": "F0C9J6KRJDN",
+    "source_dictionary_sha256": "d6f6f883dd90f091747d82ed4cc6bdbdcadb214d50c86769cda781b899c2296b"
+  }
+}

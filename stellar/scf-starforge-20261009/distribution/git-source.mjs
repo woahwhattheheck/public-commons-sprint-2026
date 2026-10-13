@@ -5,7 +5,8 @@ import { performance } from 'node:perf_hooks';
 import { resolve } from 'node:path';
 
 const OID = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/;
-export const MAX_SOURCE_FILE_BYTES = 2 * 1024 * 1024;
+// Keep original source members within the same 4 MiB limit enforced by runtime-unpack.py.
+export const MAX_SOURCE_FILE_BYTES = 4 * 1024 * 1024;
 export const MAX_SOURCE_BYTES = 128 * 1024 * 1024;
 const round = value => Math.round(value * 100) / 100;
 
@@ -61,7 +62,14 @@ export function openGitSource({ repository, ref = 'HEAD', offline = false, onPro
       const size = Number(fields[2]);
       if (fields.length !== 3 || fields[1] !== 'blob' || !Number.isSafeInteger(size) || size < 0)
         throw new TypeError('Expected regular Git blob metadata');
-      if (size > MAX_SOURCE_FILE_BYTES) throw new RangeError('Distribution source file size exceeded');
+      if (size > MAX_SOURCE_FILE_BYTES) {
+        const paths = tree.filter(item => item.blob === blobs[i]).map(item => item.path);
+        const error = new RangeError(`Distribution source file exceeds ${MAX_SOURCE_FILE_BYTES} bytes (${size}): ${paths.join(', ') || blobs[i]}`);
+        error.code = 'DISTRIBUTION_SOURCE_FILE_TOO_LARGE';
+        error.sourceCommit = commit; error.gitBlob = blobs[i]; error.paths = paths;
+        error.bytes = size; error.limitBytes = MAX_SOURCE_FILE_BYTES;
+        throw error;
+      }
       result.set(blobs[i], size);
     }
     return result;

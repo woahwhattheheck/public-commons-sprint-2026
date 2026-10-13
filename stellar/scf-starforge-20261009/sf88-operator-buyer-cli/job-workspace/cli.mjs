@@ -24,7 +24,8 @@ const HELP = [
   '            --handoff-file ABS or --claim-token-file ABS [--label TEXT]',
   'refresh     Read current customer status: --entry ID',
   'watch       Wait for a completed result: --entry ID',
-  'fetch       Retrieve the verified result into the library: --entry ID',
+  'fetch       Retrieve the result and declared output files into the library: --entry ID',
+  'outputs     Reopen the verified output package and file resources: --entry ID',
   'label       --entry ID --label TEXT --expected-revision N',
   'archive     --entry ID --archived true|false --expected-revision N',
   'scan        Reconcile the library with original delivered-job receipts',
@@ -72,7 +73,7 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
   const selection = ['--operator-workspace','--operator-profile','--runtime','--native-timeout-ms'];
   const specific = { serve: ['--port', '--approval-mode', '--landing', ...selection], status: [],
     list: ['--query','--state-filter','--view','--offset','--limit'],
-    show: ['--entry'], register: ['--buyer-directory','--label'],
+    show: ['--entry'], outputs: ['--entry'], register: ['--buyer-directory','--label'],
     retain: ['--acceptance-file','--handoff-file','--claim-token-file','--label'],
     refresh: ['--entry','--deadline-ms'], watch: ['--entry','--deadline-ms','--poll-ms'],
     fetch: ['--entry','--deadline-ms','--poll-ms'],
@@ -135,6 +136,7 @@ export async function runJobWorkspaceCommand(args = process.argv.slice(2), {
     else if (command === 'list') print(model.list({ q: flags.get('--query') ?? '', state: flags.get('--state-filter') ?? '',
       view: flags.get('--view') ?? 'active', offset: number('--offset') ?? 0, limit: number('--limit') ?? 50 }));
     else if (command === 'show') print(await model.reconcile(flags.get('--entry')));
+    else if (command === 'outputs') print(await model.outputs(flags.get('--entry'), { signal: controller.signal }));
     else if (command === 'register') print(await model.register({ buyerDirectory: flags.get('--buyer-directory'), label: flags.get('--label') ?? '' }));
     else if (command === 'retain') {
       requireValue(flags.has('--handoff-file') !== flags.has('--claim-token-file'), 'JOB_CLAIM_SOURCE_REQUIRED');

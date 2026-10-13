@@ -1,0 +1,573 @@
+{
+ "currentVersion": 11.5,
+ "cimVersion": "3.5.0",
+ "id": 21,
+ "name": "NPDES Discharges - View",
+ "type": "Feature Layer",
+ "description": "dbo.DW_Report_GIS_NPDES_Outfalls",
+ "geometryType": "esriGeometryPoint",
+ "sourceSpatialReference": {
+  "wkid": 4269,
+  "latestWkid": 4269,
+  "xyTolerance": 8.983152841195215E-9,
+  "zTolerance": 0.001,
+  "mTolerance": 0.001,
+  "falseX": -400,
+  "falseY": -400,
+  "xyUnits": 9.999999999999999E8,
+  "falseZ": -100000,
+  "zUnits": 10000,
+  "falseM": -100000,
+  "mUnits": 10000
+ },
+ "spatialReference": {
+  "wkid": 26917,
+  "latestWkid": 26917,
+  "xyTolerance": 0.001,
+  "zTolerance": 0.001,
+  "mTolerance": 0.001,
+  "falseX": -5120900,
+  "falseY": -9998100,
+  "xyUnits": 4.504455473910538E8,
+  "falseZ": -100000,
+  "zUnits": 10000,
+  "falseM": -100000,
+  "mUnits": 10000
+ },
+ "copyrightText": "",
+ "parentLayer": null,
+ "subLayers": [],
+ "minScale": 0,
+ "maxScale": 0,
+ "referenceScale": 0.0,
+ "drawingInfo": {
+  "renderer": {
+   "type": "simple",
+   "symbol": {
+    "type": "esriPMS",
+    "url": "bdd254ec4b2ada19aea7098831608923",
+    "imageData": "iVBORw0KGgoAAAANSUhEUgAAAAwAAAAOCAYAAAAbvf3sAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAA00lEQVQokbXPvUrEUBCG4fc7Z0NSqHsNil1gQUL6bb0He2/Cbi/BYhstXbC32M5SAiY3IAtWItrahTMjgvgDQciCA1PNPMM3E0bWZGtQluVOURTHIYRDM6uBI0kCeuAuxrhomubhC+R5Ppd06e6vks7d/UDSs7uvgIuUUgN8g67rboAp8HHV6rrepJSeYowvwKmZXQ/94J+NmS1DCPdmtpa0zLLsFnjc/umqqs5+DiTtAjNJ00EgaTFwcA/YHwSjI40G7n7112Lf92+/QNu2J/8S6R1iy0PRMEg2LgAAAABJRU5ErkJggg==",
+    "contentType": "image/png",
+    "width": 9,
+    "height": 10,
+    "angle": 0,
+    "xoffset": 0,
+    "yoffset": 0
+   }
+  },
+  "scaleSymbols": true,
+  "transparency": 0,
+  "labelingInfo": null
+ },
+ "defaultVisibility": false,
+ "extent": {
+  "xmin": -5120763.267722837,
+  "ymin": -9997963.942936342,
+  "xmax": 6120763.267722837,
+  "ymax": 9997963.942936342,
+  "spatialReference": {
+   "wkid": 26917,
+   "latestWkid": 26917,
+   "xyTolerance": 0.001,
+   "zTolerance": 0.001,
+   "mTolerance": 0.001,
+   "falseX": -5120900,
+   "falseY": -9998100,
+   "xyUnits": 4.504455473910538E8,
+   "falseZ": -100000,
+   "zUnits": 10000,
+   "falseM": -100000,
+   "mUnits": 10000
+  }
+ },
+ "hasAttachments": false,
+ "htmlPopupType": "esriServerHTMLPopupTypeAsHTMLText",
+ "displayField": "SiteName",
+ "typeIdField": null,
+ "subtypeFieldName": null,
+ "subtypeField": null,
+ "defaultSubtypeCode": null,
+ "fields": [
+  {
+   "name": "OBJECTID",
+   "type": "esriFieldTypeOID",
+   "alias": "OBJECTID",
+   "domain": null
+  },
+  {
+   "name": "SiteName",
+   "type": "esriFieldTypeString",
+   "alias": "SiteName",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmturl",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmturl",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtRefProgramAreaDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefProgramAreaDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmtNum",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtNum",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmtVersn",
+   "type": "esriFieldTypeDouble",
+   "alias": "PrmtPrmtVersn",
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmtRvsn",
+   "type": "esriFieldTypeDouble",
+   "alias": "PrmtPrmtRvsn",
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmtTypeDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtTypeDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtRefPrmtCatgDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefPrmtCatgDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtRefPrmtStatCatgDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefPrmtStatCatgDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtRefPrmtStatDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefPrmtStatDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtRefGnrlPrmtCatgCode",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtRefGnrlPrmtCatgCode",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtIssueDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtIssueDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "PrmtEfctvDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtEfctvDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "PrmtExprDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtExprDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "PrmtTermDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtTermDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "PrmtAppDueDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtAppDueDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "PrmtCmplMgrName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtCmplMgrName",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtCmplMgrWrkgrp",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtCmplMgrWrkgrp",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAgncyContctName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAgncyContctName",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAgncyContctWrkgrp",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAgncyContctWrkgrp",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtGnrlPrmtNum",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtGnrlPrmtNum",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmtCmnts",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmtCmnts",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddrStreet",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrStreet",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddrLine2",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrLine2",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddrCity",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrCity",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddrState",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrState",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddrPostalCode",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrPostalCode",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtAddrCountry",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtAddrCountry",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPrmt",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPrmt",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtCompanyName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtCompanyName",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtEmail",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtEmail",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPhone",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPhone",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtPhoneExt",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtPhoneExt",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtStatChngDate",
+   "type": "esriFieldTypeDate",
+   "alias": "PrmtStatChngDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "PrmtLgcyId",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtLgcyId",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtFeeTypes",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeeTypes",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtFeatrFeatrIdTxt",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrFeatrIdTxt",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtFeatrRcvgWaterName",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrRcvgWaterName",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtFeatrConveyanceDescr",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrConveyanceDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "PrmtFeatrDsgnFlowNum",
+   "type": "esriFieldTypeDouble",
+   "alias": "PrmtFeatrDsgnFlowNum",
+   "domain": null
+  },
+  {
+   "name": "PrmtFeatrRefDsgnFlowUnitCode",
+   "type": "esriFieldTypeString",
+   "alias": "PrmtFeatrRefDsgnFlowUnitCode",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrFeatrId",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatrId",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrFeatrType",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatrType",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrFeatrDescr",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatrDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrColctnMethdDescr",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrColctnMethdDescr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrLocVrfd",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrLocVrfd",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrFeatr",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrFeatr",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrLatitude",
+   "type": "esriFieldTypeDouble",
+   "alias": "FeatrLatitude",
+   "domain": null
+  },
+  {
+   "name": "FeatrLongitude",
+   "type": "esriFieldTypeDouble",
+   "alias": "FeatrLongitude",
+   "domain": null
+  },
+  {
+   "name": "FeatrGeographyWkt",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrGeographyWkt",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrLgcyId",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrLgcyId",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrRefFeatrStat",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrRefFeatrStat",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "FeatrCreatedDate",
+   "type": "esriFieldTypeDate",
+   "alias": "FeatrCreatedDate",
+   "length": 8,
+   "domain": null
+  },
+  {
+   "name": "FeatrCounty",
+   "type": "esriFieldTypeString",
+   "alias": "FeatrCounty",
+   "length": 1073741822,
+   "domain": null
+  },
+  {
+   "name": "shape",
+   "type": "esriFieldTypeGeometry",
+   "alias": "shape",
+   "domain": null
+  }
+ ],
+ "geometryField": {
+  "name": "shape",
+  "type": "esriFieldTypeGeometry",
+  "alias": "shape"
+ },
+ "indexes": [
+  {
+   "name": "FDO_OBJECTID",
+   "fields": "OBJECTID",
+   "isAscending": true,
+   "isUnique": true,
+   "description": ""
+  }
+ ],
+ "subtypes": [],
+ "relationships": [],
+ "canModifyLayer": true,
+ "canScaleSymbols": false,
+ "hasLabels": false,
+ "capabilities": "Map,Query,Data",
+ "maxRecordCount": 4000,
+ "maxSelectionCount": 2000,
+ "supportsStatistics": true,
+ "supportsExceedsLimitStatistics": true,
+ "supportsAdvancedQueries": true,
+ "supportedQueryFormats": "JSON, geoJSON, PBF",
+ "isDataVersioned": false,
+ "ownershipBasedAccessControlForFeatures": {"allowOthersToQuery": true},
+ "useStandardizedQueries": true,
+ "supportedSpatialRelationships": [
+  "esriSpatialRelIntersects",
+  "esriSpatialRelContains",
+  "esriSpatialRelCrosses",
+  "esriSpatialRelEnvelopeIntersects",
+  "esriSpatialRelIndexIntersects",
+  "esriSpatialRelOverlaps",
+  "esriSpatialRelTouches",
+  "esriSpatialRelWithin",
+  "esriSpatialRelRelation"
+ ],
+ "advancedQueryCapabilities": {
+  "useStandardizedQueries": true,
+  "supportsStatistics": true,
+  "supportsPercentileStatistics": true,
+  "supportsHavingClause": true,
+  "supportsOrderBy": true,
+  "supportsDistinct": true,
+  "supportsCountDistinct": true,
+  "supportsAdvancedQueryRelated": true,
+  "supportsQueryRelatedPagination": true,
+  "supportsPagination": true,
+  "supportsLod": false,
+  "supportsQueryWithLodSR": false,
+  "supportsTrueCurve": true,
+  "supportsQueryWithDatumTransformation": true,
+  "supportsReturningQueryExtent": true,
+  "supportsQueryWithDistance": true,
+  "supportsSqlExpression": true,
+  "supportsTimeRelation": true,
+  "supportsSqlFormat": false,
+  "supportsQueryAnalytic": true,
+  "supportsCurrentUserQueries": true
+ },
+ "supportsDatumTransformation": true,
+ "advancedQueryAnalyticCapabilities": {
+  "supportsLinearRegression": true,
+  "supportsAsync": false,
+  "supportsPercentileAnalytic": true
+ },
+ "dateFieldsTimeReference": null,
+ "preferredTimeReference": null,
+ "datesInUnknownTimezone": false,
+ "hasMetadata": true,
+ "isDataArchived": false,
+ "archivingInfo": {
+  "supportsQueryWithHistoricMoment": false,
+  "startArchivingMoment": -1
+ },
+ "supportsCoordinatesQuantization": true,
+ "supportsDynamicLegends": true,
+ "uniqueIdInfo": {
+  "type": "simple",
+  "fields": [
+   "OBJECTID"
+  ],
+  "OIDFieldContainsHashValue": false
+ },
+ "maxUniqueIDCount": 100000,
+ "serviceItemId": "2e4f71c161cc4b78b6252ce43e241f5d"
+}

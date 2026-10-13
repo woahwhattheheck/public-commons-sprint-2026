@@ -12,6 +12,12 @@ Open **Resolutions** to handle a customer issue, reply, retry or cancel the sele
 
 The [complete resolution guide](./resolution/README.md) covers case decisions, interruption recovery, accounting exports and customer receiving. Installed commands are `starforge jobs-resolution` for the merchant’s private host and `starforge jobs-buyer-resolution` for the retained buyer directory. Both workspaces include their own browser controls. Closing the merchant finishes admitted resolution work before releasing its job state.
 
+## Receive named result files
+
+A function can declare a complete ZIP result containing named reports, spreadsheets and supporting files. The original worker publishes one result digest; the customer receives and verifies each member through Jobs, Resource library and portable collections. The merchant and buyer command interfaces and complete MCP receiving client reopen the same package without another payment.
+
+The [named-output guide](./outputs/README.md) includes the complete two-input, three-output reconciliation application, file contract, browser workflow, installed commands, interruption recovery and original operating journey. Existing JSON and byte results retain their current format.
+
 ## Use the original payment path
 
 `config.mjs` compiles each configured function into an original SF30 route. Original SF89 admission validates both the complete prepared input and the subsequent job purchase request. The purchased request carries exactly `{ "jobId": "..." }`, the prepared claim capability in `x-sfjobs-token`, and the same identifier in `x-sf98-order-id` and the approved URL's `sf98_order` query. The purchase handoff also supplies orderReference for original SF88 preparation.
@@ -82,6 +88,7 @@ The state directory must be absolute and private. The original Linux fleet lease
 | `retry({id,expectedRevision,reason})` | Queue an already-paid failed, interrupted or cancelled job for a new attempt |
 | `reconcile()` | Apply matching original SF98 events to retained jobs |
 | `result(id)` | Read and verify the complete retained output bytes |
+| `outputPackage(id)`, `outputFile(id, slot)` | Verify a declared result package and read its original named members |
 
 The optional reference is the merchant's stable job identifier. Reusing it requires the original claim token and the same function and input. The token is returned in the private handoff and retained as a hash in merchant state. The operator should preserve the handoff when preparing the customer's purchase.
 

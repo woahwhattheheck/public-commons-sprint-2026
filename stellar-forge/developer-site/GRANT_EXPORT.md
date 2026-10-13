@@ -29,12 +29,48 @@ The command opens and verifies the original submission export envelope or its co
 | draft.json | Original checksummed submission export envelope, including its native prepared edition, complete draft and retained history |
 | application.md | All nine current canonical answers, with their full Markdown |
 | form-map.json | Original native issuer form map |
+| source-package.json | Complete selected application, source index, budget and companion for source receiving, whenever the draft has a selected complete bundle |
 | prepared.txt and prepared.json | Native edition output, selected answers or mapped fields, exact values, counts, recorded limits and field issues |
 | fields/*.txt | Exactly one selected value per file, with no added trailing newline |
 | review.html | Complete offline values, copy controls, counts and full printing |
 | manifest.json | Selected source identities and hashes of every generated output; written last |
 
 Open review.html to read, copy or print. Printing includes long values across as many pages as needed. The native draft can be reopened through the original **Prepare submission** interface; its planning sources, handover and reviews remain in that same record.
+
+## Receive source into the same saved draft
+
+Use a complete source package from **Source editions**, or the
+`source-package.json` produced by an existing four-file export:
+
+~~~sh
+starforge grant-export \
+  --draft /private/scf/saved-submission.json \
+  --receive-source-package /private/scf/source-package.json \
+  --out /private/scf/prepared-with-source
+~~~
+
+The command verifies the complete incoming package and receives it into the
+original draft before preparing output. Its draft ID, retained source editions,
+edited-answer baselines, issuer fields, native planning, reviews and versions
+continue. Untouched canonical answers receive the selected source. Existing
+issuer-field text keeps its original explicit refresh behavior.
+
+A changed source retains the preceding full working version. A different
+four-file bundle for the same application preserves the previous handover
+selection. Repeating the same already-selected bundle does not add another
+source-receiving version. The command then prepares its normal frozen output.
+
+The incoming package supplies all four original bodies and their retained
+metadata, so this receiving path uses the selected files directly. The
+`--receive-source-package` option applies to `--draft`. The existing
+`--source` mode below remains the publisher's way to prepare a new source
+edition from its original application, index, budget and companion files.
+
+Whenever the prepared draft selects a complete reviewer bundle, its output also
+contains `source-package.json`. This file is ready for another operator's
+Source editions screen or this same command. See the
+[original handover guide](GRANT_HANDOVER.md#receive-and-share-a-source-package)
+for the source package's byte and model contract.
 
 ## Receive an application edition
 

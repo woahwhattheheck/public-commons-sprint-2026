@@ -1,0 +1,139 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "project-continuity",
+  "title": "Project continuity",
+  "version": "7",
+  "order": 90,
+  "requires_actions": [
+    "workspace.backup",
+    "workspace.restore"
+  ],
+  "assets": [
+    "project_continuity.mjs"
+  ],
+  "backend": {
+    "module": "extension_modules.project_continuity",
+    "factory": {
+      "handler": "create",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "workspace.snapshot",
+      "workspace.receive",
+      "workspace.recovery.resume"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/extensions/project-continuity/plan",
+        "operation": "plan",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/extensions/project-continuity/list",
+        "operation": "list",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "GET"
+        ],
+        "path": "/api/extensions/project-continuity/inspect",
+        "operation": "inspect",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "path": "/api/extensions/project-continuity/transport",
+        "operation": "transport",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ],
+        "methods": [
+          "GET"
+        ]
+      }
+    ],
+    "state": {
+      "key": "project_continuity",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    },
+    "verify_workspace": {
+      "handler": "verify_workspace",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/project_continuity.mjs",
+    "factory": "attachProjectTransfers",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "openForm",
+      "submitAction",
+      "detail",
+      "fileList",
+      "uploadFile",
+      "showTask",
+      "selectWorkspace",
+      "navigate"
+    ],
+    "view": {
+      "id": "project-continuity",
+      "title": "Project continuity",
+      "after": "deliveries"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    },
+    "dispatch": "dispatch",
+    "action_prefixes": [
+      "transfer-"
+    ]
+  }
+}

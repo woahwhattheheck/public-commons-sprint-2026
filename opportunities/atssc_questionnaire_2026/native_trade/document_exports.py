@@ -19,6 +19,9 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from xml.sax.saxutils import escape
 
+from document_reading import reading_context, reader_labels, display_answer, display_cell, intro_text, language_name
+from document_navigation import word_bookmark, word_contents, word_language, pdf_heading, pdf_contents, install_pdf_outline
+
 
 ROOT = Path(__file__).resolve().parent
 FONT_ROOT = ROOT / "export-assets" / "fonts"
@@ -130,7 +133,7 @@ def _question_context(question, language="en"):
     return context
 
 
-def document_model(payload):
+def document_model(payload, *, language=None):
     """Return the common disclosure-safe content used by Word and PDF."""
     if not isinstance(payload, dict):
         raise DocumentExportError("Supply the retained document edition as an object")
@@ -148,7 +151,7 @@ def document_model(payload):
         "created": _text(payload.get("created") or payload.get("updated")),
         "record_id": _text(payload.get("report_id") if edition == "public" else payload.get("report_id") or payload.get("response_id") or payload.get("respondent_id")),
         "question_count": len(questions), "responses": [], "numeric_totals": [],
-        "language": payload.get("language") or payload.get("definition", {}).get("language") or "en",
+        "language": language_name(language or payload.get("language") or payload.get("definition", {}).get("language") or "en"),
         "orientation":"portrait", "density":"comfortable", "columns":1,
         "description":"", "view_sections":[], "include_response_details":True,
     }
@@ -218,12 +221,18 @@ def document_model(payload):
                             "text": "Protected answer withheld" if cell_withheld else _text(value) or "Not answered",
                             "classification": cell_classification,
                             "alternative": _text(cell_choice.get("public_alternative")),
+                            "answer_state": "withheld" if cell_withheld else "missing" if value is None or value == "" else "value",
+                            **({"boolean_value": value} if type(value) is bool and not cell_withheld else {}),
                         })
                     item["rows"].append(rendered_row)
                 item["empty_text"] = "Protected answer withheld" if withheld else "No answer rows"
+                item["empty_state"] = "withheld" if withheld else "empty"
             else:
                 value = None if withheld else original
                 item["text"] = "Protected answer withheld" if withheld else _text(value) or "Not answered"
+                item["answer_state"] = "withheld" if withheld else "missing" if value is None or value == "" else "value"
+                if type(value) is bool and not withheld:
+                    item["boolean_value"] = value
                 if qid in released_numbers and value is not None and value != "":
                     released_numbers[qid].append(_number(value))
             rendered["questions"].append(item)
@@ -243,6 +252,11 @@ def document_model(payload):
             "minimum": format(min(numbers), "f") if numbers else "",
             "maximum": format(max(numbers), "f") if numbers else "",
         })
+    try:
+        model["reading"] = reading_context(payload, model)
+        model["language"] = model["reading"]["language"]
+    except ValueError as exc:
+        raise DocumentExportError(str(exc)) from exc
     return model
 
 
@@ -267,11 +281,12 @@ def _intro(model):
             + " and " + str(questions) + " question" + ("s" if questions != 1 else "") + " in the saved order.")
 
 
-def _metric(value):
-    return "Not available" if value is None else _text(value)
+def _metric(value, labels=None):
+    return (labels or reader_labels("en"))["not_available"] if value is None else _text(value)
 
 
-def _view_chart(view):
+def _view_chart(view, labels=None):
+    labels = labels or reader_labels("en")
     if view.get("kind") == "text" or view.get("chart") == "none" or not view.get("summary", {}).get("answered"):
         return None
     metric = next((x for x in view["statistics"] if x in {"sum","average","ratio","count","percentage"}),"count")
@@ -288,11 +303,12 @@ def _view_chart(view):
         metric = "count"
         categories, values = [_text(x["value"]) for x in view.get("frequencies",[])], [x["count"] for x in view.get("frequencies",[])]
     return {"kind":view["chart"], "title":view["title"], "categories":categories,
-            "series":[{"name":METRIC_LABELS[metric], "values":values}]}
+            "series":[{"name":labels[metric], "values":values}]}
 
 
-def _view_tables(view, width_inches):
+def _view_tables(view, width_inches, labels=None):
     """Full readable tables, including every metric and every retained year."""
+    labels = labels or reader_labels("en")
     tables = []
     cross = view.get("cross_tab")
     if cross:
@@ -300,18 +316,18 @@ def _view_tables(view, width_inches):
         for metric in view["statistics"]:
             for start in range(0,len(cross["years"]),years_per_table):
                 years = cross["years"][start:start+years_per_table]
-                rows = [[row["label"]]+[_metric(cell["summary"].get(metric) if cell["summary"] else None) for cell in row["cells"][start:start+years_per_table]] for row in cross["rows"]]
-                tables.append((METRIC_LABELS[metric] + " by year", ["Group"]+[_text(x) for x in years], rows))
+                rows = [[row["label"]]+[_metric(cell["summary"].get(metric) if cell["summary"] else None, labels) for cell in row["cells"][start:start+years_per_table]] for row in cross["rows"]]
+                tables.append((labels["by_year"].format(metric=labels[metric]), [labels["group"]]+[_text(x) for x in years], rows))
     elif view.get("groups"):
         for metric in view["statistics"]:
-            headers = [x["label"] for x in view.get("group_by",[])] + (["Year"] if view.get("year_field") else []) + [METRIC_LABELS[metric]]
-            rows = [[_text(x) for x in row["dimensions"]]+([_text(row["year"])] if view.get("year_field") else [])+[_metric(row["summary"].get(metric))] for row in view["groups"]]
+            headers = [x["label"] for x in view.get("group_by",[])] + ([labels["year"]] if view.get("year_field") else []) + [labels[metric]]
+            rows = [[_text(x) for x in row["dimensions"]]+([_text(row["year"])] if view.get("year_field") else [])+[_metric(row["summary"].get(metric), labels)] for row in view["groups"]]
             if len(headers)>5:
                 rows = [[" / ".join(row[:-1]),row[-1]] for row in rows]
-                headers = ["Group",METRIC_LABELS[metric]]
-            tables.append((METRIC_LABELS[metric] + " by group",headers,rows))
+                headers = [labels["group"],labels[metric]]
+            tables.append((labels["by_group"].format(metric=labels[metric]),headers,rows))
     elif view.get("frequencies") and view["variable"]["kind"] not in {"number","integer"}:
-        tables.append(("Visible answers",["Answer","Count","Percentage"],[[_text(x["value"]),_text(x["count"]),_text(x["percentage"])] for x in view["frequencies"]]))
+        tables.append((labels["visible_answers"],[labels["answer"],labels["count"],labels["percentage"]],[[_text(x["value"]),_text(x["count"]),_text(x["percentage"])] for x in view["frequencies"]]))
     return tables
 
 
@@ -327,6 +343,21 @@ def _word(model):
     except ImportError as exc:
         raise DocumentExportError("Install requirements-documents.txt to enable Word exports") from exc
     doc = Document()
+    reading = model["reading"]
+    labels = reading["labels"]
+    word_language(doc, model["language"])
+    bookmark_ids = {x["key"]: index for index, x in enumerate(reading["entries"], 1)}
+    def heading(text, style, entry=None):
+        paragraph = doc.add_paragraph(text, style)
+        if entry:
+            word_bookmark(paragraph, entry["key"], bookmark_ids[entry["key"]])
+        return paragraph
+    def reference_line(value):
+        paragraph = doc.add_paragraph(value)
+        paragraph.paragraph_format.space_after = Pt(4)
+        for run in paragraph.runs:
+            run.font.size = Pt(9)
+        return paragraph
     # The bundled default Word template inherits an accent rule on Title.
     # Remove paragraph borders so this industrial document uses whitespace.
     for style in doc.styles:
@@ -354,19 +385,22 @@ def _word(model):
     for name in ("Heading 1", "Heading 2", "Heading 3"):
         doc.styles[name].paragraph_format.space_before = Pt(9)
     doc.core_properties.title = model["title"]
-    doc.core_properties.subject = model["edition"].capitalize() + " questionnaire edition"
+    doc.core_properties.subject = labels["questionnaire_edition"].format(edition=labels[model["edition"]].lower())
     doc.core_properties.author = "Questionnaire Operations"
     doc.core_properties.created = doc.core_properties.modified = _date(model["created"])
     doc.add_paragraph(model["title"], "Title")
-    doc.add_paragraph(model["edition"].capitalize() + " questionnaire edition", "Subtitle")
-    doc.add_paragraph(_intro(model))
-    doc.add_paragraph(model["state"] + (". Saved " + model["created"] if model["created"] else ""))
+    doc.add_paragraph(labels["questionnaire_edition"].format(edition=labels[model["edition"]].lower()), "Subtitle")
+    doc.add_paragraph(intro_text(model))
+    doc.add_paragraph(reading["state_label"])
+    doc.add_paragraph(reading["state_note"])
+    doc.add_paragraph(reading["scope_note"])
     if model["record_id"]:
-        doc.add_paragraph("Record " + model["record_id"])
+        reference_line(labels["report_id"] + ": " + model["record_id"])
     if model.get("questionnaire_title") and model["questionnaire_title"] != model["title"]:
-        doc.add_paragraph("Questionnaire " + model["questionnaire_title"])
+        doc.add_paragraph(labels["questionnaire"] + ": " + model["questionnaire_title"])
     if model["description"]:
         doc.add_paragraph(model["description"])
+    word_contents(doc, reading)
     full_width = (11 if landscape else 8.5) - 1.4
     width = (full_width - .25 * (model["columns"]-1)) / model["columns"]
     if model["columns"] == 2:
@@ -425,7 +459,7 @@ def _word(model):
         return result
 
     if model["numeric_totals"] and not model["view_sections"]:
-        doc.add_paragraph("Summary statistics", "Heading 1")
+        heading(labels["summary"], "Heading 1", reading["summary"])
         previous_context = None
         for summary in model["numeric_totals"]:
             context = tuple(summary["context"])
@@ -434,56 +468,74 @@ def _word(model):
                     doc.add_paragraph(value).paragraph_format.keep_with_next = True
             previous_context = context
             doc.add_paragraph(summary["label"] + ("  " + summary["unit"] if summary["unit"] else ""), "Heading 2")
-            table(["Count", "Sum", "Mean", "Minimum", "Maximum"], [[summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]], [0.75, 1.8, 1.8, 1.375, 1.375])
+            values = [summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]
+            if summary["answered"] == "0": values[1] = labels["no_public_answers" if model["edition"] == "public" else "not_answered"]
+            table([labels[x] for x in ("count", "sum", "average", "minimum", "maximum")], [values], [0.75, 1.8, 1.8, 1.375, 1.375])
     if model["view_sections"]:
         from document_charts import append_word_chart, chart_panels
-        for view in model["view_sections"]:
-            doc.add_paragraph(_text(view["title"]),"Heading 1")
+        for view, navigation in zip(model["view_sections"], reading["views"]):
+            heading(_text(view["title"]), "Heading 1", navigation)
             if view.get("note"): doc.add_paragraph(_text(view["note"]))
+            for note in navigation["notes"]: reference_line(note)
             if view["kind"] == "text": continue
-            table(["Statistic","Value"],[[METRIC_LABELS[x],_metric(view["summary"].get(x))] for x in view["statistics"]],[2.1,5.0])
-            doc.add_paragraph(str(view["summary"]["answered"])+" visible answers from "+str(view["summary"]["observations"])+" observations.")
-            spec = _view_chart(view)
+            table([labels["statistic"],labels["value"]],[[labels[x],_metric(view["summary"].get(x), labels)] for x in view["statistics"]],[2.1,5.0])
+            doc.add_paragraph(labels["observations"].format(answered=view["summary"]["answered"], observations=view["summary"]["observations"]))
+            spec = _view_chart(view, labels)
             for panel in chart_panels(spec) if spec else []:
                 doc.add_paragraph(panel["title"],"Heading 2")
                 append_word_chart(doc,panel,width=width,height=3.2 if width>5 else 2.9)
-            for title,headers,rows in _view_tables(view,width):
+            for title,headers,rows in _view_tables(view,width,labels):
                 doc.add_paragraph(title,"Heading 2")
                 table(headers,rows)
-    for response in model["responses"] if model["include_response_details"] else []:
-        doc.add_paragraph(response["heading"], "Heading 1")
-        for metadata in response["metadata"]:
-            doc.add_paragraph(metadata).paragraph_format.keep_with_next = True
+    for response, navigation in zip(model["responses"], reading["responses"]) if model["include_response_details"] else []:
+        heading(navigation["title"], "Heading 1", navigation)
+        for metadata in navigation["metadata"]:
+            reference_line(metadata).paragraph_format.keep_with_next = True
         previous_context = None
-        for question in response["questions"]:
+        for question, question_navigation in zip(response["questions"], navigation["questions"]):
             context = tuple(question["context"])
             if context and context != previous_context:
                 for value in context:
                     doc.add_paragraph(value).paragraph_format.keep_with_next = True
             previous_context = context
-            doc.add_paragraph(question["label"], "Heading 2")
-            disclosure = doc.add_paragraph(question["classification"].capitalize() + (". Unit " + question["unit"] if question["unit"] else ""))
+            heading(question["label"], "Heading 2", question_navigation)
+            for note in question_navigation["notes"]: reference_line(note)
+            for label, wording in question_navigation["wordings"]:
+                doc.add_paragraph(label, "Heading 3")
+                doc.add_paragraph(wording)
+            disclosure = doc.add_paragraph(labels[question["classification"]] + (". " + labels["unit"] + " " + question["unit"] if question["unit"] else ""))
             disclosure.paragraph_format.keep_with_next = True
             if question["kind"] == "table":
                 if question["rows"]:
                     headers = [c["label"] + (" (" + c["unit"] + ")" if c["unit"] else "") for c in question["columns"]]
                     if len(headers) <= max(2,min(5,int(width/.9))):
-                        table(headers, [[_cell_text(c) for c in row] for row in question["rows"]])
+                        table(headers, [[display_cell(c, labels) for c in row] for row in question["rows"]])
                     else:
                         # Preserve all original columns in readable row records.
                         for row_number, row in enumerate(question["rows"], 1):
-                            doc.add_paragraph("Answer row " + str(row_number), "Heading 3")
-                            table(["Column", "Answer"], list(zip(headers, [_cell_text(c) for c in row])), [2.1, 5.0])
+                            doc.add_paragraph(labels["answer_row"] + " " + str(row_number), "Heading 3")
+                            table([labels["column"], labels["answer"]], list(zip(headers, [display_cell(c, labels) for c in row])), [2.1, 5.0])
                 else:
-                    doc.add_paragraph(question["empty_text"])
+                    doc.add_paragraph(labels["withheld" if question["empty_state"] == "withheld" else "no_rows"])
             else:
-                doc.add_paragraph(question["text"])
+                doc.add_paragraph(display_answer(question, labels))
             if question["alternative"]:
-                doc.add_paragraph("Public alternative", "Heading 3")
+                doc.add_paragraph(labels["alternative"], "Heading 3")
                 doc.add_paragraph(question["alternative"])
+    heading(labels["references"], "Heading 1", reading["reference_entry"])
+    doc.add_paragraph(labels["source_note"])
+    if reading["references"]:
+        table([labels["reference"], labels["value"]], [[a,b] for a,b in reading["references"]], [2.1,5.0])
+    if reading["selected_sources"]:
+        doc.add_paragraph(labels["selected_sources"], "Heading 2")
+        table([labels["response"], labels["reference"]], [[row["title"], "\n".join(row["metadata"])] for row in reading["selected_sources"]], [2.1,5.0])
+    for source in reading["workbooks"]:
+        if source["name"]: doc.add_paragraph(labels["source_workbook"] + ": " + source["name"], "Heading 2")
+        reference_line(labels["workbook_sha256"] + ": " + source["sha256"])
+    doc.add_paragraph(labels["word_note"])
     footer = section.footer.paragraphs[0]
     footer.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-    footer.add_run(model["edition"].capitalize() + " edition  |  Page ").font.size = Pt(9)
+    footer.add_run(labels[model["edition"]] + " · " + labels["page"] + " ").font.size = Pt(9)
     page = OxmlElement("w:fldSimple")
     page.set(qn("w:instr"), "PAGE")
     footer._p.append(page)
@@ -508,9 +560,11 @@ def _pdf(model):
         from reportlab.lib.styles import ParagraphStyle
         from reportlab.lib.enums import TA_LEFT
         from reportlab.lib.pagesizes import letter, landscape
-        from reportlab.platypus import SimpleDocTemplate, BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, LongTable, TableStyle, CondPageBreak
+        from reportlab.platypus import SimpleDocTemplate, BaseDocTemplate, PageTemplate, Frame, Paragraph, Spacer, LongTable, TableStyle, NextPageTemplate, PageBreak, CondPageBreak
     except ImportError as exc:
         raise DocumentExportError("Install requirements-documents.txt to enable PDF exports") from exc
+    reading = model["reading"]
+    labels = reading["labels"]
     global _FONT_READY
     with _FONT_LOCK:
         if not _FONT_READY:
@@ -530,6 +584,8 @@ def _pdf(model):
         "record": ParagraphStyle("Record", fontName="QuestionnaireSansBold", fontSize=11.5, leading=16, spaceBefore=9, spaceAfter=6),
         "cell": ParagraphStyle("Cell", fontName="QuestionnaireSans", fontSize=9.5, leading=13, splitLongWords=True),
         "header": ParagraphStyle("Header", fontName="QuestionnaireSansBold", fontSize=9.5, leading=13, textColor=colors.white),
+        "reference": ParagraphStyle("Reference", fontName="QuestionnaireSans", fontSize=9, leading=12, spaceAfter=4, splitLongWords=True),
+        "contents": ParagraphStyle("Contents", fontName="QuestionnaireSans", fontSize=10.5, leading=14.5, spaceAfter=4, splitLongWords=True),
     }
     compact = model["density"] == "compact"
     if compact:
@@ -540,12 +596,13 @@ def _pdf(model):
     width = (full_width - 18*(model["columns"]-1))/model["columns"]
     def paragraph(text, kind="body"):
         return Paragraph(escape(text).replace("\n", "<br/>"), styles[kind])
-    story = [paragraph(model["title"], "title"), paragraph(model["edition"].capitalize() + " questionnaire edition"), paragraph(_intro(model)), paragraph(model["state"] + (". Saved " + model["created"] if model["created"] else ""))]
+    story = [paragraph(model["title"], "title"), paragraph(labels["questionnaire_edition"].format(edition=labels[model["edition"]].lower())), paragraph(intro_text(model)), paragraph(reading["state_label"]), paragraph(reading["state_note"]), paragraph(reading["scope_note"])]
     if model["record_id"]:
-        story.append(paragraph("Record " + model["record_id"]))
+        story.append(paragraph(labels["report_id"] + ": " + model["record_id"], "reference"))
     if model.get("questionnaire_title") and model["questionnaire_title"] != model["title"]:
-        story.append(paragraph("Questionnaire " + model["questionnaire_title"]))
+        story.append(paragraph(labels["questionnaire"] + ": " + model["questionnaire_title"]))
     if model["description"]: story.append(paragraph(model["description"]))
+    story.extend(pdf_contents(reading, styles))
     intro, story = story, []
     def table(headers, rows, widths=None, caption=None):
         content = [[paragraph(label, "header") for label in headers]] + [[paragraph(text, "cell") for text in row] for row in rows]
@@ -578,7 +635,7 @@ def _pdf(model):
             story.append(heading)
         story.extend([result, Spacer(1, 8)])
     if model["numeric_totals"] and not model["view_sections"]:
-        story.append(paragraph("Summary statistics", "heading"))
+        story.append(pdf_heading(labels["summary"], styles["heading"], reading["summary"]))
         previous_context = None
         for summary in model["numeric_totals"]:
             context = tuple(summary["context"])
@@ -587,48 +644,63 @@ def _pdf(model):
                     story.append(paragraph(value, "metadata"))
             previous_context = context
             story.append(paragraph(summary["label"] + ("  " + summary["unit"] if summary["unit"] else ""), "question"))
-            table(["Count", "Sum", "Mean", "Minimum", "Maximum"], [[summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]], [54, 129.6, 129.6, 99, 99])
+            values = [summary[x] for x in ("answered", "sum", "mean", "minimum", "maximum")]
+            if summary["answered"] == "0": values[1] = labels["no_public_answers" if model["edition"] == "public" else "not_answered"]
+            table([labels[x] for x in ("count", "sum", "average", "minimum", "maximum")], [values], [54, 129.6, 129.6, 99, 99])
     if model["view_sections"]:
         from document_charts import chart_panels, pdf_chart
-        for view in model["view_sections"]:
-            story.append(paragraph(_text(view["title"]),"heading"))
+        for view, navigation in zip(model["view_sections"], reading["views"]):
+            story.append(pdf_heading(_text(view["title"]), styles["heading"], navigation))
             if view.get("note"):
                 story.append(paragraph(_text(view["note"]), "metadata" if view["kind"] != "text" else "body"))
+            story.extend(paragraph(note, "reference") for note in navigation["notes"])
             if view["kind"] == "text": continue
-            table(["Statistic","Value"],[[METRIC_LABELS[x],_metric(view["summary"].get(x))] for x in view["statistics"]],[151.2,360])
-            story.append(paragraph(str(view["summary"]["answered"])+" visible answers from "+str(view["summary"]["observations"])+" observations."))
-            spec = _view_chart(view)
+            table([labels["statistic"],labels["value"]],[[labels[x],_metric(view["summary"].get(x), labels)] for x in view["statistics"]],[151.2,360])
+            story.append(paragraph(labels["observations"].format(answered=view["summary"]["answered"], observations=view["summary"]["observations"])))
+            spec = _view_chart(view, labels)
             for panel in chart_panels(spec) if spec else []:
                 story.append(paragraph(panel["title"],"question"))
                 story.extend([pdf_chart(panel,width=width,height=220 if width>360 else 210),Spacer(1,8)])
-            for title,headers,rows in _view_tables(view,width/72):
+            for title,headers,rows in _view_tables(view,width/72,labels):
                 table(headers,rows,caption=title)
-    for response in model["responses"] if model["include_response_details"] else []:
-        story.append(paragraph(response["heading"], "heading"))
-        story.extend(paragraph(value,"metadata") for value in response["metadata"])
+    for response, navigation in zip(model["responses"], reading["responses"]) if model["include_response_details"] else []:
+        story.append(pdf_heading(navigation["title"], styles["heading"], navigation))
+        story.extend(paragraph(value, "metadata") for value in navigation["metadata"])
         previous_context = None
-        for question in response["questions"]:
+        for question, question_navigation in zip(response["questions"], navigation["questions"]):
             context = tuple(question["context"])
             if context and context != previous_context:
-                story.extend(paragraph(value,"metadata") for value in context)
+                story.extend(paragraph(value, "metadata") for value in context)
             previous_context = context
-            story.append(paragraph(question["label"], "question"))
-            story.append(paragraph(question["classification"].capitalize() + (". Unit " + question["unit"] if question["unit"] else ""), "metadata"))
+            story.append(pdf_heading(question["label"], styles["question"], question_navigation))
+            story.extend(paragraph(note, "reference") for note in question_navigation["notes"])
+            for label, wording in question_navigation["wordings"]:
+                story.extend([paragraph(label, "record"), paragraph(wording)])
+            story.append(paragraph(labels[question["classification"]] + (". " + labels["unit"] + " " + question["unit"] if question["unit"] else ""), "metadata"))
             if question["kind"] == "table":
                 if question["rows"]:
                     headers = [c["label"] + (" (" + c["unit"] + ")" if c["unit"] else "") for c in question["columns"]]
                     if len(headers) <= max(2,min(5,int(width/64.8))):
-                        table(headers, [[_cell_text(c) for c in row] for row in question["rows"]])
+                        table(headers, [[display_cell(c, labels) for c in row] for row in question["rows"]])
                     else:
                         for row_number, row in enumerate(question["rows"], 1):
-                            table(["Column", "Answer"], list(zip(headers, [_cell_text(c) for c in row])), [151.2, 360],caption="Answer row " + str(row_number))
+                            table([labels["column"], labels["answer"]], list(zip(headers, [display_cell(c, labels) for c in row])), [151.2, 360], caption=labels["answer_row"] + " " + str(row_number))
                 else:
-                    story.append(paragraph(question["empty_text"]))
+                    story.append(paragraph(labels["withheld" if question["empty_state"] == "withheld" else "no_rows"]))
             else:
-                story.append(paragraph(question["text"]))
+                story.append(paragraph(display_answer(question, labels)))
             if question["alternative"]:
-                story.append(paragraph("Public alternative", "question"))
+                story.append(paragraph(labels["alternative"], "question"))
                 story.append(paragraph(question["alternative"]))
+    story.append(pdf_heading(labels["references"], styles["heading"], reading["reference_entry"]))
+    story.append(paragraph(labels["source_note"]))
+    if reading["references"]:
+        table([labels["reference"], labels["value"]], [[a,b] for a,b in reading["references"]], [151.2,360])
+    if reading["selected_sources"]:
+        table([labels["response"], labels["reference"]], [[row["title"], "\n".join(row["metadata"])] for row in reading["selected_sources"]], [151.2,360], caption=labels["selected_sources"])
+    for source in reading["workbooks"]:
+        if source["name"]: story.append(paragraph(labels["source_workbook"] + ": " + source["name"], "record"))
+        story.append(paragraph(labels["workbook_sha256"] + ": " + source["sha256"], "reference"))
     output = io.BytesIO()
     def footer(canvas, document):
         # Preserve deterministic bytes while giving the exported PDF the
@@ -638,35 +710,32 @@ def _pdf(model):
         canvas.setCreator("Questionnaire Operations")
         canvas.saveState()
         canvas.setFont("QuestionnaireSans", 8)
-        canvas.drawRightString(page_size[0]-50.4, 22, model["edition"].capitalize() + " edition  |  Page " + str(document.page))
+        canvas.drawRightString(page_size[0]-50.4, 22, labels[model["edition"]] + " · " + labels["page"] + " " + str(document.page))
         canvas.restoreState()
-    options = dict(pagesize=page_size,leftMargin=50.4,rightMargin=50.4,topMargin=46.8,bottomMargin=46.8,title=model["title"],author="Questionnaire Operations",subject=model["edition"].capitalize()+" questionnaire edition",invariant=True)
+    options = dict(pagesize=page_size,leftMargin=50.4,rightMargin=50.4,topMargin=46.8,bottomMargin=46.8,title=model["title"],author="Questionnaire Operations",subject=labels["questionnaire_edition"].format(edition=labels[model["edition"]].lower()),invariant=True,lang="fr-CA" if model["language"] == "fr" else "en-CA")
     if model["columns"] == 1:
         document = SimpleDocTemplate(output,**options)
+        install_pdf_outline(document)
         document.build(intro+story,onFirstPage=footer,onLaterPages=footer)
     else:
-        # A full-width opening followed by the saved two-column layout. Later
-        # pages keep two complete text frames and the same source order.
-        intro_height = sum(x.wrap(full_width,1000000)[1]+x.getSpaceBefore()+x.getSpaceAfter() for x in intro)+18
-        if intro_height > page_size[1]-180:
-            raise DocumentExportError("The report opening is too tall for its selected two-column layout")
-        def first_page(canvas,document):
-            footer(canvas,document)
-            opening = Frame(50.4,page_size[1]-46.8-intro_height,full_width,intro_height,leftPadding=0,rightPadding=0,topPadding=0,bottomPadding=0)
-            opening.addFromList(copy.deepcopy(intro),canvas)
-        def frames(height):
-            return [Frame(50.4+index*(width+18),46.8,width,height,leftPadding=0,rightPadding=0,topPadding=0,bottomPadding=0,id="column"+str(index)) for index in range(2)]
+        # Keep a long original introduction and complete contents in normal
+        # full-width page flow.  The selected two-column body starts on its
+        # following page; no retained description or entry needs truncation.
+        def frames():
+            return [Frame(50.4+index*(width+18),46.8,width,page_size[1]-93.6,leftPadding=0,rightPadding=0,topPadding=0,bottomPadding=0,id="column"+str(index)) for index in range(2)]
         document = BaseDocTemplate(output,**options)
-        document.addPageTemplates([PageTemplate(id="first",frames=frames(page_size[1]-93.6-intro_height),onPage=first_page,autoNextPageTemplate="later"),PageTemplate(id="later",frames=frames(page_size[1]-93.6),onPage=footer)])
-        document.build(story)
+        opening = Frame(50.4,46.8,full_width,page_size[1]-93.6,leftPadding=0,rightPadding=0,topPadding=0,bottomPadding=0,id="opening")
+        document.addPageTemplates([PageTemplate(id="opening",frames=[opening],onPage=footer),PageTemplate(id="body",frames=frames(),onPage=footer)])
+        install_pdf_outline(document)
+        document.build(intro+[NextPageTemplate("body"),PageBreak()]+story)
     return output.getvalue()
 
 
-def render_document(payload, format_name):
+def render_document(payload, format_name, *, language=None):
     """Render the supplied retained edition to complete PDF or editable DOCX bytes."""
     if format_name not in {"pdf", "docx"}:
         raise DocumentExportError("Questionnaire document downloads use PDF or Word")
-    model = document_model(payload)
+    model = document_model(payload, language=language)
     return _pdf(model) if format_name == "pdf" else _word(model)
 
 
@@ -674,10 +743,11 @@ def main():
     parser = argparse.ArgumentParser(description="Render one retained questionnaire document edition")
     parser.add_argument("payload", type=Path)
     parser.add_argument("output", type=Path)
+    parser.add_argument("--language", choices=("en", "fr"), help="Reader labels; original answers and question wording stay exact")
     args = parser.parse_args()
     if args.output.exists():
         parser.error("Choose a new output path")
-    data = render_document(json.loads(args.payload.read_text(encoding="utf-8")), args.output.suffix.lstrip("."))
+    data = render_document(json.loads(args.payload.read_text(encoding="utf-8")), args.output.suffix.lstrip("."), language=args.language)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with args.output.open("xb") as stream:
         stream.write(data)

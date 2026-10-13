@@ -192,7 +192,7 @@ export interface RubyInputs {
   probe: { ruby: string; bundlerVersion?: string; };
   create: { id: string; title: string; ruby: string; bundlerVersion: string; projectDirectory?: string; gemfile?: string; requestId: string; };
   start: { id: string; operationId: string; action: "install" | "verify" | "export"; offline?: boolean; applicationId?: string; workingCapture?: RubyWorkingCapture; };
-  run: { id: string; operationId: string; entry: "native-dataset-lifecycle" | "baserow-customer-lifecycle" | "dataset-records" | "dataset-records-lifecycle"; argv?: Array<string>; };
+  run: { id: string; operationId: string; entry: "native-dataset-lifecycle" | "baserow-customer-lifecycle" | "dataset-records" | "dataset-records-lifecycle" | "dataset-source" | "dataset-mapping-lifecycle"; argv?: Array<string>; };
   resume: { operationId: string; };
   cancel: { operationId: string; };
   operation: { operationId: string; };

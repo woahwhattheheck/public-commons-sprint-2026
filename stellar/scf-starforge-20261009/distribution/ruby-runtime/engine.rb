@@ -776,7 +776,9 @@ module StarforgeRubyRuntime
         "native-dataset-lifecycle"=>"developer/ruby-client/examples/native_dataset_lifecycle.rb",
         "baserow-customer-lifecycle"=>"baserow/customer/lifecycle.rb",
         "dataset-records"=>"developer/ruby-client/examples/rails_dataset/operator/records_cli.rb",
-        "dataset-records-lifecycle"=>"developer/ruby-client/examples/rails_dataset/operator/records_example.rb"
+        "dataset-records-lifecycle"=>"developer/ruby-client/examples/rails_dataset/operator/records_example.rb",
+        "dataset-source"=>"developer/ruby-client/examples/rails_dataset/operator/source_cli.rb",
+        "dataset-mapping-lifecycle"=>"developer/ruby-client/examples/rails_dataset/operator/mapping_example.rb"
       }
       relative = entries[selected.fetch("entry")]
       arguments = selected.fetch("argv")

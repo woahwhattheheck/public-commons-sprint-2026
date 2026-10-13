@@ -152,6 +152,9 @@ def verify_native_before(operation, target):
     expected = operation.get("precondition")
     if expected is None:
         return None
+    if expected.get("comparison") == "commissioned_typed":
+        from .commissioning_plan import verify_observed_before
+        return verify_observed_before(operation, target)
     current = target.record(expected["entity"], expected["record_id"])
     if current is None:
         raise TargetError("TARGET_PRECONDITION", "The original task disappeared after correction review.")
