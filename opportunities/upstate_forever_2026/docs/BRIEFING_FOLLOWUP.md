@@ -63,3 +63,7 @@ From the fixed current application, use the actual saved Workspace, plan revisio
 Choose exact entries with repeated --entry ORIGINAL_ENTRY_ID. Add --apply to receive the selected original notes. For a delivery supplied as files, replace --delivery-id with --report-model ORIGINAL_CLIENT_REPORT_MODEL.json --briefing-index ORIGINAL_CLIENT_REPORT_BRIEFING.json. Output files are created once; continuing the original operation uses a new output filename while native source and task identities remain stable.
 
 The complete source files are unchanged attachments under the existing plan. No separate server, duplicated task queue or model execution is introduced. The normal client-report and fieldwork owners retain their original workflows.
+
+## Original utility source briefings
+
+The same saved-report chooser includes completed Regional watershed source exports. Their explicit source-context report retains original watershed membership, observations and methods. Open its offline briefing from utility-watershed-packet.zip, record the actual review, and receive the resulting meeting file through the same plan preview and revision. Native callers use --source-export-id; exported files use the original source-context-report-model.json and source-context-report-briefing.json. See [UTILITY_SOURCE_BRIEFING.md](UTILITY_SOURCE_BRIEFING.md) for the complete original-source journey.
