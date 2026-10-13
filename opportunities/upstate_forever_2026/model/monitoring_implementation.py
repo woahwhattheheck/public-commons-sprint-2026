@@ -49,8 +49,9 @@ def _selection(service, campaign_id, revision_id):
     for original in retained_networks.values():
         service.verify_sources(original)
     from .monitoring_field_return import source_binding
+    return_cache = {}
     returned = {event["id"]: binding for event in events
-                if (binding := source_binding(service.workspace, event)) is not None}
+                if (binding := source_binding(service.workspace, event, return_cache)) is not None}
     return {"revision": selected, "plan": plan, "network": network,
             "events": events, "fieldwork_returns": returned, "history": retained_history,
             "retained_plans": retained_plans, "retained_networks": retained_networks}
@@ -69,7 +70,9 @@ def _packet(workspace, selected):
             if binding:
                 for name, member in source_export_members(workspace, label, binding):
                     add_member(files, "network_sources/" + key + "/" + name, member)
-    for binding in selected.get("fieldwork_returns", {}).values():
+    retained_returns = {binding["request_id"]: binding
+                        for binding in selected.get("fieldwork_returns", {}).values()}
+    for binding in retained_returns.values():
         for name, original in binding["source_files"].items():
             original = Path(original)
             add_member(files, "fieldwork_returns/" + binding["request_id"] + "/" + name,
