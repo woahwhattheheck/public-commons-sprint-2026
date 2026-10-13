@@ -47,6 +47,7 @@ from extension_registry import ExtensionRegistry
 from programmes import Programmes, ACTIONS as PROGRAMME_ACTIONS, READS as PROGRAMME_READS
 from task_requests import TaskRequests
 from study_catalogues import StudyCatalogues
+from programme_activity import ProgrammeActivity
 
 JSON_LIMIT = 4 * 1024 * 1024
 ACTIVE = {"queued", "running"}
@@ -141,6 +142,7 @@ class Operator:
         self.experiments = ExperimentOperator(self, Fault)
         self.parameter_studies = ParameterStudyAPI(self, Fault)
         self.programmes = Programmes(self, Fault)
+        self.programme_activity = ProgrammeActivity(self, Fault)
         self.verified = {}
         self.upload_limit = upload_limit
         self.extraction_limit = extraction_limit
@@ -834,8 +836,7 @@ class Operator:
             for study in state["parameter-studies"]:
                 study["case_count"] = len(study.get("cases", []))
                 study.pop("cases", None)
-        from programme_activity import ProgrammeActivity
-        state["compute_programmes"] = ProgrammeActivity(self, Fault).summaries(workspace, state["runs"])
+        state["compute_programmes"] = self.programme_activity.summaries(workspace, state["runs"])
         # Compact core readers already retain these exact summaries without
         # repeatedly reading the original rows and stage file inventories.
         if not compact:

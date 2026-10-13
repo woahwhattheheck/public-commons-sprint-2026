@@ -20,6 +20,7 @@ from model.common import (atomic_bytes, atomic_json, canonical, describe_file,
                           digest, file_digest, now, read_json, relative_file,
                           retain_file, verify_file)
 from model.common import INVEST_VERSION
+from model.record_catalog import ProjectedFileCache
 
 ACTIONS = {"workspace.snapshot", "workspace.receive", "workspace.recovery.resume"}
 READS = {"plan", "list", "inspect", "transport"}
@@ -96,6 +97,7 @@ class ProjectContinuity:
         self.operator = operator
         self.fault = fault
         self.supported_actions = supported_actions
+        self.catalogue = ProjectedFileCache()
 
     def _directory(self, workspace):
         return workspace.root / "project-transfers"
@@ -141,17 +143,24 @@ class ProjectContinuity:
     def list(self, workspace_key):
         ws = self.operator.ws(workspace_key)
         values = []
-        for path in sorted(self._directory(ws).glob("*.json")):
-            if path.stem == "HEAD":
-                continue
-            value = self._verify(ws, read_json(path), inputs=False)
-            values.append({k: value[k] for k in ("id", "title", "created_at", "summary", "project")})
+        paths = [path for path in sorted(self._directory(ws).glob("*.json")) if path.stem != "HEAD"]
+        self.catalogue.retain_paths(paths)
+
+        def project(value):
+            value = self._verify(ws, value, inputs=False)
+            return {k: value[k] for k in ("id", "title", "created_at", "summary", "project")}
+
+        for path in paths:
+            value = self.catalogue.read(path, project)
+            if value["project"]["id"] != ws.project["id"]:
+                raise ValueError("The selected transfer belongs to another scientific project")
+            values.append(value)
         return sorted(values, key=lambda row: (row["created_at"], row["id"]), reverse=True)
 
     def plan(self, workspace_key):
         ws = self.operator.ws(workspace_key)
         with self.operator.lock:
-            tasks = _clone(self.operator.task_list(workspace_key))
+            tasks = self.operator.task_list(workspace_key, compact=True)
         records = []
         for task in tasks:
             if task["action"] in HISTORY_ONLY:
@@ -162,7 +171,7 @@ class ProjectContinuity:
                             "required_original_inputs": task["state"] != "complete",
                             "handler_available": task["action"] in self.supported_actions,
                             "origin": task.get("transfer_origin")})
-        overview = ws.overview()
+        overview = ws.operator_overview()
         saved_view = getattr(self.operator, "operator_session", lambda key: None)(workspace_key)
         return {"project": ws.project, "workspace_key": workspace_key,
                 "operator_session": _clone(saved_view),
