@@ -159,9 +159,14 @@ export function attachExperiments(context) {
   }
   function taskActions(task) {
     if(!task.action?.startsWith('experiment.'))return '';
-    const id=task.result?.id||task.payload?.experiment_id||
+    const id=task.experiment?.id||task.experiment_id||task.result?.id||task.payload?.experiment_id||
       experiments().find(record=>sameDesign(record.selection,task.payload?.selection))?.id;
-    return id?'<div class="page-actions">'+btn('show','Open experiment',id)+'</div>':'';
+    if(!id)return '';
+    const retained=task.experiment||{},error=retained.report_error;
+    const refresh=error||retained.study_report?.state==='stale';
+    return (error?'<div class="notice error">'+esc(error)+'</div>':'')+
+      '<div class="page-actions">'+btn('show','Open experiment',id)+
+      (refresh?btn('report','Rebuild study report',id):'')+'</div>';
   }
   function axisEntries() {
     const entries=Array.isArray(axes)?axes.map(x=>typeof x==='string'?{path:x}:x):
