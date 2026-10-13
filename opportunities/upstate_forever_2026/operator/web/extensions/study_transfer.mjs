@@ -8,6 +8,7 @@ import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studie
 const ROOTS = [
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
+  ['parameter-studies', 'Parameter studies'],
   ['multivariate-controls', 'Matched-control designs'],
   ['runs', 'Native runs'],
   ['ensemble-products', 'Paired raster analyses'],
@@ -291,6 +292,8 @@ export function attachStudyTransfer(host) {
               ?button('open-sampling','Open sampling priorities','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-monitoring','Open in Monitoring','data-study-open="'+escapeHTML(key)+'"'):'')+
+            (row.state!=='unreadable'&&row.kind==='parameter-studies'&&typeof host.openParameterStudy==='function'
+              ?button('open-parameter','Open Parameter study','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&row.kind==='ensemble-products'&&typeof host.openDesk==='function'
               ?button('open-paired','Open paired analysis','data-study-open="'+escapeHTML(key)+'"'):'')+
             '</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind)+'</td>'+
@@ -556,6 +559,15 @@ export function attachStudyTransfer(host) {
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-receiving'){await openReceiving(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-spatial'){await openSpatial(target.dataset.studyKind,target.dataset.studyId);}
+      else if(action==='open-parameter'){
+        const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
+        if(!row||row.state==='unreadable'||row.kind!=='parameter-studies')
+          throw new Error('Choose an original saved Parameter study.');
+        if(typeof host.openParameterStudy!=='function')throw new Error('Use the maintained Parameter studies desk.');
+        const captured=stamp(),serial=++retainedRecordRequest;
+        await host.openParameterStudy({workspace_key:captured.workspace,experiment_id:row.id},
+          {current:()=>current(captured)&&serial===retainedRecordRequest});
+      }
       else if(action==='open-paired'){
         const row=visiblePage().items.find(item=>keyOf(item)===target.dataset.studyOpen);
         if(!row||row.state==='unreadable'||row.kind!=='ensemble-products')
