@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.4.12",
+  "version": "2.4.13",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "1056ae0a433decfd7927fe3c9e32f5dbe89dbb43",
@@ -53,8 +53,8 @@
     },
     {
       "path": "install_published_studies.py",
-      "bytes": 23242,
-      "sha256": "188e28262e912aa926afcaaa3ed09b701616f66dddac5b9da8c9a7e9f70be91d"
+      "bytes": 23300,
+      "sha256": "d5b62e21f25d2208bb6e632a79a137492222d85430881913f0e753f87c0c2e8a"
     },
     {
       "path": "integration/component_fragments/geographic-study-selection.json",
@@ -1233,8 +1233,8 @@
     },
     {
       "path": "operator/web/station_geography.mjs",
-      "bytes": 75236,
-      "sha256": "46f355426b380ed3ba03a788489a9ef86307e878f3a18a1fe42ece7685570e8f"
+      "bytes": 76132,
+      "sha256": "6995ba876bc317aef8322180ad8525f167db31ebf012ddd408e0efb03ca63790"
     },
     {
       "path": "PUBLISHED_STUDIES.md",
@@ -1268,8 +1268,8 @@
     },
     {
       "path": "source_tools/offline_handover/offline_handover.html",
-      "bytes": 23314,
-      "sha256": "6e1032d350e26bf60c3a9df59aee68c1f3aa607ba64b5b0f844013036909cc09"
+      "bytes": 23979,
+      "sha256": "46e142fe2096eb34825fe82c3dadcc6087ff739cbc49e6e05687d54573d16a38"
     },
     {
       "path": "source_tools/offline_handover/README.md",
@@ -2225,6 +2225,11 @@
       "path": "AGENTS.md",
       "bytes": 8289,
       "sha256": "c2ff39b9a18aa6db67637ff0c60c54ffeef8ba25e47a42e069ca81609c37cf45"
+    },
+    {
+      "path": "measurement_workspace/ORIGINAL_RESULT_SELECTION.md",
+      "bytes": 12117,
+      "sha256": "6030f6e935bc93fab1a846bed85e39028377600aa654a64987b90dee0de6d59b"
     }
   ],
   "composed_source_editions": {
@@ -2395,6 +2400,10 @@
       "retained_builder": "measurement_workspace/utility_microbiology.py",
       "scope": "The original full source is validated before selecting exact activity IDs; saved review, scientific report and cold receive retain complete original inputs.",
       "receiving_application": "Use the complete current application or compose this full family at the native boundary; preserve advancing shared browser, renderer and Study hooks."
+    },
+    "original_result_receiving": {
+      "guide": "measurement_workspace/ORIGINAL_RESULT_SELECTION.md",
+      "notes": "Retains the complete merged4100 family and source/receiving repairs; adds maintained original-result selection guide, current Station geography client and actual viewed offline handover template."
     }
   }
 }
