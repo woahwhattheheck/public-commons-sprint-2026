@@ -4,8 +4,8 @@
   "operation_id": "UPSTATE-FULL-PRODUCT-BUILD-BRYCE-20261012-1FB3-GUIDED-JOURNEY",
   "files": {
     "operator/install_guided_journey.py": {
-      "bytes": 23254,
-      "sha256": "88b8a0b07739d719858b34f62cf46744b94979824912b28a548c7084b737fe43"
+      "bytes": 23991,
+      "sha256": "30341e789fb222b0eaa60f935f44cc3ae846afc8f979b8206efa871fea34263d"
     },
     "operator/Guided_Journey_Integration.json": {
       "bytes": 21577,
@@ -28,20 +28,20 @@
       "sha256": "5a608c7fa200cd6f9fcf35c29ccf96999fa48f2b7c43912ccc835057c2343434"
     },
     "operator/web/operator_reference.mjs": {
-      "bytes": 19888,
-      "sha256": "174f5cee6a1b631daa7a499d31595f85ae0a3223a69bb840c5cc6f96c8e4ee37"
+      "bytes": 27338,
+      "sha256": "37a20dc3fae5d0de1eefddd8c0e3e7ee3c9de040e289ac69907ae35b02494539"
     },
     "operator/web/operator_reference.css": {
       "bytes": 1939,
       "sha256": "9ec48d33be8fdbae094fdc581d93985f17e8df28c43dc18d53f6c9db611c9afa"
     },
     "operator/OPERATOR_REFERENCE.html": {
-      "bytes": 16517,
-      "sha256": "33974a529b57309c0cad846213dd5d373ce624bc7f9cd1dde3fd329c4a8d1169"
+      "bytes": 24221,
+      "sha256": "0a5e8e213ef2eafb451c08a9696ebe49e574e0805c2dc207f961e81ae5b60cfb"
     },
     "operator/OPERATOR_REFERENCE.md": {
-      "bytes": 11466,
-      "sha256": "b951867f5df62fb389dd993d0f2dfd4a8a5803c8c68fffd7f394e066cf1aa4c0"
+      "bytes": 18584,
+      "sha256": "5b65b09ac1a8922b1a37102152f72cbc261d5b5ecfdf8b08a10d5c81bc6ddf26"
     }
   },
   "source_context": {
@@ -91,7 +91,21 @@
       "original_case": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791913846837249?thread_ts=1791724121.853269",
       "route": "Guided journey → Operator reference → actual existing screen / complete offline reference",
       "owner_direction": "CURRENT_OWNER_DIRECTION.md v2026-10-13.4; AGENTS.md2026-10-13.1; full post-call52 ordersF0C8R2SQ0NP",
-      "receiving": "Same original first-study receiver; actual populated and offline HTML desktop/390 viewing."
+      "receiving": "Same original first-study receiver; actual populated and offline HTML desktop/390 viewing.",
+      "calibration_cycle": {
+        "route": "Original annual observations and saved-DEM catchments → Calibration selection and physical history → selected Parameter working revisions and completed cases → editable Study receiving",
+        "source_changes": [
+          "4651",
+          "4656",
+          "4677",
+          "4705",
+          "4737",
+          "4744"
+        ],
+        "original_reference_adoption": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791916195821559?thread_ts=1791724121.853269",
+        "preservation": "The original eight reference sections, current workspace rendering, navigation, journey controller and CSS remain unchanged.",
+        "direct_study": "Share editable Study retains the exact chosen Calibration design or evaluation; all six Calibration root kinds and actual received design/evaluation/run opening controls are documented."
+      }
     }
   }
 }
