@@ -24,6 +24,7 @@ export function attachScientificReportEditions(host) {
   let sources=[],editions=[],selected=[],title='',contact={name:'',organization:'',email:''};
   let preview=null,opened=null,busy=false,error='',pending=null,storageIssue='';
   let briefingPreview=null,briefingOpened=null;
+  const briefingFrames=new Map();
   const valid=(ws,turn)=>workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   const request=(path,values={})=>host.api(host.endpoint(path,values));
   const payload=()=>({sources:selected.map(choice),...(title.trim()?{title:title.trim()}:{}),contact:{...contact}});
@@ -51,6 +52,7 @@ export function attachScientificReportEditions(host) {
     if(!panel){
       panel=document.createElement('section');panel.className='scientific-report-editions';
       panel.setAttribute('aria-label','Prepare and reopen scientific reports');
+      panel.innerHTML='<div data-scientific-report-main></div><section data-scientific-report-detail hidden></section><section data-scientific-report-briefing-host hidden></section><section data-scientific-report-files hidden></section>';
       panel.addEventListener('click',event=>{
         const button=event.target.closest('[data-scientific-report-action]');
         if(!button||!panel.contains(button))return;
@@ -77,7 +79,7 @@ export function attachScientificReportEditions(host) {
     let chosen=[],selectionIssue='';
     try{chosen=orderedReportSources(sources,selected);}catch(reason){selectionIssue=reason.message;}
     const selectedKeys=new Set(selected.map(key)),remaining=sources.filter(row=>!selectedKeys.has(key(row))),locked=busy||!!pending;
-    panel.innerHTML='<div class="source-reports-heading"><div><h3>Prepare a scientific report</h3>'+
+    panel.querySelector('[data-scientific-report-main]').innerHTML='<div class="source-reports-heading"><div><h3>Prepare a scientific report</h3>'+
       '<p>Select saved scientific studies in reading order. The report retains their methods, periods, figures and source data.</p></div>'+
       '<button type="button" data-scientific-report-action="refresh">Refresh saved reports</button></div>'+
       '<p data-scientific-report-status role="status">'+esc(error||storageIssue||selectionIssue||(busy?'Working through the original task queue…':''))+'</p>'+
@@ -105,8 +107,11 @@ export function attachScientificReportEditions(host) {
           row.source_count+' studies · '+row.section_count+' sections · '+row.figure_count+' figures</td><td>'+
           '<button type="button" data-scientific-report-action="open" data-id="'+esc(row.id)+'">Open saved report</button></td></tr>').join('')+
         '</tbody></table></div>':'<p class="note">Prepared editions appear here and stay with the Workspace backup.</p>')+
-      '<section data-scientific-report-detail'+(opened?'':' hidden')+'></section>';
+      '';
+    panel.querySelector('[data-scientific-report-detail]').hidden=!opened;
+    panel.querySelector('[data-scientific-report-files]').hidden=!opened;
     if(opened)renderDetail();
+    renderBriefingDocument();
   }
   function previewHTML(){
     if(!preview)return '<p class="note">Preview the current selection before preparing the report.</p>';
@@ -154,8 +159,8 @@ export function attachScientificReportEditions(host) {
       '<p class="note">The report ZIP contains the rendered report, its selection, figures and retained report data. Study transfer also includes its ordered source collections and available original editable study history. The Workspace backup keeps the entire project.</p>'+
       briefingHTML()+
       (opened.viewer_url?'<div class="source-report-frame-shell"><iframe title="'+esc(row.title)+
-        '" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" src="'+esc(opened.viewer_url)+'"></iframe></div>':'')+
-      '<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
+        '" sandbox="allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer" src="'+esc(opened.viewer_url)+'"></iframe></div>':'');
+    panel.querySelector('[data-scientific-report-files]').innerHTML='<div class="table-scroll"><table><thead><tr><th>File</th><th>Size / SHA256</th><th></th></tr></thead><tbody>'+
       opened.files.map(item=>'<tr><td>'+esc(item.path)+'</td><td>'+size(item.bytes)+'<small class="mono">'+esc(item.sha256)+
         '</small></td><td>'+link(item.url,'Download')+'</td></tr>').join('')+'</tbody></table></div>';
   }
@@ -169,7 +174,27 @@ export function attachScientificReportEditions(host) {
       (opened.briefings?.length?'<ul>'+opened.briefings.map(item=>'<li>'+item.page_count+' pages · <button type="button" data-scientific-report-action="briefing-open" data-id="'+esc(item.id)+'">Open saved briefing</button></li>').join('')+'</ul>':'')+
       (briefingOpened?'<div class="inline-actions">'+(briefingOpened.archive?link(briefingOpened.archive.url,'Download complete discussion package'):'')+
         link(briefingOpened.viewer_url,'Download briefing HTML')+'</div><p class="note">Extract the complete ZIP for the meeting. Export actual meeting notes from the briefing, then choose this saved briefing in Implementation &amp; fieldwork → Receive briefing follow-up.</p>'+
-        '<div class="source-report-frame-shell"><iframe title="'+esc(briefingOpened.briefing.title)+' — meeting briefing" sandbox="allow-scripts allow-downloads" referrerpolicy="no-referrer" src="'+esc(briefingOpened.viewer_url)+'"></iframe></div>':'')+'</section>';
+        '<p class="note">The opened meeting briefing remains below this report while you refresh its saved files. Export the meeting file before changing Workspace or closing this browser.</p>':'')+'</section>';
+  }
+  function renderBriefingDocument(){
+    const holder=panel.querySelector('[data-scientific-report-briefing-host]');
+    for(const row of briefingFrames.values())row.shell.hidden=true;
+    if(!opened||!briefingOpened){holder.hidden=true;return;}
+    const id=JSON.stringify([workspace,opened.edition.id,briefingOpened.briefing.id,briefingOpened.viewer_url]);
+    let saved=briefingFrames.get(id);
+    if(!saved){
+      const shell=document.createElement('section'),heading=document.createElement('h3'),frame=document.createElement('iframe');
+      heading.textContent=briefingOpened.briefing.title+' — meeting briefing';
+      shell.append(heading);
+      const frameShell=document.createElement('div');frameShell.className='source-report-frame-shell';
+      frame.title=heading.textContent;
+      frame.setAttribute('sandbox','allow-scripts allow-downloads allow-modals allow-popups allow-popups-to-escape-sandbox');
+      frame.setAttribute('allow','fullscreen');frame.setAttribute('allowfullscreen','');
+      frame.referrerPolicy='no-referrer';frame.src=briefingOpened.viewer_url;
+      frameShell.append(frame);shell.append(frameShell);holder.append(shell);
+      saved={shell,frame};briefingFrames.set(id,saved);
+    }
+    holder.hidden=false;saved.shell.hidden=false;
   }
   async function previewBriefing(){
     if(!opened)throw Error('Open the saved scientific report first.');
@@ -187,6 +212,7 @@ export function attachScientificReportEditions(host) {
     if(result.workspace_key!==ws||result.briefing?.id!==id||result.briefing.source_edition_id!==edition)
       throw Error('The saved briefing belongs to another scientific report.');
     briefingOpened=result;error='';render();
+    panel.querySelector('[data-scientific-report-briefing-host]').scrollIntoView({block:'start'});
   }
 
   async function showRetainedTask(){
@@ -318,6 +344,7 @@ export function attachScientificReportEditions(host) {
   function detach(){active=false;detailGeneration++;if(panel)panel.hidden=true;}
   function reset(){
     generation++;revision++;detailGeneration++;if(panel)panel.remove();
+    briefingFrames.clear();
     panel=null;workspace=null;sources=[];editions=[];selected=[];title='';
     contact={name:'',organization:'',email:''};
     preview=null;opened=null;briefingPreview=null;briefingOpened=null;busy=false;pending=null;error='';storageIssue='';active=false;
