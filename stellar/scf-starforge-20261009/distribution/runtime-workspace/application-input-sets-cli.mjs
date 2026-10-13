@@ -1,9 +1,13 @@
+import {inspectApplicationInputSetArchiveFile,receiveApplicationInputSetArchive,exportApplicationInputSetArchive} from './application-input-set-archives.mjs';
 // MIT. Companion source CLI uses the shared complete-tree source reader.
 import {resolve} from 'node:path';
 import {need} from './storage.mjs';
 import {retainApplicationInputSetDirectory} from './application-input-set-sources.mjs';
 export {readApplicationInputSetDirectory,retainApplicationInputSetDirectory} from './application-input-set-sources.mjs';
 export const applicationInputSetHelp=[
+  '  runtime-workspace input-set-archive-inspect --workspace DIRECTORY --archive ORIGINAL_ZIP',
+  '  runtime-workspace input-set-archive-receive --workspace DIRECTORY --archive ORIGINAL_ZIP [--set-id EXPECTED_SHA256]',
+  '  runtime-workspace input-set-archive-export --workspace DIRECTORY --set-id SHA256 --output NEW_ZIP',
   '  runtime-workspace input-sets --workspace DIRECTORY [--query TEXT --offset 0 --limit 20]',
   '  runtime-workspace input-set-import --workspace DIRECTORY --directory COMPLETE_SOURCE_FOLDER [--name NAME]',
   '  runtime-workspace input-set-status --workspace DIRECTORY --set-id SHA256',
@@ -12,6 +16,9 @@ export const applicationInputSetHelp=[
   '  runtime-workspace input-set-export --workspace DIRECTORY --set-id SHA256 --output PRIVATE_EXPORT_DIRECTORY',
 ].join('\n');
 export const applicationInputSetCommands={
+  'input-set-archive-inspect':['--workspace','--archive'],
+  'input-set-archive-receive':['--workspace','--archive','--set-id'],
+  'input-set-archive-export':['--workspace','--set-id','--output'],
   'input-sets':['--workspace','--query','--offset','--limit'],
   'input-set-import':['--workspace','--directory','--name'],
   'input-set-status':['--workspace','--set-id'],
@@ -21,6 +28,9 @@ export const applicationInputSetCommands={
 };
 export async function runApplicationInputSetCommand(model,command,options) {
   const required=key=>{need(options[key],'APPLICATION_INPUT_SET_ARGUMENT_REQUIRED',key+' is required.');return options[key];};
+  if(command==='input-set-archive-inspect')return inspectApplicationInputSetArchiveFile({archive:required('--archive')});
+  if(command==='input-set-archive-receive')return receiveApplicationInputSetArchive(model,{archive:required('--archive'),expectedSetId:options['--set-id']});
+  if(command==='input-set-archive-export')return exportApplicationInputSetArchive(model,{setId:required('--set-id'),output:required('--output')});
   if(command==='input-sets')return model.applicationInputSetsState({query:options['--query']??'',offset:Number(options['--offset']??0),limit:Number(options['--limit']??20)});
   if(command==='input-set-import')return retainApplicationInputSetDirectory(model,{directory:resolve(required('--directory')),name:options['--name']});
   if(command==='input-set-status')return model.applicationInputSetInspect({setId:required('--set-id')});

@@ -337,6 +337,13 @@
         "application-result-sets.mjs",
         "text/javascript; charset=utf-8"
       ]
+    ],
+    [
+      "/application-input-set-archive-format.mjs",
+      [
+        "application-input-set-archive-format.mjs",
+        "text/javascript; charset=utf-8"
+      ]
     ]
   ]
 }
