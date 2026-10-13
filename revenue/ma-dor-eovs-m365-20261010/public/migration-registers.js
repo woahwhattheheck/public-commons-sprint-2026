@@ -383,11 +383,17 @@ function create(context){
     }
     return panel("Complete register history",basicForm([field("Record kind",select("kind",["dataset","plan","rehearsal","review","cutover"],"dataset"))],"Browse every retained record",data=>load(data,0)),results,opened);
   }
+  async function originalOperation(request){
+    const reply=await read("operation.get",{id:request.payload.operation_id});
+    if(!reply.found){const error=new Error("The original request has not been found.");error.code="OPERATION_NOT_FOUND";throw error;}
+    if(!object(reply.operation))throw Error("The original operation response is incomplete.");
+    return reply.operation;
+  }
   function verifyOriginal(operation,request){
     if(operation.id!==request.payload.operation_id||operation.operation!==request.operation||stable(operation.request)!==stable(request.payload))throw new Error("The retained operation differs from the selected original request. Preserve this working file and inspect both records.");
   }
   async function finishPending(key,entry){
-    const operation=await read("operation.get",{id:entry.request.payload.operation_id});
+    const operation=await originalOperation(entry.request);
     verifyOriginal(operation,entry.request);
     jsonRecord("Original register operation",operation);
     if(operation.status==="SUCCEEDED"){
@@ -401,7 +407,7 @@ function create(context){
     if(!reason.trim())throw new Error("Enter the reason for preserving this attempt and revising its draft.");
     let observation;
     try{
-      observation=await read("operation.get",{id:entry.request.payload.operation_id});
+      observation=await originalOperation(entry.request);
       verifyOriginal(observation,entry.request);
       if(observation.status==="SUCCEEDED"){await finishPending(key,entry);render();return;}
       if(observation.status!=="INTERRUPTED")throw new Error("The original request has not stopped. Inspect its retained result before revising this draft.");
@@ -430,7 +436,7 @@ function create(context){
         }),
         linkButton("Continue interrupted request",async()=>{
           if(!reason.value.trim())throw new Error("Enter a continuation reason below.");
-          const original=await read("operation.get",{id:entry.request.payload.operation_id});
+          const original=await originalOperation(entry.request);
           verifyOriginal(original,entry.request);
           if(original.status==="SUCCEEDED"){await finishPending(key,entry);render();return;}
           await command("resume:"+entry.request.payload.operation_id,"operation.resume",{target_operation_id:entry.request.payload.operation_id,reason:reason.value});
