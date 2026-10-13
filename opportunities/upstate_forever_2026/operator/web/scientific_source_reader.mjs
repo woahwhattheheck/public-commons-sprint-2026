@@ -8,7 +8,7 @@ const PAGE=50;
 
 export function attachScientificSourceReader(host){
   let panel=null,workspace=null,active=false,generation=0,requestId=0,opened=null,error='',busy=false;
-  let query='',pages=new Map(),documentPath=null;
+  let query='',pages=new Map(),documentPath=null,readingTitle='';
   const frames=new Map();
   const valid=(ws,turn)=>active&&workspace===ws&&host.getWorkspace()===ws&&generation===turn;
   function ensure(container){
@@ -36,14 +36,18 @@ export function attachScientificSourceReader(host){
     }
     if(panel.parentNode!==container)container.append(panel);
   }
-  function status(){if(panel)panel.querySelector('[data-source-reader-status]').textContent=error||(busy?'Reading complete original source…':'');}
+  function status(){if(panel)panel.querySelector('[data-source-reader-status]').textContent=error||(busy?'Reading complete original source: '+readingTitle+'…':'');}
   async function open(source,{isCurrent}={}){
     if(!active||!panel)throw Error('Open Sources before reading its original scientific study.');
     if(!source||typeof source.source_collection_id!=='string'||typeof source.source_id!=='string')
       throw Error('Choose an exact retained scientific source.');
     const ws=workspace,turn=generation,ticket=++requestId;
     const current=()=>valid(ws,turn)&&ticket===requestId&&(typeof isCurrent!=='function'||isCurrent());
-    busy=true;error='';panel.hidden=false;status();
+    busy=true;error='';readingTitle=String(source.title||source.source_id);panel.hidden=false;
+    if(!opened)panel.querySelector('[data-source-reader-heading]').innerHTML=
+      '<div class="source-reports-heading"><div><h3>Read original scientific study</h3><p>'+esc(readingTitle)+
+      '</p></div><button type="button" data-source-reader-action="close">Return to report selection</button></div>';
+    status();
     let result;
     try{result=await host.api(host.endpoint('/api/source-reports/scientific-source',{
       ...choice(source),...(source.body_sha256?{body_sha256:source.body_sha256}:{})}));}
@@ -53,7 +57,7 @@ export function attachScientificSourceReader(host){
        result.source?.source_collection_id!==source.source_collection_id||result.source?.source_id!==source.source_id||
        (source.body_sha256&&result.source.body_sha256!==source.body_sha256)||
        !Array.isArray(result.files)||!Array.isArray(result.recipe?.sections)){
-      busy=false;throw Error('The original source reader returned another retained edition.');
+      busy=false;error='The original source reader returned another retained edition.';status();throw Error(error);
     }
     const same=opened&&key(opened.source)===key(result.source);
     opened=result;busy=false;error='';
@@ -148,6 +152,6 @@ export function attachScientificSourceReader(host){
     active=true;ensure(container);
   }
   function detach(){active=false;requestId++;busy=false;if(panel)panel.hidden=true;}
-  function reset(){detach();generation++;frames.clear();panel?.remove();panel=null;workspace=null;opened=null;error='';query='';pages.clear();documentPath=null;}
+  function reset(){detach();generation++;frames.clear();panel?.remove();panel=null;workspace=null;opened=null;error='';query='';pages.clear();documentPath=null;readingTitle='';}
   return {mount,open,detach,reset};
 }
