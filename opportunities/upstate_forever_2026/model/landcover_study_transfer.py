@@ -292,7 +292,11 @@ def _local(closure, collection_id, entry, origin, recipe, members, edition, bind
 
 def include_source(closure, collection_id, entry):
     """Follow this producer only for an explicitly ordered saved-report source."""
-    if (entry.get("metadata") or {}).get("source_kind") != "saved_landcover_ledger":
+    source_kind = (entry.get("metadata") or {}).get("source_kind")
+    if source_kind == "observed-landcover-selections":
+        from . import observed_landcover_study_transfer
+        return observed_landcover_study_transfer.include_source(closure, collection_id, entry)
+    if source_kind != "saved_landcover_ledger":
         return False
     identifier(collection_id)
     origin, recipe, members, edition, binding, report, originals = _captured(closure, entry)
