@@ -1,5 +1,6 @@
 /** Independent scientific source comparisons in the original authenticated Workspace. */
 import {draftScope,openComparisonDraftStore} from './independent_comparison_state.mjs';
+import {renderIndependentFigures,moveIndependentFigure} from './independent_comparison_figures.mjs';
 const clone=value=>JSON.parse(JSON.stringify(value));
 const canonical=value=>JSON.stringify(value,(_k,v)=>v&&typeof v==='object'&&!Array.isArray(v)?Object.fromEntries(Object.keys(v).sort().map(k=>[k,v[k]])):v);
 const list=value=>Array.isArray(value)?value:[];
@@ -70,7 +71,7 @@ export function attachIndependentComparison(host){
   }
   function retainParent(c){if(c.opened?.edition?.id)c.state.selection.parent_id=c.opened.edition.id;else if(c.state.savedBasis&&canonical(c.state.selection)===c.state.savedBasis.selectionKey)c.state.selection.parent_id=c.state.savedBasis.editionId;}
   function validateWorking(value){
-    need(value&&typeof value==='object'&&Array.isArray(value.history)&&Array.isArray(value.requests)&&typeof value.raw==='string'&&typeof value.rawDirty==='boolean'&&value.view&&['selection','mapping','pairs','results','originals','context','history'].includes(value.view.tab)&&Number.isSafeInteger(value.view.page)&&value.view.page>=0&&typeof value.view.query==='string','Retain the complete editor, history and view state.');
+    need(value&&typeof value==='object'&&Array.isArray(value.history)&&Array.isArray(value.requests)&&typeof value.raw==='string'&&typeof value.rawDirty==='boolean'&&value.view&&['selection','mapping','pairs','results','figures','originals','context','history'].includes(value.view.tab)&&Number.isSafeInteger(value.view.page)&&value.view.page>=0&&typeof value.view.query==='string','Retain the complete editor, history and view state.');
     selectionValid(value.selection);
     if(value.pending){const r=value.pending.request;need(r&&typeof r.workspace==='string'&&r.action==='independent.comparison.save'&&typeof r.operation_id==='string'&&/^[A-Za-z0-9_-]{16,100}$/.test(r.operation_id),'Retain the exact original task request and workspace.');selectionValid(r.payload);}
     return value;
@@ -85,7 +86,7 @@ export function attachIndependentComparison(host){
     return '<section class="ic-desk"><header><h2>Independent source comparisons</h2><p>Compare a saved native result with an independently published estimate. Keep original support, uncertainty and disagreements visible.</p></header>'+
       '<div class="ic-toolbar">'+button('refresh','Refresh sources')+button('working','Download complete working draft')+'<label>Open working draft<input type="file" data-import accept=".json,application/json"></label>'+button('conflicts','Conflicting drafts')+button('retry-storage','Retry original local save')+'</div>'+
       '<p class="ic-status" data-status role="status" aria-live="polite">Opening retained choices…</p><div data-pending></div>'+
-      '<nav class="ic-tabs" aria-label="Comparison sections">'+['selection','mapping','pairs','results','originals','context','history'].map(t=>button('tab',(t==='context'?'Publisher context':t[0].toUpperCase()+t.slice(1)),'data-tab="'+t+'" role="tab"')).join('')+'</nav>'+
+      '<nav class="ic-tabs" aria-label="Comparison sections">'+['selection','mapping','pairs','results','figures','originals','context','history'].map(t=>button('tab',(t==='context'?'Publisher context':t==='figures'?'Maps and figures':t[0].toUpperCase()+t.slice(1)),'data-tab="'+t+'" role="tab"')).join('')+'</nav>'+
       '<div data-body></div><div data-conflicts></div><div class="ic-toolbar"><label>Saved comparison<select data-saved><option value="">Choose a saved edition</option></select></label>'+button('open','Open selected edition')+button('new','New draft','data-mutator')+'</div>'+
       '<div data-downloads></div><div class="ic-toolbar">'+button('inputs','Read selected original inputs','data-mutator')+button('preview','Preview comparison','data-mutator')+button('save','Save full comparison','data-mutator')+button('resume','Recover original request')+'</div></section>';
   }
@@ -175,6 +176,7 @@ export function attachIndependentComparison(host){
     const s=c.state.selection,ref=s.reference,tab=c.state.view.tab;
     let html='';
     if(tab==='context')html=predictionContextView(c)+fitContextView(c);
+    else if(tab==='figures')html=renderIndependentFigures(c.opened,c.state.view);
     else if(tab==='selection'){
       const natives=list(c.catalog?.native_comparisons||c.catalog?.comparisons),sources=list(c.catalog?.reference_sources||c.catalog?.references||c.catalog?.sources);
       html='<section class="ic-panel ic-editor" data-editor data-guided><h3>Original selections</h3><div class="ic-grid">'+
@@ -216,6 +218,7 @@ export function attachIndependentComparison(host){
       html='<section class="ic-panel"><h3>Draft and request history</h3><p>Saved scientific editions stay in the original Workspace. This working draft also retains replaced unfinished selections and exact operator requests.</p>'+table(['When','Reason','Original selection'],c.state.history.map((r,i)=>'<tr><td>'+esc(r.at)+'</td><td>'+esc(r.reason)+'</td><td>'+button('history-download','Download complete prior draft','data-index="'+i+'"')+'</td></tr>').join(''))+'<details><summary>Original requests and task receipts</summary><pre>'+esc(pretty(c.state.requests))+'</pre></details></section>';
     }
     node('[data-body]').innerHTML=html;paintStatus(c);
+    if(tab==='figures'){const image=node('[data-figure-image]');if(image?.complete&&image.naturalWidth>0){const label=node('[data-figure-status]');if(label)label.textContent='Exact saved figure loaded. Full original data and file downloads remain below.';}}
   }
   async function refresh(c){
     const g=epoch,ticket=++c.readEpoch,result=await api(endpoint('/api/independent-comparison/catalog',{workspace:c.scope.workspace}));
@@ -335,6 +338,8 @@ export function attachIndependentComparison(host){
       }finally{c.busy=false;if(alive(c,g))paintStatus(c);}return;
     }
     if(action==='tab'){c.state.view.tab=target.dataset.tab;c.dirty=true;queueSave(c);render(c);if(c.state.view.tab==='context')return Promise.all([c.fitContext?null:loadFitContext(c),c.predictionContext?null:loadPredictionContext(c)]);return;}
+    if(action==='figure-unpaired-previous'||action==='figure-unpaired-next'){const side=target.dataset.side;need(['native','reference'].includes(side),'Choose an original unpaired source table.');const key=side==='native'?'figureNativePage':'figureReferencePage',rows=list(c.opened?.data?.['unpaired_'+side]),last=Math.max(0,Math.ceil(rows.length/50)-1),page=Number.isSafeInteger(c.state.view[key])?c.state.view[key]:0;c.state.view[key]=Math.max(0,Math.min(last,page+(action==='figure-unpaired-next'?1:-1)));c.dirty=true;queueSave(c);renderBody(c);return;}
+    if(action==='figure-previous'||action==='figure-next'){const chosen=moveIndependentFigure(c.opened,c.state.view,action==='figure-next'?1:-1);if(chosen){c.state.view.figureId=chosen;c.dirty=true;queueSave(c);renderBody(c);}return;}
     if(action==='prediction-context-read')return loadPredictionContext(c);
     if(action==='prediction-context-download'){need(c.predictionContext,'Read the complete prediction chapter first.');download('sparrow-prediction-context.json',c.predictionContext);return;}
     if(action==='publisher-field-map-download'){need(c.predictionContext,'Read the complete prediction chapter first.');download('sparrow-publisher-field-map.json',c.predictionContext.sourceMap);return;}
@@ -370,8 +375,11 @@ export function attachIndependentComparison(host){
   function detach(){const c=ctx;if(c){clearTimeout(c.timer);if(c.dirty)queueSave(c);}events?.abort();events=null;root=null;ctx=null;epoch++;}
   async function mount(container){
     detach();root=container;const g=epoch,c=localContext(activeScope());ctx=c;root.innerHTML=controls();events=new AbortController();const signal=events.signal;
+    root.addEventListener('load',e=>{if(!alive(c,g)||!e.target.matches?.('[data-figure-image]'))return;const label=node('[data-figure-status]');if(label)label.textContent='Exact saved figure loaded. Full original data and file downloads remain below.';},{signal,capture:true});
+    root.addEventListener('error',e=>{if(!alive(c,g)||!e.target.matches?.('[data-figure-image]'))return;const label=node('[data-figure-status]');if(label){label.textContent='The retained figure could not be displayed. Reopen this same saved edition or use its exact SVG and data downloads.';label.classList.add('ic-error');}},{signal,capture:true});
     root.addEventListener('input',e=>{try{if(!e.target.matches('select,[data-native],[data-reference]'))input(e);}catch(error){status(error.message,true);}},{signal});
     root.addEventListener('change',e=>{const t=e.target;
+      if(t.matches('[data-figure-filter]')){const key=t.dataset.figureFilter;need(['figureKind','figureParameter','figureId'].includes(key),'Choose an original figure display control.');c.state.view[key]=t.value;if(key!=='figureId')c.state.view.figureId='';c.dirty=true;queueSave(c);renderBody(c);return;}
       if(t.matches('[data-import]')){const file=t.files?.[0];if(file)receive(c,file).catch(error=>{if(alive(c,g))status(error.message,true);});return;}
       try{if(t.matches('[data-native],[data-reference]')){editable(c);retainParent(c);archive(c,'Original source selection changed');
           if(t.matches('[data-native]'))c.state.selection.native_comparison_id=t.value;

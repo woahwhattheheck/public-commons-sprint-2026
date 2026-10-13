@@ -74,6 +74,34 @@ No exact outgoing application/report/archive is claimed visually ready from sour
 Read the complete current AGENTS.md and CURRENT_OWNER_DIRECTION.md v2026-10-13.4. The later ECO-POSTCALL-20261013 owner work orders in F0C8R2SQ0NP release the browser and supersede the historical cutoff. Continue original teaching12/regional12/38F0 scientific identities, native queues and current owners. Do not send Tim anything externally, start another cloud session, publish private customer inputs, use private GitHub or Actions, or change native model behavior in this component.
 
 
+## Saved comparison maps and figures
+
+New saved editions use `saved-native-independent-source-2`. The original comparison calculator, selected native run, every source row, unit conversion, eligibility decision and residual stay unchanged. Old editions remain readable and are never silently regenerated. Reopen original inputs and save an attributed successor to obtain figures under the current complete source.
+
+The original engine writes `figures/index.html`, native SVGs, `figures/figures.json`, `figures/figure-data.json`, `figures/geometry.json`, and `figures/pair-values.csv` before the immutable comparison is published. Every member joins the original source manifest, complete ZIP and Study report recipe. The main comparison report embeds the exact generated SVGs. Study uses the same maintained `scientific_figures.py` and `scientific_map_figures.py` specifications for its PDF/vector output. The original authenticated file route verifies each saved member before the operator displays it.
+
+### Geometry and its limits
+
+Native catchments for both paired and original unpaired rows are read from the complete copied original source with the existing saved layer, filter and identity field. Each selected identity must be unique and resolve to a valid, nonempty Polygon or MultiPolygon. Conflicting/missing selected native geometry is a source integrity failure; it is never silently discarded. Complete original geometry, properties, CRS and the transformed display geometry are retained. Transformation uses `always_xy=True` into the already selected native model grid in projected metres. Full holes, multipart vertices and source pins survive; no simplification, repair, centroid, invented station or basemap occurs.
+
+A reference reach appears only when the selected reference source itself retains the original NLDI GeoJSON as a companion, its literal COMID identity matches the exact mapped reference catchment ID, and the original feature/provenance fields agree. Installed regional geometry is never attached to an unrelated imported table. NLDI COMID geometry is a reach line, not a station point or catchment polygon. Original unpaired reference rows with literal retained reach geometry get explicitly labeled context maps, while their absent geometry remains listed. Numbered reach labels use original vertices solely for drawing placement, never as inferred station points. Maps page at six reach labels without dropping any geometry. Missing reference geometry is a normal explicit state and does not make a comparison comparable. Geographic association remains distinct from equal quantity, fraction, spatial and temporal support.
+
+The renderer preserves equal projected X/Y scale, polygon holes and complete line vertices. Its scale bar reports grid metres, not a ground-distance correction; grid north is not river-flow direction. The geometry JSON includes exact original/projected forms, original source member, transformation definition/accuracy and actual geometry runtime versions.
+
+### Numerical panels
+
+Only original pairs whose final saved decision is `comparable` enter paired-value and signed-difference panels. These separate nitrogen, phosphorus and sediment and their original common units. Each panel contains at most twelve pairs for readability; every remaining pair continues on a following panel, with no scientific sampling. Filled native markers and open converted-reference markers show the original annual values. Differences retain `native − converted reference`; zero means numerical agreement only. The charts add no regression, midpoint, uncertainty band, trend, summed load or independence claim.
+
+Context-only pairs remain complete in the reader, CSV and JSON, with original units, definitions, qualifiers, periods, source evidence and rationale. Full original unpaired rows and exclusions are retained. Values outside a finite plotting scale remain in the data with a precise unplotted reason; they are not replaced or dropped.
+
+### Source/API and receiving
+
+`independent_comparison_figures.specifications(result, geometry, comparison_source, geometry_source)` is pure. `geometry_data(directory, inputs, result, originals)` resolves only verified copied source files. `prepare(...)` produces native vectors before original source publication. `inspect(...)` reads verified original deliverables; it does not rerun old computations or maps.
+
+Current `independent_comparison.inspect` adds optional `figures` with schema/title/edition, `figures[]` (id,kind,title,caption,path,parameter,units,pair_ids), complete `data`, and reader/spec/data_path/csv/geometry_path. Original old editions omit that field. Operator selection is view state only and cannot rewrite the scientific selection or dispatch another native solve.
+
+On the original equipped receiving operation, save a comparison from its actual completed native run and retained reference source; open the map, paired-values and differences; verify normal missing-reference/context-only handling; open each actual SVG, complete reader, CSV/JSON and archive; reopen the original Study/PDF. Exercise an old saved edition and a newly attributed successor without mutating the original. Inspect desktop and narrow screens and actually view all captured screenshots. Source review is not native/rendered acceptance. The complete owner rule below remains mandatory.
+
 <!-- bryce-rendered-product-inspection:begin -->
 ## Standing lab rule: inspect the rendered product before presenting it
 

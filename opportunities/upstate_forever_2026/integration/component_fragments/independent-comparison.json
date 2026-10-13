@@ -4,7 +4,7 @@
   "source_reference": "https://github.com/woahwhattheheck/public-commons-sprint-2026/tree/main/opportunities/upstate_forever_2026",
   "components": {
     "independent-comparison": {
-      "title": "Saved native and independent source comparison with attributed support review",
+      "title": "Saved native and independent source comparison with full support maps and descriptive figures",
       "paths": [
         "model/independent_comparison.py",
         "model/INDEPENDENT_COMPARISON_DOMAIN.md",
@@ -43,7 +43,12 @@
         "source/usgs-sparrow-upper-savannah-20261013/publisher-context/source-budgets.csv",
         "source/usgs-sparrow-upper-savannah-20261013/publisher-context/edition-differences.csv",
         "source/usgs-sparrow-upper-savannah-20261013/publisher-context/REPRODUCE.md",
-        "model/verified_files.py"
+        "model/verified_files.py",
+        "model/independent_comparison_figures.py",
+        "operator/web/independent_comparison_figures.mjs",
+        "model/scientific_figures.py",
+        "model/scientific_map_figures.py",
+        "model/rasters.py"
       ],
       "requires": [
         "observed-context",
@@ -96,7 +101,12 @@
         "source/usgs-sparrow-upper-savannah-20261013/publisher-context/source-budgets.csv",
         "source/usgs-sparrow-upper-savannah-20261013/publisher-context/edition-differences.csv",
         "source/usgs-sparrow-upper-savannah-20261013/publisher-context/REPRODUCE.md",
-        "model/verified_files.py"
+        "model/verified_files.py",
+        "model/independent_comparison_figures.py",
+        "operator/web/independent_comparison_figures.mjs",
+        "model/scientific_figures.py",
+        "model/scientific_map_figures.py",
+        "model/rasters.py"
       ]
     }
   }
