@@ -1,0 +1,703 @@
+{
+  "schema": "commons.canadabuys.source-contract.v1",
+  "operation": "SCF-CANADABUYS-PROCUREMENT-9FCD-20261012",
+  "repository": "woahwhattheheck/tjlabs-stellar-merchant-workspace",
+  "original_engine_commit": "9bfbb77418bc442b0644091a8c1d7f4e8f6cf75e",
+  "repository_instructions": {
+    "tree_sha": "9bfbb77418bc442b0644091a8c1d7f4e8f6cf75e",
+    "truncated": false,
+    "exact_AGENTS_files": []
+  },
+  "official_dataset": "https://open.canada.ca/data/en/dataset/6abd20d4-7a1c-4b38-baa2-9525d0bb2fd2",
+  "official_guidance": "https://donnees-data.tpsgc-pwgsc.gc.ca/ba2/ac-cb/soutien-support-eng.html",
+  "license_url": "https://open.canada.ca/en/open-government-licence-canada",
+  "complete_new_tender_source": {
+    "url": "https://canadabuys.canada.ca/opendata/pub/newTenderNotice-nouvelAvisAppelOffres.csv",
+    "final_url": "https://canadabuys.canada.ca/opendata/pub/newTenderNotice-nouvelAvisAppelOffres.csv",
+    "status": 200,
+    "captured_at": "2026-10-12T15:38:06.127771+00:00",
+    "bytes": 2904,
+    "sha256": "88c4ad1f4e2f5d4e45d6bc34be0b9421f5e5a09b82963eb4339e7e03b33b6ee1",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": "2904",
+      "Last-Modified": "Mon, 12 Oct 2026 14:15:06 GMT",
+      "ETag": "0x8DF286B375C5E59"
+    },
+    "columns": [
+      "title-titre-eng",
+      "title-titre-fra",
+      "referenceNumber-numeroReference",
+      "amendmentNumber-numeroModification",
+      "solicitationNumber-numeroSollicitation",
+      "publicationDate-datePublication",
+      "tenderClosingDate-appelOffresDateCloture",
+      "amendmentDate-dateModification",
+      "expectedContractStartDate-dateDebutContratPrevue",
+      "expectedContractEndDate-dateFinContratPrevue",
+      "tenderStatus-appelOffresStatut-eng",
+      "tenderStatus-appelOffresStatut-fra",
+      "gsin-nibs",
+      "gsinDescription-nibsDescription-eng",
+      "gsinDescription-nibsDescription-fra",
+      "unspsc",
+      "unspscDescription-eng",
+      "unspscDescription-fra",
+      "procurementCategory-categorieApprovisionnement",
+      "noticeType-avisType-eng",
+      "noticeType-avisType-fra",
+      "procurementMethod-methodeApprovisionnement-eng",
+      "procurementMethod-methodeApprovisionnement-fra",
+      "selectionCriteria-criteresSelection-eng",
+      "selectionCriteria-criteresSelection-fra",
+      "limitedTenderingReason-raisonAppelOffresLimite-eng",
+      "limitedTenderingReason-raisonAppelOffresLimite-fra",
+      "tradeAgreements-accordsCommerciaux-eng",
+      "tradeAgreements-accordsCommerciaux-fra",
+      "regionsOfOpportunity-regionAppelOffres-eng",
+      "regionsOfOpportunity-regionAppelOffres-fra",
+      "regionsOfDelivery-regionsLivraison-eng",
+      "regionsOfDelivery-regionsLivraison-fra",
+      "contractingEntityName-nomEntitContractante-eng",
+      "contractingEntityAddressLine-ligneAdresseEntiteContractante-eng",
+      "contractingEntityAddressCity-entiteContractanteAdresseVille-eng",
+      "contractingEntityAddressProvince-entiteContractanteAdresseProvince-eng",
+      "contractingEntityAddressPostalCode-entiteContractanteAdresseCodePostal",
+      "contractingEntityAddressCountry-entiteContractanteAdressePays-eng",
+      "contractingEntityName-nomEntitContractante-fra",
+      "contractingEntityAddressLine-ligneAdresseEntiteContractante-fra",
+      "contractingEntityAddressCity-entiteContractanteAdresseVille-fra",
+      "contractingEntityAddressProvince-entiteContractanteAdresseProvince-fra",
+      "contractingEntityAddressCountry-entiteContractanteAdressePays-fra",
+      "endUserEntitiesName-nomEntitesUtilisateurFinal-eng",
+      "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-eng",
+      "endUserEntitiesName-nomEntitesUtilisateurFinal-fra",
+      "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-fra",
+      "contactInfoName-informationsContactNom",
+      "contactInfoEmail-informationsContactCourriel",
+      "contactInfoPhone-contactInfoTelephone",
+      "contactInfoFax",
+      "contactInfoAddressLine-contactInfoAdresseLigne-eng",
+      "contactInfoCity-contacterInfoVille-eng",
+      "contactInfoProvince-contacterInfoProvince-eng",
+      "contactInfoPostalcode",
+      "contactInfoCountry-contactInfoPays-eng",
+      "contactInfoAddressLine-contactInfoAdresseLigne-fra",
+      "contactInfoCity-contacterInfoVille-fra",
+      "contactInfoProvince-contacterInfoProvince-fra",
+      "contactInfoCountry-contactInfoPays-fra",
+      "noticeURL-URLavis-eng",
+      "noticeURL-URLavis-fra",
+      "attachment-piecesJointes-eng",
+      "attachment-piecesJointes-fra",
+      "tenderDescription-descriptionAppelOffres-eng",
+      "tenderDescription-descriptionAppelOffres-fra"
+    ],
+    "row_count": 0,
+    "statuses": {},
+    "categories": {},
+    "longest_field": 0,
+    "selected": [],
+    "complete_gzip_base64": "H4sIAAAAAAACA5VWS27bMBDdF+glsq4OYcgO0CIfI3G6p6mRMgBFEkPKiM/WRY/UK3REUrY+li0vbFMzb978Rf/78/fBo1eQ8TdBBrp6+DGQlCRYQlACgZbw0tR7oEw3NZB566SMEDXogj9+gHg2BZYohUejGeSMQok+PA5w70adNQy0zV4ls7XwkBX8tT3L2hjZHVCujENdBYywFtRrWRK49plVvqFBaCeqUVjwZUF6KHKjPQnp372gM3gN+8ZHld8SHBq4YLLRxcngEfUYHqNlXt+4fqBB4ruyXwfFTlScb6Zx79J5DU4S2jaTIO4/R9pbqMjbaGedPB2mNFN5NLRkJNe5rW/OyVeGjpmMB4SVZfUBHcN1gLCBNh4l7I6WW8aqcIguLmkmTp7Bf5oiq8PP1EGiusMgenCguKEszQk9EIpMhgOXv9Mk6iXIyKmwZkWxC33lMX0D4VhJAvlndW7wU8Al+juNoiceNk6tIggp8fRIaahwual5uySK5qubsdvAbuMrTsS9lq/WGvKNRn/MorAXRGJdCB4xr0HhAahDckaHmOWYdR4YGWVaQq7WRvNr6/jCK59pU4enbkWFPtV4YrAqCg6QiTVkCisNq/AMQQt3MORt5jCxSnS/UalbDNt2PPmdOs/SQ1wlMs4LlfPMz1O12oi7lpNpWHElra04urlg5lsx07s7WnGdYUkrrjPc0YoboSyqYOTgvf9wQMEewQ3qB+7Do0LHr9eG+JoRKpV9ZJTcZqJfuoW2txxejHKhw3OVOP2fujTBGfKB6nAZuzzqXkw9BG5qgeoSkktLfNGoIXz7aXh8eoIdv5ptKxziHsXXUNCfvoE45PXUzmNv0pM2TFp6Bmol40XvwurGZQC+sM8dPqym5CUdOUzz1IcOd/COdCZNmUtnAryRzpR4JuwIjLf/x9tTxp/2/h/8K+jLI154JvkMV7hFkOB+GeSN6sxm1enGDPdr/+9McT5Pb7jF8Jb9+7f/1lT7jFgLAAA="
+  },
+  "complete_official_dictionary": {
+    "url": "https://donnees-data.tpsgc-pwgsc.gc.ca/ba2/ac-cb/achatscanada-canadabuys-dd.xml",
+    "final_url": "https://donnees-data.tpsgc-pwgsc.gc.ca/ba2/ac-cb/achatscanada-canadabuys-dd.xml",
+    "status": 200,
+    "captured_at": "2026-10-12T15:38:20.706513+00:00",
+    "bytes": 60478,
+    "sha256": "092071569300e3c58ddfd300a821dddfc8a73e9c519bf3a611d6de0deacba0fe",
+    "headers": {
+      "Last-Modified": "Tue, 24 Mar 2026 18:21:46 GMT",
+      "ETag": "\"ec3e-64dc9395a93cd\"",
+      "Content-Length": "60478",
+      "Content-Type": "text/xml"
+    },
+    "selected_dictionary": [
+      {
+        "labels": [
+          "attachment-piecesJointes-eng",
+          "attachment-piecesJointes-fra"
+        ],
+        "description": [
+          "A link (if applicable) to a file containing extra material (such as charts, tables, diagrams, etc.) that are attached to a tender notice. (Used in the CanadaBuys tender notices data files.)"
+        ]
+      },
+      {
+        "labels": [
+          "noticeURL-URLavis-eng",
+          "noticeURL-URLavis-fra"
+        ],
+        "description": [
+          "This field may contain a link to any relevant procurement system involved in the bidding process for this tender. The information in this file is compiled from multiple procurement systems in use across the country, as such this field may be blank for some systems. Another relevant URL may also be listed in the attachment-piecesJointes field, or included in the tenderDescription-descriptionAppelOffres field. You may also use the solicitationNumber-numeroSollicitation field to look this record up directly in CanadaBuys (https://canadabuys.canada.ca/en/tender-opportunities) where additional bidding information may be provided. (Used in the CanadaBuys tender notices data files.)"
+        ]
+      },
+      {
+        "labels": [
+          "procurementCategory-categorieApprovisionnement"
+        ],
+        "description": [
+          "The category of procurement, whether Construction (CNST), Goods (GD), Services (SRV), and/or Services Related to Goods (SRVTGD). (Used in the CanadaBuys tender notices, award notices, and contract history data files.)"
+        ]
+      },
+      {
+        "labels": [
+          "publicationDate-datePublication"
+        ],
+        "description": [
+          "The date a tender notice, award notice, or contract is publicly published. (Used in the CanadaBuys tender notices, award notices, and contract history data files.)"
+        ]
+      },
+      {
+        "labels": [
+          "referenceNumber-numeroReference"
+        ],
+        "description": [
+          "An internal system identifier assigned to a tender notice, award notice, or contract history entry that can specify the sourcing project (WS #), contract workspace (CW #), and/or Contractor (ACM #). (Used in the CanadaBuys tender notices, award notices, and contract history data files.)"
+        ]
+      },
+      {
+        "labels": [
+          "solicitationNumber-numeroSollicitation"
+        ],
+        "description": [
+          "A identification number that is provided by the government department issuing the solicitation, to identify the tender notices and award notices on GETS (ie: NPP, ACAN). (Used in the CanadaBuys tender notices, award notices, and contract history data files.)"
+        ]
+      },
+      {
+        "labels": [
+          "tenderClosingDate-appelOffresDateCloture"
+        ],
+        "description": [
+          "The date of closing for a tender notice, after which no new submissions will be accepted for consideration.\nNote: the dates/times displayed are all in UTC-0500, or five hours earlier than the Universal Time Coordinate. This equates to EASTERN STANDARD TIME (and differs from Eastern DAYLIGHT SAVINGS time which is UTC-0400). So a value of 2023-08-01T13:00:00 (which is a day when the Canadian Eastern time zone uses daylight savings) would actually equate to 2pm on that day in Ottawa, Ontario; whereas a value of 2023-01-31T13:00 (which is a date when the Canadian Eastern time zone would be on Standard Time) would be 1pm on that day in Ottawa, Ontario. (Used in the CanadaBuys tender notices data files.)"
+        ]
+      }
+    ],
+    "complete_gzip_base64": "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"
+  },
+  "open_tender_capture": {
+    "url": "https://canadabuys.canada.ca/opendata/pub/openTenderNotice-ouvertAvisAppelOffres.csv",
+    "final_url": "https://canadabuys.canada.ca/opendata/pub/openTenderNotice-ouvertAvisAppelOffres.csv",
+    "status": 200,
+    "captured_at": "2026-10-12T15:38:13.623332+00:00",
+    "bytes": 6360099,
+    "sha256": "c1f2273a6b7cc2d6da4c3d9d17baf5d4dce1ee49f3e11644cd568e683e473a21",
+    "headers": {
+      "Content-Type": "application/octet-stream",
+      "Content-Length": "6360099",
+      "Last-Modified": "Mon, 12 Oct 2026 10:20:18 GMT",
+      "ETag": "0x8DF284A69FE02C6"
+    },
+    "columns": [
+      "title-titre-eng",
+      "title-titre-fra",
+      "referenceNumber-numeroReference",
+      "amendmentNumber-numeroModification",
+      "solicitationNumber-numeroSollicitation",
+      "publicationDate-datePublication",
+      "tenderClosingDate-appelOffresDateCloture",
+      "amendmentDate-dateModification",
+      "expectedContractStartDate-dateDebutContratPrevue",
+      "expectedContractEndDate-dateFinContratPrevue",
+      "tenderStatus-appelOffresStatut-eng",
+      "tenderStatus-appelOffresStatut-fra",
+      "gsin-nibs",
+      "gsinDescription-nibsDescription-eng",
+      "gsinDescription-nibsDescription-fra",
+      "unspsc",
+      "unspscDescription-eng",
+      "unspscDescription-fra",
+      "procurementCategory-categorieApprovisionnement",
+      "noticeType-avisType-eng",
+      "noticeType-avisType-fra",
+      "procurementMethod-methodeApprovisionnement-eng",
+      "procurementMethod-methodeApprovisionnement-fra",
+      "selectionCriteria-criteresSelection-eng",
+      "selectionCriteria-criteresSelection-fra",
+      "limitedTenderingReason-raisonAppelOffresLimite-eng",
+      "limitedTenderingReason-raisonAppelOffresLimite-fra",
+      "tradeAgreements-accordsCommerciaux-eng",
+      "tradeAgreements-accordsCommerciaux-fra",
+      "regionsOfOpportunity-regionAppelOffres-eng",
+      "regionsOfOpportunity-regionAppelOffres-fra",
+      "regionsOfDelivery-regionsLivraison-eng",
+      "regionsOfDelivery-regionsLivraison-fra",
+      "contractingEntityName-nomEntitContractante-eng",
+      "contractingEntityAddressLine-ligneAdresseEntiteContractante-eng",
+      "contractingEntityAddressCity-entiteContractanteAdresseVille-eng",
+      "contractingEntityAddressProvince-entiteContractanteAdresseProvince-eng",
+      "contractingEntityAddressPostalCode-entiteContractanteAdresseCodePostal",
+      "contractingEntityAddressCountry-entiteContractanteAdressePays-eng",
+      "contractingEntityName-nomEntitContractante-fra",
+      "contractingEntityAddressLine-ligneAdresseEntiteContractante-fra",
+      "contractingEntityAddressCity-entiteContractanteAdresseVille-fra",
+      "contractingEntityAddressProvince-entiteContractanteAdresseProvince-fra",
+      "contractingEntityAddressCountry-entiteContractanteAdressePays-fra",
+      "endUserEntitiesName-nomEntitesUtilisateurFinal-eng",
+      "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-eng",
+      "endUserEntitiesName-nomEntitesUtilisateurFinal-fra",
+      "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-fra",
+      "contactInfoName-informationsContactNom",
+      "contactInfoEmail-informationsContactCourriel",
+      "contactInfoPhone-contactInfoTelephone",
+      "contactInfoFax",
+      "contactInfoAddressLine-contactInfoAdresseLigne-eng",
+      "contactInfoCity-contacterInfoVille-eng",
+      "contactInfoProvince-contacterInfoProvince-eng",
+      "contactInfoPostalcode",
+      "contactInfoCountry-contactInfoPays-eng",
+      "contactInfoAddressLine-contactInfoAdresseLigne-fra",
+      "contactInfoCity-contacterInfoVille-fra",
+      "contactInfoProvince-contacterInfoProvince-fra",
+      "contactInfoCountry-contactInfoPays-fra",
+      "noticeURL-URLavis-eng",
+      "noticeURL-URLavis-fra",
+      "attachment-piecesJointes-eng",
+      "attachment-piecesJointes-fra",
+      "tenderDescription-descriptionAppelOffres-eng",
+      "tenderDescription-descriptionAppelOffres-fra"
+    ],
+    "row_count": 908,
+    "statuses": {
+      "Open": 908
+    },
+    "categories": {
+      "*CNST": 163,
+      "*SRV": 346,
+      "*GD\n*SRV": 7,
+      "*SRV\n*GD": 1,
+      "*SRVTGD": 16,
+      "*GD": 373,
+      "*SRVTGD\n*GD": 1,
+      "*GD\n*SRVTGD": 1
+    },
+    "longest_field": 17674
+  },
+  "selected_original_open_tender_records": [
+    {
+      "record_number": 42,
+      "values": {
+        "title-titre-eng": "Advance Procurement Notice (APN) Data Center, National Capital Region",
+        "title-titre-fra": "Préavis d’Approvisionnement (PA) Centre de Données Rég. de la Capitale Nationale",
+        "referenceNumber-numeroReference": "MX-444187993328",
+        "amendmentNumber-numeroModification": "000",
+        "solicitationNumber-numeroSollicitation": "WA257004_88262",
+        "publicationDate-datePublication": "2026-10-07",
+        "tenderClosingDate-appelOffresDateCloture": "2027-01-05T14:00:00",
+        "amendmentDate-dateModification": "",
+        "expectedContractStartDate-dateDebutContratPrevue": "2027-02-01",
+        "expectedContractEndDate-dateFinContratPrevue": "2027-02-01",
+        "tenderStatus-appelOffresStatut-eng": "Open",
+        "tenderStatus-appelOffresStatut-fra": "Ouvert",
+        "gsin-nibs": "",
+        "gsinDescription-nibsDescription-eng": "",
+        "gsinDescription-nibsDescription-fra": "",
+        "unspsc": "",
+        "unspscDescription-eng": "",
+        "unspscDescription-fra": "",
+        "procurementCategory-categorieApprovisionnement": "*CNST",
+        "noticeType-avisType-eng": "",
+        "noticeType-avisType-fra": "",
+        "procurementMethod-methodeApprovisionnement-eng": "Competitive - Open bidding",
+        "procurementMethod-methodeApprovisionnement-fra": "Concurrentielle - Invitation ouverte à soumissionner",
+        "selectionCriteria-criteresSelection-eng": "",
+        "selectionCriteria-criteresSelection-fra": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-eng": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-fra": "",
+        "tradeAgreements-accordsCommerciaux-eng": "*Canada-European Union Comprehensive Economic and Trade Agreement (CETA)\n*World Trade Organization Agreement on Government Procurement (WTO GPA)\n*Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP)",
+        "tradeAgreements-accordsCommerciaux-fra": "*Accord économique et commercial global (AECG) entre le Canada et l’Union européenne (UE)\n*Accord sur les marchés publics de l'Organisation mondiale du commerce (AMP-OMC)\n*Accord de Partenariat transpacifique global et progressiste (PTPGP)",
+        "regionsOfOpportunity-regionAppelOffres-eng": "",
+        "regionsOfOpportunity-regionAppelOffres-fra": "",
+        "regionsOfDelivery-regionsLivraison-eng": "",
+        "regionsOfDelivery-regionsLivraison-fra": "",
+        "contractingEntityName-nomEntitContractante-eng": "Defence Construction Canada / Construction de Défense Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-eng": "350 Albert St,, 19th floor,",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-eng": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-eng": "Ontario",
+        "contractingEntityAddressPostalCode-entiteContractanteAdresseCodePostal": "K1A 0K3",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-eng": "Canada",
+        "contractingEntityName-nomEntitContractante-fra": "Defence Construction Canada / Construction de Défense Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-fra": "350 Albert St,, 19th floor,",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-fra": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-fra": "Ontario",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-fra": "Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-eng": "",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-eng": "",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-fra": "",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-fra": "",
+        "contactInfoName-informationsContactNom": "Stephanie Tanguay",
+        "contactInfoEmail-informationsContactCourriel": "Stephanie.Tanguay@dcc-cdc.gc.ca",
+        "contactInfoPhone-contactInfoTelephone": "613-715-4626",
+        "contactInfoFax": "",
+        "contactInfoAddressLine-contactInfoAdresseLigne-eng": "",
+        "contactInfoCity-contacterInfoVille-eng": "",
+        "contactInfoProvince-contacterInfoProvince-eng": "",
+        "contactInfoPostalcode": "",
+        "contactInfoCountry-contactInfoPays-eng": "",
+        "contactInfoAddressLine-contactInfoAdresseLigne-fra": "",
+        "contactInfoCity-contacterInfoVille-fra": "",
+        "contactInfoProvince-contacterInfoProvince-fra": "",
+        "contactInfoCountry-contactInfoPays-fra": "",
+        "noticeURL-URLavis-eng": "https://www.merx.com/public/solicitations/4120526211/abstract?language=EN",
+        "noticeURL-URLavis-fra": "https://www.merx.com/public/solicitations/4120526211/abstract?language=FR",
+        "attachment-piecesJointes-eng": "",
+        "attachment-piecesJointes-fra": "",
+        "tenderDescription-descriptionAppelOffres-eng": "Advance Procurement Notice\r\n\r\n&nbsp;\r\n\r\nData Center, (Modify design Built)\r\nNational Capital Region \r\n(with Security Requirements)\r\n\r\n\r\n\tPurpose of this Advance Procurement Notice\r\n\r\n\r\nThis is not a bid solicitation nor a request for proposals.\r\nIn the context of the major investments announced by the Government and to foster a proactive partnership with industry, DCC is issuing this Advance Procurement Notice (APN) to inform design-builders of an upcoming contract opportunity located within the National Capital Region (Ontario).\r\nThe purpose of this APN is to allow design-builders to assess their capacity and interest in participating, and to prepare adequately for the potential solicitation process, notably by initiating any necessary steps.\r\nThis is a preliminary notice regarding a potential contract, which includes security requirements. The purpose of this APN is to allow interested design-builders to initiate, if required, the sponsorship process to obtain the necessary clearances or security clearances (if applicable).\r\nPlease note that there is no guarantee that this contract will proceed or that security clearances will be granted within the anticipated timelines or at all as part of the sponsorship process.\r\nPlease note that this project may include Indigenous businesses participation component in accordance with the Procurement Strategy for Indigenous Business (PSIB).\r\n\r\n\r\n\tDescription of the Project and Services\r\n\r\n\r\nIt is anticipated that the following solicitation will proceed as noted in the table below. This is conditional on the contract receiving approval to proceed\r\n\r\nProject Number: WA257004\r\nContract Number: 88262\r\nTitle: Data Center NCR\r\nApproximate Estimate: 1.5B to 1.85B\r\nAnticipated Posting: Winter 2027\r\n\r\nDescription:\r\nTo increase its capacity in supporting the mid to long-term objectives related to operations, security, and technology modernization, the Government of Canada is planning to design and construction a data center facility within the National Capital Region.\r\nThis Data center of 60 MW will enable the onboarding of next-generation capabilities with tailored mechanical and electrical configurations to meet distinct technology requirements throughout the facility. The proposed data centre facility will also include a small office space and a shipping and receiving area.\r\n\r\nThe estimated cost of the proposed Modified Design-Build (MDB) Contract exceeds $1.5 to 1.85B.\r\n\r\nIt is anticipated that this solicitation will be initiated in Winter 2027.&nbsp; This is conditional on receiving approval to proceed by the Government of Canada.\r\n\r\n\r\n\tContract Award and Anticipated Security Requirements\r\n\r\n\r\nTo be eligible for contract award, a proponent will be required to, among other things, actively hold or obtain all required security clearance(s) prior to the date of the award, as further detailed in the solicitation documents.\r\nAs of the date of posting of this Advance Procurement Notice, the required security clearance(s) are anticipated to be:\r\n\r\n\r\n\tfor design-builders: a valid Facility Security Clearance (FSC).\r\n\r\n\r\n\r\n\t&nbsp;Industrial Security Program Sponsorship \r\n\r\n\r\nDefence Construction Canada (DCC) is providing design-builders early access to the security clearance application process through sponsorship under its Industrial Security Program (ISP). Accordingly, design-builders that intend to submit a proposal for this project and that do not actively hold the above identified security clearance(s) should begin forthwith the security clearance application process by applying through DCC&rsquo;s ISP.\r\nUnder this program, DCC may, at its entire discretion, provide preliminary assistance to all the potential proponents with their respective security clearance sponsorship process.\r\nTo begin the security clearance sponsorship process, please submit a sponsorship request application to DCC by following the steps identified on DCC&rsquo;s website at: https://www.dcc-cdc.gc.ca/industry/security-requirements.\r\nIn their sponsorship request application to DCC, design-builders are asked to quote the following information, among other things:\r\n\r\n\r\n\t\r\n\tAdvance Procurement Notice (APN) number, as identified in Section 2 of this APN; and\r\n\t\r\n\t\r\n\tLevel of clearance requested to be sponsored, as identified in Section 3 of this APN.\r\n\t\r\n\r\n\r\n\r\n\tSponsorship Process\r\n\r\n\r\nUpon receipt, DCC will review the sponsorship request application and will communicate directly with the design-builders to provide assistance for the completion of the sponsorship request packages.\r\nOnce DCC has determined, at its entire discretion, that a design-builders\r\n\r\n\r\n\thas started the sponsorship process prior to the solicitation being advertised on MERX,\r\n\thas met all the material requirements of the sponsorship request package prior to the closing date indicated in the solicitation, and\r\n\thas submitted a proposal.\r\n\r\n\r\n&nbsp;\r\n\r\nDCC will send the documents to the Public Services and Procurement Canada&rsquo;s (PSPC) Contract Security Program (CSP).\r\nNote &ndash; Design-Builder that do not submit a proposal will not be able to attain clearance through this sponsorship process.\r\n\r\nFollowing receipt of the sponsorship request package, the CSP will communicate directly with the proponent regarding any further steps or actions to be undertaken or the status of the sponsorship request package processing. At such time, the proponent will need to promptly cooperate with CSP to ensure that the process is completed as soon as possible.\r\n\r\n\r\n\tQuestions\r\n\r\n\r\nAny questions pertaining to the sponsoring process through the ISP can be addressed to:\r\nTelephone Number: (613) 998-8974; or\r\nEmail address: ISP.Sponsorship@dcc-cdc.gc.ca\r\n\r\n&nbsp;\r\n\r\nAny questions relating to this Advance Procurement Notice can be addressed to:\r\nStephanie Tanguay\r\nRegional service line leader, Contract services\r\nDefence Construction Canada\r\n613-715-4626\r\nstephanie.tanguay@dcc-cdc.gc.ca\r\n\r\n\r\n\tDisclaimer\r\n\r\n\r\nDCC is only providing assistance, at its entire discretion, for the above stated sponsorship process and does not provide any representations or guarantees that a sponsorship request package or a security clearance application forwarded by DCC to the CSP will be successful or result in the granting of the requested security clearance(s) by the CSP. At all times, the processing of a sponsorship request package or a security clearance application is subject to the respective terms, conditions, and timelines of DCC&rsquo;s ISP sponsorship process and the CSP security clearance granting process. By applying to either of the aforementioned processes, the proponent agrees to bear any fees and risks associated with: (i) the completeness or accuracy, or lack thereof, of its application or related documents submitted under or in connection with either said processes, and (ii) the timeliness, or lack thereof, of any processing or granting of security clearance(s) under or in connection with either said processes. Notwithstanding anything else stated above, DCC shall in no event be liable to the proponent for any direct, indirect, incidental, special, consequential, punitive or exemplary damages arising out or in connection with the above stated sponsorship process.Bidding and Documents are available on http://www.merx.com.  Fees may apply; See https://www.merx.com/public/pricing for more information.",
+        "tenderDescription-descriptionAppelOffres-fra": "PR&Eacute;AVIS D&rsquo;APPROVISIONNEMENT\r\n\r\nCENTRE DE DONN&Eacute;ES (CONCEPTION-CONSTRUCTION MODIFI&Eacute;E)\r\nR&Eacute;GION DE LA CAPITALE NATIONALE\r\n(COMPREND DES EXIGENCES DE S&Eacute;CURIT&Eacute;)\r\n\r\n\r\n\tOBJECTIF DU PR&Eacute;SENT PR&Eacute;AVIS D&rsquo;APPROVISIONNEMENT\r\n\r\n\r\nIl ne s&rsquo;agit pas d&rsquo;une demande de soumission ni d&rsquo;une demande de proposition.\r\nDans le contexte des investissements majeurs annonc&eacute;s par le gouvernement et afin de favoriser un partenariat proactif avec l&rsquo;industrie, CDC diffuse le pr&eacute;sent pr&eacute;avis d&rsquo;approvisionnement (PA) afin d&rsquo;informer les concepteurs-constructeurs d&rsquo;un contrat &agrave; venir dans la R&eacute;gion de la capitale nationale.\r\nLe pr&eacute;sent PA vise &agrave; permettre aux concepteurs-constructeurs d&rsquo;&eacute;valuer leur capacit&eacute; et leur int&eacute;r&ecirc;t &agrave; y participer, ainsi que de se pr&eacute;parer ad&eacute;quatement en vue du processus de sollicitation.\r\nIl s&rsquo;agit d&rsquo;un avis pr&eacute;liminaire concernant un contrat potentiel qui comporte des exigences en mati&egrave;re de s&eacute;curit&eacute;. Ce pr&eacute;avis vise &agrave; permettre aux concepteurs-constructeurs qui le souhaitent la possibilit&eacute; d&rsquo;entamer, au besoin, le processus de parrainage afin d&rsquo;obtenir (si n&eacute;cessaire) les habilitations ou les attestations de s&eacute;curit&eacute; requises.\r\nVeuillez noter qu&rsquo;il n&rsquo;y a aucune garantie que ce contrat sera mis de l&rsquo;avant ni que les attestations de s&eacute;curit&eacute; seront accord&eacute;es dans les d&eacute;lais anticip&eacute;s ou seront m&ecirc;me accord&eacute;es dans le cadre du processus de parrainage.\r\n&Agrave; noter que le projet pourrait comprendre un volet de participation pour entreprises autochtones conform&eacute;ment &agrave; la Strat&eacute;gie d&rsquo;approvisionnement aupr&egrave;s des entreprises autochtones (SAEA).\r\n&nbsp;\r\n\r\n\r\n\tDESCRIPTION DU PROJET ET DES SERVICES\r\n\r\n\r\nIl est pr&eacute;vu que la sollicitation suivante sera mise de l&rsquo;avant comme indiqu&eacute; dans le tableau ci-dessous. Ceci est conditionnel &agrave; l&rsquo;approbation du contrat.\r\n\r\nNum&eacute;ro de projet&nbsp;: WA257004\r\nNum&eacute;ro de contrat&nbsp;: 82262\r\nTitre&nbsp;: Centre de donn&eacute;es de la RNC\r\nEstim&eacute; approximatif&nbsp;: 1,5&nbsp;G$ &agrave; 1,85&nbsp;G$\r\nDate de publication pr&eacute;vue&nbsp;: hiver&nbsp;2027\r\n\r\nDescription&nbsp;:\r\nAfin d&rsquo;accro&icirc;tre sa capacit&eacute; de soutenir les objectifs &agrave; moyen et &agrave; long terme li&eacute;s aux op&eacute;rations, &agrave; la s&eacute;curit&eacute; et &agrave; la modernisation technologique, le gouvernement du Canada pr&eacute;voit la conception et la construction d&rsquo;un centre de donn&eacute;es dans la R&eacute;gion de la capitale nationale.\r\nCe centre de donn&eacute;es de 60&nbsp;MW permettra l&rsquo;int&eacute;gration de capacit&eacute;s de nouvelle g&eacute;n&eacute;ration gr&acirc;ce &agrave; des configurations m&eacute;caniques et &eacute;lectriques adapt&eacute;es aux diff&eacute;rentes exigences technologiques dans l&rsquo;ensemble de l&rsquo;installation. Le centre de donn&eacute;es propos&eacute; comprendra &eacute;galement un petit espace de bureau ainsi qu&rsquo;une aire d&rsquo;exp&eacute;dition et de r&eacute;ception.\r\n\r\nLe co&ucirc;t estim&eacute; du contrat de conception-construction modifi&eacute;e (CCM) propos&eacute; d&eacute;passe 1,25 &agrave; 1,85&nbsp;G$.\r\n\r\nIl est pr&eacute;vu que cette sollicitation sera lanc&eacute;e &agrave; l&rsquo;hiver&nbsp;2027.&nbsp;&nbsp; Ceci est conditionnel &agrave; l&rsquo;approbation par le gouvernement du Canada.\r\n\r\n\r\n\tExigences &eacute;ventuelles en mati&egrave;re de s&eacute;curit&eacute; et d&rsquo;attribution du contrat\r\n\r\n\r\nPour &ecirc;tre admissible &agrave; l&rsquo;attribution d&rsquo;un contrat, un soumissionnaire sera tenu, entre autres, d&eacute;tenir toute cote de s&eacute;curit&eacute; requise avant la date de l&rsquo;octroi du contrat, comme il sera indiqu&eacute; en d&eacute;tail dans les documents de la sollicitation.\r\n&Agrave; la date de publication du pr&eacute;sent pr&eacute;avis d&rsquo;approvisionnement, il est pr&eacute;vu que la cote de s&eacute;curit&eacute; requise soit la suivante&nbsp;:\r\n\r\n\r\n\tpour les concepteurs-constructeurs&nbsp;: une attestation de s&eacute;curit&eacute; d&rsquo;installation (ASI) valide.\r\n\r\n\r\n\r\n\tParrainage dans le cadre du Programme de s&eacute;curit&eacute; industrielle (PSI)\r\n\r\n\r\nConstruction de D&eacute;fense Canada (CDC) offre aux concepteurs-constructeurs l&rsquo;opportunit&eacute; de se faire parrainer en vue d&rsquo;obtenir une attestation de s&eacute;curit&eacute; par l&rsquo;entremise du Programme de s&eacute;curit&eacute; industrielle (PSI). Par cons&eacute;quent, les concepteurs-constructeurs qui pr&eacute;voient pr&eacute;senter une proposition pour ce projet et qui ne d&eacute;tiennent pas activement l&rsquo;attestation de s&eacute;curit&eacute; identifi&eacute;e ci-dessus devraient commencer imm&eacute;diatement le processus de demande d&rsquo;attestation de s&eacute;curit&eacute; en faisant la demande par l&rsquo;interm&eacute;diaire du PSI de CDC.\r\nDans le cadre de ce programme, CDC peut, &agrave; son enti&egrave;re discr&eacute;tion, fournir une aide pr&eacute;liminaire aux soumissionnaires potentiels pour le processus de parrainage visant l&rsquo;obtention d&rsquo;une attestation de s&eacute;curit&eacute;.\r\nPour commencer ce processus, veuillez pr&eacute;senter une demande de parrainage &agrave; CDC en suivant les &eacute;tapes suivantes qui se trouvent sur son site Web &agrave;&nbsp;: https://www.cdc-dcc.gc.ca/industrie/exigences-de-s&eacute;curit&eacute;.\r\nDans la demande de parrainage qu&rsquo;ils pr&eacute;sentent &agrave; CDC, les experts-conseils ou entrepreneurs ou sont pri&eacute;s de notamment indiquer les renseignements suivants&nbsp;:\r\n\r\n\r\n\tLe num&eacute;ro du pr&eacute;avis d&rsquo;approvisionnement, tel qu&rsquo;indiqu&eacute; &agrave; la section&nbsp;2 de ce PA;\r\n\tLe niveau de cote de s&eacute;curit&eacute; demand&eacute; dans le cadre du parrainage, tel qu&rsquo;indiqu&eacute; &agrave; la section&nbsp;3 de ce PA.\r\n\r\n\r\n\r\n\tProcessus de parrainage\r\n\r\n\r\n&Agrave; la r&eacute;ception d&rsquo;une demande de parrainage, CDC l&rsquo;examine et communique directement avec l&rsquo;expert-conseil ou l&rsquo;entrepreneur pour compl&eacute;ter le dossier.\r\nUne fois que CDC a d&eacute;termin&eacute;, &agrave; son enti&egrave;re discr&eacute;tion, qu&rsquo;un expert-conseil ou entrepreneur&nbsp;:\r\n\r\n\r\n\ta d&eacute;but&eacute; le processus de parrainage avant que la sollicitation ne soit annonc&eacute;e sur MERX;\r\n\ta satisfait &agrave; toutes les exigences mat&eacute;rielles de la trousse de demande de parrainage avant la date de fermeture indiqu&eacute;e dans la sollicitation;\r\n\ta d&eacute;pos&eacute; une proposition.\r\n\r\n\r\nCDC enverra la trousse de demande de parrainage au Programme de s&eacute;curit&eacute; des contrats (PSC) de Services publics et Approvisionnement Canada (SPAC).\r\nRemarque&nbsp;: Les entrepreneurs ou experts-conseils qui ne transmettent pas de proposition ne pourront pas obtenir d&rsquo;attestation de s&eacute;curit&eacute; dans le cadre de ce processus de parrainage.\r\n\r\nApr&egrave;s la r&eacute;ception du dossier de demande de parrainage, le PSC communique directement avec le soumissionnaire pour lui indiquer les prochaines &eacute;tapes, les mesures &agrave; prendre ou l&rsquo;&eacute;tat du traitement du dossier. Le soumissionnaire sera alors tenu de coop&eacute;rer avec le PSC en temps opportun pour faire avancer le processus.\r\n\r\n\r\n\tDes questions?\r\n\r\n\r\nVous pouvez transmettre toute question concernant le processus de parrainage par l&rsquo;interm&eacute;diaire du PSI &agrave;&nbsp;:\r\n\r\nNum&eacute;ro de t&eacute;l&eacute;phone&nbsp;: 613-998-8974\r\nCourriel&nbsp;: ISP.Sponsorship@dcc-cdc.gc.ca\r\n\r\nVous pouvez transmettre vos questions relatives au pr&eacute;sent pr&eacute;avis d&rsquo;approvisionnement &agrave;&nbsp;:\r\n\r\nStephanie Tanguay\r\nChef r&eacute;gionale de secteur de services, Services des march&eacute;s\r\nConstruction de D&eacute;fense Canada\r\n613-715-4626\r\nstephanie.tanguay@dcc-cdc.gc.ca\r\n\r\n\r\n\tAvis de non-responsabilit&eacute;\r\n\r\n\r\nCDC ne fournit qu&rsquo;une aide, &agrave; son enti&egrave;re discr&eacute;tion, pour le processus de parrainage susmentionn&eacute; et ne fournit aucune d&eacute;claration ni ne garantit qu&rsquo;un dossier de demande de parrainage ou une demande d&rsquo;attestation de s&eacute;curit&eacute; transmise par CDC au PSC sera retenu ou entra&icirc;nera l&rsquo;octroi de l&rsquo;attestation de s&eacute;curit&eacute; demand&eacute;e par le PSC. En tout temps, le traitement d&rsquo;une demande de parrainage ou d&rsquo;une demande d&rsquo;attestation de s&eacute;curit&eacute; est assujetti aux modalit&eacute;s et aux d&eacute;lais respectifs du processus de parrainage du PSI de CDC et du processus d&rsquo;octroi de l&rsquo;attestation de s&eacute;curit&eacute; du PSC. En postulant &agrave; l&rsquo;un ou l&rsquo;autre des processus susmentionn&eacute;s, le soumissionnaire accepte d&rsquo;assumer les frais et les risques associ&eacute;s &agrave;&nbsp;: (i) l&rsquo;exhaustivit&eacute; ou l&rsquo;exactitude, ou l&rsquo;absence d&rsquo;exactitude, de sa demande ou des documents connexes soumis dans le cadre de l&rsquo;un ou l&rsquo;autre de ces processus ou en relation avec ceux-ci, et (ii) le respect ou l&rsquo;absence d&rsquo;opportunit&eacute;, de tout traitement ou octroi d&rsquo;une ou de plusieurs attestations de s&eacute;curit&eacute; dans le cadre de l&rsquo;un ou l&rsquo;autre de ces processus ou en relation avec ceux-ci. Nonobstant toute autre disposition ci-dessus, CDC ne sera en aucun cas responsable envers le soumissionnaire de tout dommage direct ou indirect.\r\n\r\n&nbsp;Vous pouvez soumettre une offre et accéder aux documents sur http://www.merx.com. Des frais peuvent sappliquer; Voir https://www.merx.com/public/pricing pour plus dinformations."
+      },
+      "raw_record": "\"Advance Procurement Notice (APN) Data Center, National Capital Region\",\"Préavis d’Approvisionnement (PA) Centre de Données Rég. de la Capitale Nationale\",\"MX-444187993328\",\"000\",\"WA257004_88262\",\"2026-10-07\",\"2027-01-05T14:00:00\",\"\",\"2027-02-01\",\"2027-02-01\",\"Open\",\"Ouvert\",\"\",\"\",\"\",\"\",\"\",\"\",\"*CNST\",\"\",\"\",\"Competitive - Open bidding\",\"Concurrentielle - Invitation ouverte à soumissionner\",\"\",\"\",\"\",,\"*Canada-European Union Comprehensive Economic and Trade Agreement (CETA)\n*World Trade Organization Agreement on Government Procurement (WTO GPA)\n*Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP)\",\"*Accord économique et commercial global (AECG) entre le Canada et l’Union européenne (UE)\n*Accord sur les marchés publics de l'Organisation mondiale du commerce (AMP-OMC)\n*Accord de Partenariat transpacifique global et progressiste (PTPGP)\",\"\",\"\",\"\",\"\",\"Defence Construction Canada / Construction de Défense Canada\",\"350 Albert St,, 19th floor,\",\"Ottawa\",\"Ontario\",\"K1A 0K3\",\"Canada\",\"Defence Construction Canada / Construction de Défense Canada\",\"350 Albert St,, 19th floor,\",\"Ottawa\",\"Ontario\",\"Canada\",\"\",\"\",\"\",\"\",\"Stephanie Tanguay\",\"Stephanie.Tanguay@dcc-cdc.gc.ca\",\"613-715-4626\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"\",\"https://www.merx.com/public/solicitations/4120526211/abstract?language=EN\",\"https://www.merx.com/public/solicitations/4120526211/abstract?language=FR\",\"\",\"\",\"Advance Procurement Notice\r\n\r\n&nbsp;\r\n\r\nData Center, (Modify design Built)\r\nNational Capital Region \r\n(with Security Requirements)\r\n\r\n\r\n\tPurpose of this Advance Procurement Notice\r\n\r\n\r\nThis is not a bid solicitation nor a request for proposals.\r\nIn the context of the major investments announced by the Government and to foster a proactive partnership with industry, DCC is issuing this Advance Procurement Notice (APN) to inform design-builders of an upcoming contract opportunity located within the National Capital Region (Ontario).\r\nThe purpose of this APN is to allow design-builders to assess their capacity and interest in participating, and to prepare adequately for the potential solicitation process, notably by initiating any necessary steps.\r\nThis is a preliminary notice regarding a potential contract, which includes security requirements. The purpose of this APN is to allow interested design-builders to initiate, if required, the sponsorship process to obtain the necessary clearances or security clearances (if applicable).\r\nPlease note that there is no guarantee that this contract will proceed or that security clearances will be granted within the anticipated timelines or at all as part of the sponsorship process.\r\nPlease note that this project may include Indigenous businesses participation component in accordance with the Procurement Strategy for Indigenous Business (PSIB).\r\n\r\n\r\n\tDescription of the Project and Services\r\n\r\n\r\nIt is anticipated that the following solicitation will proceed as noted in the table below. This is conditional on the contract receiving approval to proceed\r\n\r\nProject Number: WA257004\r\nContract Number: 88262\r\nTitle: Data Center NCR\r\nApproximate Estimate: 1.5B to 1.85B\r\nAnticipated Posting: Winter 2027\r\n\r\nDescription:\r\nTo increase its capacity in supporting the mid to long-term objectives related to operations, security, and technology modernization, the Government of Canada is planning to design and construction a data center facility within the National Capital Region.\r\nThis Data center of 60 MW will enable the onboarding of next-generation capabilities with tailored mechanical and electrical configurations to meet distinct technology requirements throughout the facility. The proposed data centre facility will also include a small office space and a shipping and receiving area.\r\n\r\nThe estimated cost of the proposed Modified Design-Build (MDB) Contract exceeds $1.5 to 1.85B.\r\n\r\nIt is anticipated that this solicitation will be initiated in Winter 2027.&nbsp; This is conditional on receiving approval to proceed by the Government of Canada.\r\n\r\n\r\n\tContract Award and Anticipated Security Requirements\r\n\r\n\r\nTo be eligible for contract award, a proponent will be required to, among other things, actively hold or obtain all required security clearance(s) prior to the date of the award, as further detailed in the solicitation documents.\r\nAs of the date of posting of this Advance Procurement Notice, the required security clearance(s) are anticipated to be:\r\n\r\n\r\n\tfor design-builders: a valid Facility Security Clearance (FSC).\r\n\r\n\r\n\r\n\t&nbsp;Industrial Security Program Sponsorship \r\n\r\n\r\nDefence Construction Canada (DCC) is providing design-builders early access to the security clearance application process through sponsorship under its Industrial Security Program (ISP). Accordingly, design-builders that intend to submit a proposal for this project and that do not actively hold the above identified security clearance(s) should begin forthwith the security clearance application process by applying through DCC&rsquo;s ISP.\r\nUnder this program, DCC may, at its entire discretion, provide preliminary assistance to all the potential proponents with their respective security clearance sponsorship process.\r\nTo begin the security clearance sponsorship process, please submit a sponsorship request application to DCC by following the steps identified on DCC&rsquo;s website at: https://www.dcc-cdc.gc.ca/industry/security-requirements.\r\nIn their sponsorship request application to DCC, design-builders are asked to quote the following information, among other things:\r\n\r\n\r\n\t\r\n\tAdvance Procurement Notice (APN) number, as identified in Section 2 of this APN; and\r\n\t\r\n\t\r\n\tLevel of clearance requested to be sponsored, as identified in Section 3 of this APN.\r\n\t\r\n\r\n\r\n\r\n\tSponsorship Process\r\n\r\n\r\nUpon receipt, DCC will review the sponsorship request application and will communicate directly with the design-builders to provide assistance for the completion of the sponsorship request packages.\r\nOnce DCC has determined, at its entire discretion, that a design-builders\r\n\r\n\r\n\thas started the sponsorship process prior to the solicitation being advertised on MERX,\r\n\thas met all the material requirements of the sponsorship request package prior to the closing date indicated in the solicitation, and\r\n\thas submitted a proposal.\r\n\r\n\r\n&nbsp;\r\n\r\nDCC will send the documents to the Public Services and Procurement Canada&rsquo;s (PSPC) Contract Security Program (CSP).\r\nNote &ndash; Design-Builder that do not submit a proposal will not be able to attain clearance through this sponsorship process.\r\n\r\nFollowing receipt of the sponsorship request package, the CSP will communicate directly with the proponent regarding any further steps or actions to be undertaken or the status of the sponsorship request package processing. At such time, the proponent will need to promptly cooperate with CSP to ensure that the process is completed as soon as possible.\r\n\r\n\r\n\tQuestions\r\n\r\n\r\nAny questions pertaining to the sponsoring process through the ISP can be addressed to:\r\nTelephone Number: (613) 998-8974; or\r\nEmail address: ISP.Sponsorship@dcc-cdc.gc.ca\r\n\r\n&nbsp;\r\n\r\nAny questions relating to this Advance Procurement Notice can be addressed to:\r\nStephanie Tanguay\r\nRegional service line leader, Contract services\r\nDefence Construction Canada\r\n613-715-4626\r\nstephanie.tanguay@dcc-cdc.gc.ca\r\n\r\n\r\n\tDisclaimer\r\n\r\n\r\nDCC is only providing assistance, at its entire discretion, for the above stated sponsorship process and does not provide any representations or guarantees that a sponsorship request package or a security clearance application forwarded by DCC to the CSP will be successful or result in the granting of the requested security clearance(s) by the CSP. At all times, the processing of a sponsorship request package or a security clearance application is subject to the respective terms, conditions, and timelines of DCC&rsquo;s ISP sponsorship process and the CSP security clearance granting process. By applying to either of the aforementioned processes, the proponent agrees to bear any fees and risks associated with: (i) the completeness or accuracy, or lack thereof, of its application or related documents submitted under or in connection with either said processes, and (ii) the timeliness, or lack thereof, of any processing or granting of security clearance(s) under or in connection with either said processes. Notwithstanding anything else stated above, DCC shall in no event be liable to the proponent for any direct, indirect, incidental, special, consequential, punitive or exemplary damages arising out or in connection with the above stated sponsorship process.Bidding and Documents are available on http://www.merx.com.  Fees may apply; See https://www.merx.com/public/pricing for more information.\",\"PR&Eacute;AVIS D&rsquo;APPROVISIONNEMENT\r\n\r\nCENTRE DE DONN&Eacute;ES (CONCEPTION-CONSTRUCTION MODIFI&Eacute;E)\r\nR&Eacute;GION DE LA CAPITALE NATIONALE\r\n(COMPREND DES EXIGENCES DE S&Eacute;CURIT&Eacute;)\r\n\r\n\r\n\tOBJECTIF DU PR&Eacute;SENT PR&Eacute;AVIS D&rsquo;APPROVISIONNEMENT\r\n\r\n\r\nIl ne s&rsquo;agit pas d&rsquo;une demande de soumission ni d&rsquo;une demande de proposition.\r\nDans le contexte des investissements majeurs annonc&eacute;s par le gouvernement et afin de favoriser un partenariat proactif avec l&rsquo;industrie, CDC diffuse le pr&eacute;sent pr&eacute;avis d&rsquo;approvisionnement (PA) afin d&rsquo;informer les concepteurs-constructeurs d&rsquo;un contrat &agrave; venir dans la R&eacute;gion de la capitale nationale.\r\nLe pr&eacute;sent PA vise &agrave; permettre aux concepteurs-constructeurs d&rsquo;&eacute;valuer leur capacit&eacute; et leur int&eacute;r&ecirc;t &agrave; y participer, ainsi que de se pr&eacute;parer ad&eacute;quatement en vue du processus de sollicitation.\r\nIl s&rsquo;agit d&rsquo;un avis pr&eacute;liminaire concernant un contrat potentiel qui comporte des exigences en mati&egrave;re de s&eacute;curit&eacute;. Ce pr&eacute;avis vise &agrave; permettre aux concepteurs-constructeurs qui le souhaitent la possibilit&eacute; d&rsquo;entamer, au besoin, le processus de parrainage afin d&rsquo;obtenir (si n&eacute;cessaire) les habilitations ou les attestations de s&eacute;curit&eacute; requises.\r\nVeuillez noter qu&rsquo;il n&rsquo;y a aucune garantie que ce contrat sera mis de l&rsquo;avant ni que les attestations de s&eacute;curit&eacute; seront accord&eacute;es dans les d&eacute;lais anticip&eacute;s ou seront m&ecirc;me accord&eacute;es dans le cadre du processus de parrainage.\r\n&Agrave; noter que le projet pourrait comprendre un volet de participation pour entreprises autochtones conform&eacute;ment &agrave; la Strat&eacute;gie d&rsquo;approvisionnement aupr&egrave;s des entreprises autochtones (SAEA).\r\n&nbsp;\r\n\r\n\r\n\tDESCRIPTION DU PROJET ET DES SERVICES\r\n\r\n\r\nIl est pr&eacute;vu que la sollicitation suivante sera mise de l&rsquo;avant comme indiqu&eacute; dans le tableau ci-dessous. Ceci est conditionnel &agrave; l&rsquo;approbation du contrat.\r\n\r\nNum&eacute;ro de projet&nbsp;: WA257004\r\nNum&eacute;ro de contrat&nbsp;: 82262\r\nTitre&nbsp;: Centre de donn&eacute;es de la RNC\r\nEstim&eacute; approximatif&nbsp;: 1,5&nbsp;G$ &agrave; 1,85&nbsp;G$\r\nDate de publication pr&eacute;vue&nbsp;: hiver&nbsp;2027\r\n\r\nDescription&nbsp;:\r\nAfin d&rsquo;accro&icirc;tre sa capacit&eacute; de soutenir les objectifs &agrave; moyen et &agrave; long terme li&eacute;s aux op&eacute;rations, &agrave; la s&eacute;curit&eacute; et &agrave; la modernisation technologique, le gouvernement du Canada pr&eacute;voit la conception et la construction d&rsquo;un centre de donn&eacute;es dans la R&eacute;gion de la capitale nationale.\r\nCe centre de donn&eacute;es de 60&nbsp;MW permettra l&rsquo;int&eacute;gration de capacit&eacute;s de nouvelle g&eacute;n&eacute;ration gr&acirc;ce &agrave; des configurations m&eacute;caniques et &eacute;lectriques adapt&eacute;es aux diff&eacute;rentes exigences technologiques dans l&rsquo;ensemble de l&rsquo;installation. Le centre de donn&eacute;es propos&eacute; comprendra &eacute;galement un petit espace de bureau ainsi qu&rsquo;une aire d&rsquo;exp&eacute;dition et de r&eacute;ception.\r\n\r\nLe co&ucirc;t estim&eacute; du contrat de conception-construction modifi&eacute;e (CCM) propos&eacute; d&eacute;passe 1,25 &agrave; 1,85&nbsp;G$.\r\n\r\nIl est pr&eacute;vu que cette sollicitation sera lanc&eacute;e &agrave; l&rsquo;hiver&nbsp;2027.&nbsp;&nbsp; Ceci est conditionnel &agrave; l&rsquo;approbation par le gouvernement du Canada.\r\n\r\n\r\n\tExigences &eacute;ventuelles en mati&egrave;re de s&eacute;curit&eacute; et d&rsquo;attribution du contrat\r\n\r\n\r\nPour &ecirc;tre admissible &agrave; l&rsquo;attribution d&rsquo;un contrat, un soumissionnaire sera tenu, entre autres, d&eacute;tenir toute cote de s&eacute;curit&eacute; requise avant la date de l&rsquo;octroi du contrat, comme il sera indiqu&eacute; en d&eacute;tail dans les documents de la sollicitation.\r\n&Agrave; la date de publication du pr&eacute;sent pr&eacute;avis d&rsquo;approvisionnement, il est pr&eacute;vu que la cote de s&eacute;curit&eacute; requise soit la suivante&nbsp;:\r\n\r\n\r\n\tpour les concepteurs-constructeurs&nbsp;: une attestation de s&eacute;curit&eacute; d&rsquo;installation (ASI) valide.\r\n\r\n\r\n\r\n\tParrainage dans le cadre du Programme de s&eacute;curit&eacute; industrielle (PSI)\r\n\r\n\r\nConstruction de D&eacute;fense Canada (CDC) offre aux concepteurs-constructeurs l&rsquo;opportunit&eacute; de se faire parrainer en vue d&rsquo;obtenir une attestation de s&eacute;curit&eacute; par l&rsquo;entremise du Programme de s&eacute;curit&eacute; industrielle (PSI). Par cons&eacute;quent, les concepteurs-constructeurs qui pr&eacute;voient pr&eacute;senter une proposition pour ce projet et qui ne d&eacute;tiennent pas activement l&rsquo;attestation de s&eacute;curit&eacute; identifi&eacute;e ci-dessus devraient commencer imm&eacute;diatement le processus de demande d&rsquo;attestation de s&eacute;curit&eacute; en faisant la demande par l&rsquo;interm&eacute;diaire du PSI de CDC.\r\nDans le cadre de ce programme, CDC peut, &agrave; son enti&egrave;re discr&eacute;tion, fournir une aide pr&eacute;liminaire aux soumissionnaires potentiels pour le processus de parrainage visant l&rsquo;obtention d&rsquo;une attestation de s&eacute;curit&eacute;.\r\nPour commencer ce processus, veuillez pr&eacute;senter une demande de parrainage &agrave; CDC en suivant les &eacute;tapes suivantes qui se trouvent sur son site Web &agrave;&nbsp;: https://www.cdc-dcc.gc.ca/industrie/exigences-de-s&eacute;curit&eacute;.\r\nDans la demande de parrainage qu&rsquo;ils pr&eacute;sentent &agrave; CDC, les experts-conseils ou entrepreneurs ou sont pri&eacute;s de notamment indiquer les renseignements suivants&nbsp;:\r\n\r\n\r\n\tLe num&eacute;ro du pr&eacute;avis d&rsquo;approvisionnement, tel qu&rsquo;indiqu&eacute; &agrave; la section&nbsp;2 de ce PA;\r\n\tLe niveau de cote de s&eacute;curit&eacute; demand&eacute; dans le cadre du parrainage, tel qu&rsquo;indiqu&eacute; &agrave; la section&nbsp;3 de ce PA.\r\n\r\n\r\n\r\n\tProcessus de parrainage\r\n\r\n\r\n&Agrave; la r&eacute;ception d&rsquo;une demande de parrainage, CDC l&rsquo;examine et communique directement avec l&rsquo;expert-conseil ou l&rsquo;entrepreneur pour compl&eacute;ter le dossier.\r\nUne fois que CDC a d&eacute;termin&eacute;, &agrave; son enti&egrave;re discr&eacute;tion, qu&rsquo;un expert-conseil ou entrepreneur&nbsp;:\r\n\r\n\r\n\ta d&eacute;but&eacute; le processus de parrainage avant que la sollicitation ne soit annonc&eacute;e sur MERX;\r\n\ta satisfait &agrave; toutes les exigences mat&eacute;rielles de la trousse de demande de parrainage avant la date de fermeture indiqu&eacute;e dans la sollicitation;\r\n\ta d&eacute;pos&eacute; une proposition.\r\n\r\n\r\nCDC enverra la trousse de demande de parrainage au Programme de s&eacute;curit&eacute; des contrats (PSC) de Services publics et Approvisionnement Canada (SPAC).\r\nRemarque&nbsp;: Les entrepreneurs ou experts-conseils qui ne transmettent pas de proposition ne pourront pas obtenir d&rsquo;attestation de s&eacute;curit&eacute; dans le cadre de ce processus de parrainage.\r\n\r\nApr&egrave;s la r&eacute;ception du dossier de demande de parrainage, le PSC communique directement avec le soumissionnaire pour lui indiquer les prochaines &eacute;tapes, les mesures &agrave; prendre ou l&rsquo;&eacute;tat du traitement du dossier. Le soumissionnaire sera alors tenu de coop&eacute;rer avec le PSC en temps opportun pour faire avancer le processus.\r\n\r\n\r\n\tDes questions?\r\n\r\n\r\nVous pouvez transmettre toute question concernant le processus de parrainage par l&rsquo;interm&eacute;diaire du PSI &agrave;&nbsp;:\r\n\r\nNum&eacute;ro de t&eacute;l&eacute;phone&nbsp;: 613-998-8974\r\nCourriel&nbsp;: ISP.Sponsorship@dcc-cdc.gc.ca\r\n\r\nVous pouvez transmettre vos questions relatives au pr&eacute;sent pr&eacute;avis d&rsquo;approvisionnement &agrave;&nbsp;:\r\n\r\nStephanie Tanguay\r\nChef r&eacute;gionale de secteur de services, Services des march&eacute;s\r\nConstruction de D&eacute;fense Canada\r\n613-715-4626\r\nstephanie.tanguay@dcc-cdc.gc.ca\r\n\r\n\r\n\tAvis de non-responsabilit&eacute;\r\n\r\n\r\nCDC ne fournit qu&rsquo;une aide, &agrave; son enti&egrave;re discr&eacute;tion, pour le processus de parrainage susmentionn&eacute; et ne fournit aucune d&eacute;claration ni ne garantit qu&rsquo;un dossier de demande de parrainage ou une demande d&rsquo;attestation de s&eacute;curit&eacute; transmise par CDC au PSC sera retenu ou entra&icirc;nera l&rsquo;octroi de l&rsquo;attestation de s&eacute;curit&eacute; demand&eacute;e par le PSC. En tout temps, le traitement d&rsquo;une demande de parrainage ou d&rsquo;une demande d&rsquo;attestation de s&eacute;curit&eacute; est assujetti aux modalit&eacute;s et aux d&eacute;lais respectifs du processus de parrainage du PSI de CDC et du processus d&rsquo;octroi de l&rsquo;attestation de s&eacute;curit&eacute; du PSC. En postulant &agrave; l&rsquo;un ou l&rsquo;autre des processus susmentionn&eacute;s, le soumissionnaire accepte d&rsquo;assumer les frais et les risques associ&eacute;s &agrave;&nbsp;: (i) l&rsquo;exhaustivit&eacute; ou l&rsquo;exactitude, ou l&rsquo;absence d&rsquo;exactitude, de sa demande ou des documents connexes soumis dans le cadre de l&rsquo;un ou l&rsquo;autre de ces processus ou en relation avec ceux-ci, et (ii) le respect ou l&rsquo;absence d&rsquo;opportunit&eacute;, de tout traitement ou octroi d&rsquo;une ou de plusieurs attestations de s&eacute;curit&eacute; dans le cadre de l&rsquo;un ou l&rsquo;autre de ces processus ou en relation avec ceux-ci. Nonobstant toute autre disposition ci-dessus, CDC ne sera en aucun cas responsable envers le soumissionnaire de tout dommage direct ou indirect.\r\n\r\n&nbsp;Vous pouvez soumettre une offre et accéder aux documents sur http://www.merx.com. Des frais peuvent sappliquer; Voir https://www.merx.com/public/pricing pour plus dinformations.\"\r\n"
+    },
+    {
+      "record_number": 53,
+      "values": {
+        "title-titre-eng": "RFQ – HPE Hardware and Software Maintenance and Support renewal for DND",
+        "title-titre-fra": "DDP - Maintenance et soutien du matériel et des logiciels HPE pour MDN",
+        "referenceNumber-numeroReference": "SSC-26-00035044:T",
+        "amendmentNumber-numeroModification": "000",
+        "solicitationNumber-numeroSollicitation": "BPM026718/35044",
+        "publicationDate-datePublication": "",
+        "tenderClosingDate-appelOffresDateCloture": "2026-10-19T14:00:00",
+        "amendmentDate-dateModification": "",
+        "expectedContractStartDate-dateDebutContratPrevue": "",
+        "expectedContractEndDate-dateFinContratPrevue": "",
+        "tenderStatus-appelOffresStatut-eng": "Open",
+        "tenderStatus-appelOffresStatut-fra": "Ouvert",
+        "gsin-nibs": "*JX7025EA",
+        "gsinDescription-nibsDescription-eng": "*Local Area Networks, Systems and Components - Maintenance",
+        "gsinDescription-nibsDescription-fra": "*Réseaux locaux, systèmes et composants - entretien",
+        "unspsc": "",
+        "unspscDescription-eng": "",
+        "unspscDescription-fra": "",
+        "procurementCategory-categorieApprovisionnement": "*SRVTGD",
+        "noticeType-avisType-eng": "Request for Proposal",
+        "noticeType-avisType-fra": "Demande de propositions",
+        "procurementMethod-methodeApprovisionnement-eng": "Competitive - Open bidding",
+        "procurementMethod-methodeApprovisionnement-fra": "Concurrentielle - Invitation ouverte à soumissionner",
+        "selectionCriteria-criteresSelection-eng": "",
+        "selectionCriteria-criteresSelection-fra": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-eng": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-fra": "",
+        "tradeAgreements-accordsCommerciaux-eng": "*None",
+        "tradeAgreements-accordsCommerciaux-fra": "*Aucun",
+        "regionsOfOpportunity-regionAppelOffres-eng": "*Canada",
+        "regionsOfOpportunity-regionAppelOffres-fra": "*Canada",
+        "regionsOfDelivery-regionsLivraison-eng": "*Nova Scotia",
+        "regionsOfDelivery-regionsLivraison-fra": "*Nouvelle-Écosse",
+        "contractingEntityName-nomEntitContractante-eng": "Shared Services Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-eng": "90 Metcalfe Street",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-eng": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-eng": "Ontario",
+        "contractingEntityAddressPostalCode-entiteContractanteAdresseCodePostal": "K0A 0C3",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-eng": "Canada",
+        "contractingEntityName-nomEntitContractante-fra": "Services partagés Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-fra": "90, rue Metcalfe",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-fra": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-fra": "Ontario",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-fra": "Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-eng": "Shared Services Canada",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-eng": "90 Metcalfe Street,Ottawa,Ontario,K0A 0C3,Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-fra": "Services partagés Canada",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-fra": "90, rue Metcalfe,Ottawa,Ontario,K0A 0C3,Canada",
+        "contactInfoName-informationsContactNom": "Ryma,Brahiti",
+        "contactInfoEmail-informationsContactCourriel": "",
+        "contactInfoPhone-contactInfoTelephone": "343-990-2339",
+        "contactInfoFax": "343-990-2339",
+        "contactInfoAddressLine-contactInfoAdresseLigne-eng": "99 Metcalf  99 Metcalf 99 Metcalf<br>Ottawa<br>National Capital Region",
+        "contactInfoCity-contacterInfoVille-eng": "Ottawa",
+        "contactInfoProvince-contacterInfoProvince-eng": "Ontario",
+        "contactInfoPostalcode": "K1P6L7",
+        "contactInfoCountry-contactInfoPays-eng": "CANADA",
+        "contactInfoAddressLine-contactInfoAdresseLigne-fra": "99 Metcalf  99 Metcalf 99 Metcalf<br>Région de la Capitale nationale",
+        "contactInfoCity-contacterInfoVille-fra": "Ottawa",
+        "contactInfoProvince-contacterInfoProvince-fra": "Ontario",
+        "contactInfoCountry-contactInfoPays-fra": "CANADA",
+        "noticeURL-URLavis-eng": "",
+        "noticeURL-URLavis-fra": "",
+        "attachment-piecesJointes-eng": "https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/CC4E1114-9176-44AE-AA63-DAFA3F761E82,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/6B68A2DB-CFD7-4B6F-90D3-A561DA123A77",
+        "attachment-piecesJointes-fra": "https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/84C47A49-DCF4-46A1-BD86-C13BCE1F15C6,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/EA5937F9-DCBB-4325-AACB-5BBBE403A0D3",
+        "tenderDescription-descriptionAppelOffres-eng": "Notice of Proposed ProcurementThis solicitation is for the HPE hardware maintenance and support and HPE software maintenance and support, for the Department of National Defence.A bid must comply with all requirements of the bid solicitation to be declared responsive. The responsive bid with the lowest evaluated subtotal price will be recommended for award of a contract.The Bidder must submit pricing in accordance with Annex A – List of Deliverables and Pricing.Please refer to the Request for Quotations document for the complete details regarding this requirement including the mandatory criteria, evaluation criteria and basis of selection.Bidders can register in the SSC P2P portal in order to:a. view and access solicitations from SSC;b. submit a response to a solicitation;c. receive updates and amendments regarding solicitations;d. be awarded contracts and receive contract amendments; ande. submit invoices and receive payment status updates.To register, please go to https://supplier-fournisseur-sscp2pspc.ssc-spc.gc.ca/page.aspx/en/usr/login and click Register Now. &nbsp;\nSSC RFQ – HPE Hardware and Software Maintenance and Support renewal for DND- Amendment 000",
+        "tenderDescription-descriptionAppelOffres-fra": "Avis de projet d’acquisitionCette sollicitation concerne la maintenance et le soutien du mat&#233;riel et des logiciels HPE, pour le Minist&#232;re de la D&#233;fense Nationale. &nbsp;Une soumission doit &#234;tre conforme &#224; toutes les exigences de la demande de soumissions pour &#234;tre d&#233;clar&#233;e recevable. La soumission recevable avec le prix sous-total &#233;valu&#233; le plus bas sera recommand&#233;e pour l’attribution d’un contrat.Le soumissionnaire doit soumettre les prix conform&#233;ment &#224; l’annexe A – Liste des produits livrables et des prix.Veuillez consulter le document Demande de prix pour obtenir tous les d&#233;tails concernant cette exigence, y compris les crit&#232;res obligatoires, les crit&#232;res d’&#233;valuation et la m&#233;thode de s&#233;lection.Les soumissionnaires peuvent s’inscrire au portail APL de SPC pour :a. consulter les appels d’offres de SPC et y acc&#233;der;b. soumettre une r&#233;ponse &#224; l’&#233;gard d’un appel d’offres;c. recevoir les mises &#224; jour et les modifications au sujet des appels d’offres;d. se voir attribuer des contrats et recevoir les modifications aux contrats;e. soumettre des factures et recevoir les mises &#224; jour concernant l’&#233;tat des paiements.&nbsp;Pour vous inscrire, veuillez visiter le site https://supplier-fournisseur-sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/usr/login et cliquez sur Inscrivez-vous maintenant.\nSSC RFQ – HPE Hardware and Software Maintenance and Support renewal for DND- Amendment 000"
+      },
+      "raw_record": "\"RFQ – HPE Hardware and Software Maintenance and Support renewal for DND\",\"DDP - Maintenance et soutien du matériel et des logiciels HPE pour MDN\",\"SSC-26-00035044:T\",\"000\",\"BPM026718/35044\",\"\",\"2026-10-19T14:00:00\",\"\",\"\",\"\",\"Open\",\"Ouvert\",\"*JX7025EA\",\"*Local Area Networks, Systems and Components - Maintenance\",\"*Réseaux locaux, systèmes et composants - entretien\",\"\",\"\",\"\",\"*SRVTGD\",\"Request for Proposal\",\"Demande de propositions\",\"Competitive - Open bidding\",\"Concurrentielle - Invitation ouverte à soumissionner\",\"\",\"\",\"\",,\"*None\",\"*Aucun\",\"*Canada\",\"*Canada\",\"*Nova Scotia\",\"*Nouvelle-Écosse\",\"Shared Services Canada\",\"90 Metcalfe Street\",\"Ottawa\",\"Ontario\",\"K0A 0C3\",\"Canada\",\"Services partagés Canada\",\"90, rue Metcalfe\",\"Ottawa\",\"Ontario\",\"Canada\",\"Shared Services Canada\",\"90 Metcalfe Street,Ottawa,Ontario,K0A 0C3,Canada\",\"Services partagés Canada\",\"90, rue Metcalfe,Ottawa,Ontario,K0A 0C3,Canada\",\"Ryma,Brahiti\",\"\",\"343-990-2339\",\"343-990-2339\",\"99 Metcalf  99 Metcalf 99 Metcalf<br>Ottawa<br>National Capital Region\",\"Ottawa\",\"Ontario\",\"K1P6L7\",\"CANADA\",\"99 Metcalf  99 Metcalf 99 Metcalf<br>Région de la Capitale nationale\",\"Ottawa\",\"Ontario\",\"CANADA\",\"\",\"\",\"https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/CC4E1114-9176-44AE-AA63-DAFA3F761E82,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/6B68A2DB-CFD7-4B6F-90D3-A561DA123A77\",\"https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/84C47A49-DCF4-46A1-BD86-C13BCE1F15C6,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/EA5937F9-DCBB-4325-AACB-5BBBE403A0D3\",\"Notice of Proposed ProcurementThis solicitation is for the HPE hardware maintenance and support and HPE software maintenance and support, for the Department of National Defence.A bid must comply with all requirements of the bid solicitation to be declared responsive. The responsive bid with the lowest evaluated subtotal price will be recommended for award of a contract.The Bidder must submit pricing in accordance with Annex A – List of Deliverables and Pricing.Please refer to the Request for Quotations document for the complete details regarding this requirement including the mandatory criteria, evaluation criteria and basis of selection.Bidders can register in the SSC P2P portal in order to:a. view and access solicitations from SSC;b. submit a response to a solicitation;c. receive updates and amendments regarding solicitations;d. be awarded contracts and receive contract amendments; ande. submit invoices and receive payment status updates.To register, please go to https://supplier-fournisseur-sscp2pspc.ssc-spc.gc.ca/page.aspx/en/usr/login and click Register Now. &nbsp;\nSSC RFQ – HPE Hardware and Software Maintenance and Support renewal for DND- Amendment 000\",\"Avis de projet d’acquisitionCette sollicitation concerne la maintenance et le soutien du mat&#233;riel et des logiciels HPE, pour le Minist&#232;re de la D&#233;fense Nationale. &nbsp;Une soumission doit &#234;tre conforme &#224; toutes les exigences de la demande de soumissions pour &#234;tre d&#233;clar&#233;e recevable. La soumission recevable avec le prix sous-total &#233;valu&#233; le plus bas sera recommand&#233;e pour l’attribution d’un contrat.Le soumissionnaire doit soumettre les prix conform&#233;ment &#224; l’annexe A – Liste des produits livrables et des prix.Veuillez consulter le document Demande de prix pour obtenir tous les d&#233;tails concernant cette exigence, y compris les crit&#232;res obligatoires, les crit&#232;res d’&#233;valuation et la m&#233;thode de s&#233;lection.Les soumissionnaires peuvent s’inscrire au portail APL de SPC pour :a. consulter les appels d’offres de SPC et y acc&#233;der;b. soumettre une r&#233;ponse &#224; l’&#233;gard d’un appel d’offres;c. recevoir les mises &#224; jour et les modifications au sujet des appels d’offres;d. se voir attribuer des contrats et recevoir les modifications aux contrats;e. soumettre des factures et recevoir les mises &#224; jour concernant l’&#233;tat des paiements.&nbsp;Pour vous inscrire, veuillez visiter le site https://supplier-fournisseur-sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/usr/login et cliquez sur Inscrivez-vous maintenant.\nSSC RFQ – HPE Hardware and Software Maintenance and Support renewal for DND- Amendment 000\"\r\n"
+    },
+    {
+      "record_number": 62,
+      "values": {
+        "title-titre-eng": "RFI for Application Performance Management 2 (APM2) Solution",
+        "title-titre-fra": "DDR pour une solution de gestion du rendement des  applications 2 (GRA2)",
+        "referenceNumber-numeroReference": "SSC-26-00035133:T",
+        "amendmentNumber-numeroModification": "000",
+        "solicitationNumber-numeroSollicitation": "BPM026762/35133",
+        "publicationDate-datePublication": "",
+        "tenderClosingDate-appelOffresDateCloture": "2026-11-09T14:00:00",
+        "amendmentDate-dateModification": "",
+        "expectedContractStartDate-dateDebutContratPrevue": "",
+        "expectedContractEndDate-dateFinContratPrevue": "",
+        "tenderStatus-appelOffresStatut-eng": "Open",
+        "tenderStatus-appelOffresStatut-fra": "Ouvert",
+        "gsin-nibs": "*N7030",
+        "gsinDescription-nibsDescription-eng": "*ADP Software",
+        "gsinDescription-nibsDescription-fra": "*Logiciel TAI",
+        "unspsc": "",
+        "unspscDescription-eng": "",
+        "unspscDescription-fra": "",
+        "procurementCategory-categorieApprovisionnement": "*GD",
+        "noticeType-avisType-eng": "Request for Information",
+        "noticeType-avisType-fra": "Demande de renseignements",
+        "procurementMethod-methodeApprovisionnement-eng": "Competitive - Open bidding",
+        "procurementMethod-methodeApprovisionnement-fra": "Concurrentielle - Invitation ouverte à soumissionner",
+        "selectionCriteria-criteresSelection-eng": "",
+        "selectionCriteria-criteresSelection-fra": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-eng": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-fra": "",
+        "tradeAgreements-accordsCommerciaux-eng": "*World Trade Organization Agreement on Government Procurement (WTO GPA)\n*Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP)\n*Canada-Colombia Free Trade Agreement\n*Canada-European Union Comprehensive Economic and Trade Agreement (CETA)\n*Canada-Honduras Free Trade Agreement\n*Canada-Korea Free Trade Agreement (CKFTA)\n*Canada-Panama Free Trade Agreement\n*Canadian Free Trade Agreement (CFTA)\n*Canada-Chile Free Trade Agreement (CCFTA)\n*Canada-Peru Free Trade Agreement (CPFTA)\n*Canada-Ukraine Free Trade Agreement (CUFTA)\n*Canada-UK Trade Continuity Agreement (Canada-UK TCA)",
+        "tradeAgreements-accordsCommerciaux-fra": "*Accord sur les marchés publics de l'Organisation mondiale du commerce (AMP-OMC)\n*Accord de Partenariat transpacifique global et progressiste (PTPGP)\n*Accord de libre-échange Canada-Colombie\n*Accord économique et commercial global (AECG) entre le Canada et l’Union européenne (UE)\n*Accord de libre-échange Canada-Honduras\n*Accord de libre-échange Canada-Corée\n*Accord de libre-échange Canada-Panama\n*Accord de libre-échange canadien (ALEC)\n*Accord de libre-échange Canada-Chili (ALECC)\n*Accord de libre-échange Canada-Pérou (ALECP)\n*Accord de libre-échange Canada-Ukraine (ALECU)\n*Accord de continuité commerciale Canada-Royaume-Uni (ACC Canada-Royaume-Uni)",
+        "regionsOfOpportunity-regionAppelOffres-eng": "*Canada",
+        "regionsOfOpportunity-regionAppelOffres-fra": "*Canada",
+        "regionsOfDelivery-regionsLivraison-eng": "*National Capital Region (NCR)",
+        "regionsOfDelivery-regionsLivraison-fra": "*Région de la capitale nationale (RCN)",
+        "contractingEntityName-nomEntitContractante-eng": "Shared Services Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-eng": "90 Metcalfe Street",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-eng": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-eng": "Ontario",
+        "contractingEntityAddressPostalCode-entiteContractanteAdresseCodePostal": "K0A 0C3",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-eng": "Canada",
+        "contractingEntityName-nomEntitContractante-fra": "Services partagés Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-fra": "90, rue Metcalfe",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-fra": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-fra": "Ontario",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-fra": "Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-eng": "Shared Services Canada",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-eng": "90 Metcalfe Street,Ottawa,Ontario,K0A 0C3,Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-fra": "Services partagés Canada",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-fra": "90, rue Metcalfe,Ottawa,Ontario,K0A 0C3,Canada",
+        "contactInfoName-informationsContactNom": "Agnes,Kowalska",
+        "contactInfoEmail-informationsContactCourriel": "",
+        "contactInfoPhone-contactInfoTelephone": "343-551-9034",
+        "contactInfoFax": "000-000-0000",
+        "contactInfoAddressLine-contactInfoAdresseLigne-eng": "Data Centers and Internal Services, PVR Shared Services Canada 180 Kent St., 13 Floor, PO Box 9808, STS T",
+        "contactInfoCity-contacterInfoVille-eng": "Ottawa",
+        "contactInfoProvince-contacterInfoProvince-eng": "Ontario",
+        "contactInfoPostalcode": "K1G 4A8",
+        "contactInfoCountry-contactInfoPays-eng": "CANADA",
+        "contactInfoAddressLine-contactInfoAdresseLigne-fra": "Data Centers and Internal Services, PVR Shared Services Canada 180 Kent St., 13 Floor, PO Box 9808, STS T<br>K1G 4A8<br>CANADA",
+        "contactInfoCity-contacterInfoVille-fra": "",
+        "contactInfoProvince-contacterInfoProvince-fra": "",
+        "contactInfoCountry-contactInfoPays-fra": "",
+        "noticeURL-URLavis-eng": "",
+        "noticeURL-URLavis-fra": "",
+        "attachment-piecesJointes-eng": "https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/FE46308F-F91E-4FAB-BD03-905F2449E708",
+        "attachment-piecesJointes-fra": "https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/C6440BC5-30DA-47C5-8BF9-61119C3CF06F",
+        "tenderDescription-descriptionAppelOffres-eng": "Request for Information (RFI) for Application Performance Management 2 (APM2) SolutionThe Government of Canada (GC) is seeking to modernize and optimize the Application Performance Management (APM) enterprise observability platform used to monitor the health and performance of GC IT infrastructure, application and datacentre observability. This Request for Information (RFI) aims to gather comprehensive insight from industry on all viable infrastructure and application performance observability platform solutions that support the continuous monitoring and tracking of infrastructure and application availability and performance while providing deeper ad-hoc visibility for diagnoses.The GC is seeking industry input on the current and emerging landscape with a view of informing future procurement strategies.&nbsp; The objective is to establish procurement vehicle(s) that provide access to IT observability platform solutions and supporting services, to meet the Government’s diverse operational and security requirements.Through this initiative, the GC seeks to reduce risk, increase agility, and ensure long-term availability and performance of its IT infrastructure and application through observability.Please refer to the RFI Documentation for instructions on how to submit a Response.Questions: Questions concerning this RFI must be directed to the Contracting Authority.\nSSC RFI for Application Performance Management 2 (APM2) Solution- Amendment 000",
+        "tenderDescription-descriptionAppelOffres-fra": "Demande de renseignements (DDR) pour une solution de gestion du rendement des applications 2 (GRA2)Le gouvernement du Canada (GC) cherche &#224; moderniser et &#224; optimiser la plateforme d’observabilit&#233; d’entreprise pour la gestion du rendement des applications (GRA) qui est utilis&#233;e pour surveiller le bon fonctionnement et le rendement de l’observabilit&#233; de l’infrastructure, des applications et des centres de donn&#233;es de TI du GC. La pr&#233;sente demande de renseignements (DDR) vise &#224; recueillir de l’information exhaustive aupr&#232;s de l’industrie sur toutes les solutions viables de plateforme d’observabilit&#233; de l’infrastructure et du rendement des applications qui permettent d’effectuer la surveillance et le suivi continus de la disponibilit&#233; et du rendement de l’infrastructure et des applications, tout en offrant une visibilit&#233; ponctuelle plus approfondie &#224; des fins de diagnostic.Le GC cherche &#224; obtenir l’avis de l’industrie sur le paysage actuel et &#233;mergent en vue d’orienter les strat&#233;gies d’approvisionnement &#233;ventuelles. L’objectif consiste &#224; mettre en place au moins un m&#233;canisme d’approvisionnement qui offre un acc&#232;s aux solutions de plateforme d’observabilit&#233; des TI et aux services de soutien afin de r&#233;pondre aux diverses exigences fonctionnelles et en mati&#232;re de s&#233;curit&#233; du gouvernement.Avec cette initiative, le GC cherche &#224; r&#233;duire les risques, accro&#238;tre l’agilit&#233; et assurer la disponibilit&#233; et le rendement &#224; long terme de son infrastructure de TI et de ses applications gr&#226;ce &#224; l’observabilit&#233;.Veuillez consulter la documentation de la DDR pour obtenir des instructions sur la fa&#231;on de soumettre une r&#233;ponse.Questions : Les questions concernant la pr&#233;sente DDR doivent &#234;tre adress&#233;es &#224; l’autorit&#233; contractante.\nSSC RFI for Application Performance Management 2 (APM2) Solution- Amendment 000"
+      },
+      "raw_record": "\"RFI for Application Performance Management 2 (APM2) Solution\",\"DDR pour une solution de gestion du rendement des  applications 2 (GRA2)\",\"SSC-26-00035133:T\",\"000\",\"BPM026762/35133\",\"\",\"2026-11-09T14:00:00\",\"\",\"\",\"\",\"Open\",\"Ouvert\",\"*N7030\",\"*ADP Software\",\"*Logiciel TAI\",\"\",\"\",\"\",\"*GD\",\"Request for Information\",\"Demande de renseignements\",\"Competitive - Open bidding\",\"Concurrentielle - Invitation ouverte à soumissionner\",\"\",\"\",\"\",,\"*World Trade Organization Agreement on Government Procurement (WTO GPA)\n*Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP)\n*Canada-Colombia Free Trade Agreement\n*Canada-European Union Comprehensive Economic and Trade Agreement (CETA)\n*Canada-Honduras Free Trade Agreement\n*Canada-Korea Free Trade Agreement (CKFTA)\n*Canada-Panama Free Trade Agreement\n*Canadian Free Trade Agreement (CFTA)\n*Canada-Chile Free Trade Agreement (CCFTA)\n*Canada-Peru Free Trade Agreement (CPFTA)\n*Canada-Ukraine Free Trade Agreement (CUFTA)\n*Canada-UK Trade Continuity Agreement (Canada-UK TCA)\",\"*Accord sur les marchés publics de l'Organisation mondiale du commerce (AMP-OMC)\n*Accord de Partenariat transpacifique global et progressiste (PTPGP)\n*Accord de libre-échange Canada-Colombie\n*Accord économique et commercial global (AECG) entre le Canada et l’Union européenne (UE)\n*Accord de libre-échange Canada-Honduras\n*Accord de libre-échange Canada-Corée\n*Accord de libre-échange Canada-Panama\n*Accord de libre-échange canadien (ALEC)\n*Accord de libre-échange Canada-Chili (ALECC)\n*Accord de libre-échange Canada-Pérou (ALECP)\n*Accord de libre-échange Canada-Ukraine (ALECU)\n*Accord de continuité commerciale Canada-Royaume-Uni (ACC Canada-Royaume-Uni)\",\"*Canada\",\"*Canada\",\"*National Capital Region (NCR)\",\"*Région de la capitale nationale (RCN)\",\"Shared Services Canada\",\"90 Metcalfe Street\",\"Ottawa\",\"Ontario\",\"K0A 0C3\",\"Canada\",\"Services partagés Canada\",\"90, rue Metcalfe\",\"Ottawa\",\"Ontario\",\"Canada\",\"Shared Services Canada\",\"90 Metcalfe Street,Ottawa,Ontario,K0A 0C3,Canada\",\"Services partagés Canada\",\"90, rue Metcalfe,Ottawa,Ontario,K0A 0C3,Canada\",\"Agnes,Kowalska\",\"\",\"343-551-9034\",\"000-000-0000\",\"Data Centers and Internal Services, PVR Shared Services Canada 180 Kent St., 13 Floor, PO Box 9808, STS T\",\"Ottawa\",\"Ontario\",\"K1G 4A8\",\"CANADA\",\"Data Centers and Internal Services, PVR Shared Services Canada 180 Kent St., 13 Floor, PO Box 9808, STS T<br>K1G 4A8<br>CANADA\",\"\",\"\",\"\",\"\",\"\",\"https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/FE46308F-F91E-4FAB-BD03-905F2449E708\",\"https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/C6440BC5-30DA-47C5-8BF9-61119C3CF06F\",\"Request for Information (RFI) for Application Performance Management 2 (APM2) SolutionThe Government of Canada (GC) is seeking to modernize and optimize the Application Performance Management (APM) enterprise observability platform used to monitor the health and performance of GC IT infrastructure, application and datacentre observability. This Request for Information (RFI) aims to gather comprehensive insight from industry on all viable infrastructure and application performance observability platform solutions that support the continuous monitoring and tracking of infrastructure and application availability and performance while providing deeper ad-hoc visibility for diagnoses.The GC is seeking industry input on the current and emerging landscape with a view of informing future procurement strategies.&nbsp; The objective is to establish procurement vehicle(s) that provide access to IT observability platform solutions and supporting services, to meet the Government’s diverse operational and security requirements.Through this initiative, the GC seeks to reduce risk, increase agility, and ensure long-term availability and performance of its IT infrastructure and application through observability.Please refer to the RFI Documentation for instructions on how to submit a Response.Questions: Questions concerning this RFI must be directed to the Contracting Authority.\nSSC RFI for Application Performance Management 2 (APM2) Solution- Amendment 000\",\"Demande de renseignements (DDR) pour une solution de gestion du rendement des applications 2 (GRA2)Le gouvernement du Canada (GC) cherche &#224; moderniser et &#224; optimiser la plateforme d’observabilit&#233; d’entreprise pour la gestion du rendement des applications (GRA) qui est utilis&#233;e pour surveiller le bon fonctionnement et le rendement de l’observabilit&#233; de l’infrastructure, des applications et des centres de donn&#233;es de TI du GC. La pr&#233;sente demande de renseignements (DDR) vise &#224; recueillir de l’information exhaustive aupr&#232;s de l’industrie sur toutes les solutions viables de plateforme d’observabilit&#233; de l’infrastructure et du rendement des applications qui permettent d’effectuer la surveillance et le suivi continus de la disponibilit&#233; et du rendement de l’infrastructure et des applications, tout en offrant une visibilit&#233; ponctuelle plus approfondie &#224; des fins de diagnostic.Le GC cherche &#224; obtenir l’avis de l’industrie sur le paysage actuel et &#233;mergent en vue d’orienter les strat&#233;gies d’approvisionnement &#233;ventuelles. L’objectif consiste &#224; mettre en place au moins un m&#233;canisme d’approvisionnement qui offre un acc&#232;s aux solutions de plateforme d’observabilit&#233; des TI et aux services de soutien afin de r&#233;pondre aux diverses exigences fonctionnelles et en mati&#232;re de s&#233;curit&#233; du gouvernement.Avec cette initiative, le GC cherche &#224; r&#233;duire les risques, accro&#238;tre l’agilit&#233; et assurer la disponibilit&#233; et le rendement &#224; long terme de son infrastructure de TI et de ses applications gr&#226;ce &#224; l’observabilit&#233;.Veuillez consulter la documentation de la DDR pour obtenir des instructions sur la fa&#231;on de soumettre une r&#233;ponse.Questions : Les questions concernant la pr&#233;sente DDR doivent &#234;tre adress&#233;es &#224; l’autorit&#233; contractante.\nSSC RFI for Application Performance Management 2 (APM2) Solution- Amendment 000\"\r\n"
+    },
+    {
+      "record_number": 67,
+      "values": {
+        "title-titre-eng": "Managed Back Up and Recovery Software Invitation to Qualify (ITQ)",
+        "title-titre-fra": "Invitation à se qualifier (ISQ) Pour le processus d'approvisionnement de Logiciel de sauvegarde et de récupération géré par",
+        "referenceNumber-numeroReference": "SSC-26-00034957:T",
+        "amendmentNumber-numeroModification": "000",
+        "solicitationNumber-numeroSollicitation": "BPM026659/34957",
+        "publicationDate-datePublication": "2026-09-22",
+        "tenderClosingDate-appelOffresDateCloture": "2026-10-19T14:00:00",
+        "amendmentDate-dateModification": "",
+        "expectedContractStartDate-dateDebutContratPrevue": "",
+        "expectedContractEndDate-dateFinContratPrevue": "",
+        "tenderStatus-appelOffresStatut-eng": "Open",
+        "tenderStatus-appelOffresStatut-fra": "Ouvert",
+        "gsin-nibs": "*N7030",
+        "gsinDescription-nibsDescription-eng": "*ADP Software",
+        "gsinDescription-nibsDescription-fra": "*Logiciel TAI",
+        "unspsc": "",
+        "unspscDescription-eng": "",
+        "unspscDescription-fra": "",
+        "procurementCategory-categorieApprovisionnement": "*GD",
+        "noticeType-avisType-eng": "Invitation to Qualify",
+        "noticeType-avisType-fra": "Invitation à se qualifier",
+        "procurementMethod-methodeApprovisionnement-eng": "Competitive - Open bidding",
+        "procurementMethod-methodeApprovisionnement-fra": "Concurrentielle - Invitation ouverte à soumissionner",
+        "selectionCriteria-criteresSelection-eng": "",
+        "selectionCriteria-criteresSelection-fra": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-eng": "",
+        "limitedTenderingReason-raisonAppelOffresLimite-fra": "",
+        "tradeAgreements-accordsCommerciaux-eng": "*Canada-European Union Comprehensive Economic and Trade Agreement (CETA)\n*World Trade Organization Agreement on Government Procurement (WTO GPA)\n*General Agreement on Tariffs and Trade (GATT)\n*Atlantic Procurement Agreement\n*Canada-Chile Free Trade Agreement (CCFTA)\n*Canada-UK Trade Continuity Agreement (Canada-UK TCA)\n*Canada-Panama Free Trade Agreement\n*Comprehensive Land Claim Agreement (CLCA)\n*Canada-Ukraine Free Trade Agreement (CUFTA)\n*Canada-Peru Free Trade Agreement (CPFTA)\n*Canada-Korea Free Trade Agreement (CKFTA)\n*Canadian Free Trade Agreement (CFTA)\n*Canada-Colombia Free Trade Agreement\n*Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP)\n*Canada-Honduras Free Trade Agreement",
+        "tradeAgreements-accordsCommerciaux-fra": "*Accord économique et commercial global (AECG) entre le Canada et l’Union européenne (UE)\n*Accord sur les marchés publics de l'Organisation mondiale du commerce (AMP-OMC)\n*Accord général sur les tarifs douaniers et le commerce (GATT)\n*Protocole d'entente des provinces de l'Atlantique sur les marchés publics \n*Accord de libre-échange Canada-Chili (ALECC)\n*Accord de continuité commerciale Canada-Royaume-Uni (ACC Canada-Royaume-Uni)\n*Accord de libre-échange Canada-Panama\n*Ententes sur les revendications territoriales globales (ERTG)\n*Accord de libre-échange Canada-Ukraine (ALECU)\n*Accord de libre-échange Canada-Pérou (ALECP)\n*Accord de libre-échange Canada-Corée\n*Accord de libre-échange canadien (ALEC)\n*Accord de libre-échange Canada-Colombie\n*Accord de Partenariat transpacifique global et progressiste (PTPGP)\n*Accord de libre-échange Canada-Honduras",
+        "regionsOfOpportunity-regionAppelOffres-eng": "*World\n*Canada",
+        "regionsOfOpportunity-regionAppelOffres-fra": "*Monde\n*Canada",
+        "regionsOfDelivery-regionsLivraison-eng": "*Canada",
+        "regionsOfDelivery-regionsLivraison-fra": "*Canada",
+        "contractingEntityName-nomEntitContractante-eng": "Shared Services Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-eng": "90 Metcalfe Street",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-eng": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-eng": "Ontario",
+        "contractingEntityAddressPostalCode-entiteContractanteAdresseCodePostal": "K0A 0C3",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-eng": "Canada",
+        "contractingEntityName-nomEntitContractante-fra": "Services partagés Canada",
+        "contractingEntityAddressLine-ligneAdresseEntiteContractante-fra": "90, rue Metcalfe",
+        "contractingEntityAddressCity-entiteContractanteAdresseVille-fra": "Ottawa",
+        "contractingEntityAddressProvince-entiteContractanteAdresseProvince-fra": "Ontario",
+        "contractingEntityAddressCountry-entiteContractanteAdressePays-fra": "Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-eng": "Shared Services Canada",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-eng": "90 Metcalfe Street,Ottawa,Ontario,K0A 0C3,Canada",
+        "endUserEntitiesName-nomEntitesUtilisateurFinal-fra": "Services partagés Canada",
+        "endUserEntitiesAddress-adresseEntitesUtilisateurFinal-fra": "90, rue Metcalfe,Ottawa,Ontario,K0A 0C3,Canada",
+        "contactInfoName-informationsContactNom": "James ,McKay",
+        "contactInfoEmail-informationsContactCourriel": "",
+        "contactInfoPhone-contactInfoTelephone": "6132913521",
+        "contactInfoFax": "6132154877",
+        "contactInfoAddressLine-contactInfoAdresseLigne-eng": "180 Office Kent St.",
+        "contactInfoCity-contacterInfoVille-eng": "Ottawa",
+        "contactInfoProvince-contacterInfoProvince-eng": "Ontario",
+        "contactInfoPostalcode": "K1G 4A8",
+        "contactInfoCountry-contactInfoPays-eng": "CANADA",
+        "contactInfoAddressLine-contactInfoAdresseLigne-fra": "180 Office Kent St.",
+        "contactInfoCity-contacterInfoVille-fra": "Ottawa",
+        "contactInfoProvince-contacterInfoProvince-fra": "Ontario",
+        "contactInfoCountry-contactInfoPays-fra": "CANADA",
+        "noticeURL-URLavis-eng": "",
+        "noticeURL-URLavis-fra": "",
+        "attachment-piecesJointes-eng": "https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/CCCE08A4-B588-48F8-B1DA-7784DB4433BC,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/C1135C70-B6CF-45C0-9C90-EF4B0CD60FF6,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/DDD90E91-0DC7-4059-8A6A-88710A3A2404",
+        "attachment-piecesJointes-fra": "https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/343433D3-EFCD-4B7D-AD5B-DCB3C1E88FB5,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/5B54FE69-E4BE-4827-98F1-BD71C330DBD2,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/8FBF9BD3-D05F-4AA5-B544-BB2BA52EE81F",
+        "tenderDescription-descriptionAppelOffres-eng": "Invitation to Qualify (ITQ) For The Procurement of Government of Canada Managed Backup and Recovery Software (MBRS)This Invitation to Qualify is the first phase of a procurement process by Shared Services Canada (SSC) for a Government of Canada Managed Backup and Recovery Software for enterprise on premises open systems. Suppliers are invited to pre-qualify in accordance with the terms and conditions of this ITQ in order to become “Qualified Respondents” for any later phases of the procurement process.&nbsp;This ITQ process is not a solicitation of bids or tenders. No contract will be awarded as a result of the activities during the ITQ phase.Respondents that successfully satisfy all qualification requirements will become Qualified Respondents and will be invited to participate in subsequent phases of this procurement process.The Government of Canada currently intends that participation in the Review and Refine Requirements (RRR) phase and any resulting Request for Proposals (RFP) be limited to Qualified Respondents resulting from this ITQ.&nbsp;\nSSC Managed Back Up and Recovery Software Invitation to Qualify (ITQ) - Amendment 000",
+        "tenderDescription-descriptionAppelOffres-fra": "Invitation &#224; se qualifier (ISQ) Pour le processus d&#39;approvisionnement de Logiciel de sauvegarde et de r&#233;cup&#233;ration g&#233;r&#233; par le gouvernement du CanadaPhase 1 du processus d&#39;approvisionnement: La pr&#233;sente invitation &#224; se qualifier (ISQ) est la premi&#232;re &#233;tape d&#39;un processus d&#39;approvisionnement par Services partag&#233;s Canada (SPC) pour un logiciel de sauvegarde et de r&#233;cup&#233;ration g&#233;r&#233; gouvernement du Canada pour les syst&#232;mes ouverts sur place d&#39;entreprise. Les fournisseurs sont invit&#233;s &#224; se pr&#233;qualifier conform&#233;ment aux modalit&#233;s de la pr&#233;sente ISQ afin de devenir des &#171; r&#233;pondants qualifi&#233;s &#187; pour les phases ult&#233;rieures du processus d&#39;approvisionnement.&nbsp;L&#39;ISQ n&#39;est pas une demande de soumissions: Le pr&#233;sent processus d&#39;ISQ ne constitue pas une demande de soumissions ni un appel d&#39;offres. Aucun contrat ne sera attribu&#233; &#224; la suite des activit&#233;s men&#233;es au cours de l&#39;&#233;tape de l&#39;ISQ.Les r&#233;pondants qui satisfont &#224; toutes les exigences de qualification deviendront des r&#233;pondants qualifi&#233;s et seront invit&#233;s &#224; participer aux &#233;tapes subs&#233;quentes de ce processus d&#39;approvisionnement.Le gouvernement du Canada a actuellement l&#39;intention de limiter la participation &#224; l&#39;&#233;tape de l’&#201;tape d&#39;examen et d&#39;am&#233;lioration des exigences (EAE) et &#224; toute Demande de propositions (DP) subs&#233;quente aux r&#233;pondants qualifi&#233;s d&#233;coulant de la pr&#233;sente ISQ.&nbsp;\nSSC Managed Back Up and Recovery Software Invitation to Qualify (ITQ) - Amendment 000"
+      },
+      "raw_record": "\"Managed Back Up and Recovery Software Invitation to Qualify (ITQ)\",\"Invitation à se qualifier (ISQ) Pour le processus d'approvisionnement de Logiciel de sauvegarde et de récupération géré par\",\"SSC-26-00034957:T\",\"000\",\"BPM026659/34957\",\"2026-09-22\",\"2026-10-19T14:00:00\",\"\",\"\",\"\",\"Open\",\"Ouvert\",\"*N7030\",\"*ADP Software\",\"*Logiciel TAI\",\"\",\"\",\"\",\"*GD\",\"Invitation to Qualify\",\"Invitation à se qualifier\",\"Competitive - Open bidding\",\"Concurrentielle - Invitation ouverte à soumissionner\",\"\",\"\",\"\",,\"*Canada-European Union Comprehensive Economic and Trade Agreement (CETA)\n*World Trade Organization Agreement on Government Procurement (WTO GPA)\n*General Agreement on Tariffs and Trade (GATT)\n*Atlantic Procurement Agreement\n*Canada-Chile Free Trade Agreement (CCFTA)\n*Canada-UK Trade Continuity Agreement (Canada-UK TCA)\n*Canada-Panama Free Trade Agreement\n*Comprehensive Land Claim Agreement (CLCA)\n*Canada-Ukraine Free Trade Agreement (CUFTA)\n*Canada-Peru Free Trade Agreement (CPFTA)\n*Canada-Korea Free Trade Agreement (CKFTA)\n*Canadian Free Trade Agreement (CFTA)\n*Canada-Colombia Free Trade Agreement\n*Comprehensive and Progressive Agreement for Trans-Pacific Partnership (CPTPP)\n*Canada-Honduras Free Trade Agreement\",\"*Accord économique et commercial global (AECG) entre le Canada et l’Union européenne (UE)\n*Accord sur les marchés publics de l'Organisation mondiale du commerce (AMP-OMC)\n*Accord général sur les tarifs douaniers et le commerce (GATT)\n*Protocole d'entente des provinces de l'Atlantique sur les marchés publics \n*Accord de libre-échange Canada-Chili (ALECC)\n*Accord de continuité commerciale Canada-Royaume-Uni (ACC Canada-Royaume-Uni)\n*Accord de libre-échange Canada-Panama\n*Ententes sur les revendications territoriales globales (ERTG)\n*Accord de libre-échange Canada-Ukraine (ALECU)\n*Accord de libre-échange Canada-Pérou (ALECP)\n*Accord de libre-échange Canada-Corée\n*Accord de libre-échange canadien (ALEC)\n*Accord de libre-échange Canada-Colombie\n*Accord de Partenariat transpacifique global et progressiste (PTPGP)\n*Accord de libre-échange Canada-Honduras\",\"*World\n*Canada\",\"*Monde\n*Canada\",\"*Canada\",\"*Canada\",\"Shared Services Canada\",\"90 Metcalfe Street\",\"Ottawa\",\"Ontario\",\"K0A 0C3\",\"Canada\",\"Services partagés Canada\",\"90, rue Metcalfe\",\"Ottawa\",\"Ontario\",\"Canada\",\"Shared Services Canada\",\"90 Metcalfe Street,Ottawa,Ontario,K0A 0C3,Canada\",\"Services partagés Canada\",\"90, rue Metcalfe,Ottawa,Ontario,K0A 0C3,Canada\",\"James ,McKay\",\"\",\"6132913521\",\"6132154877\",\"180 Office Kent St.\",\"Ottawa\",\"Ontario\",\"K1G 4A8\",\"CANADA\",\"180 Office Kent St.\",\"Ottawa\",\"Ontario\",\"CANADA\",\"\",\"\",\"https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/CCCE08A4-B588-48F8-B1DA-7784DB4433BC,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/C1135C70-B6CF-45C0-9C90-EF4B0CD60FF6,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/en/fil/download_public/DDD90E91-0DC7-4059-8A6A-88710A3A2404\",\"https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/343433D3-EFCD-4B7D-AD5B-DCB3C1E88FB5,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/5B54FE69-E4BE-4827-98F1-BD71C330DBD2,https://sscp2pspc.ssc-spc.gc.ca/page.aspx/fr/fil/download_public/8FBF9BD3-D05F-4AA5-B544-BB2BA52EE81F\",\"Invitation to Qualify (ITQ) For The Procurement of Government of Canada Managed Backup and Recovery Software (MBRS)This Invitation to Qualify is the first phase of a procurement process by Shared Services Canada (SSC) for a Government of Canada Managed Backup and Recovery Software for enterprise on premises open systems. Suppliers are invited to pre-qualify in accordance with the terms and conditions of this ITQ in order to become “Qualified Respondents” for any later phases of the procurement process.&nbsp;This ITQ process is not a solicitation of bids or tenders. No contract will be awarded as a result of the activities during the ITQ phase.Respondents that successfully satisfy all qualification requirements will become Qualified Respondents and will be invited to participate in subsequent phases of this procurement process.The Government of Canada currently intends that participation in the Review and Refine Requirements (RRR) phase and any resulting Request for Proposals (RFP) be limited to Qualified Respondents resulting from this ITQ.&nbsp;\nSSC Managed Back Up and Recovery Software Invitation to Qualify (ITQ) - Amendment 000\",\"Invitation &#224; se qualifier (ISQ) Pour le processus d&#39;approvisionnement de Logiciel de sauvegarde et de r&#233;cup&#233;ration g&#233;r&#233; par le gouvernement du CanadaPhase 1 du processus d&#39;approvisionnement: La pr&#233;sente invitation &#224; se qualifier (ISQ) est la premi&#232;re &#233;tape d&#39;un processus d&#39;approvisionnement par Services partag&#233;s Canada (SPC) pour un logiciel de sauvegarde et de r&#233;cup&#233;ration g&#233;r&#233; gouvernement du Canada pour les syst&#232;mes ouverts sur place d&#39;entreprise. Les fournisseurs sont invit&#233;s &#224; se pr&#233;qualifier conform&#233;ment aux modalit&#233;s de la pr&#233;sente ISQ afin de devenir des &#171; r&#233;pondants qualifi&#233;s &#187; pour les phases ult&#233;rieures du processus d&#39;approvisionnement.&nbsp;L&#39;ISQ n&#39;est pas une demande de soumissions: Le pr&#233;sent processus d&#39;ISQ ne constitue pas une demande de soumissions ni un appel d&#39;offres. Aucun contrat ne sera attribu&#233; &#224; la suite des activit&#233;s men&#233;es au cours de l&#39;&#233;tape de l&#39;ISQ.Les r&#233;pondants qui satisfont &#224; toutes les exigences de qualification deviendront des r&#233;pondants qualifi&#233;s et seront invit&#233;s &#224; participer aux &#233;tapes subs&#233;quentes de ce processus d&#39;approvisionnement.Le gouvernement du Canada a actuellement l&#39;intention de limiter la participation &#224; l&#39;&#233;tape de l’&#201;tape d&#39;examen et d&#39;am&#233;lioration des exigences (EAE) et &#224; toute Demande de propositions (DP) subs&#233;quente aux r&#233;pondants qualifi&#233;s d&#233;coulant de la pr&#233;sente ISQ.&nbsp;\nSSC Managed Back Up and Recovery Software Invitation to Qualify (ITQ) - Amendment 000\"\r\n"
+    }
+  ],
+  "selection_description": "The selected original records are rows42,53,62,67 from the completely read908-row live open-tender file. Each includes its complete original67-field values and exact raw CSV record text. Full open-tender file preservation is a separate source fixture within this same operation.",
+  "current_engine_files": [
+    {
+      "path": "stellar-forge/mcp-merchant-operator/catalog/ocds-workspace.mjs",
+      "sha": "a99a332820ee5e11018f57e9aa7d2c3a289988ec",
+      "bytes": 8742
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/ocds-workspace.mjs",
+      "sha": "b54333447541511f60e4a969da0eb9551292315b",
+      "bytes": 33413
+    },
+    {
+      "path": "stellar-forge/mcp-merchant-operator/providers/ocds-workspaces.mjs",
+      "sha": "1d8b33b79a514a0e21994cb146cf97d589d46c92",
+      "bytes": 2216
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/merchant-provider-ocds-workspaces.json",
+      "sha": "5f91d4ad4cd20f449b199c6b0720ef7d593cda8d",
+      "bytes": 305
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/distribution/contributions/ocds.json",
+      "sha": "e25fcd9eb1398fb920662428bf3de7e1352d5c22",
+      "bytes": 959
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/README.md",
+      "sha": "8b92723cb6a099bede16e5c858ae0dd301fe8480",
+      "bytes": 12534
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/application-provider.mjs",
+      "sha": "8fb5abd6fd9e6d22d063bd824e94c49fdcee6f38",
+      "bytes": 6093
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/capture.mjs",
+      "sha": "3c69d6f5ec43219bfd854a91530a78d0f98d5d74",
+      "bytes": 10773
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/cli.mjs",
+      "sha": "56f2813f94b1afa65bcc8cae435599e1167aef46",
+      "bytes": 11332
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/client.d.mts",
+      "sha": "8750be327eff2c6aa6018618bcd3eedd77a31ea0",
+      "bytes": 117
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/client.d.ts",
+      "sha": "512cbec5fda22ca7bb9b95778ef5380e7051dd8c",
+      "bytes": 4976
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/client.mjs",
+      "sha": "a4d5dba59966a8c904437d1c76c894e176590148",
+      "bytes": 6251
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/domain.d.mts",
+      "sha": "ba281258592a27eb45715256f44c9ad08ded40c0",
+      "bytes": 117
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/domain.d.ts",
+      "sha": "9549c0810db9f5337634c254267f65ea8ec4928b",
+      "bytes": 5738
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/domain.mjs",
+      "sha": "90a6177c58cb23eab88ba7689f7e91433fafe875",
+      "bytes": 35662
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/examples/browser-journey.mjs",
+      "sha": "05099473bf61f28e7b7e8af4ff60b4398e62f1df",
+      "bytes": 10998
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/examples/native-bootstrap.py",
+      "sha": "e9b123901b38b1e142f7e270f297bce66acbe362",
+      "bytes": 8921
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/examples/native-journey.mjs",
+      "sha": "7e0e65cd9a050665655867a7b1d6040f88b28944",
+      "bytes": 15808
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/examples/source/cdmx-release-package-01.json",
+      "sha": "3bd5b552c00572e4c844bf09df7cc80ed91a025f",
+      "bytes": 24612
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/examples/source/cdmx-release-package-02.json",
+      "sha": "b0b834e671fbeee9666147711baa998085118756",
+      "bytes": 12218
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/examples/source/manifest.json",
+      "sha": "295ecb9391aca2af805a5a25531cb64d4d59b07f",
+      "bytes": 2061
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/merchant.mjs",
+      "sha": "2b6a5c7e77675108a36c7121e3d3047ff5b9a11b",
+      "bytes": 21313
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/reports.mjs",
+      "sha": "62099bb2eb2f2ad6eebb5de845d7fffa1b757685",
+      "bytes": 20613
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/server.mjs",
+      "sha": "9d4545ae0527b529b06e00ee625b76dbb701bd16",
+      "bytes": 9499
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/web/index.html",
+      "sha": "4e16a97aeaff25475a11f36b0b1af6442534e33d",
+      "bytes": 90043
+    },
+    {
+      "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/ocds/workspace.mjs",
+      "sha": "c1d7124a2329472ba6fa684d93a7001cb73b2b21",
+      "bytes": 28656
+    }
+  ]
+}

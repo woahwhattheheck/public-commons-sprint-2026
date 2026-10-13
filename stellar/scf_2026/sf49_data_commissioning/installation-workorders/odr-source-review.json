@@ -1,0 +1,91 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "odr-source-review",
+  "title": "ODR source review and Alpha receiving",
+  "task": {
+    "name": "Install and operate the original ODR source and Alpha review workspace",
+    "purpose": "Give the original team its complete source-selected review application, durable original handover, exact revisions and an independently received working installation.",
+    "request": "Continue the original selected Workshare and Installation with complete application source, original workspace, actual runtimes and named owners. Operate the original review/measurement/native-request history and deliver whole editable source/state.",
+    "completeOutput": "Complete original source and license; immutable source editions; selected Python/Node; managed original UI with explicit durable saves; complete handover/report; whole installation ZIP; independently received managed application and onward edit/export.",
+    "repeatTrigger": "A substantive new source, notification edition, review, measurement or actual native response continues through the same original application. Retain all earlier source/record history and explicit receiving identities.",
+    "pricedUnit": "Use the original complete Workshare, source permissions, funded/commercial assignments and actual authorised budget. Original source, service and Stellar operations remain within that same unit."
+  },
+  "source": {
+    "reference": "Original selected Workshare and Customer Installation seed; complete APPLICATION_SOURCE.json and original handover; products/odr-workspace/SCF.md and native/API.md.",
+    "mode": "MIXED",
+    "population": "Complete source publications, notification definitions and drafts, exact historical reviews, planned/observed Alpha measurements, actual selected metadata/mappings and exact prepared request/received response records.",
+    "meaning": "Preserve actual source account, record/workspace identity, full history, explicit technical findings, selected original metadata and native response identity. Separate authored planning from observed evidence.",
+    "changePolicy": "Original owners select new publications or application editions and review new draft revisions. Preserve prior editions and complete native request/response lineage; no automatic tenant dispatch or inference of required fields."
+  },
+  "receiving": {
+    "application": "The complete selected original source app through products/odr-workspace, fifteen merchant_odr tools, the direct-child ODR review Application and original Installation seed.",
+    "acceptanceRule": "Receive complete original source and handover; verify workspace/source/digests. Open the managed original UI, review real selected fields and records, retain an ordinary edit with explicit installed save, reopen and inspect full history. Receive a lost response under the same input; retain conflicts for explicit receiving. Stop before whole snapshot; independently receive all original source/history/lineage, reopen the received app and save/export onward.",
+    "changeAndWithdraw": "Keep original source, service and customer decisions with their existing owners. Preserve earlier source and record history. No live Dataverse write is implied by offline request preparation.",
+    "recovery": "Retain exact lifecycle UUID/input and full browser pending payload/expected digest. Complete committed transitions before requiring temporary donor paths; verify surviving inputs. Independent receiving keeps workspace UUID and assigns a new installation identity.",
+    "maintenance": "Name original source/product owner, staff operator, receiving operator and commercial owner. Retain selected runtime/source, whole archive and actual original results with the same case."
+  },
+  "steps": [
+    {
+      "title": "Select original scope and source",
+      "result": "Keep the complete original Workshare, attached source, saved workspace and acceptance checks."
+    },
+    {
+      "title": "Prepare the whole selected application",
+      "result": "Verify every source member, builder and license; receive the actual original handover and immutable source lineage."
+    },
+    {
+      "title": "Open the managed original service",
+      "result": "Review the exact selected installation, Python/Node/source and direct child readiness."
+    },
+    {
+      "title": "Operate complete original review",
+      "result": "Retain exact source/notification/review editions, meaningful Alpha evidence and complete prepared/received native records."
+    },
+    {
+      "title": "Save and reconcile original work",
+      "result": "Explicitly save the whole handover, receive the same exact pending payload after interruption, and preserve both editions on a real CAS conflict."
+    },
+    {
+      "title": "Export source and workspace",
+      "result": "Stop the application; export original full handover, report and source then whole installation ZIP."
+    },
+    {
+      "title": "Independently receive",
+      "result": "Verify every archive member, preserve workspace/history/source and sender lineage, and create a separate installation UUID."
+    },
+    {
+      "title": "Reopen and deliver onward",
+      "result": "Operate the received original application, preserve an ordinary original record edit and export complete onward artifacts."
+    }
+  ],
+  "inputs": [
+    "Original complete Workshare, Installation seed/bindings and source-use authority",
+    "Complete selected APPLICATION_SOURCE.json with exact original files/manifest and license",
+    "Actual original handover including workspace history, source lineage and working drafts",
+    "Installed Node20+ and Python3.10+, private installation/transfer directories",
+    "Exact lifecycle request IDs and selected source/workspace/archive hashes",
+    "Complete received installation and original operator/owner handover"
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/odr-workspace/SCF.md",
+      "blob": "abdcee7ce0b8d9d37776deb4abfeeaca42133125"
+    },
+    {
+      "path": "products/odr-workspace/native/API.md",
+      "blob": "f21f96d72945fca4ce168c81b7b8462cfa334088"
+    },
+    {
+      "path": "products/odr-workspace/native/manage.py",
+      "blob": "b3baee78fdd6bb37aba7c879437c82aa54142aed"
+    },
+    {
+      "path": "products/odr-workspace/client.mjs",
+      "blob": "bf12c1a47ed64bef8704b4454934fe2af2e9a7b4"
+    },
+    {
+      "path": "products/odr-workspace/commission.mjs",
+      "blob": "017fcbd5821e2d84d496b5faabe3305a432535d3"
+    }
+  ]
+}

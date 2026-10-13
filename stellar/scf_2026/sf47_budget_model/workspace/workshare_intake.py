@@ -82,8 +82,14 @@ def business_end(start, days, calendar):
     fail("The entered duration exceeds the original forecast horizon.")
 
 
-def load_workshares(commissioning, receiving_packet=None, *, require_proposed_usd=True):
+def load_workshares(commissioning, receiving_packet=None, *, require_proposed_usd=True,
+                    receiving_packet_bytes=None):
     """Read every original phase and reconcile the matching complete case packet."""
+    if commissioning.get("schema") == "stellar-forge.canadabuys-workshare-source.v1":
+        from canadabuys_workshare_intake import load_native_workshares
+        return load_native_workshares(commissioning, receiving_packet,
+                                      packet_bytes=receiving_packet_bytes,
+                                      require_proposed_usd=require_proposed_usd)
     supported = ("sec-workshare.commissioning-inputs.v1", "dealscout.workshare-commissioning-inputs.v1")
     if commissioning.get("version") not in supported:
         fail("Use the complete operated Workshare commissioning-inputs.v1 contract.")

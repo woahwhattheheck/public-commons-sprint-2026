@@ -4,6 +4,10 @@ Run the actual SF47 funding calculator through a retained local planning workspa
 
 The application uses the original [budget.py](../budget.py) for every accepted scenario. Its current source is [sf10_current_candidate.json](../sf10_current_candidate.json); the accompanying [calculator guide](../README.md) explains the native funding model and source assumptions.
 
+## Compare saved revisions
+
+Open **Compare saved plans** to compare saved revisions within one plan or across named alternatives. Inspect complete source changes, exact funding and capacity deltas, and retained daily cash outcomes. The [comparison guide](COMPARISON.md) covers the browser, CLI, typed client, Merchant MCP and complete original-plan receiving package.
+
 ## Start and reopen
 
 Use Linux with Python 3.10 or newer and a current browser. The application uses Python's standard library, SQLite and a retained operating-system file lock. Its browser files are plain HTML, CSS and JavaScript.
@@ -210,6 +214,24 @@ Python callers can import `Workspace` from `model.py` or use `create_server(work
 
 Use the saved plan's source digest, revision number, change note and complete exported source when coordinating the next staffing, milestone or application decision.
 
+## Calendar for grant delivery
+
+**Delivery calendar** provides an agenda and month view across the original case's completion deadlines, saved assignments, grant receipts and form submissions. Source links reopen the payment or tranche; filters select owners, tranches and dates. Full ICS, CSV and JSON downloads remain available through the browser, native CLI and typed/MCP client. See [Calendar operation](CALENDAR.md) for date meanings, complete exports and commands.
+
+## Budget performance and period management
+
+**Delivery operations → Budget performance** connects a selected reporting period to the pinned package budget, original contributor work, issued invoices, payment/refund allocations and native asset quantities. Review opening/period/closing positions, package and contributor performance, invoice aging and full source rows. The complete handover includes JSON/CSV/offline HTML and the original operating case; importing it reopens the selected dates. Use [PERFORMANCE.md](PERFORMANCE.md) for the browser, CLI, HTTP, typed client and Merchant workflow.
+
+## Bring complete source tables into the actual ledger
+
+**Delivery operations → Bulk ledger intake** receives complete contributor, work, supplier-invoice and cash CSV/TSV/JSON tables with original file attachments, explicit column mapping, cross-file references, grouped invoice lines and payment allocations. Operators review every native record before applying the whole intake in one original case transaction. The full input, resulting record map, original files and interrupted-request recovery remain available in the browser and complete case export.
+
+Use [LEDGER_INTAKE.md](LEDGER_INTAKE.md) for the operator workflow, templates, CLI builder and complete HTTP, typed client and Merchant MCP interfaces.
+
+## Original currencies, customer payment credits and portfolio cash
+
+Use [Original currencies in operating forecasts](CURRENCY.md) to keep quoted amounts, delivery estimates, explicit dated exchange rates and native payment credits through Forecast and Portfolio. The complete [loadable input example](examples/native-currency-forecast.json) demonstrates a foreign quote, a USD estimate, event-dependent terms and exact milestone rounding. Original cash records retain their recorded USD values; the cash and allocation views expose incomplete financial coverage alongside operational scheduling.
+
 ## Reforecast remaining cash and delivery work
 
 The original **Delivery operations → Operating forecast** workspace now saves dated forecasts from actual case records: unpaid invoice balances, uninvoiced package obligations, remaining hours, conditional grant dates and customer-specific implementation scenarios. It includes native UI, HTTP and CLI preview/save, exact source snapshots, complete exports and reopen/receiving. Use [FORECAST.md](FORECAST.md) for the complete operator guide. The original application budget and recorded financial observations remain their existing source of truth.
@@ -229,3 +251,30 @@ The matching Python and Node managed launch readers identify the full installed 
 ## Original implementation evidence
 
 The [Implementation evidence desk](IMPLEMENTATION_EVIDENCE.md) receives complete SF74 commissioning source into the existing operating case. Operators select exact task, measurement and separate technical/customer receiving observations, link the original work/purchases/deployments and saved Installation editions, and freeze a source-verified review. The original Completion, typed client/MCP, CLI and full case export/reopen retain the same evidence and request identities. The [original receiving journey](BUYER_RECEIVING_JOURNEY.md) can include this phase on its explicitly selected original case.
+
+## Reconcile an original account and save its dated close
+
+**Delivery operations → Account reconciliation** compares a retained original account statement with the complete native cash account and period. Review source rows, original and corrected cash movements, whole-record matching groups and explicitly outstanding items. Retain an unresolved draft or close the reviewed period when the complete source and cash comparison balances.
+
+Every saved edition reopens its original decisions and comparison alongside the current account. The exact original Statements and Cash writers open from the reconciliation desk while complete drafts and pending requests remain retained. **Download complete account** carries the original native case, source files, saved editions, readable HTML and CSV reports; importing it reopens the same reconciliation selection. The [Account reconciliation guide](ACCOUNT_RECONCILIATION.md) covers the complete browser, command line, typed client, Merchant MCP, original request recovery and receiving workflow.
+
+## Operate complete cash accounts and corrections
+
+**Delivery operations → Cash / issuer** now joins exact dated cash accounts, full original payment/refund allocations, native quantities, source documents and complete correction history. Review an observation's financial effect before recording its original void and replacement in one native case transaction. Current forecast inputs follow the recorded successor chain; original completion receipts and submitted reviews remain attached.
+
+**Download complete account** exports the full report, CSVs, offline HTML, correction sources and original operating case. Import that whole ZIP to reopen the same dates and exact account. The [Cash accounts guide](CASH_ACCOUNTS.md) covers the full browser, original source/recovery, Statements/Completion/Forecast, CLI, typed client, Merchant MCP and receiving workflow.
+
+## Operate a complete supplier account
+
+**Delivery operations → Supplier accounts** brings the selected contributor or supplier, original work, invoice lines, review states, source documents and observed payments/refunds into one account. Operators can record and edit original supplier/work/invoice data, attach documents, retain actual cash allocations, and review opening/period/closing balances and invoice aging for selected dates.
+
+**Download complete account handover** includes the complete account JSON, all invoice/work/cash/activity CSVs, readable offline HTML and the original operating case with every retained attachment. Import that complete ZIP to reopen the same supplier and dates. The [Supplier accounts guide](PAYABLES.md) covers browser recovery, native commands, typed client, CLI, Merchant MCP and the source joins with Engagements, Statements, Ledger Intake and Budget Performance.
+
+
+## Named staff and complete installation receiving
+
+Open **Team workspace** at `/team` from the original private owner link. Enroll lead, finance, reviewer and contributor profiles against the existing case and contributor identities. Named HTTP sessions use individual cookies and a CSRF value; the original case commands record the enrolled actor. The contributor desk records original work and invoices and shows their paid, open and credit balances.
+
+[STAFF_ACCESS.md](STAFF_ACCESS.md) contains the operating workflow and role matrix. [STAFF_INSTALLATION.md](STAFF_INSTALLATION.md) covers whole-database backup, source and attachment transfer, individual SSH access and independent recovery. Both Applications launchers include the same named-staff source inventory.
+
+The full operating receiving entrypoint is `python3 STAFF_WORKFLOW_RECEIVING.py --output /absolute/private/receiving --node /absolute/path/to/node`. It operates the original local server through named staff HTTP and browser sessions, then opens the same complete installation in a separate recovered destination. Existing trusted integrations retain the original owner bearer API.

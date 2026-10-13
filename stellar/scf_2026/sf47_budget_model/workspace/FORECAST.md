@@ -82,17 +82,33 @@ Retain the exact original offer alongside the estimate:
 | Delivery invoices | Original invoices whose lines are outside the grant packages; each can belong to one scenario |
 | Source and assumptions | Original scope, prerequisites, estimate basis, date assumptions and relevant attachments |
 
-The milestone amounts must add to the quoted price exactly. Selected observed customer receipts reduce those milestones in order; over-receipts remain explicit. A milestone with no collection date is excluded from the cash curve and listed as a date decision.
+The milestone amounts must add to the quoted price exactly. Selected observed customer receipts reduce those milestones in order using original USD amounts in USD mode or retained native payment credits in native mode; over-receipts remain explicit. A milestone with no collection date is excluded from the cash curve and listed as a date decision.
 
-Customer-specific remaining uninvoiced cost equals its current total delivery estimate less the original linked invoice amounts and assigned direct payments, floored at zero. Included unpaid invoices remain separately due. Reusable product work completed before the proposed customer implementation belongs in its original scope; it must not be relabeled as work still needed for this customer.
+For USD delivery estimates, customer-specific remaining uninvoiced cost equals the current total estimate less the original linked invoice amounts and assigned direct payments, floored at zero. Foreign estimates use the retained native cost credits and explicit rate described in the currency guide. Included unpaid invoices remain separately due. Reusable product work completed before the proposed customer implementation belongs in its original scope; it must not be relabeled as work still needed for this customer.
 
 A new internal effort estimate is valid as a forecast assumption when its author, scope and basis are explicit. It is distinct from a quoted customer commitment, measured hours or an agreed supplier rate. Keep each concept in its original field and source note.
+
+## Native currencies and original payment credits
+
+Choose original USD entry or explicit native-currency entry for each commercial scenario. Native quotes, delivery estimates, source-dated exchange rates, original payment credits, exact milestone rounding and valuation coverage remain together through saved forecasts, Portfolio and complete-case receiving. See [Original currencies in operating forecasts](CURRENCY.md) for the full workflow and [loadable input example](examples/native-currency-forecast.json).
 
 ## Capacity
 
 The forecast distributes the selected remaining hours over their inclusive calendar windows and compares the seven-day equivalent with the entered weekly team hours. When that field is blank, it uses the pinned contributor capacities if available.
 
 This is a shared capacity comparison, not a staff roster. The result retains the original contributors and reports peak required hours, overloaded days, and the first and last overloaded dates. The capacity note should describe actual availability or the planning assumption being examined. Selecting a proposed customer project adds its remaining hours to the same comparison.
+
+## Reconcile the selected cash plan with actual records
+
+Use **Forecast cash reconciliation** in the editable Forecast to select one immutable original plan, read the complete current Cash/Invoice sources, and compare its dated cash with recorded receipts and expenses. Review unassigned and unvalued records, explicit next-Forecast package/customer associations, and every changed as-of/work/payment date before adopting the reviewed inputs. Current field conflicts need explicit original/current/proposed choices. The same native preview, currency-credit rules and immutable save remain authoritative.
+
+The complete working file retains original sources, unfinished reviews, current decisions and applied before/after history. The full delivery contains the complete native case and every original attachment alongside readable HTML, exact JSON and all-row CSV. See [Forecast cash reconciliation](FORECAST_CASH_RECONCILIATION.md) for the complete source, scope, recovery and receiving flow.
+
+## Compare complete saved forecasts
+
+Open **Compare saved forecasts** in the original Operating forecast desk. Select the before and after editions, then compare their exact cash needs, balances, remaining work and capacity with the complete changed inputs and source records. Calendar dates align directly; missing dates and unknown amounts have no delta. Different as-of dates, opening cash, selected customer scope and original currency coverage remain visible. The current forecast draft stays in its existing editor.
+
+Download the complete comparison ZIP to retain both saved forecasts and the original case. [Saved operating forecast comparison](FORECAST_COMPARISON.md) covers the full browser, CLI, typed client, original source identity and independent receiving workflow.
 
 ## Exact saved identity and receiving
 
@@ -149,7 +165,7 @@ python3 workspace/cli.py operations --workspace /private/sf47 forecast-export \
 
 The browser and CLI use the same exclusive workspace owner. Close the browser server before opening that workspace in a separate CLI process. Output files use the existing private atomic publisher and must have new destination names.
 
-Input JSON can be downloaded from the browser and loaded back into its normal form. Unknown fields, repeated protected assignments, changed source versions, out-of-range dates and mismatched milestone amounts are rejected before saving. Money remains decimal strings with cent precision; remaining hours preserve four decimal places.
+Input JSON can be downloaded from the browser and loaded back into its normal form. Unknown fields, repeated protected assignments, changed source versions, out-of-range dates and mismatched milestone amounts are rejected before saving. USD money remains decimal strings with cent precision; explicit foreign-currency inputs preserve up to eight decimal places and retained rates up to eighteen. Remaining hours preserve four decimal places.
 
 Limits follow the original operating workspace: 100 saved forecasts per case, 50 customer scenarios per forecast, 30 receipt milestones per scenario, and the existing complete-case archive bound. Keep the complete original case export for portable receiving.
 
@@ -193,3 +209,8 @@ To activate the dated work:
 An allocation keeps the whole undated task, including its effort, assignments and source terms. It reports `EVENT_RELEASE_DATE_REQUIRED` while the original release remains unresolved. A deadline outside the selected horizon needs a longer calendar; a manually entered due date later than the original relative deadline is returned for correction. Existing saved allocations stay available alongside that unfinished date decision.
 
 The complete forecast ZIP adds `event-dependent-timing.json`, `event-dependent-work.csv` and `event-dependent-receipts.csv` only when this timing mode is used. Complete case export and import retain these inputs through the original saved forecasts and snapshots. Ordinary dated rows omit `timing`; their normalized values, calculations and saved identities are unchanged.
+
+
+## Protect customer delivery funding
+
+The optional [Customer funding guide](./FORECAST_CUSTOMER_FUNDING.md) explains explicit unspent opening attribution, included invoices counted once, unknown-versus-zero values, full protected/unreserved daily results, and original saved working-file/workbook/case receiving. Use the existing Forecast controls, preview and native save; no separate account or payment is created. Older saved Forecasts with no optional input retain their original calculations and identities.

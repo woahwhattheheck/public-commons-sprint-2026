@@ -79,7 +79,7 @@ function flags(request) {
 }
 
 export async function grantStartup(request, text) {
-  if (request.command !== 'grant-workspace' || typeof text !== 'string' || text.length > 32768 ||
+  if (request.command !== 'grant-workspace' || typeof text !== 'string' || Buffer.byteLength(text) > 256 * 1024 ||
     !text.startsWith('{')) return null;
   let announcement;
   try { announcement = JSON.parse(text); } catch { return null; }

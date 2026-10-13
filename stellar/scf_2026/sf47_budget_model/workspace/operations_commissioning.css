@@ -1,0 +1,26 @@
+.commissioning-editor,.commissioning-report{border:1px solid #a7a7a7;background:#fafafa;padding:18px;margin:22px 0;color:#222;min-width:0}
+.commissioning-editor legend{font-weight:700;padding:0 8px}.commissioning-editor p,.commissioning-report p{line-height:1.5}
+.commissioning-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:12px 0}
+.commissioning-fields label{display:flex;flex-direction:column;gap:5px;min-width:0}
+.commissioning-fields label>span{font-weight:600}.commissioning-wide{grid-column:1/-1}
+.commissioning-fields input,.commissioning-fields textarea,.commissioning-fields select{box-sizing:border-box;max-width:100%;width:100%;border:1px solid #858585;border-radius:2px;padding:8px;background:#fff;color:#171717;font:inherit}
+.commissioning-fields textarea{resize:vertical;min-height:65px}.commissioning-fields small,.commissioning-check small{display:block;color:#505050;font-size:.88em;line-height:1.4}
+.commissioning-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.commissioning-editor button{border:1px solid #777;border-radius:2px;background:#f0f0f0;color:#171717;padding:8px 11px;font:inherit;cursor:pointer}
+.commissioning-editor button:hover{background:#e1e1e1}.commissioning-editor button:disabled{color:#666;cursor:default}
+.commissioning-editor :focus-visible{outline:3px solid #333;outline-offset:2px}
+.commissioning-row{border:1px solid #bbb;padding:14px;margin:14px 0;background:#fff}
+.commissioning-row summary{font-weight:650;cursor:pointer;line-height:1.5;overflow-wrap:anywhere}
+.commissioning-row dl{display:grid;grid-template-columns:minmax(100px,1fr) 3fr;gap:8px}
+.commissioning-row dt{font-weight:600}.commissioning-row dd{margin:0;white-space:pre-wrap;overflow-wrap:anywhere}
+.commissioning-table{width:100%;overflow:auto;margin:12px 0}.commissioning-table table{border-collapse:collapse;width:100%;min-width:660px}
+.commissioning-table th,.commissioning-table td{padding:8px;text-align:left;vertical-align:top;border:1px solid #c4c4c4;overflow-wrap:anywhere;font-size:.92em}
+.commissioning-table th{background:#e8e8e8}.commissioning-table code,.commissioning-output code{word-break:break-all;font-size:.85em}
+.commissioning-decision{background:#f5f5f5;padding:12px;border-left:3px solid #777;margin:12px 0}
+.commissioning-check{display:flex;align-items:flex-start;gap:8px;line-height:1.5;font-weight:400}
+.commissioning-check input{flex:0 0 auto;margin-top:5px}.commissioning-output{display:grid;gap:10px;max-height:400px;overflow:auto;padding:8px;border:1px solid #bbb}
+.commissioning-link{border-top:1px solid #ccc;margin:12px 0;padding-top:12px}.commissioning-attention{padding:10px;border-left:4px solid #555;background:#ececec}
+.commissioning-current{padding:10px;border-left:4px solid #777;background:#f1f1f1}
+.commissioning-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.commissioning-summary p{border:1px solid #bbb;padding:10px}.commissioning-summary strong{display:block;font-size:1.35em}
+.commissioning-editor pre,.commissioning-report pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:480px;overflow:auto;background:#f1f1f1;padding:10px}
+@media(max-width:700px){.commissioning-editor,.commissioning-report{padding:10px}.commissioning-fields,.commissioning-summary{grid-template-columns:1fr}.commissioning-wide{grid-column:auto}.commissioning-row dl{grid-template-columns:1fr}.commissioning-row{padding:9px}}

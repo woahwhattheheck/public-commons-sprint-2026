@@ -1,0 +1,113 @@
+{
+  "schema": "stellar-forge.installation-workorder-profile.v1",
+  "id": "property-continuity",
+  "title": "Property migration, independent reconciliation, rehearsals and editable receiving",
+  "task": {
+    "name": "Commission one selected property-continuity migration through complete independent receiving",
+    "purpose": "Give the customer's property, finance, document, spatial and implementation teams a complete retained explanation of what moved, which relationships and values agree, which observations remain unresolved, and what the named authority actually accepted. Carry the original files, exact mappings, complete reports, review decisions and editable history into the receiving team's own working directory.",
+    "request": "Continue the original customer Workshare and Customer installation. Select the actual authorized source and target platforms, complete cohort boundaries, identity namespaces, property hierarchy, rental-space and lease conventions, project references, controlled-document editions, finance amounts/currencies and spatial coordinate reference systems. Retain original extractions and independently acquired target returns. Review explicit typed mappings and relationships, inspect every source/target row and complete finding, and record the accountable review. Operate two distinct rehearsals against later source acquisitions, plan the authorized cutover and recovery procedure, then record its actual complete result or failed-load observation. Export the full case, independently receive it, continue a legitimate later edit and retain both original and received branches. Use the maintained property-continuity application, authenticated client and original SCF Installation; all platform execution follows the selected customer's own approved implementation.",
+    "completeOutput": "A complete original file/edition register; explicit reviewed mappings and source-to-target identities; full row accounting, typed comparisons and relationship findings for each selected reconciliation; retained review decisions and two rehearsal records; the named cutover plan, actual authority and result; complete reports and original-history workspace archives; an independently reopened editable receiving branch; the original Workshare and Installation with actual operator observations, source ownership, ongoing correction/support and recovery instructions.",
+    "repeatTrigger": "A source owner supplies a later extraction or target return, a load produces a new result, a reviewer changes a mapping or finding disposition, or the customer selects another explicitly complete cohort. Preserve earlier source editions, command requests, complete results and decisions. Reopening a report, continuing a saved request or receiving the same original archive continues that recorded operation. A new rehearsal or cutover selection uses the actual later acquisitions and its own original load identity.",
+    "pricedUnit": "The useful implementation workshare or expressly selected customer service unit in the original agreement. The original Bluewave planning offer is a proposed implementation programme with its own inventory assumptions and milestones; its amount is not a native token price or an accepted customer order. Preserve existing commercial prices, effort, dates and actual payment selections from the original Workshare."
+  },
+  "source": {
+    "reference": "Complete original customer source exports, extraction metadata, reviewed platform/field contracts, independently acquired target returns, original load observations and actual review/recovery evidence. The maintained application includes the full public IDA request-to-participate text extraction as background source; it does not supply tenant data or determine a partner's current procurement appointment.",
+    "mode": "MIXED",
+    "population": "Select a complete declared cohort for every source and target family, with platform, family, identity namespace, source reference, acquisition time, complete/partial declaration and original expected row count. Preserve all present rows, duplicates, invalid identities and incomplete coverage. Each file is at most 64 MiB, distinct retained source/evidence bytes 256 MiB, each dataset 25,000 rows and one reconciliation 100,000 total source plus target rows. Agree complete cohort boundaries before splitting a larger estate, including the full related-property coverage needed to assess hierarchy.",
+    "meaning": "Keep exact source bytes and every original typed value. Identity keys explicitly combine the selected platform/family/namespace fields; related references declare their own actual target namespace. Preserve JSON number tokens without floating-point rounding and show their original JSON pointers. Money uses exact decimal text and a separately selected currency. A lease's LIVE/ACTIVE state and reviewed interval/end-boundary convention are explicit. Controlled documents retain actual version, hash and byte length; project KPN remains a separate identity. Spatial coordinates retain their declared CRS, units and source interpretation. Finance records preserve their original authoritative platform and sign convention.",
+    "changePolicy": "Import a changed file or extraction as a new immutable edition. Save mapping corrections as new reviewed records and reconcile the selected complete inputs again. Keep the original reports and decisions as historical records. Incomplete or invalid key coverage remains UNVERIFIED rather than asserting that a missing target row was lost. The original source or target owner performs any tenant correction, actual migration load, financial posting, document signing or spatial edit through its established authorized process."
+  },
+  "receiving": {
+    "application": "The property-continuity application in the existing SCF Applications lifecycle, carrying the unchanged original Python application under products/property-continuity/app/. Select the saved physical workspace directory, Python 3.11+ executable, private connection file and independent receiving directory. The authenticated client and agent methods address that same original service. Customer installations retains the complete implementation workorder and native commercial/operating history.",
+    "acceptanceRule": "Open and visibly inspect the exact installed application at the actual screenshare width and 390 px where relevant. Operate the important source, mapping, report, decision, export and reopen controls on the selected authorized case. Confirm both-side row accounting, exact numeric/financial semantics, all required relationships and every unresolved finding. Accepted rehearsals use their actual later acquisitions and independent target returns. Cutover authority precedes the actual load inside its selected window; a failed or incomplete cutover retains its actual observations and reason. Receive the complete archive into a separate directory, verify its original full history/reports/source, perform an actual permitted later edit, reopen it and export its continuation. Record actual customer acceptance and operator observations in the original Installation.",
+    "changeAndWithdraw": "Customer data ownership, supplier licensing, source-use permission, tenant credentials, platform administration and production release decisions remain with the named actual owners. The local workspace retains authorized evidence and reviewer decisions. Record access withdrawal and retention/deletion decisions through those existing controls, including all independently received copies. Keep portable archives and the private capability-bearing connection file in their selected authorized locations.",
+    "recovery": "Keep original workspace UUID and physical directory together. Resolve an interrupted command from its saved request UUID and original first result before another mutation. A definite revision conflict is resolved against the current saved edition while preserving the unsent draft. Preserve original and received branches independently even when they share a portable workspace UUID. Reuse the original archive hash, bytes, receiving operation and destination for a known interrupted receive; a repeated receive must preserve a receiver's legitimate later edits. Continue Start/Stop or managed-run recovery through the same Applications operation. Inspect and reconcile an existing live workspace owner before another server launch.",
+    "maintenance": "Name the source/target owners, mapping and finance/document/spatial reviewers, original load writer, release authority, receiving operator and ongoing support engineer. Retain source schedules, cohort and schema-change review, workspace/source backups, private connection renewal, restore/rollback procedure, full report locations and original commercial correction/support allowance. Distinguish local software training from actual tenant commissioning. Keep the original complete release and its operating, data-contract, training and receiving guides available with each handover."
+  },
+  "steps": [
+    {
+      "title": "Continue the original Workshare and Installation",
+      "result": "Open the existing customer case and commercial plan. Preserve all original phases, fees, actual effort sources, funded assignments and acceptance criteria. Prepare a fresh PLANNED Installation seed only when no operated Installation exists; otherwise update the existing native edition."
+    },
+    {
+      "title": "Select deployment, owners and complete cohorts",
+      "result": "Record the actual source and target platforms, responsible team, complete row populations, original system namespaces, extraction rights, receiving host and working directories. Select the platform/field contracts and all related entity coverage before authoring mappings."
+    },
+    {
+      "title": "Install and open the original application",
+      "result": "Receive the complete selected SCF release. Select property-continuity in Applications, review the existing workspace, Python executable, connection and receiving paths, save the application and use its ordinary Review Start/Start/Open lifecycle. Confirm the exact title, portable identity, physical branch and saved revision."
+    },
+    {
+      "title": "Retain full source and independent target editions",
+      "result": "Import the original source/evidence bytes and every required family with actual acquisition metadata, expected and observed row counts, format and complete/partial scope. Keep target returns tied to the actual completed load and their own later extraction, even if their values happen to match the source."
+    },
+    {
+      "title": "Review mappings and cross-system meaning",
+      "result": "Select actual source/target columns, exact typed comparisons, identity and relationship namespaces, lease status/interval rules, document version/hash/size, project identity, finance signs/currencies and spatial CRS/units. Save and review the complete mapping with named operator and evidence."
+    },
+    {
+      "title": "Reconcile and inspect the whole selected cohort",
+      "result": "Run against the selected actual source/target editions and original load. Inspect complete row groups, duplicates, missing/extra/UNVERIFIED classifications, field differences and related-entity findings. Inspect original numeric tokens and exact finance arithmetic. Download the complete report rather than relying on one visible page."
+    },
+    {
+      "title": "Record decisions and the first rehearsal",
+      "result": "The accountable reviewer selects REQUIRE_CORRECTION or an explicitly justified ACCEPT_EXCEPTION on each finding. Keep original decision evidence. Record the actual accepted or rejected first rehearsal against that reconciliation and its retained load/source basis."
+    },
+    {
+      "title": "Operate the later second rehearsal",
+      "result": "Receive genuinely later source and target acquisitions from a separate actual load of the same reviewed cohort and mapping lineage. Reconcile and resolve its own findings. Record the second rehearsal with the accepted first rehearsal reference and the full original evidence."
+    },
+    {
+      "title": "Prepare the production window and recovery",
+      "result": "Select both accepted rehearsals, current approved mapping/finding basis, named authority, cutoff and start/end window. Retain actual delta-capture, rollback, restore and recovery-readiness procedures. Record the release authority through its original reviewed decision."
+    },
+    {
+      "title": "Record the actual cutover outcome",
+      "result": "Retain the actual load and independently acquired final return, then reconcile the complete selected cohort. For acceptance, verify its complete source, mapping and decision basis and actual load chronology. For rejection, record the true incomplete/failed/unknown load observation and reason, including absent start/completion or final return where applicable."
+    },
+    {
+      "title": "Export, independently receive and continue",
+      "result": "Export the selected saved revision with every original command, first result, retained source, report and application file. Receive it into a separate working directory, inspect its full history and reports, perform an actual permitted later edit, reopen that branch and export its continuation. Keep the original branch available."
+    },
+    {
+      "title": "Complete native Installation return and support",
+      "result": "Attach the actual original and receiving outputs to the existing Installation. Record observed acceptance, each continuing owner and the agreed support/change procedure. Export and independently reopen the complete SCF case through the maintained Operations importer. The original funding plan and company relationship retain their existing custody."
+    }
+  ],
+  "inputs": [
+    "Complete original customer Workshare, canonical commercial plan, every phase and effort source, current original Installation or fresh PLANNED seed, and the named customer/implementation owners.",
+    "Actual selected deployment, full original source/target platform and field contracts, permitted extraction scope, production/load authority and original evidence-use rights.",
+    "Full source and independent target files with original SHA256/bytes, extraction reference and time, family/platform/identity namespace, expected row count, completeness and complete cohort boundaries.",
+    "Explicit cross-system identity keys and relationship namespaces for property, rental space, lease, project, controlled documents, finance and spatial records.",
+    "Reviewed field types and exact value conventions, including JSON numeric tokens, decimal-text money/currency, lease LIVE/ACTIVE interval/end semantics, controlled-document version/hash/size and spatial CRS/units.",
+    "Actual original load UUID/input digest, writer, start/completion, outcome and retained evidence for each rehearsal or production run; independent target-extraction observations.",
+    "Named mapping and finding reviewers, complete decisions and reasons, original authority/evidence and the selected current review basis.",
+    "Two actual rehearsal reports and their independent later acquisitions, complete production cutoff/window, delta verification and actual rollback/recovery readiness.",
+    "Existing retained workspace UUID plus canonical physical directory, complete selected application/runtime, Python 3.11+, private connection path and distinct receiving destination.",
+    "Original source/workspace archives, complete report/download set, named receiving engineer, actual reopen/edit observations and later receiving export.",
+    "Actual customer-specific payment/deployment selections only when applicable; retain native atomic units and authorization separately from implementation fees and grant funding.",
+    "Selected ongoing source cadence, schema/cohort-change policy, data retention/withdrawal ownership, backups/restoration and original commercial correction/support terms."
+  ],
+  "sourceFiles": [
+    {
+      "path": "products/property-continuity/app/OPERATING.md",
+      "blob": "8ddffe98563f14552ef278cda0f31ab40dccec23"
+    },
+    {
+      "path": "products/property-continuity/app/CONTINUITY_DOMAIN.md",
+      "blob": "b6b7e7f880dd3cf934376880b52d15488646acf2"
+    },
+    {
+      "path": "products/property-continuity/app/RECEIVING_PROGRAMME.md",
+      "blob": "7f8b7be74b08ce0d0c80653524bfa9bc804f31b2"
+    },
+    {
+      "path": "products/property-continuity/app/TRAINING.md",
+      "blob": "3403ea9596fa7b7540200a9350ffbc69cbba630b"
+    },
+    {
+      "path": "products/property-continuity/app/source-selection.json",
+      "blob": "375f51c804e4df78fbbfec27f0a6e920ce807ea4"
+    }
+  ]
+}
