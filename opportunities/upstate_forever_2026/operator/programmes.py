@@ -13,11 +13,12 @@ from model.compute_programme import ComputeProgrammes
 ACTIONS = {
     "compute.programme.save",
     "compute.programme.experiment",
+    "compute.programme.pair-completion",
     "compute.programme.run",
     "compute.programme.report",
     "compute.programme.delivery",
 }
-READS = {"catalog", "detail", "report"}
+READS = {"catalog", "detail", "report", "pair-completion-preview"}
 
 
 class Programmes:
@@ -57,6 +58,8 @@ class Programmes:
             include_sources = payload.get("include_sources") in (True, 1, "1", "true")
             return {"workspace_key": workspace, **self.catalogue(workspace, include_completed_sources=include_sources)}
         key = self._id(payload)
+        if operation == "pair-completion-preview":
+            return {"workspace_key": workspace, **manager.pair_completion_preview(key)}
         if operation == "detail":
             return {"workspace_key": workspace, **self._decorate(workspace, manager.status(key))}
         if operation == "report":
@@ -100,6 +103,12 @@ class Programmes:
                 raise self.Fault("PROGRAMME_SELECTION", "Create or import a programme selection.")
             return manager.create(selection, source_reference=payload.get("source_reference"))
         key = self._id(payload)
+        if action == "compute.programme.pair-completion":
+            result = manager.create_pair_completion(key, expected_preview_id=payload.get("expected_preview_id"))
+            if payload.get("run") is not True:
+                return result
+            key = result["id"]
+            action = "compute.programme.run"
         if action == "compute.programme.run":
             result = manager.resume(key, only_runs=payload.get("only_runs"))
             if result.get("state") == "failed" or result.get("counts", {}).get("failed", 0):
@@ -136,6 +145,8 @@ class Programmes:
         payload = task.get("payload", {})
         result = task.get("result", {})
         key = payload.get("programme_id")
+        if task["action"] == "compute.programme.pair-completion":
+            key = result.get("id") or key
         if not key and task["action"] in ("compute.programme.save", "compute.programme.experiment"):
             key = result.get("id")
         if key:
