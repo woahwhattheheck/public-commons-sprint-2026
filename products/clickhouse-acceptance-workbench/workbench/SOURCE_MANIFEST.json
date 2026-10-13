@@ -74,8 +74,8 @@
     },
     {
       "path": "receiving/receive.mjs",
-      "bytes": 49104,
-      "sha256": "3393b6e6fd1c6b072e8e30629e7763a52b6a83a5160a42e84a18acf21bd20f6d"
+      "bytes": 51021,
+      "sha256": "201061daafd2db272df8cb02501fef27f37f1e2893c59394b6e4e39c93a01ed3"
     },
     {
       "path": "reference/FIXTURE.md",
@@ -94,8 +94,8 @@
     },
     {
       "path": "reference/fixture.py",
-      "bytes": 18094,
-      "sha256": "26110720f1473e62eb8826f7843344a882423a33c98e97d10015c1530adfa785"
+      "bytes": 38603,
+      "sha256": "21b6b9c8c8fcc88d27d32e1147a54350cc9007427278d64efc23663511ed874a"
     },
     {
       "path": "reference/merchant-source.json",

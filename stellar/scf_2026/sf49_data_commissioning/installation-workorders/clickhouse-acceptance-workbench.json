@@ -21,7 +21,7 @@
     "application": "TJLabs ClickHouse Acceptance Workbench under products/clickhouse-acceptance-workbench/workbench, preserving the complete 54-file original Altinity migration acceptance application from Commons 67ed8a126bf56c8dafa4202a672f441498a6b1a6 and explicit maintained source corrections. Commands clickhouse-acceptance-workbench, -prepare, -managed and -receive. Select the exact prepared applicationDirectory, own runtimeReadyFile, absolute Python and private original actor/auth/connection files.",
     "acceptanceRule": "All selected source/configuration/authority are retained and the current plan is explicitly reviewed. Actual original transfer and fresh verify finish with every native file and full comparison. Every required type/schema/key/null/value/multiplicity condition passes; actual source stability and target UUID/schema are verified. Current cutover selects the latest ready verify and exact prior consumer binding is recoverable. Full original typed rows are reviewed as retained exports, not represented as live queries. The customer browser and agent use the same immutable project/history. Whole source/runtime/project packages independently receive and cold reopen. Only actual results enter Installation acceptance.",
     "changeAndWithdraw": "Use original reviewed revision/actions and reasons for plan, candidate and consumer changes. Applications Stop closes the observer/listener and its handles; accepted detached native jobs remain under their original kernel lifetime. job.cancel requests actual cancellation; observe the original outcome before handoff. Rollback restores a retained consumer declaration and does not downgrade the server, drop tables or reconfigure external clients. Commercial changes use the existing Installation change/return process.",
-    "recovery": "Retain complete actor-bound create/action input before dispatch. Read the Merchant request journal and replay exactly the same request ID, expected revision and payload after any uncertain HTTP result, including post-commit launch/materialization errors. Resume original upload offsets. Preserve uncertain SQL effects and original native decisions. Reopen exact received project/source/history with private receiving-host credentials and selected Python; no additional native attempt is authorized by receiving alone.",
+    "recovery": "Retain complete actor-bound create/action input before dispatch. Read the Merchant request journal and replay exactly the same request ID, expected revision and payload after any uncertain HTTP result, including post-commit launch/materialization errors. Resume original upload offsets. Preserve uncertain SQL effects and original native decisions. Reopen exact received project/source/history with private receiving-host credentials and selected Python; no additional native attempt is authorized by receiving alone. For a receiver-source correction, retain an explicit source-observer request and its complete source alongside the same original operation. Preserve baseline source, native jobs and named archives; use the current complete receiving guide for deliberate original-fixture continuation.",
     "maintenance": "Name customer data owner, database operator, acceptance engineer, consumer owner and independent receiver in the existing case. Deliver complete editable code, licenses, original native result/source identities, complete project history and opening guide. Keep tokens/passwords and local credential files outside exported project data. Preserve the F8256 company/sender and existing ClickHouse merchant owner; TJLabs product registration implies no Altinity endorsement."
   },
   "steps": [
@@ -116,11 +116,11 @@
     },
     {
       "path": "products/clickhouse-acceptance-workbench/workbench/receiving/receive.mjs",
-      "blob": "8721bedbad883d930ee9ae6377dd198bccbc9086"
+      "blob": "e80631987efcac6d5bf5d41454ac8935f8cef612"
     },
     {
       "path": "products/clickhouse-acceptance-workbench/workbench/reference/fixture.py",
-      "blob": "e7180b939c8a596b2471f5fb537319c143feb590"
+      "blob": "82115bde880fe2c925e1747a5d318bf901c4eeaf"
     }
   ]
 }

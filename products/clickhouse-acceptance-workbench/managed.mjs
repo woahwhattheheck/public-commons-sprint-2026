@@ -9,7 +9,7 @@ import {CONNECTION_SCHEMA,STARTUP_SCHEMA,need,absolute,integer,hash,readFile,rea
   writeJson,privateDirectory,readLaunchConfiguration,ClickHouseAcceptanceClient,inside} from './connection.mjs';
 
 export const WORKBENCH_ROOT=fileURLToPath(new URL('./workbench/',import.meta.url));
-export const ORIGINAL_MANIFEST_SHA256='9c5641722c75528aa4b63349aa6e2870ef2669ff57bb0fbf946ec8bf81f9854e';
+export const ORIGINAL_MANIFEST_SHA256='761f84ddc801b5594b506799836c579eac72c878cb242aba60099806f12578d2';
 export async function inspectOriginalSource({directory=WORKBENCH_ROOT}={}){
   const sourceRoot=absolute(directory);
   const selected=await readJson(fileURLToPath(new URL('./original-source.json',import.meta.url)),1024*1024,{privateOnly:false});

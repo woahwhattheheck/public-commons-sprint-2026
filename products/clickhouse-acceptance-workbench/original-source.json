@@ -4,7 +4,7 @@
   "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
   "prefix": "opportunities/altinity_clickhouse_application_workshare_2026/migration_acceptance/",
   "installedDirectory": "workbench",
-  "edition": "clickhouse-acceptance-20261013-public-intake-form",
+  "edition": "clickhouse-acceptance-20261013-original-observer",
   "origin": {
     "repository": "woahwhattheheck/commons",
     "commit": "4fd50b7f5a5744f1fdfdbe2e7ff0dba162863623",
@@ -183,6 +183,57 @@
         "bytes": 8732,
         "sha256": "319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0",
         "gitBlob": "aac6bfa0b9febeb9eb224f9eb7ee49897cbac5a8"
+      }
+    },
+    {
+      "path": "receiving/receive.mjs",
+      "reason": "Continue the same original operation with a separately retained observer, preserving original baseline application/browser/CLI/reference/archives.",
+      "source": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791903660346499?thread_ts=1791881096.663589",
+      "original": {
+        "path": "receiving/receive.mjs",
+        "bytes": 49104,
+        "sha256": "3393b6e6fd1c6b072e8e30629e7763a52b6a83a5160a42e84a18acf21bd20f6d",
+        "gitBlob": "8721bedbad883d930ee9ae6377dd198bccbc9086"
+      },
+      "selected": {
+        "path": "receiving/receive.mjs",
+        "bytes": 51021,
+        "sha256": "201061daafd2db272df8cb02501fef27f37f1e2893c59394b6e4e39c93a01ed3",
+        "gitBlob": "e80631987efcac6d5bf5d41454ac8935f8cef612"
+      }
+    },
+    {
+      "path": "reference/fixture.py",
+      "reason": "Observe the original fixture with unchanged native/seed/input/command selection and retain the explicit corrected receiver, prior results and complete closeout.",
+      "source": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791903660346499?thread_ts=1791881096.663589",
+      "original": {
+        "path": "reference/fixture.py",
+        "bytes": 18094,
+        "sha256": "26110720f1473e62eb8826f7843344a882423a33c98e97d10015c1530adfa785",
+        "gitBlob": "e7180b939c8a596b2471f5fb537319c143feb590"
+      },
+      "selected": {
+        "path": "reference/fixture.py",
+        "bytes": 38603,
+        "sha256": "21b6b9c8c8fcc88d27d32e1147a54350cc9007427278d64efc23663511ed874a",
+        "gitBlob": "82115bde880fe2c925e1747a5d318bf901c4eeaf"
+      }
+    },
+    {
+      "path": "SOURCE_MANIFEST.json",
+      "reason": "Bind the complete observer edition while retaining every chronological source predecessor.",
+      "source": "https://tokenjunkielabs.slack.com/archives/C0BTB4SUCP9/p1791903660346499?thread_ts=1791881096.663589",
+      "original": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0",
+        "gitBlob": "aac6bfa0b9febeb9eb224f9eb7ee49897cbac5a8"
+      },
+      "selected": {
+        "path": "SOURCE_MANIFEST.json",
+        "bytes": 8732,
+        "sha256": "42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f",
+        "gitBlob": "092c2e3c74a6c0bd3114da8e34a9f0278aeea9cd"
       }
     }
   ],
@@ -447,15 +498,15 @@
     },
     {
       "path": "receiving/receive.mjs",
-      "bytes": 49104,
-      "sha256": "3393b6e6fd1c6b072e8e30629e7763a52b6a83a5160a42e84a18acf21bd20f6d",
-      "gitBlob": "8721bedbad883d930ee9ae6377dd198bccbc9086"
+      "bytes": 51021,
+      "sha256": "201061daafd2db272df8cb02501fef27f37f1e2893c59394b6e4e39c93a01ed3",
+      "gitBlob": "e80631987efcac6d5bf5d41454ac8935f8cef612"
     },
     {
       "path": "reference/fixture.py",
-      "bytes": 18094,
-      "sha256": "26110720f1473e62eb8826f7843344a882423a33c98e97d10015c1530adfa785",
-      "gitBlob": "e7180b939c8a596b2471f5fb537319c143feb590"
+      "bytes": 38603,
+      "sha256": "21b6b9c8c8fcc88d27d32e1147a54350cc9007427278d64efc23663511ed874a",
+      "gitBlob": "82115bde880fe2c925e1747a5d318bf901c4eeaf"
     },
     {
       "path": "reference/seed.sql",
@@ -508,8 +559,8 @@
     {
       "path": "SOURCE_MANIFEST.json",
       "bytes": 8732,
-      "sha256": "319d467960f5cd86534ca90f20d4fbff29a36bf5e8af0ec94284ee3e32d7a1a0",
-      "gitBlob": "aac6bfa0b9febeb9eb224f9eb7ee49897cbac5a8"
+      "sha256": "42bfdf12a1c0ece3e0feacb57e609c520b51d13fae61f21d14d43532f9d1369f",
+      "gitBlob": "092c2e3c74a6c0bd3114da8e34a9f0278aeea9cd"
     }
   ]
 }
