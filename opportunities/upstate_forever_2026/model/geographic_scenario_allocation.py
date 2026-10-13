@@ -26,6 +26,7 @@ NOTES = [
     "The primary allocation support is the intersection of finite categorical cells in all three original scenarios inside the selected original mask.",
     "Control matching applies to the whole reporting selection. Equal global class counts do not imply equal treatment or class mix within a HUC or utility footprint.",
     "HUC polygons, upstream HUC contribution areas, published protection areas and their family unions are separately named. Overlapping rows must not be summed.",
+    "Each RFP utility upstream union uses the Boolean OR of its original anchor contribution masks. Overlapping selected pixels count once; its display geometry is the union of the original contribution shapes clipped to the quantity scope.",
     "Native support diagnostics intersect the primary categorical support with finite original annual-output cells in all three runs, separately for each quantity and scope.",
     "The accompanying native quantities are the original Receiving baseline-versus-each-alternative pairwise results. Their supports can differ; subtracting their totals does not establish a three-way matched-control effect.",
     "Land-cover hectares are not pollutant reductions. Annual native nitrogen and phosphorus retain kg/year and sediment retains metric tonnes/year delivered to streams.",
@@ -112,8 +113,11 @@ def _finish(value, run_ids, area):
         "alternatives": alternatives,
         "balance": {"changed_cells_difference": difference,
                     "changed_hectares_difference": difference * area,
-                    "equal_local_changed_counts": difference == 0,
-                    "equal_local_original_class_counts": all(row["difference_cells"] == 0 for row in by_origin),
+                    "has_common_categorical_support": value["common_valid_cells"] > 0,
+                    "equal_local_changed_counts": (difference == 0 if value["common_valid_cells"] else None),
+                    "equal_local_original_class_counts": (
+                        all(row["difference_cells"] == 0 for row in by_origin)
+                        if value["common_valid_cells"] else None),
                     "by_origin": by_origin},
         "native_support": support,
     }
@@ -150,6 +154,75 @@ def _prepared(workspace, prepared, context):
             raise ValueError("The original completed run and compiled land-cover selection differ")
         footprints[role], runs[role] = footprint, run
     return root, dict(zip(ROLES, ids)), footprints, runs
+
+def _utility_unions(workspace, context, domains, crs, definitions):
+    """Use exact profile identities and OR of retained anchor contribution masks."""
+    from shapely.ops import unary_union
+    application = Path(__file__).resolve().parents[1]
+    profile_path = application / "source/receptor-profiles/utility-focus-20261012.json"
+    profile = read_json(profile_path)
+    if profile.get("schema") != "upstate.receptor-spec/v1":
+        raise ValueError("Retain the original utility-focus receptor profile")
+    plan = waters.inspect_plan(workspace, context["plan_ids"]["upstream_huc"], verify=True)
+    anchors = {}
+    for receptor in plan["receptors"]:
+        code = receptor.get("classification", {}).get("original_huc12")
+        if code is not None:
+            if code in anchors or receptor["relation"]["method"] != "upstream_huc":
+                raise ValueError("Retain distinct original upstream HUC anchors")
+            anchors[code] = receptor
+    indexed = {(row["quantity_scope"], row["subject_id"]): row for row in definitions
+               if row["relationship"] == "upstream_huc" and row["kind"] == "receptor"}
+    binding = {"file": describe_file(application, profile_path), "profile": deepcopy(profile),
+               "plan_id": plan["id"], "plan_record_sha256": plan["record_sha256"], "utilities": []}
+    used = set()
+    for original in profile["receptors"]:
+        utility = original["utility_id"]
+        selected = original["anchor_huc12s"]
+        if (not utility or utility in used or not selected
+                or len(set(selected)) != len(selected)):
+            raise ValueError("Retain distinct original utility identities and anchors")
+        used.add(utility)
+        missing = sorted(set(selected) - set(anchors))
+        item = {"utility_id": utility, "receptor_id": original["id"],
+                "title": original["title"], "anchor_huc12s": list(selected),
+                "reference": deepcopy(original["reference"]),
+                "available": not missing, "missing_original_anchor_huc12s": missing}
+        binding["utilities"].append(item)
+        if missing:
+            # A different geographic selection can omit a profile's anchors.
+            continue
+        receptors = [anchors[code] for code in selected]
+        members = sorted({code for receptor in receptors
+                          for code in receptor["relation"]["upstream_huc_ids"]})
+        if not set(selected).issubset(members):
+            raise ValueError("Original upstream membership lost its utility anchors")
+        item["upstream_huc12s"] = members
+        item["contribution_geometries"] = [
+            deepcopy(receptor["contribution_geometry"]) for receptor in receptors]
+        geometry = unary_union([
+            waters._load_contribution(workspace, plan, receptor, crs) for receptor in receptors])
+        for scope, domain in domains.items():
+            original_regions = [indexed[(scope, receptor["id"])] for receptor in receptors]
+            masks = {row["mask"]["path"]: deepcopy(row["mask"])
+                     for row in original_regions if row["mask"] is not None}
+            clipped = geometry.intersection(domain)
+            definitions.append({
+                "id": "utility-" + identifier(utility.lower()) + "-" + scope,
+                "title": original["title"], "kind": "utility_upstream_union",
+                "relationship": "profile_upstream_huc_union", "quantity_scope": scope,
+                "analysis_id": None, "subject_id": None,
+                "utility_id": utility, "profile_receptor_id": original["id"],
+                "anchor_huc12s": list(selected), "upstream_huc12s": members,
+                "profile_reference": deepcopy(original["reference"]),
+                "source_plan_id": plan["id"],
+                "original_receiving_regions": [row["id"] for row in original_regions],
+                "mask_basis": "Boolean OR of exact original anchor contribution masks; each selected pixel is counted once",
+                "geometry": clipped, "mask": None, "mask_union": list(masks.values()),
+                "vector_geometry_empty_with_selected_cells": bool(
+                    clipped.is_empty and any(row["expected_selected_cells"] for row in original_regions)),
+                "pairwise_native_quantities": []})
+    return binding
 
 def _regions(workspace, prepared, context, grid_record, run_ids):
     from pyproj import CRS
@@ -231,8 +304,8 @@ def _regions(workspace, prepared, context, grid_record, run_ids):
             if mask is not None:
                 mask = {**mask, "path": str(verify_file(directory, mask).relative_to(workspace.root))}
             geometry = geometries.get(subject["id"], Polygon())
-            if geometry.is_empty and metrics["selected_cells"]:
-                raise ValueError("A populated Receiving subject lost its original geometry")
+            # Boolean accounting partitions can retain boundary pixels even
+            # when their exported vector difference has zero area.
             native_rows = []
             for role in ALTERNATIVES:
                 for pollutant, values in metrics["alternatives"][run_ids[role]]["changes"].items():
@@ -249,10 +322,13 @@ def _regions(workspace, prepared, context, grid_record, run_ids):
                 "relationship": retained["relationship"], "quantity_scope": scope,
                 "analysis_id": analysis["id"], "subject_id": subject["id"],
                 "geometry": geometry, "mask": mask, "expected_selected_cells": metrics["selected_cells"],
+                "vector_geometry_empty_with_selected_cells": bool(geometry.is_empty and metrics["selected_cells"]),
                 "pairwise_native_quantities": native_rows})
+    utility_profile = _utility_unions(workspace, context, domains, crs, definitions)
     if len({row["id"] for row in definitions}) != len(definitions):
         raise ValueError("Each original allocation region needs a distinct identity")
-    return definitions, analyses, {"huc_source": huc_binding, "boundaries_and_analyses": bindings}
+    return definitions, analyses, {"huc_source": huc_binding, "boundaries_and_analyses": bindings,
+                                   "utility_profile": utility_profile}
 
 def _bands(workspace, stack, grid, analyses, runs):
     """Reuse the actual admitted quantity provenance from the completed analyses."""
@@ -316,10 +392,11 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
                     "restoration_changed_cells": 0, "control_changed_cells": 0}
         masks = {}
         for row in definitions:
-            if row["mask"] is not None:
-                name = row["mask"]["path"]
+            selected_masks = row.get("mask_union", [row["mask"]] if row["mask"] is not None else [])
+            for descriptor in selected_masks:
+                name = descriptor["path"]
                 if name not in masks:
-                    masks[name] = stack.enter_context(rasterio.open(verify_file(workspace.root, row["mask"])))
+                    masks[name] = stack.enter_context(rasterio.open(verify_file(workspace.root, descriptor)))
                     _raster_grid(masks[name], grid)
         from rasterio.transform import Affine
         transform = Affine(*grid["transform"])
@@ -329,8 +406,19 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
             for left in range(0, grid["width"], 256):
                 window = Window(left, top, min(256, grid["width"] - left), min(256, grid["height"] - top))
                 extent = box(*bounds(window, transform))
-                active = [row for row in definitions
-                          if not row["geometry"].is_empty and row["geometry"].intersects(extent)]
+                # Retained Receiving masks are authoritative, including any
+                # boundary pixels of Boolean accounting partitions.
+                mask_values = {}
+                for name, source in masks.items():
+                    data = source.read(1, window=window, masked=True)
+                    inside = ~np.ma.getmaskarray(data) & (np.ma.getdata(data) == 1)
+                    if np.any(inside):
+                        mask_values[name] = inside
+                active = [row for row in definitions if (
+                    "mask_union" in row and any(item["path"] in mask_values for item in row["mask_union"])) or (
+                    row["mask"] is not None and row["mask"]["path"] in mask_values) or (
+                    "mask_union" not in row and row["mask"] is None and not row["geometry"].is_empty
+                    and row["geometry"].intersects(extent))]
                 if not active:
                     continue
                 arrays, valid = {}, {}
@@ -348,9 +436,12 @@ def _compute(workspace, grid, footprints, runs, definitions, analyses, progress)
                                     for role, band in bands.items()}
                         for pollutant, bands in native[scope].items()}
                 for row in active:
-                    if row["mask"] is not None:
-                        data = masks[row["mask"]["path"]].read(1, window=window, masked=True)
-                        inside = ~np.ma.getmaskarray(data) & (np.ma.getdata(data) == 1)
+                    if "mask_union" in row:
+                        inside = np.logical_or.reduce([
+                            mask_values[item["path"]] for item in row["mask_union"]
+                            if item["path"] in mask_values])
+                    elif row["mask"] is not None:
+                        inside = mask_values[row["mask"]["path"]]
                     else:
                         inside = waters._inside(grid, row["geometry"], window)
                     if np.any(inside):
@@ -488,6 +579,9 @@ def prepare(workspace, prepared, context, *, progress=None):
                 rendered = rendering.write(pending, report, features)
                 atomic_json(pending / "original-prepared.json", prepared)
                 atomic_json(pending / "original-context-selection.json", context["identity"])
+                profile_path = verify_file(Path(__file__).resolve().parents[1],
+                                           geometry_binding["utility_profile"]["file"])
+                (pending / "original-utility-profile.json").write_bytes(profile_path.read_bytes())
                 files = [describe_file(pending, path) for path in sorted(pending.rglob("*")) if path.is_file()]
                 recipe = {
                     "schema": "upstate.observed-report/v1", "edition": "geographic-allocation-v1",
@@ -495,7 +589,8 @@ def prepare(workspace, prepared, context, *, progress=None):
                     "inputs": files, "sections": rendered["sections"],
                     "source_links": ["allocation.json", "allocations.csv", "transitions.csv",
                         "native-support.csv", "pairwise-native-quantities.csv", "regions.geojson",
-                        "original-prepared.json", "original-context-selection.json"],
+                        "original-prepared.json", "original-context-selection.json",
+                        "original-utility-profile.json"],
                 }
                 if rendered.get("figures"):
                     recipe.update(figures=rendered["figures"], figure_spec=rendered["figure_spec"])
