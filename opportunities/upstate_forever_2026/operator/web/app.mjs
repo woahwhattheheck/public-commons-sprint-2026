@@ -57,7 +57,7 @@ let formOpeningRequest=0;
 const acceptedTasks=new Map();
 const form=$('#operation-form'),formDialog=$('#form-dialog'),detailDialog=$('#detail-dialog');
 
-const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast});
+const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});
 const scenarioInputReview=createScenarioInputReview({getState:()=>state,esc,number,button,table,short,when,runTitle,nativeModels});
 
 async function api(path,{method='GET',body,raw,filename,signal}={}){
@@ -1549,7 +1549,7 @@ async function dispatch(button){
  if(action==='form-close'){if(formContext?.busy)throw Error('The current request is being retained. Wait for its response before closing.');formDialog.close();formContext=null;return;}
  if(action==='detail-close'){detailDialog.close();detailContext=null;return;}
  if(action==='spatial-item'){
-  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity};
+  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity,reference_id:button.dataset.referenceId,reference_sha256:button.dataset.referenceSha256,candidate_sha256:button.dataset.candidateSha256};
   detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');
  }
  if(action==='item')return openItem(button.dataset.kind,id);

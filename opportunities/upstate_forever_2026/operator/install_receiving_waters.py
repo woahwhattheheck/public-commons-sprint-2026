@@ -19,13 +19,14 @@ import stat
 import tempfile
 
 
-PREFIX = "waterlink-receiving-waters-quantity-support-13"
+PREFIX = "waterlink-receiving-waters-plan-geography-14"
 REQUIRED = (
     "model/receiving_waters.py",
     "model/receiving_water_accounting.py",
     "model/spatial_esri.py",
     "source/capture_upstream_network.py",
     "model/receiving_water_spatial.py",
+    "model/receiving_water_plan_map.py",
     "model/receiving_water_delivery.py",
     "model/receiving_water_cli.py",
     "model/receiving_water_monitoring.py",
@@ -115,6 +116,8 @@ STUDY_TRANSFER_REQUIRED = (
     "operator/web/extensions/study_transfer.mjs",
     "operator/web/extensions/study_transfer.css",
     "operator/RECEIVING_WATER_STUDY_TRANSFER.md",
+    "operator/SPATIAL_STUDY_TRANSFER.md",
+    "integration/component_fragments/spatial-study-transfer.json",
     "integration/component_fragments/receiving-water-study-navigation.json",
 )
 MONITORING_ACTIONS = {
@@ -122,8 +125,9 @@ MONITORING_ACTIONS = {
     "monitoring.campaign.create", "monitoring.campaign.revise",
     "monitoring.campaign.event", "monitoring.export",
 }
-# Exact retained version 4–11 descriptors before quantity-support comparison.
-DESCRIPTOR_PREDECESSORS = {"091d12fa8dab4098ec89bd2eb9e247ee1fa6dd8a637dcc30aa06751085a3e7a2",
+# Exact retained descriptors before saved-plan geographic comparison.
+DESCRIPTOR_PREDECESSORS = {"4d0a40788362d3207a7fe459204394bf1de0898145466bc60c7e49228ebbe94e",
+                           "091d12fa8dab4098ec89bd2eb9e247ee1fa6dd8a637dcc30aa06751085a3e7a2",
                            "461066ded3c3681dcaf8507f019dc8f1188d0a1ec45aea7f3a9f2e73835d637c",
                            "8cea5b0259c4d8c2656bad8153c20e5b50aadfb162ff223e07656cb2d056777c",
                            "7c04dc9f70efad4793888df765afc526b04d0dcea4aabdc71e08308e5eb91813",
@@ -639,7 +643,7 @@ def join_spatial_app(text):
     text = replace_once(
         text, "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView} from './receiving_water_spatial.mjs';",
         "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';",
-        "receivingWaterView, receivingWaterStateSignature}",
+        "receivingWaterView, receivingWaterStateSignature",
     )
     text = replace_once(
         text, "return JSON.stringify(['sources','grids','runs','comparisons','deliveries','spatial_reviews'].map(kind=>(state.data?.[kind]||[]).map(row=>[row.id,row.state])));",
@@ -666,12 +670,43 @@ def join_spatial_app(text):
         "    if(isReceivingWaterTarget(target)){Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)));dirty(c);return;}\n",
         "Object.assign(c.model,receivingWaterView(matches,target,id=>selected(c,id)))",
     )
+    return join_plan_geography_spatial(text)
+
+
+def join_plan_geography_spatial(text):
+    text = replace_once(text, "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';", "import {isReceivingWaterTarget, receivingWaterTargetMatches, receivingWaterView, receivingWaterPlanMapRequest, receivingWaterPlanMapView, receivingWaterStateSignature} from './receiving_water_spatial.mjs';", "receivingWaterPlanMapRequest, receivingWaterPlanMapView")
+    text = replace_once(text, "  function applyTarget(c,target){\n", "  async function applyTarget(c,target){\n    const targetVersion=(c.targetVersion||0)+1;c.targetVersion=targetVersion;\n    stopGroup(c,'targetControl');\n    if(target.kind==='receiving-water-plan-comparison'){\n      const query=receivingWaterPlanMapRequest(target),control=controller(c);c.targetControl=control;\n      stopGroup(c,'drawControl');stopGroup(c,'pointControl');\n      status(c,'Reading both original saved plan boundaries…');\n      try{\n        const value=await request('/api/receiving-waters/plan-map?'+new URLSearchParams({workspace:c.key,...query}),{signal:control.signal});\n        assertCurrent(c);\n        if(control.signal.aborted||targetVersion!==c.targetVersion)throw new DOMException('A newer map comparison was selected.','AbortError');\n        if(value.workspace_key!==c.key)throw Error('The geographic comparison belongs to another workspace.');\n        Object.assign(c.model,receivingWaterPlanMapView(c.model.catalog,target,value));\n        c.model.exportOptions.review_id='';\n        c.root.querySelector('[data-spatial-input=\"title\"]').value=c.model.title;\n        c.root.querySelector('[data-spatial-input=\"notes\"]').value=c.model.notes;\n        renderExports(c);dirty(c);return;\n      }finally{release(c,control);if(c.targetControl===control)c.targetControl=null;}\n    }\n", "query=receivingWaterPlanMapRequest(target)")
+    text = replace_once(text, "      if(pendingTarget?.workspace===c.key){const target=pendingTarget;pendingTarget=null;if(target.kind==='spatial_reviews')await loadReview(c,target.id);else applyTarget(c,target);}", "      if(pendingTarget?.workspace===c.key){const target=pendingTarget;if(target.kind==='spatial_reviews')await loadReview(c,target.id);else await applyTarget(c,target);if(pendingTarget===target)pendingTarget=null;}", "else await applyTarget(c,target);if(pendingTarget===target)")
+    text = replace_once(text, "    if(current&&alive(current)&&current.key===pendingTarget.workspace&&current.model.catalog){const target=pendingTarget;pendingTarget=null;if(target.kind==='spatial_reviews')return loadReview(current,target.id);applyTarget(current,target);sourceControls(current);renderMarkers(current);renderOverlays(current);await draw(current);}", "    if(current&&alive(current)&&current.key===pendingTarget.workspace&&current.model.catalog){const c=current,target=pendingTarget;if(target.kind==='spatial_reviews'){await loadReview(c,target.id);if(pendingTarget===target)pendingTarget=null;return;}await applyTarget(c,target);assertCurrent(c);if(pendingTarget===target)pendingTarget=null;sourceControls(c);renderMarkers(c);renderOverlays(c);await draw(c);}", "await applyTarget(c,target);assertCurrent(c);if(pendingTarget===target)")
+    text = replace_once(text, "export function createSpatialWorkspace({request,getWorkspace,refreshState,showTask,openItem,toast}){", "export function createSpatialWorkspace({request,getWorkspace,refreshState,showTask,openItem,toast,openStudyTransfer}){", "toast,openStudyTransfer}")
+    text = replace_once(text, "button('review-open','Open','data-id=\"'+esc(row.id)+'\" class=\"small\"')+'</li>'", "button('review-open','Open','data-id=\"'+esc(row.id)+'\" class=\"small\"')+(openStudyTransfer?button('review-transfer','Transfer saved view','data-id=\"'+esc(row.id)+'\" class=\"small\"'):'')+'</li>'", "button('review-transfer'")
+    text = replace_once(text, "button('export-open','Open files','data-id=\"'+esc(row.id)+'\" class=\"small\"')+'</li>'", "button('export-open','Open files','data-id=\"'+esc(row.id)+'\" class=\"small\"')+(openStudyTransfer&&row.state==='complete'?button('export-transfer','Transfer map and sources','data-id=\"'+esc(row.id)+'\" class=\"small\"'):'')+'</li>'", "button('export-transfer'")
+    text = replace_once(text, "    if(name==='review-open')return loadReview(c,node.dataset.id);", "    if(name==='review-transfer'||name==='export-transfer'){\n      assertCurrent(c);\n      if(typeof openStudyTransfer!=='function')throw Error('Reopen the current selected-study workflow.');\n      const kind=name==='review-transfer'?'spatial-reviews':'spatial-exports';\n      const row=(kind==='spatial-reviews'?c.model.catalog?.reviews:c.model.exportItems)?.find(item=>item.id===node.dataset.id);\n      if(!row||(kind==='spatial-exports'&&row.state!=='complete'))throw Error('Choose an existing saved view or completed map pack from this workspace.');\n      return openStudyTransfer({workspace_key:c.key,roots:[{kind,id:row.id,title:row.title||row.content?.title||row.id,state:'complete'}]});\n    }\n    if(name==='review-open')return loadReview(c,node.dataset.id);", "if(name==='review-transfer'||name==='export-transfer')")
+    return join_plan_geography_lifecycle(text)
+
+
+def join_plan_geography_lifecycle(text):
+    text = replace_once(text, "  }\n\n  function dirty(c){c.model.dirty=true;c.root.querySelector('[data-spatial-save-status]').textContent='Unsaved view changes.';}\n  function updateTool(c){\n    for(const node of c.root.querySelectorAll('[data-spatial-action^=\"tool-\"]'))node.setAttribute('aria-pressed',String(node.dataset.spatialAction==='tool-'+c.model.tool));\n", "  }\n\n  function invalidateMapTarget(c){\n    const pending=pendingTarget?.workspace===c.key&&pendingTarget.kind==='receiving-water-plan-comparison';\n    const reading=Boolean(c.targetControl);\n    c.targetVersion=(c.targetVersion||0)+1;stopGroup(c,'targetControl');\n    if(pending)pendingTarget=null;\n    if(reading)status(c,'Map comparison request canceled; your current view is retained.');\n  }\n  function dirty(c,preserveTarget=false){\n    if(!preserveTarget)invalidateMapTarget(c);\n    c.model.dirty=true;c.root.querySelector('[data-spatial-save-status]').textContent='Unsaved view changes.';\n  }\n  function updateTool(c){\n    for(const node of c.root.querySelectorAll('[data-spatial-action^=\"tool-\"]'))node.setAttribute('aria-pressed',String(node.dataset.spatialAction==='tool-'+c.model.tool));\n", "  }\n\n  function invalidateMapTarget(c){\n    const pending=pendingTarget?.workspace===c.key&&pendingTarget.kind==='receiving-water-plan-comparison';\n    const reading=Boolean(c.targetControl);\n    c.targetVersion=(c.targetVersion||0)+1;stopGroup(c,'targetControl');\n    if(pending)pendingTarget=null;\n    if(reading)status(c,'Map comparison request canceled; your current view is retained.');\n  }\n  function dirty(c,preserveTarget=false){\n    if(!preserveTarget)invalidateMapTarget(c);\n    c.model.dirty=true;c.root.querySelector('[data-spatial-save-status]').textContent='Unsaved view changes.';\n  }\n  function updateTool(c){\n    for(const node of c.root.querySelectorAll('[data-spatial-action^=\"tool-\"]'))node.setAttribute('aria-pressed',String(node.dataset.spatialAction==='tool-'+c.model.tool));\n")
+    text = replace_once(text, "  }\n  async function applyTarget(c,target){\n    const targetVersion=(c.targetVersion||0)+1;c.targetVersion=targetVersion;\n    stopGroup(c,'targetControl');\n", "  }\n  async function applyTarget(c,target){\n    stopGroup(c,'reviewControl');\n    const targetVersion=(c.targetVersion||0)+1;c.targetVersion=targetVersion;\n    stopGroup(c,'targetControl');\n", "  }\n  async function applyTarget(c,target){\n    stopGroup(c,'reviewControl');\n    const targetVersion=(c.targetVersion||0)+1;c.targetVersion=targetVersion;\n    stopGroup(c,'targetControl');\n")
+    text = replace_once(text, "        c.root.querySelector('[data-spatial-input=\"title\"]').value=c.model.title;\n        c.root.querySelector('[data-spatial-input=\"notes\"]').value=c.model.notes;\n        renderExports(c);dirty(c);return;\n      }finally{release(c,control);if(c.targetControl===control)c.targetControl=null;}\n    }\n", "        c.root.querySelector('[data-spatial-input=\"title\"]').value=c.model.title;\n        c.root.querySelector('[data-spatial-input=\"notes\"]').value=c.model.notes;\n        renderExports(c);dirty(c,true);return;\n      }finally{release(c,control);if(c.targetControl===control)c.targetControl=null;}\n    }\n", "        c.root.querySelector('[data-spatial-input=\"title\"]').value=c.model.title;\n        c.root.querySelector('[data-spatial-input=\"notes\"]').value=c.model.notes;\n        renderExports(c);dirty(c,true);return;\n      }finally{release(c,control);if(c.targetControl===control)c.targetControl=null;}\n    }\n")
+    text = replace_once(text, "  }\n  async function fit(c,clearMarkers=false){\n    const control=controller(c);\n    try{\n", "  }\n  async function fit(c,clearMarkers=false){\n    invalidateMapTarget(c);\n    const control=controller(c);\n    try{\n", "  }\n  async function fit(c,clearMarkers=false){\n    invalidateMapTarget(c);\n    const control=controller(c);\n    try{\n")
+    text = replace_once(text, "  }\n  async function save(c){\n    if(c.saving)return;\n    const m=c.model;reconcileAtlasReview(m);const payload=reviewPayload(m);\n", "  }\n  async function save(c){\n    if(c.targetControl||(pendingTarget?.workspace===c.key&&pendingTarget.kind==='receiving-water-plan-comparison'))throw Error('Wait for the selected receiving-water boundaries to finish loading before saving this review.');\n    if(c.saving)return;\n    const m=c.model;reconcileAtlasReview(m);const payload=reviewPayload(m);\n", "  }\n  async function save(c){\n    if(c.targetControl||(pendingTarget?.workspace===c.key&&pendingTarget.kind==='receiving-water-plan-comparison'))throw Error('Wait for the selected receiving-water boundaries to finish loading before saving this review.');\n    if(c.saving)return;\n    const m=c.model;reconcileAtlasReview(m);const payload=reviewPayload(m);\n")
+    text = replace_once(text, "  }\n  async function loadReview(c,id){\n    stopGroup(c,'reviewControl');const control=controller(c);c.reviewControl=control;\n    try{\n", "  }\n  async function loadReview(c,id){\n    invalidateMapTarget(c);\n    stopGroup(c,'reviewControl');const control=controller(c);c.reviewControl=control;\n    try{\n", "  }\n  async function loadReview(c,id){\n    invalidateMapTarget(c);\n    stopGroup(c,'reviewControl');const control=controller(c);c.reviewControl=control;\n    try{\n")
+    text = replace_once(text, "  async function action(c,node){\n    clearError(c);const name=node.dataset.spatialAction,index=Number(node.dataset.index),m=c.model;\n    if(name.startsWith('tool-')){m.tool=name.slice(5);updateTool(c);return;}\n    if(name==='refresh-catalog'){await catalog(c);return draw(c);}\n", "  async function action(c,node){\n    clearError(c);const name=node.dataset.spatialAction,index=Number(node.dataset.index),m=c.model;\n    if(name!=='save')invalidateMapTarget(c);\n    if(name.startsWith('tool-')){m.tool=name.slice(5);updateTool(c);return;}\n    if(name==='refresh-catalog'){await catalog(c);return draw(c);}\n", "  async function action(c,node){\n    clearError(c);const name=node.dataset.spatialAction,index=Number(node.dataset.index),m=c.model;\n    if(name!=='save')invalidateMapTarget(c);\n    if(name.startsWith('tool-')){m.tool=name.slice(5);updateTool(c);return;}\n    if(name==='refresh-catalog'){await catalog(c);return draw(c);}\n")
+    text = replace_once(text, "    },options);\n    c.root.addEventListener('change',event=>{\n      const node=event.target.closest('[data-spatial-input]');if(node)change(c,node).catch(error=>fail(c,error));\n    },options);\n    c.root.addEventListener('input',event=>{const node=event.target.closest('[data-spatial-input]');if(node)edit(c,node);},options);\n    c.root.addEventListener('pointerdown',event=>{\n      const map=event.target.closest('[data-spatial-map]');if(!map||event.button!==0||c.busy||!validView(c.model.view))return;\n      event.preventDefault();map.focus();map.setPointerCapture(event.pointerId);\n      c.drag={pointerId:event.pointerId,map,x:event.clientX,y:event.clientY,start:eventPoint(c,event,map),tool:c.model.tool,view:clone(c.model.view),moved:false};\n", "    },options);\n    c.root.addEventListener('change',event=>{\n      invalidateMapTarget(c);\n      const node=event.target.closest('[data-spatial-input]');if(node)change(c,node).catch(error=>fail(c,error));\n    },options);\n    c.root.addEventListener('input',event=>{invalidateMapTarget(c);const node=event.target.closest('[data-spatial-input]');if(node)edit(c,node);},options);\n    c.root.addEventListener('pointerdown',event=>{\n      const map=event.target.closest('[data-spatial-map]');if(!map||event.button!==0||c.busy||!validView(c.model.view))return;\n      invalidateMapTarget(c);\n      event.preventDefault();map.focus();map.setPointerCapture(event.pointerId);\n      c.drag={pointerId:event.pointerId,map,x:event.clientX,y:event.clientY,start:eventPoint(c,event,map),tool:c.model.tool,view:clone(c.model.view),moved:false};\n", "    },options);\n    c.root.addEventListener('change',event=>{\n      invalidateMapTarget(c);\n      const node=event.target.closest('[data-spatial-input]');if(node)change(c,node).catch(error=>fail(c,error));\n    },options);\n    c.root.addEventListener('input',event=>{invalidateMapTarget(c);const node=event.target.closest('[data-spatial-input]');if(node)edit(c,node);},options);\n    c.root.addEventListener('pointerdown',event=>{\n      const map=event.target.closest('[data-spatial-map]');if(!map||event.button!==0||c.busy||!validView(c.model.view))return;\n      invalidateMapTarget(c);\n      event.preventDefault();map.focus();map.setPointerCapture(event.pointerId);\n      c.drag={pointerId:event.pointerId,map,x:event.clientX,y:event.clientY,start:eventPoint(c,event,map),tool:c.model.tool,view:clone(c.model.view),moved:false};\n")
+    return text
+
+
+def join_plan_geography_app(text):
+    text = join_app(text)
+    text = replace_once(text, "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity};", "  const target={workspace,kind:button.dataset.kind,id,collection:button.dataset.collection,subject:button.dataset.subject,subject_kind:button.dataset.subjectKind,statistic:button.dataset.statistic,run:button.dataset.run,quantity:button.dataset.quantity,reference_id:button.dataset.referenceId,reference_sha256:button.dataset.referenceSha256,candidate_sha256:button.dataset.candidateSha256};", "reference_sha256:button.dataset.referenceSha256")
+    text = replace_once(text, "const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast});", "const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});", "const spatialWorkspace=createSpatialWorkspace({request:api,getWorkspace:()=>workspace,refreshState:refresh,showTask,openItem,toast,openStudyTransfer:selection=>extensions.openExtension('study-transfer','openForStudies',selection)});")
     return text
 
 
 JOINERS = {
     "operator/server.py": join_server,
-    "operator/web/app.mjs": join_app,
+    "operator/web/app.mjs": join_plan_geography_app,
     "operator/web/index.html": join_index,
     "model/delivery.py": join_delivery,
     "model/portable.py": join_portable,
@@ -796,12 +831,15 @@ def install(root, *, check=False):
                                      for target in node.targets)), None)
     root_names = {node.value for node in ast.walk(root_declaration)
                   if isinstance(node, ast.Constant) and isinstance(node.value, str)} if root_declaration is not None else set()
-    if not {"receiving-water-plans", "receiving-water-analyses"} <= root_names:
-        raise ValueError("Receive Study transfer with original receiving-water plan and analysis roots")
+    if not {"receiving-water-plans", "receiving-water-analyses", "spatial-reviews", "spatial-exports"} <= root_names:
+        raise ValueError("Receive Study transfer with original receiving-water plans, analyses, saved maps and complete map packs")
     study_client = (root / "operator/web/extensions/study_transfer.mjs").read_text(encoding="utf-8")
     if ("openForStudies" not in study_client
             or "receiving-water-plans" not in study_client
-            or "receiving-water-analyses" not in study_client):
+            or "receiving-water-analyses" not in study_client
+            or "spatial-reviews" not in study_client
+            or "spatial-exports" not in study_client
+            or "openMap" not in study_descriptor.get("client", {}).get("requires", [])):
         raise ValueError("Receive the current Study transfer browser with direct original study selection")
     water_browser = (root / "operator/web/receiving_waters.mjs").read_text(encoding="utf-8")
     water_editing = (root / "operator/web/receiving_water_editing.mjs").read_text(encoding="utf-8")

@@ -147,7 +147,8 @@
       "openItem",
       "openScientificReport",
       "openDesk",
-      "openParameterStudy"
+      "openParameterStudy",
+      "openMap"
     ],
     "styles": [
       "/web/extensions/study_transfer.css",
