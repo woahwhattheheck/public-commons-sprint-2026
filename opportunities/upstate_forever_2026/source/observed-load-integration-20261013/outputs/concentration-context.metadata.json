@@ -1,7 +1,0 @@
-{
-  "title": "Retained concentration observations used by load integration",
-  "source_uri": "https://www.waterqualitydata.us/",
-  "value_basis": "source_context",
-  "observation_kind": "receiving_water_measurement",
-  "time_support": "original_sample"
-}

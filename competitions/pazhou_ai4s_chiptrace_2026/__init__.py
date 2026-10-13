@@ -1,1 +1,0 @@
-"""ChipTrace competition carrier."""

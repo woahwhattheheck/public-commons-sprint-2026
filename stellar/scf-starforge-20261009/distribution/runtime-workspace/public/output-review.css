@@ -1,8 +1,0 @@
-.procedure-output-review{min-width:0;max-width:100%;margin:1rem 0;border-top:1px solid var(--border,#ccc);padding-top:1rem}
-.procedure-output-review .actions{display:flex;flex-wrap:wrap;gap:.5rem;margin:.8rem 0}
-.procedure-output-review button,.procedure-output-review input{font:inherit;max-width:100%;padding:.55rem .75rem}
-.procedure-output-review label{display:grid;gap:.3rem;min-width:0}
-.procedure-output-review pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:32rem;overflow:auto;padding:.8rem;background:var(--surface,#f3f3f3)}
-.procedure-output-review p,.procedure-output-review details{overflow-wrap:anywhere}
-.procedure-output-review li{padding:.7rem 0}
-@media(max-width:480px){.procedure-output-review ol{padding-left:1.4rem}.procedure-output-review .actions>button{flex:1 1 10rem}}

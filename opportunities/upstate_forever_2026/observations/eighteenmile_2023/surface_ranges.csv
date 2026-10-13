@@ -1,6 +1,0 @@
-site_id,ph_min_su,ph_max_su,do_min_mg_l,do_max_mg_l,temperature_min_c,temperature_max_c,specific_conductivity_min_us_cm,specific_conductivity_max_us_cm,turbidity_min_fnu,turbidity_max_fnu,depth_m,period_start,period_end,general_event_count,source_table,source_pdf_page,source_url
-SV-268,6.68,7.31,6.2,9.05,12.03,24.63,65.9,126.3,12.65,81.33,0.3,2023-04-05,2023-10-17,15,2,11,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf
-SV-838,7.02,8.81,8.62,11.23,18.64,31.86,44.7,77,2.47,24.27,0.3,2023-04-05,2023-10-17,15,2,11,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf
-SV-839,7.08,8.48,7.8,10.37,19.46,31.23,37.7,59.1,1.71,10.77,0.3,2023-04-05,2023-10-17,15,2,11,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf
-SV-374,6.94,8.64,7.07,10.51,19.4,30.95,37.1,51.9,1.33,7.17,0.3,2023-04-05,2023-10-17,15,2,11,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf
-SV-840,6.83,7.87,6.35,10.14,18.66,30.59,33.9,43.5,0.14,4.34,0.3,2023-04-05,2023-10-17,15,2,11,https://www.des.sc.gov/sites/des/files/Documents/BOW/WaterQuality/2023LakeProgramFinalReport.pdf

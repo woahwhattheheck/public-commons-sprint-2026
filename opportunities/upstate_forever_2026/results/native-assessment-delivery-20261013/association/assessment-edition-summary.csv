@@ -1,3 +1,0 @@
-"source_id","source_sha256","vintage","records","stations","comparison_counts","assessment_priority_records","assessment_priority_stations","station_exact_priority_records","station_exact_priority_stations","station_huc12_unreported_records"
-"scdes-303d-published-2024-pdf-table-text","9be7679b79ca2a8a4d4d21227ad57371b88fd6082e8b29c7efc6d9a18ab0edce","2024","108","94","{""same_publisher_huc12"":101,""same_publisher_huc8"":7}","6","6","6","6","7"
-"scdes-tmdl-attainment-20260728","c26a79441d22e8a4a302c9094640654c199c88ec6171875e00bf6cde4a0c0dd7","2026-07-28","84","84","{""different_publisher_huc12"":6,""same_publisher_huc12"":75,""same_publisher_huc8"":3}","5","5","6","6","3"

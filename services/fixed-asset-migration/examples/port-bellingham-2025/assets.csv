@@ -1,8 +1,0 @@
-company_id,asset_id,parent_asset_id,class_code,description
-PORT-PUBLISHED-2025,PUBCLASS-land,,land,Land — published class aggregate
-PORT-PUBLISHED-2025,PUBCLASS-construction,,construction,Construction in progress — published class aggregate
-PORT-PUBLISHED-2025,PUBCLASS-buildings,,buildings,Buildings and Structures — published class aggregate
-PORT-PUBLISHED-2025,PUBCLASS-intangibles,,intangibles,Intangible Assets — published class aggregate
-PORT-PUBLISHED-2025,PUBCLASS-improvements,,improvements,Improvements/Infrastructure — published class aggregate
-PORT-PUBLISHED-2025,PUBCLASS-equipment,,equipment,Machinery and Equipment — published class aggregate
-PORT-PUBLISHED-2025,PUBCLASS-lease,,lease,Right-to-Use Lease Assets — published class aggregate

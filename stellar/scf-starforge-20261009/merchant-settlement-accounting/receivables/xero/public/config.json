@@ -1,9 +1,0 @@
-{
-  "apiPath": "/api/receivables/xero",
-  "uiPath": "/receivables/xero",
-  "receivablesApiPath": "/api/receivables",
-  "receivablesUiPath": "/receivables",
-  "requestBytes": 33554432,
-  "templateBytes": 262144,
-  "returnedFileBytes": 8388608
-}

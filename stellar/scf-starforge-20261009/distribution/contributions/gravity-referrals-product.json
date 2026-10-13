@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "gravity-referrals-product",
-  "description": "Complete installed Gravity referrals programme and customer receiving.",
-  "components": [
-    "products/gravity-referrals"
-  ]
-}

@@ -1,8 +1,0 @@
-{
-  "schema": "tjlabs.netbox.connection/v1",
-  "netbox_url": "https://netbox.example.invalid",
-  "script": "inventory_migration.InventoryMigration",
-  "token_env": "NETBOX_TOKEN",
-  "authorization_scheme": "Bearer",
-  "timeout_seconds": 60
-}

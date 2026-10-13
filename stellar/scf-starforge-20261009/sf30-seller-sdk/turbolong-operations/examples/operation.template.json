@@ -1,9 +1,0 @@
-{
-  "periodId": "REPLACE_WITH_SAVED_PERIOD_UUID",
-  "periodVersion": 1,
-  "connection": "mainnet-telemetry",
-  "action": "snapshots.list",
-  "args": {
-    "limit": 500
-  }
-}

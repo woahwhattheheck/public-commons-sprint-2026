@@ -1,5 +1,0 @@
-id,role,account,partnerId,label,memoType,memoValue,weight,retain
-authority,authority,,authority,Authority,none,,1,false
-driver-pool,driver_pool,,driver-programme,Driver pool,none,,1,false
-platform,platform,,platform,Platform,none,,1,false
-driver-001,driver,,driver-001,Driver 001,none,,1,false

@@ -1,1 +1,0 @@
-{"processDefinitionId":"__PROCESS_DEFINITION_ID__","businessKey":"__BUSINESS_KEY__","name":"Vendor approval native commissioning reference","variables":[{"name":"caseNumber","type":"long","value":9223372036854775806},{"name":"customer","type":"string","value":"Native receiving example"},{"name":"amount","type":"double","value":1248.75}]}

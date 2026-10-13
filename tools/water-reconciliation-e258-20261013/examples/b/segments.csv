@@ -1,6 +1,0 @@
-segment_id,period_id,meter_id,endpoint_id,start,end,start_read_id,end_read_id,rollover_count,register_modulus,source_reference
-A-1,A-OCT,M-A,E-A,2026-10-01T00:00:00-05:00,2026-10-03T00:00:00-05:00,RA0,RA1,0,,invented A physical meter
-B-1,B-FALL,M-B1,E-B1,2026-11-01T00:00:00-05:00,2026-11-01T02:00:00-06:00,RB0,RB1,0,,invented B removal
-B-2,B-FALL,M-B2,E-B2,2026-11-01T02:00:00-06:00,2026-11-02T00:00:00-06:00,RB2,RB3,0,,invented B installation
-C-1,C-GAP,M-C,E-C,2026-10-01T00:00:00-05:00,2026-10-02T00:00:00-05:00,RC0,RC1,0,,invented C physical meter
-D-1,D-NEGATIVE,M-D,E-D,2026-10-01T00:00:00-05:00,2026-10-02T00:00:00-05:00,RD0,RD1,0,,invented D physical meter

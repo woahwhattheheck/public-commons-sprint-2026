@@ -1,5 +1,0 @@
-"externalKey","customerKey","siteKey","kind","status","quotedAmount","startDate","notes"
-"medina-J001","DEMO-medina-customer-1","DEMO-medina-site-1","Repair diagnosis","requested","125.00","2026-10-14","Fictional operating input."
-"medina-J002","DEMO-medina-customer-2","DEMO-medina-site-2","Planned installation","scheduled","1800.00","2026-10-15","Exact original
-multiline scope, with comma."
-"medina-J003","DEMO-medina-customer-1","DEMO-medina-site-1","Maintenance review","completed","95.00","2026-10-16","Fictional operating input."

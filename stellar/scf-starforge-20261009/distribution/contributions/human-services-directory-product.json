@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "human-services-directory-product",
-  "description": "Installed Human Services Directory programme, complete customer receiving and source-backed operating guide.",
-  "components": [
-    "products/human-services-directory"
-  ]
-}

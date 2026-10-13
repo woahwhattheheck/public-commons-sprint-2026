@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "tenderly",
-  "description": "tenderly original Applications",
-  "applicationProviders": {
-    "tenderly": "stellar/scf-starforge-20261009/distribution/runtime-workspace/providers/tenderly.mjs"
-  }
-}

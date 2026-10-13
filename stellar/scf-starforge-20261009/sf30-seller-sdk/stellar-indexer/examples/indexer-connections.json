@@ -1,7 +1,0 @@
-{
-  "client": {
-    "network": "stellar:pubnet",
-    "consumerTokenEnv": "STELLAR_INDEXER_CONSUMER_TOKEN",
-    "apiUrl": "https://api.stellarindexer.com"
-  }
-}

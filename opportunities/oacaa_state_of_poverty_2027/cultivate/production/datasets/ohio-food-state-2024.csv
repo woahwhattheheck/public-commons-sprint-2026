@@ -1,3 +1,0 @@
-"geography","fips","period","population","count","rate","above_threshold","below_threshold","threshold_fpl","meal_cost","annual_shortfall","source_url"
-"Ohio","39000","2024","All people","1822930","15.3","60","41","130","3.53","1220450000","https://map.feedingamerica.org/county/2024/overall/ohio"
-"Ohio","39000","2024","Children under 18","534640","20.8","33","67","185","3.53","1220450000","https://map.feedingamerica.org/county/2024/child/ohio"

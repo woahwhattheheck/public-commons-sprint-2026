@@ -1,9 +1,0 @@
-{
-  "source": "/absolute/path/to/operator",
-  "workspace": "/absolute/path/to/owned-runtime/workspace",
-  "output": "/absolute/path/to/owned-runtime/output",
-  "python": "/absolute/path/to/python3",
-  "playwright": "/absolute/path/to/playwright/index.mjs",
-  "chromium": "/absolute/path/to/chrome-headless-shell",
-  "port": 18976
-}

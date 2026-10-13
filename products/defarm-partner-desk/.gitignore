@@ -1,6 +1,0 @@
-partner-workspace/
-node_modules/
-upstream/defarm-sdk-ts/node_modules/
-upstream/defarm-sdk-ts/dist/
-.env
-.env.local

@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-provider-nocodb-workspaces",
-  "description": "Original nocodb workspaces MCP provider",
-  "merchantProviders": {
-    "nocodb-workspaces": "stellar-forge/mcp-merchant-operator/providers/nocodb-workspaces.mjs"
-  }
-}

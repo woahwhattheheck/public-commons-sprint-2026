@@ -1,6 +1,0 @@
-{
-  "name": "pygeoapi ICOADS public demonstration",
-  "baseUrl": "https://demo.pygeoapi.io/master/",
-  "allowedOrigins": [],
-  "authorizationEnv": null
-}

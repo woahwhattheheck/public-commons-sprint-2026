@@ -1,0 +1,564 @@
+{
+  "schema": "upstate.parameter-working-source-delivery/v1",
+  "commit": "bdf18bc7cf4375689d1a3746f32f6038e0b74efe",
+  "files": 86,
+  "json": {
+    "bytes": 1871333,
+    "sha256": "feb6a9e3ce918cef4426b0c8f669d706b70b5ac5bd94a438ca945b784515bb83"
+  },
+  "gzip": {
+    "bytes": 479504,
+    "sha256": "75708bbe75515b1417c3b18d07f72c2cb5b69d50a955a5bbdda280cb4bba40b0",
+    "git_blob": "097ffaa7df0924d28817f79d017a070a6b719c6e"
+  },
+  "base64": {
+    "bytes": 639340,
+    "sha256": "ea567b6dd6279c6d55851b82e5315ff85ff6904d7c70322ffa6ea7c7963e84b9",
+    "git_blob": "100e35b6cdc8292dc708dacf3f5caa0a6c15cc73"
+  },
+  "source_scope": "86 exact installer source files for an existing complete retained application. This is not the complete application or a scientific Workspace.",
+  "host_prerequisites": [
+    "model/workspace.py",
+    "model/observations.py",
+    "operator/server.py",
+    "operator/web/app.mjs",
+    "operator/web/index.html",
+    "model/scientific_figures.py",
+    "operator/extension_registry.py",
+    "operator/web/extension_host.mjs",
+    "install_extensions.py",
+    "model/observed_context.py",
+    "model/native_versions.py",
+    "model/model_selection.py",
+    "model/observation_support.py",
+    "model/observation_diagnostics.py",
+    "model/common.py",
+    "model/observed_report_render.py",
+    "operator/source_reports.py",
+    "operator/source_report_editions.py",
+    "operator/web/source_reports.mjs",
+    "operator/web/source_report_editions.mjs",
+    "operator/extensions/source-reports.json"
+  ],
+  "installer": "operator/install_calibration.py",
+  "original_claim": "1791913662.534029",
+  "source_delivery": "1791916088.362199",
+  "members": [
+    {
+      "path": "model/terrain_conditioning_study_transfer.py",
+      "git_blob": "a05d3e927020ad23c7cd24f6e47fa37a24617e44",
+      "bytes": 22203,
+      "sha256": "fb638d3ba492c458db59748a6ed8f5677e52e5d7e703736eddb008a907f33e0b"
+    },
+    {
+      "path": "model/terrain_conditioning_report_source.py",
+      "git_blob": "18d306af58e7d8c5810fe82927a3a2a6799dd1be",
+      "bytes": 15265,
+      "sha256": "0cc8beb0a867de96f51cef316cd30c1dbd50d5a2e421f325bf5ee278aa26a10a"
+    },
+    {
+      "path": "model/terrain_conditioning_scientific_report.py",
+      "git_blob": "cbf8b08ebca9f743cb9664874d4afd12c2798926",
+      "bytes": 15449,
+      "sha256": "55458bca79ea45b083c924ef4cd451d8e5ba18581a31f7f89fcba933b764ea81"
+    },
+    {
+      "path": "operator/extensions/terrain-conditioning.json",
+      "git_blob": "0b87ed056b1f7a538dadd40dc93fa1280f4df86b",
+      "bytes": 2158,
+      "sha256": "d0792743fa5431ec9016eb30c80fc52cafde0aaeae0e600bf8087554ad5b72c6"
+    },
+    {
+      "path": "operator/terrain_conditioning_native.py",
+      "git_blob": "f1701cac0091c0153113209af133dd5f637d19e0",
+      "bytes": 4000,
+      "sha256": "2183aa7b08a8d7862a4b4de871067980aff4dfddfe2677ec1a3b6c47d026d31c"
+    },
+    {
+      "path": "operator/web/terrain_conditioning.css",
+      "git_blob": "d5afafd03dfd8ec4cba8e11544978c48d5592099",
+      "bytes": 1852,
+      "sha256": "dee94f0843bd2f7df9820047ea4510927c0b8a0e375c1237c94ea754587b5add"
+    },
+    {
+      "path": "operator/web/terrain_conditioning.mjs",
+      "git_blob": "99ff047b786ee8f248c633d0d4e0e294caa6f54d",
+      "bytes": 31325,
+      "sha256": "09db60bf868fae3e68cbcdc95761d0f662d8bea311d90fb0aedb135ff8a38cfe"
+    },
+    {
+      "path": "source_tools/TERRAIN_CONDITIONING.md",
+      "git_blob": "307077c427b7ce5e39fe587573442e868c91d14e",
+      "bytes": 10347,
+      "sha256": "b8d2f904095f42aed5b1b46126ba8c740078eaf03c6cd63d3f56bfd3f1fe1919"
+    },
+    {
+      "path": "source_tools/terrain_conditioning.py",
+      "git_blob": "6511205ddcb5d81d15c72c29dc988fa323eb3a5d",
+      "bytes": 28711,
+      "sha256": "55b95608d49da4df031b5a30fac0aa9a2e4cfa0d914dffccbe7bf819e3f8c3e0"
+    },
+    {
+      "path": "source_tools/terrain_conditioning_report.py",
+      "git_blob": "82b40f89e8942af6b1f82f5302a3c8d1ec666f31",
+      "bytes": 12801,
+      "sha256": "4ebf5586452ee2e37efaee1c9edb601bbbeb06677fcf0c1fc0cf4071929bf3ef"
+    },
+    {
+      "path": "source_tools/terrain_conditioning_response.py",
+      "git_blob": "7d11b4d70a98f2d40fd3e1eff6d73be25c20b927",
+      "bytes": 18658,
+      "sha256": "155bea88d3369d0e87a79cab0c551c414f5c97ca2aa4d0ec3223044fe6cc9326"
+    },
+    {
+      "path": "source_tools/terrain_flood.cpp",
+      "git_blob": "4f82f7e989667a72ef3ca79b0687fe9b8169fb1f",
+      "bytes": 3142,
+      "sha256": "bf9f0290581e2333fa63f94eec7066600373e05b3a1cab258abefc4681985a1d"
+    },
+    {
+      "path": "integration/component_fragments/climate-management.json",
+      "git_blob": "12a6435a6c4a2d84d9d48c288d6b84acfe517ece",
+      "bytes": 1063,
+      "sha256": "c53968022597f59393cae5429579f11ffb3682c0e26b3e80a6494ae535b61e76"
+    },
+    {
+      "path": "model/climate_management.py",
+      "git_blob": "17f94a82018be269207c2932df025f81e0358815",
+      "bytes": 52379,
+      "sha256": "813b295f2e6ecc26da85232dc90b7339dc840265f961abe55b8732d9bf3832d2"
+    },
+    {
+      "path": "model/climate_management_study_transfer.py",
+      "git_blob": "ef5df4ecaad602952fbddbe553a9d149b6f8c8db",
+      "bytes": 8913,
+      "sha256": "218b7d004dbf8dcd5864f81e5a842d8b6ef2b966711c1ebbbb0ec8228d4d3d96"
+    },
+    {
+      "path": "operator/climate_management.py",
+      "git_blob": "00982f4c6136302664422b3d6ff5376b5a74624b",
+      "bytes": 4569,
+      "sha256": "343b42c15ae11ca3f3c408d16691536f3eb96a7c587c335a31c8eeb15dab4ac7"
+    },
+    {
+      "path": "operator/extensions/climate-management.json",
+      "git_blob": "340c26bb3327061535e2f28128efa914046be3ed",
+      "bytes": 2516,
+      "sha256": "ebdc4908861cd061edabce4437dd1ad2690b851b623980d5f38511c6a141e964"
+    },
+    {
+      "path": "operator/web/climate_management.mjs",
+      "git_blob": "916c0774e732a7c3fce9293528e442d3f445e404",
+      "bytes": 22886,
+      "sha256": "57c948eb65e2f1137a094a104bbffec90949abc3b0ba34f7c561ca2f435a9321"
+    },
+    {
+      "path": "operator/web/climate_management.css",
+      "git_blob": "8fdf0d023403999cd8ef98738ec824eee5df697d",
+      "bytes": 2945,
+      "sha256": "9e7a04f80d54d44c75deb3d2dc31a301aee2943b8e08352bed1d7a3f86ba0d13"
+    },
+    {
+      "path": "operator/CLIMATE_MANAGEMENT.md",
+      "git_blob": "22908aba4007a81c92babf3de2cbf984ca603c04",
+      "bytes": 16513,
+      "sha256": "1ec7000a1de9260ac10bfdbf00cbab0cf5a4422c087673e75684497f09f0b60a"
+    },
+    {
+      "path": "model/parameter_working.py",
+      "git_blob": "efaee75bb81296d48ce217dc7e0578f001593785",
+      "bytes": 18941,
+      "sha256": "9828cd447c70d09a88b3293303cddfb6bb48d0349a7fb21db8764b081880c216"
+    },
+    {
+      "path": "model/parameter_working_transfer.py",
+      "git_blob": "ba7aaf0738355a61946442c47f36c46cb664cb60",
+      "bytes": 3313,
+      "sha256": "71a44930896de89611d957d10eea51d701c01a4176895ecf5678372957912b7c"
+    },
+    {
+      "path": "model/portable_parameter_studies.py",
+      "git_blob": "06611a41cf60edf1afec0c339f6245b1e989dc47",
+      "bytes": 3747,
+      "sha256": "676f1574e7af4ec3cc021b3702337d20a2f12032ecb6529a197499d5471d1ce4"
+    },
+    {
+      "path": "operator/web/parameter_working.mjs",
+      "git_blob": "520dc9b8d9f69150f962ff32ea867fd025dbff9d",
+      "bytes": 20798,
+      "sha256": "2ac05f71fb4e661faa1d0797c4e8b0c9c8da0e788d601f4cd8fec810bedf22b2"
+    },
+    {
+      "path": "operator/PARAMETER_WORKING.md",
+      "git_blob": "9ca5f9efabb0a295548cd3b7baed81a633f5557a",
+      "bytes": 7039,
+      "sha256": "4bc1f32ac1b8a98885c9d1964082f5862ef748c38cce2c93b0076889c4781165"
+    },
+    {
+      "path": "integration/component_fragments/parameter-working.json",
+      "git_blob": "0db40435ebe23e6f287d5cc1671103f1a2b9b671",
+      "bytes": 8249,
+      "sha256": "f2ed10f9fe9d7e6211210833b7e4e1ece91b368f818a5f16592e897806ec4fad"
+    },
+    {
+      "path": "model/management_case_study_transfer.py",
+      "git_blob": "7e02a6c5349989ddac37dddb953b078cb8047c45",
+      "bytes": 12239,
+      "sha256": "53bf4dc1efdab5698881dbfa463b4a9aafee233fd519b0b0146231e9fef0c9b7"
+    },
+    {
+      "path": "model/management_cases.py",
+      "git_blob": "74285a94181ab374e101996b6508442d94953808",
+      "bytes": 19438,
+      "sha256": "c2051b714cdbd8874509418ca55614d8b54278b690ad893c1377de4707d2e2ae"
+    },
+    {
+      "path": "model/experiment_profiles.py",
+      "git_blob": "2f9e71eefe293c12f6ed897534193236f8134c7b",
+      "bytes": 31374,
+      "sha256": "d320068ac633e7c88bcdd74f504cf7ce6ed40b1b13dd4c5bf30d29504e6afd4b"
+    },
+    {
+      "path": "model/climate_forcing_study_transfer.py",
+      "git_blob": "57554bf589227fee7c58a408c0ad46c4ef925403",
+      "bytes": 14260,
+      "sha256": "320787e940a6a5b2f524bd953c122e26f010b83be5416d1310ff63a8a583574f"
+    },
+    {
+      "path": "model/climate_forcing.py",
+      "git_blob": "1f535cead09f82795010a460fa7778c3e288bda4",
+      "bytes": 59045,
+      "sha256": "e8ccf301380f015033ada767429845768bde28cd5d17c8cf9ef5a04da49012c5"
+    },
+    {
+      "path": "model/forcing_sources.py",
+      "git_blob": "b72036ac15a12f91471c60a3861b65e5b68b3cd1",
+      "bytes": 14479,
+      "sha256": "c34dc1b694666afaa0a5fc2e4d090c3e77c61396a874ee5296928a32358765c2"
+    },
+    {
+      "path": "model/calibration_execution.py",
+      "git_blob": "d39f92848a93c62016d7874d881f42cf573bf46f",
+      "bytes": 10747,
+      "sha256": "b712c073c092d608d9e4da1c47d1649a0db702844d6b4fb2b68bb3f6c6278c3c"
+    },
+    {
+      "path": "model/calibration.py",
+      "git_blob": "c7f85f3facd0880602f997bf4354bd730674b6b3",
+      "bytes": 56292,
+      "sha256": "39432889173648ac8933c2295c8754c06ef34af61aa3c4b9f4cd70dc7e72cda4"
+    },
+    {
+      "path": "model/CALIBRATION.md",
+      "git_blob": "e62cb1fa33700b581770a732ff4100195279219a",
+      "bytes": 29443,
+      "sha256": "2118fd8799102529b58ffc3652ae5edb75eee512af190dfff0c4f7db3203d62d"
+    },
+    {
+      "path": "model/calibration_uncertainty.py",
+      "git_blob": "a6141b1ea9e833693275238dcff7de1ce51d1230",
+      "bytes": 32800,
+      "sha256": "5c6aeddd276c88b350f76617f3b1d52c6bb061787569417f0f2ac15ef4cda201"
+    },
+    {
+      "path": "model/CALIBRATION_UNCERTAINTY.md",
+      "git_blob": "b97bc3db5f1fe4ab4a985b115374e2ccd95e4480",
+      "bytes": 16320,
+      "sha256": "f1bdee6ca2fdfb09dbeedffe9895d4b84834f321a197a9887512c67b34191c93"
+    },
+    {
+      "path": "model/calibration_maps.py",
+      "git_blob": "b0139f73061101ec042ec7dc08942d26b3f77ac8",
+      "bytes": 42434,
+      "sha256": "9c0dfeb2db3c7f1ad58cfe542d62e6d489d3186b3a4d576eba5b9bf5c2edf09a"
+    },
+    {
+      "path": "model/CALIBRATION_MAPS.md",
+      "git_blob": "7944dad8586ffae75737457ece3f21ff7f9da942",
+      "bytes": 15898,
+      "sha256": "cc129c9b7b1b0a7a750fcffdecd16f0266d379815da605d62c23c7693b22fce4"
+    },
+    {
+      "path": "model/calibration_review.py",
+      "git_blob": "bf955e4e9b4571e4a5e748c0d04663e8d9254b97",
+      "bytes": 42764,
+      "sha256": "7391808607b6bce77beeb3f4efb8e31dce464a1b5095ec6dc5d61b5807a6733e"
+    },
+    {
+      "path": "model/CALIBRATION_REVIEW.md",
+      "git_blob": "514cd56737dd0cdb3ddebaa2472a1ed6dc798649",
+      "bytes": 16979,
+      "sha256": "3cd2171598c91e6b893fc5ea8a0c3a2ea6621d3c6f48aee52a073f0085d9a32e"
+    },
+    {
+      "path": "model/calibration_report_source.py",
+      "git_blob": "77c7acae56675bd5b88a4e3410d28a95a208a983",
+      "bytes": 33871,
+      "sha256": "b1797b5c0b3854625bd70466b2c9e9c090e897e5d795b919b265ca43a99e7fa0"
+    },
+    {
+      "path": "model/CALIBRATION_REPORT_SOURCE.md",
+      "git_blob": "893c46df489376824ef866279285906526db928e",
+      "bytes": 14722,
+      "sha256": "36c33fff7aaa425c2641ab01b29bbcee0393097f59893e77b62ce8dc4afca1cf"
+    },
+    {
+      "path": "operator/calibration.py",
+      "git_blob": "4306fbf6695663a32342a020634ed5d32d9d0fa3",
+      "bytes": 60992,
+      "sha256": "59e4187b8fa23f09a2772a160ffd2cba87759b685a954f01cce6a7f18b3fbe53"
+    },
+    {
+      "path": "operator/web/calibration.mjs",
+      "git_blob": "7475674f3475358c30181385202d46e947ecb627",
+      "bytes": 98543,
+      "sha256": "f84a6b5befd8119d626f7bee31dc7fd424e33ac692ad253de7e3f444e5b41a55"
+    },
+    {
+      "path": "operator/web/calibration_maps.mjs",
+      "git_blob": "c7ba697bc7c291caff3704a4ccb0824abbc7e041",
+      "bytes": 16937,
+      "sha256": "9445ea28bca6e589415502076643c21534edb5ee826dfca961c6e99fe8993556"
+    },
+    {
+      "path": "operator/web/calibration_review.mjs",
+      "git_blob": "d74e7f8331ccf6b54e85f4bc6b5afa09c05344c5",
+      "bytes": 15243,
+      "sha256": "25736e4b5ec565e5d2a179bf109ab8142b41772b226f2632ce47d8fe3af9c0f9"
+    },
+    {
+      "path": "operator/web/calibration.css",
+      "git_blob": "a22238c109fca3975773bc96b3f3916734e8154c",
+      "bytes": 5448,
+      "sha256": "fb77fb9b08887fcd807812fc7ccfc73e74f115f4cc75d538a0b50cd6a14af26f"
+    },
+    {
+      "path": "operator/extensions/calibration.json",
+      "git_blob": "76b54ba01862faaeae1f808030a63d65f6cb1755",
+      "bytes": 7785,
+      "sha256": "8105b03a0284830b72ac8cdc4b9cbbfe6fedbabec45d840e7a09e0990e195b75"
+    },
+    {
+      "path": "operator/CALIBRATION.md",
+      "git_blob": "ecca095fcf3a176a3d1cb973cef5d6acfb6348f3",
+      "bytes": 56471,
+      "sha256": "1ce4770213a6a0ade628472159469eb22f6430444730766ff5c865c676bcc2ba"
+    },
+    {
+      "path": "operator/install_calibration.py",
+      "git_blob": "1a429a221aec9af610deffd4cc4743221399a8f7",
+      "bytes": 36047,
+      "sha256": "8d90c0993870c5c16b24ed9c00e1e962da2b3c1dc4e0cd64396f14c1389cf667"
+    },
+    {
+      "path": "source_tools/calibration_assembly.py",
+      "git_blob": "4e88b9ecc719f903a5c9e91aaae0865fbd4c10a2",
+      "bytes": 19961,
+      "sha256": "46135abd1229eee2a801e756da843ba92064b5d32554a0b42191e630acdb8acd"
+    },
+    {
+      "path": "operator/web/calibration_design.mjs",
+      "git_blob": "08d99ca85caee43840d006487433c77abc3debed",
+      "bytes": 13388,
+      "sha256": "4bc0f1e49f99bd280e8de1afcf39a424b74a325b8a293f33e617e4324c33913a"
+    },
+    {
+      "path": "operator/CALIBRATION_DESIGN.md",
+      "git_blob": "56d364b081c2033ddd6c5b4458b482d655e7613e",
+      "bytes": 8972,
+      "sha256": "91b5b34cb6a5614e4fd39ad5a0eb8131d9902298a650c280fe69e568a5a0d6fb"
+    },
+    {
+      "path": "operator/calibration_design_patch.json",
+      "git_blob": "5b3ad281375de5d966619e587a65a353b0ea8546",
+      "bytes": 4407,
+      "sha256": "fe0b0bd6ebb9b83d8f125aa6ae5c35ffdeadbf060229ed33dffe72522c3ab1b4"
+    },
+    {
+      "path": "operator/install_calibration_design.py",
+      "git_blob": "f256c1065014d76cf425de5d5d5eade4b2c0629a",
+      "bytes": 5734,
+      "sha256": "f96f73795bec3ec832f1a67fd554f97b22af20dc1f4c786f207ade76ac314b1a"
+    },
+    {
+      "path": "source/calibration-design/upper-savannah-reference-support.json",
+      "git_blob": "cd9ab1c453ec6dbff653bc1762079b9d516c24fa",
+      "bytes": 6824,
+      "sha256": "4517a6f65f42d02900f13a4f38b673c81f0365af749d083153151a7a9dee4ed1"
+    },
+    {
+      "path": "model/parameter_calibration.py",
+      "git_blob": "e442489d7e151cc0a53e0a2a3d4b41ef5c9a3ad5",
+      "bytes": 12046,
+      "sha256": "4c940f7689c747bb37d3a6cb5dd59d0ac1294ae6646401f7c4ace9e57be259e9"
+    },
+    {
+      "path": "model/parameter_studies.py",
+      "git_blob": "371a679a45f2b816c6626f3e31b1f55b52854495",
+      "bytes": 71257,
+      "sha256": "96d42955202ea579eefef60ced9ec5d941a8c9f5930eef10c6ec42bfcddf9a1c"
+    },
+    {
+      "path": "model/parameter_report_source.py",
+      "git_blob": "8007691f76c9c606b866a95b56972caa3f7d28f0",
+      "bytes": 50303,
+      "sha256": "7435d9a92c19bb42a9c1cbda28e55e8e308a5b227a2f6a3e63580113396532e2"
+    },
+    {
+      "path": "model/parameter_study_transfer.py",
+      "git_blob": "b224d74ebb88af7b579849a2497ea0e55802349e",
+      "bytes": 33382,
+      "sha256": "fcc098aa4ce9b5fde974907eb580ffc9091a9c368ed058175ab310a50e1631b0"
+    },
+    {
+      "path": "operator/parameter_study_api.py",
+      "git_blob": "176aaee880a5aeb3b126ea5546e0f7fbbe09b2dd",
+      "bytes": 8680,
+      "sha256": "a75c5ec5dfbca2f775d330d7dbbd4100b8f24fff5721234430743771bc50b9db"
+    },
+    {
+      "path": "operator/web/parameter_studies.mjs",
+      "git_blob": "05e829f8ad2acef8ef859b6a79658c66847b141c",
+      "bytes": 79272,
+      "sha256": "d81ec12c414b89b9744b79b2fafc403e0d481f7ee6faa816d4740e5881b1ea97"
+    },
+    {
+      "path": "operator/web/parameter_studies.css",
+      "git_blob": "7beb88fa3fb3d754f60342ff6cac2a8a7cd94f38",
+      "bytes": 3198,
+      "sha256": "0b527187a0b8ec1fc7d6f93f5bca10d478e228ef037f1c8852006d597c75a833"
+    },
+    {
+      "path": "operator/PARAMETER_STUDY_CALIBRATION.md",
+      "git_blob": "ab1b77f0673dd7f1f6066fc355dd4fb74b810a07",
+      "bytes": 10587,
+      "sha256": "19924308a451d80531bf8cf996a6fab829684ecf3a538b2541fdc3f3f224e2ce"
+    },
+    {
+      "path": "integration/component_fragments/calibration-parameter-continuation.json",
+      "git_blob": "f7db86a342c009a9effefb96b39975ede895baaf",
+      "bytes": 3490,
+      "sha256": "9b4bd3a1dbaea4672976db772278f18c8d99e59f4f77e9ac9ae24eca0bd2ab94"
+    },
+    {
+      "path": "model/study_transfer.py",
+      "git_blob": "266c0efe82c190aae03733de3c3c63abe9a9ece2",
+      "bytes": 74414,
+      "sha256": "91144e24fdc1441531c3a0e1e8e2adf2fac2782ee60fc320dc91d48bb4ffbe52"
+    },
+    {
+      "path": "model/parameter_study_receiving.py",
+      "git_blob": "cf502afa1fa354e2a03a3f4404eb89639b18c10b",
+      "bytes": 9572,
+      "sha256": "3b4984e116b9c5232aa74ebfda01a64e36a117783a7b3c3e5e9bf60550c58c84"
+    },
+    {
+      "path": "model/multivariate_control_study_transfer.py",
+      "git_blob": "4e8610929cdb3c5da4c274dea646f723762589f6",
+      "bytes": 5616,
+      "sha256": "1d373a376c72c7d1e40b53ec28040f6a5e13cf38e4e2ebdcceee1147957d492c"
+    },
+    {
+      "path": "operator/parameter_receiving.py",
+      "git_blob": "da6cf928213e70b86bab55e032bccbc22745de84",
+      "bytes": 707,
+      "sha256": "9e1519bf058e4135425c4426334e1da552a47995a4e2a8c8011c0fbc71e1ea89"
+    },
+    {
+      "path": "operator/web/parameter_received_studies.mjs",
+      "git_blob": "67dbf4d8b5044c4946e192cbd509cbcb830bedce",
+      "bytes": 8966,
+      "sha256": "24ce1226afb974433803c2d10fe19875087e92fb0447f6824b4b5219959c7c07"
+    },
+    {
+      "path": "operator/web/extensions/study_transfer.mjs",
+      "git_blob": "7035a2878b73018b0903b680fe4c785f056a77d0",
+      "bytes": 53181,
+      "sha256": "5b0fb705f7aa35decf1b496ccd254ffeef8aa098bccc18460cefea31e12e6612"
+    },
+    {
+      "path": "model/calibration_followup.py",
+      "git_blob": "82da9c70906cb854418474fa2c37b0ce10534228",
+      "bytes": 8247,
+      "sha256": "11b1ffd3b6e39189721fd9a001645d5b45beb1013fd455b928d79904b4cd242e"
+    },
+    {
+      "path": "model/calibration_study_transfer.py",
+      "git_blob": "7233d36bb4b6b71c47bc9485defbc0f74fd58601",
+      "bytes": 17464,
+      "sha256": "75b48106f10c6d1220f59bf9ae61850cfeea23451f9372be4bf912ae772b59ea"
+    },
+    {
+      "path": "model/CALIBRATION_FOLLOWUP.md",
+      "git_blob": "fdcd472e6644270a16e7aedad24e31a2d5562c4d",
+      "bytes": 6453,
+      "sha256": "5fa75d6c6577d34ac336d4b1e5cf2575b06bb654b2df224006ccb48459a31dce"
+    },
+    {
+      "path": "integration/component_fragments/calibration-reference-followup.json",
+      "git_blob": "1fb719aa6ae5eb1dce1775151a105f4db68eb080",
+      "bytes": 2374,
+      "sha256": "761f2e0e3ca5b3a5edd60e0e04f80e6511a12b70ca58206b74a45a054391a158"
+    },
+    {
+      "path": "model/calibration_history.py",
+      "git_blob": "c60c32b1f8a7e62a69abf21f30b64d0e2b3133e5",
+      "bytes": 16262,
+      "sha256": "58de687081c7dc1ed97d62012cedd5400b99210e2fad729b268e0d6d52dbbcc0"
+    },
+    {
+      "path": "model/calibration_history_export.py",
+      "git_blob": "53fe2078ee90190e8392494ac79031359cb99566",
+      "bytes": 17923,
+      "sha256": "196dbac62ab12038d5fbe82c2a5d9394720acee3f977fa6669a9e79cae4739e9"
+    },
+    {
+      "path": "operator/web/calibration_history.mjs",
+      "git_blob": "41de9c53534f0ead1f8b1de049260186de9494bd",
+      "bytes": 8026,
+      "sha256": "846a8b33bba34c8ebf52aff4f6aedef4d873dbbf37101bc9b022f8d58ced6c43"
+    },
+    {
+      "path": "model/CALIBRATION_HISTORY.md",
+      "git_blob": "455d8acd0ff287bf8b63a1f7c518fe3b92f27bdd",
+      "bytes": 6887,
+      "sha256": "2ebf7749cba66fcb6a86136419d86c360e5e8c081112a49def969c64f4ac1448"
+    },
+    {
+      "path": "integration/component_fragments/calibration-profile-history.json",
+      "git_blob": "4aa1553f406c9a96f4b3420347140dcb72492251",
+      "bytes": 2082,
+      "sha256": "45805e1ef5fc4e5ed93b96cabab575bd85bdd842ef5e923816efbd0d34e4bbfc"
+    },
+    {
+      "path": "model/calibration_catchments.py",
+      "git_blob": "bc3a28590b251bc7087e6741e2d4c076428da206",
+      "bytes": 46867,
+      "sha256": "30ef0f1fd841b111897ed3995e6cfc3eb2bc5a2bc76456382ee12a31ad07b29f"
+    },
+    {
+      "path": "operator/web/calibration_catchments.mjs",
+      "git_blob": "06f91d5e7c5eece61c34ecfa8157124868e132bd",
+      "bytes": 19328,
+      "sha256": "ae1720f433f127729e3f393368f1ffb964a362f5e229ddc35479fdbd16b817ec"
+    },
+    {
+      "path": "model/CALIBRATION_CATCHMENTS.md",
+      "git_blob": "28b3795e687db8d532bb06c32c0e1c0e95292e31",
+      "bytes": 12431,
+      "sha256": "a5977145dffc11072909db7b31151605a4fb903d9273368f15353a12d5c03db9"
+    },
+    {
+      "path": "source_tools/sparrow_candidate_course.py",
+      "git_blob": "50e8a9f69d602101e0e3be94370fa66d25cca5f8",
+      "bytes": 29165,
+      "sha256": "69acae5093093ccd1c335ef761f96fd2e0b373c2bdf014c5e5db85d2e461b6eb"
+    },
+    {
+      "path": "integration/component_fragments/calibration-native-catchments.json",
+      "git_blob": "7dfe3870a891d5f9b74972a431628e5879c6c9a1",
+      "bytes": 2311,
+      "sha256": "b35c674391569d399a062505bcc33f11efb94b9645c8681f1b0141bd071d2e82"
+    }
+  ]
+}

@@ -1,8 +1,0 @@
-{
-  "path": "paired-station-contrasts.csv",
-  "bytes": 23431,
-  "sha256": "1e40329d943a79c93079d970c888f59e6cfd9ed4a0512fcebdc012cc8f6116d7",
-  "data_rows": 116,
-  "original_commit": "463917ad1af43b305125279426d15353b946c0e7",
-  "source_url": "https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/463917ad1af43b305125279426d15353b946c0e7/opportunities/upstate_forever_2026/observations/eighteenmile_stream_nutrients_2020_2025/analysis/paired-station-contrasts.csv"
-}

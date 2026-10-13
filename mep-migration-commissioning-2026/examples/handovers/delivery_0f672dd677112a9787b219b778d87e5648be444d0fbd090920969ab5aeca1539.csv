@@ -1,5 +1,0 @@
-"externalKey","customerKey","siteKey","kind","status","quotedAmount","startDate","notes"
-"dale-J001","DEMO-dale-customer-1","DEMO-dale-site-1","Short service visit","requested","125.00","2026-10-14","Fictional operating input."
-"dale-J002","DEMO-dale-customer-2","DEMO-dale-site-2","Multi-day installation","scheduled","1800.00","2026-10-15","Exact original
-multiline scope, with comma."
-"dale-J003","DEMO-dale-customer-1","DEMO-dale-site-1","Generator service review","completed","95.00","2026-10-16","Fictional operating input."

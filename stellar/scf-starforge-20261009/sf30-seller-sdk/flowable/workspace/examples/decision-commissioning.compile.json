@@ -1,5 +1,0 @@
-{
-  "schema": "stellar-forge.flowable-decision-programme-compile.v1",
-  "catalog": "../../fixtures/decisions/decision-catalog.json",
-  "operation": "FLOWABLE-DECISION-COMMISSIONING-REFERENCE"
-}

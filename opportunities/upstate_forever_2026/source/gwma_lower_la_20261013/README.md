@@ -1,9 +1,0 @@
-# Original California cohort: Los Angeles River at Imperial Highway
-
-This complete source collection retains all 24 E. coli observations returned for the exact RegionNumber 4, StationCode 412LARAIH, Analyte E. coli and Project Lower LA River Restoration Access Feb24-Jan25 filters. The original dates are March 12, 2024 through January 30, 2025; the method is SM 9223 B and unit MPN/100 mL. All 81 publisher columns and CKAN _id remain in the CSV, with every original API response and actual provider receipt retained.
-
-Use `safe-to-swim-legacy-81-20261012` with the maintained study operator. `source-manifest.json` is the existing upstate.sources/v1 collection. Provide this whole directory to `receive_gwma_study.py`; keep the original queue and study operation. The CSV is a lossless lexical projection for numbers and source strings; empty cells project original null, which remains distinguishable in raw JSON. It is not a CEDEN 2.0 upload template. ResultSub, geometric summaries, placeholder dates and every QA/comment field remain source information.
-
-The opening selected page returned 24 records and total24; the terminal offset24 page returned zero records and the same total. Selection metadata documents the actual public path from Region4 to the observed LA station. Each original response was obtained by the normal connected public HTTPS attachment route because the accepting native host had no working DNS. This collection does not claim the separate native acquisition script was executed.
-
-Review timezone, formal watershed membership, repeated publisher SampleID and original quality annotations explicitly. Source sample and batch comments are carried intact. Scientific contracts, culture/PCR separation, limits, thresholds and risk interpretations remain named decisions in the existing study application.

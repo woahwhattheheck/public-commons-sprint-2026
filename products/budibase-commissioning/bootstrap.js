@@ -1,9 +1,0 @@
-(async()=>{
-window.programmeHTML="<!doctype html>\n"+document.documentElement.outerHTML;
-const b64=document.getElementById("source-packet").textContent.trim(),bytes=Uint8Array.from(atob(b64),c=>c.charCodeAt(0)),stream=new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip")),SOURCE_FILES=JSON.parse(await new Response(stream).text());
-const style=document.createElement("style");style.textContent=SOURCE_FILES["style.css"];document.head.appendChild(style);document.body.innerHTML=SOURCE_FILES["body.html"];
-function moduleOf(path){const source=SOURCE_FILES[path],names=[...source.matchAll(/export (?:async )?(?:function|const) (\w+)/g)].map(m=>m[1]);return new Function(source.replace(/^export /gm,"")+";return {"+names.join(",")+"};")();}
-const C=moduleOf("core.mjs"),Commercial=moduleOf("commercial/budibase-commercial.mjs"),zip=new Function(SOURCE_FILES["zip.js"]+";return buildStoredZip;")();
-window.downloadProgramme=async files=>{const entries=Object.entries(files).map(([name,data])=>({name,data}));entries.push({name:"source-packet.json",data:JSON.stringify({schema:"tjlabs.budibase-source/v1",files},null,2)},{name:"index.html",data:window.programmeHTML});const blob=zip(entries),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="TJLabs_Budibase_Commissioning_Programme.zip";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-await new Function("return ("+SOURCE_FILES["browser.js"]+");")()(C,Commercial,SOURCE_FILES);
-})().catch(e=>{const m=document.getElementById("message")||document.body;m.textContent="Programme could not open: "+e.message;});

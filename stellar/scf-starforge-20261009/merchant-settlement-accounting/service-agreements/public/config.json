@@ -1,7 +1,0 @@
-{
-  "apiPath": "/api/service-agreements",
-  "uiPath": "/service-agreements",
-  "requestBytes": 2000000,
-  "receivablesPath": "/receivables/",
-  "customersPath": "/customer-statements/"
-}

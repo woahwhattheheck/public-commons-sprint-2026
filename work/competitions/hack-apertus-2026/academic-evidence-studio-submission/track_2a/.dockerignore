@@ -1,9 +1,0 @@
-**/.DS_Store
-**/node_modules
-**/*.env
-**/*.key
-**/*.pem
-**/predictions.jsonl
-**/results.json
-**/data/**
-!src/**

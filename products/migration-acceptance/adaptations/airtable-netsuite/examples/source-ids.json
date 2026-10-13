@@ -1,8 +1,0 @@
-{
-  "inputs/customers.json": "example_source_0",
-  "expected/customers.json": "example_expected_0",
-  "inputs/orders.json": "example_source_1",
-  "expected/orders.json": "example_expected_1",
-  "inputs/order_customers.json": "example_source_2",
-  "expected/order_customers.json": "example_expected_2"
-}

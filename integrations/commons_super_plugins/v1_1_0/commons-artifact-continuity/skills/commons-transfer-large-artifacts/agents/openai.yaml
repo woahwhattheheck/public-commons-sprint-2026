@@ -1,4 +1,0 @@
-interface:
-  display_name: "Commons Artifact Transfer"
-  short_description: "Move complete sources into resumable native operations"
-  default_prompt: "Use $commons-transfer-large-artifacts to receive complete source bytes and continue the original native operation."

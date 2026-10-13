@@ -1,9 +1,0 @@
-{
-  "name": "Client contract events",
-  "planId": "REPLACE_WITH_SAVED_EVENT_PLAN_ID",
-  "windowLedgers": 5000,
-  "pollIntervalMs": 5000,
-  "connectionAlias": "testnet",
-  "recoveryConnectionAlias": null,
-  "publication": null
-}

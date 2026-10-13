@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.sensorthings-analysis-merchant-runtime.v1",
-  "port": 0,
-  "maxInFlight": 4,
-  "drainGraceMs": 60000,
-  "operationsAccessFile": "/REPLACE_WITH_EXISTING_PRIVATE_HOST/operations-access.url",
-  "nativeFactoryModule": null
-}

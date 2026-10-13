@@ -1,8 +1,0 @@
-{
-  "schema": "stellar-forge.merchant-distribution-contribution.v1",
-  "id": "merchant-provider-discovery",
-  "description": "Original discovery MCP provider",
-  "merchantProviders": {
-    "discovery": "stellar-forge/mcp-merchant-operator/providers/discovery.mjs"
-  }
-}

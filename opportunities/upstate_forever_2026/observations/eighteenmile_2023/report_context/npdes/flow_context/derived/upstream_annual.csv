@@ -1,7 +1,0 @@
-year,parameter_code,parameter_name,amount_unit,gauge_id,upstream_permit_ids,expected_series,complete_cohort_months,expected_facility_days,quantified_facility_days,quantified_period_amount,complete_cohort_annual_amount,gauge_volume_m3,reported_effluent_volume_m3,reported_effluent_to_gauge_volume_pct,gross_mass_per_gauge_volume_mg_l
-2023,00530,"Solids, total suspended",kg,USGS-02186702,"[""SC0000477"",""SC0042994"",""SC0047856""]",3,12,1095,1095,52868.11341562,52868.11341562,61099554.38676296,,,0.865278215958212
-2023,00600,"Nitrogen, total [as N]",kg,USGS-02186702,"[""SC0042994"",""SC0047856""]",2,11,730,668,5148.93199689,,61099554.38676296,,,
-2023,00610,"Nitrogen, ammonia total [as N]",kg,USGS-02186702,"[""SC0000477"",""SC0042994"",""SC0047856""]",3,3,1095,821,513.42360243,,61099554.38676296,,,
-2023,00620,"Nitrogen, nitrate total [as N]",kg,USGS-02186702,"[""SC0000477""]",1,12,365,365,4887.58235867,4887.58235867,61099554.38676296,,,0.07999374803507373
-2023,00665,"Phosphorus, total [as P]",kg,USGS-02186702,"[""SC0000477"",""SC0042994"",""SC0047856""]",3,12,1095,1095,949.31580872,949.31580872,61099554.38676296,,,0.015537196927997014
-2023,50050,"Flow, in conduit or thru treatment plant",million_US_gallons,USGS-02186702,"[""SC0000477"",""SC0042994"",""SC0047856""]",3,12,1095,1095,683.717745,683.717745,61099554.38676296,2588153.208852907,4.235960859010165,

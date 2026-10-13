@@ -1,5 +1,0 @@
-"externalKey","customerKey","siteKey","kind","status","quotedAmount","startDate","notes"
-"united-J001","DEMO-united-customer-1","DEMO-united-site-1","Water heater diagnosis","requested","125.00","2026-10-14","Fictional operating input."
-"united-J002","DEMO-united-customer-2","DEMO-united-site-2","Drain repair","scheduled","1800.00","2026-10-15","Exact original
-multiline scope, with comma."
-"united-J003","DEMO-united-customer-1","DEMO-united-site-1","Accepted replacement","completed","95.00","2026-10-16","Fictional operating input."

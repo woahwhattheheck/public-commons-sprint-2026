@@ -1,7 +1,0 @@
-# Complete source operation
-
-The retained provider-input.mjs was executed with the original exact JSON parser and unchanged pure SHA-256 implementation in functions V8. The authored complete example produced three native resources and three independently captured expected tables: customers (3/3), orders (2/2) and order_customers (3/3). Both provider relation reports retain zero orphans in this example. Full original response pages, source inputs, expected outputs and mapping are included.
-
-The operation preserves customer key 9007199254740993 exactly, expands the original three linked-record relationships and distinguishes an omitted false checkbox from a present value through its reviewed policy. Source balance 1234567890123456.1200 and independently provided expected balance 1234567890123456.1300 both remain intact. The existing native comparator therefore receives the actual example discrepancy rather than a rewritten expected value.
-
-Concrete review checks exercised incomplete opaque pagination, changed native manifest binding, invalid February31 timestamp, exact-zero exponent/scale, unsupported decimal rounding and unchanged-population comparison across a following capture operation. All produced their intended outcomes. The complete collector source and application joins are supplied for the original authorized Node/native operator; provider calls occur only with its actual selected account credentials.
