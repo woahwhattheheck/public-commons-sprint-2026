@@ -1,6 +1,6 @@
 # Native input response
 
-Version 1.0.0 — 13 October 2026
+Version 1.0.1 — 13 October 2026
 
 This is a complete offline consumer of the original application's **completed
 Parameter studies**. The original Workspace and native model modules own the
@@ -46,7 +46,14 @@ unrounded value, units and original cell centre. Download the selected GeoTIFF,
 inspected cell, original result CSV/JSON, complete study ZIP or editable design.
 
 The comparison table covers all included scenarios for the selected pollutant.
-Its quantities come from the original per-case paired support. Change is case
+Every row retains its original reporting-area name and identifier. Reporting
+areas can overlap; do not sum their quantities or areas. The map continues to
+show the full original saved raster, rather than a table-area crop. Its cached
+cells are bound to the saved study, run, pollutant, mode and original raster
+path/SHA, so two retained-run studies can reuse a run without reusing a different
+study's baseline-difference raster.
+
+Table quantities come from the original per-case paired support. Change is case
 minus that study's retained parameter baseline, not necessarily restoration minus
 present land cover. The table does not imply that different study pairs have an
 identical pixel mask. Full precision, source hashes and run/profile identity stay
