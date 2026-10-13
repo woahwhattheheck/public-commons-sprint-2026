@@ -102,3 +102,11 @@ archive joins rather than diverting everyone to cosmetic review. Preserve the
 October 13, 2026 fleet cutoff at 10:00 a.m. Eastern (EDT), 14:00 UTC. This project
 cutoff does not expire the standing inspection rule or change other projects'
 owner-directed schedules.
+
+## Open the river context inside the observation studies
+
+The maintained Published Studies registry attaches this source manifest to the SV-833 2021–2026, four-station 2026, and three-station historical 2021–2025 editions when the companion is installed. New imports retain its nine Sources entries under `application-context/three-twenty-hydrologic-context/`, alongside the selected study's unchanged original observations and statistical basis. The historical study still has three observation stations; the geographic companion keeps its explicit four-station scope. Reopen the exported Study and Workspace to use the same original map, report, source links and downloads.
+
+The complete delivery contains 35 files. Native Sources closes 34 of these: its manifest and all 33 original, authored and output companions. The external `family.json` inventories those 34 members; its exclusion from its own inventory avoids a circular hash. All inputs needed to reproduce the 35-file delivery remain inside the native source closure. Published Studies additionally validates the external inventory against every native source member and retains it, so its exported geographic context carries the complete 35-file family.
+
+The original-source hyperlinks use paths relative to the report directory. They resolve in the application directory, the native Sources viewer after its common source parent is removed, and the retained Published Studies context. Rebuild into a new output directory with the command above. For an existing populated application, `Workspace(existing_path).import_sources(manifest_path)` admits the nine Sources entries without starting or changing a native model run.
