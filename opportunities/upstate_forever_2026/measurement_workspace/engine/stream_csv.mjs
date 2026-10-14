@@ -3,14 +3,14 @@ import {InputError,clean} from './parse.mjs';
 /** UTF-8 chunks may split any scalar, escaped quote or CRLF. No complete source is held. */
 export function* csvRecords(chunks,{maxCell=1_000_000,maxColumns=10000,maxRecord=16*1024*1024}={}){
   const decoder=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true});
-  let field='',values=[],quoted=false,after=false,skipLF=false,first=true,line=1,start=1,recordSize=0;
+  let field='',values=[],quoted=false,after=false,skipLF=false,first=true,line=1,start=1,recordSize=0,previousCR=false;
   const endField=()=>{values.push(field);field='';after=false;if(values.length>maxColumns)throw new InputError('CSV has too many columns',413);};
   const endRecord=()=>{endField();const result=values.some(v=>v!=='')?{line:start,values}:null;values=[];recordSize=0;return result;};
   function* consume(text){for(const char of text){
     if(first){first=false;if(char==='\uFEFF')continue;}
     if(skipLF){skipLF=false;if(char==='\n')continue;}
     recordSize+=char.length;if(recordSize>maxRecord)throw new InputError('CSV record exceeds configured size at line '+start,413);
-    if(quoted){if(char==='"'){quoted=false;after=true;}else{field+=char;if(char==='\n')line++;}}
+    if(quoted){if(char==='"'){quoted=false;after=true;}else{field+=char;if(char==='\r'||(char==='\n'&&!previousCR))line++;}}
     else if(after&&char==='"'){field+='"';quoted=true;after=false;}
     else if(char===',')endField();
     else if(char==='\n'||char==='\r'){const item=endRecord();if(item)yield item;line++;start=line;skipLF=char==='\r';}
@@ -18,6 +18,7 @@ export function* csvRecords(chunks,{maxCell=1_000_000,maxColumns=10000,maxRecord
     else if(char==='"'){if(field)throw new InputError('Quote inside unquoted field at line '+line);quoted=true;}
     else field+=char;
     if(field.length>maxCell)throw new InputError('Field too large at line '+line,413);
+    previousCR=char==='\r';
   }}
   for(const chunk of chunks)yield* consume(decoder.decode(chunk,{stream:true}));
   yield* consume(decoder.decode());
