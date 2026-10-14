@@ -18,7 +18,9 @@ import tempfile
 import uuid
 
 from .common import IntelligenceError, digest as evidence_digest, file_digest, now
-from model.common import atomic_bytes, digest as native_digest, read_json, verify_file, _sync_directory
+from model.common import atomic_bytes, digest as native_digest, read_json, verify_file
+from model.portable_fs import (native_path as _native_fs_path,
+                               sync_directory as _sync_directory, publish_file as publish_new)
 
 FORMAT = "upstate.selected-study-investigations/v1"
 _SCHEMA_TABLES = frozenset({
@@ -43,7 +45,7 @@ def snapshot_project_state(
     pending = None
     selection = None
     try:
-        handle, name = tempfile.mkstemp(prefix=".investigations-", dir=destination.parent)
+        handle, name = tempfile.mkstemp(prefix=".investigations-", dir=_native_fs_path(destination.parent))
         os.close(handle)
         pending = Path(name)
         with closing(sqlite3.connect(str(pending))) as dst:
@@ -79,7 +81,7 @@ def snapshot_project_state(
             dst.commit()
         with pending.open("r+b") as handle:
             os.fsync(handle.fileno())
-        os.link(pending, destination)
+        publish_new(pending, destination)
         _sync_directory(destination.parent)
         result = {
             "format": snapshot_format, "workspace_key": workspace_key,

@@ -14,6 +14,9 @@ import zipfile
 
 from .common import (atomic_json, canonical, describe_file, digest,
                      held, identifier, relative_file, verify_file)
+from .portable_fs import (native_path as _native_fs_path,
+                          sync_directory as _sync_directory, publish_file as publish_new,
+                          open_file, fd_stat, path_stat)
 
 SCHEMA = "upstate.community-report-handover/v1"
 VERSION = 1
@@ -158,8 +161,8 @@ def _opened(path, expected_sha256=None):
         raise ValueError("Receive a source handover as an original regular file")
     if expected_sha256 is not None:
         identifier(expected_sha256)
-    with path.open("rb") as original:
-        before = os.fstat(original.fileno())
+    with os.fdopen(open_file(path, os.O_RDONLY), "rb") as original:
+        before = fd_stat(original.fileno())
         if not stat.S_ISREG(before.st_mode):
             raise ValueError("Receive a source handover as an original regular file")
         descriptor = _stream(original)
@@ -189,14 +192,14 @@ def _opened(path, expected_sha256=None):
                 _manifest_contract(manifest, record)
                 with bundle.open(REPORT_ARCHIVE) as archive:
                     _stream(archive, expected=manifest_files[REPORT_ARCHIVE])
-                if (_state(os.fstat(original.fileno())) != _state(before)
-                        or _state(path.lstat()) != _state(before)):
+                if (_state(fd_stat(original.fileno())) != _state(before)
+                        or _state(path_stat(path)) != _state(before)):
                     raise ValueError("The original source handover changed while it was being read")
                 yield original, bundle, manifest, record, descriptor
         except (zipfile.BadZipFile, NotImplementedError) as error:
             raise ValueError("The complete source handover ZIP could not be read") from error
-        if (_state(os.fstat(original.fileno())) != _state(before)
-                or _state(path.lstat()) != _state(before)):
+        if (_state(fd_stat(original.fileno())) != _state(before)
+                or _state(path_stat(path)) != _state(before)):
             raise ValueError("The original source handover changed while it was being read")
 
 
@@ -290,7 +293,7 @@ def _package(workspace, record_bytes, report_id, report_sha256, donor, archive_p
         if not path.exists():
             pending = None
             try:
-                with tempfile.NamedTemporaryFile(dir=directory, prefix=".write-community-handover-", delete=False) as output:
+                with tempfile.NamedTemporaryFile(dir=_native_fs_path(directory), prefix=".write-community-handover-", delete=False) as output:
                     pending = Path(output.name)
                     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as bundle:
                         bundle.writestr(_zip_info(MANIFEST), canonical(manifest) + b"\n")
@@ -300,14 +303,10 @@ def _package(workspace, record_bytes, report_id, report_sha256, donor, archive_p
                                 _stream(source, target, manifest["files"][REPORT_ARCHIVE])
                     output.flush()
                     os.fsync(output.fileno())
-                os.link(pending, path)
-                pending.unlink()
+                publish_new(pending, path)
+                pending.unlink(missing_ok=True)
                 pending = None
-                descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
-                try:
-                    os.fsync(descriptor)
-                finally:
-                    os.close(descriptor)
+                _sync_directory(directory)
             finally:
                 if pending is not None:
                     pending.unlink(missing_ok=True)

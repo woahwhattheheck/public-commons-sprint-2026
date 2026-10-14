@@ -64,16 +64,15 @@ def read_json(path):
 
 
 def sync_directory(path):
-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-    try:
-        os.fsync(descriptor)
-    finally:
-        os.close(descriptor)
+    from model.portable_fs import sync_directory as _sync_directory
+    _sync_directory(path)
 
 
 def publish(path, value, *, immutable=False, raw=False):
     """Publish complete bytes, syncing the file and directory before return."""
-    path = Path(path)
+    from model.portable_fs import (native_path as _native_fs_path,
+                                   replace as _replace_original, publish_file as publish_new)
+    path = _native_fs_path(path)
     body = value if raw else encoded(value) + b"\n"
     path.parent.mkdir(parents=True, exist_ok=True)
     require(not path.is_symlink(), "Preserve the existing symbolic link: " + str(path))
@@ -91,12 +90,12 @@ def publish(path, value, *, immutable=False, raw=False):
             os.fsync(stream.fileno())
         if immutable:
             try:
-                os.link(temporary, path)
+                publish_new(temporary, path)
             except FileExistsError:
                 require(path.is_file() and not path.is_symlink() and path.read_bytes() == body,
                         "A different original file appeared: " + str(path))
         else:
-            os.replace(temporary, path)
+            _replace_original(temporary, path)
         sync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
@@ -315,9 +314,10 @@ class Receiving:
                     # Reuse a fully written original pending archive after interruption.
                     inspected = self.reviews.inspect_packet(pending)
                     require(inspected["manifest"] == manifest, "Pending archive belongs to a different original packet")
-                    os.link(pending, archive_path)
+                    from model.portable_fs import publish_file
+                    publish_file(pending, archive_path)
                     sync_directory(archive_path.parent)
-                    pending.unlink()
+                    pending.unlink(missing_ok=True)
                 else:
                     self.reviews.archive_packet(destination, archive_path)
                     sync_directory(archive_path.parent)

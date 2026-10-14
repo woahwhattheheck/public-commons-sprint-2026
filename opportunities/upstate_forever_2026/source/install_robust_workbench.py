@@ -1609,6 +1609,17 @@ ALLOWED = ALLOWED | frozenset({
     "source_tools/collection_opening/prepare_runtime_dependencies.py",
 })
 
+# Complete storage, original-object and final native-runtime integration sources.
+ALLOWED = ALLOWED | frozenset({
+    "integration/apply_supervisor_recovery.py",
+    "source_tools/NATIVE_RUNTIME_PORTABILITY.md",
+    "source_tools/apply_macos_worker_port.py",
+    "source_tools/original_object_io.py",
+    "source_tools/original_object_windows.py",
+    "source_tools/private_capability.py",
+    "tests/test_native_runtime_platforms.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"

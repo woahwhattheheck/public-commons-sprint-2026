@@ -81,16 +81,19 @@ def operation(prefix, suffix):
 
 def secret(args):
     if args.capability_file:
-        flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(args.capability_file, flags)
-        with os.fdopen(fd, "rb") as handle:
-            info = os.fstat(handle.fileno())
-            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
-                    or stat.S_IMODE(info.st_mode) & 0o077):
-                raise IntakeError("The capability file must be an ordinary file owned by this user with mode 0600 or 0400.")
-            raw = handle.read(4097)
-            if len(raw) > 4096:
-                raise IntakeError("The capability file must contain only the current operator capability.")
+        # Support both module import and the original direct-script entry point.
+        try:
+            from source_tools.private_capability import read_private_file
+        except ModuleNotFoundError as error:
+            if error.name != "source_tools":
+                raise
+            from private_capability import read_private_file
+        try:
+            raw = read_private_file(args.capability_file)
+        except (OSError, ValueError) as error:
+            raise IntakeError("Choose a private capability file owned by the current user. "
+                              "On Windows, allow only this user, SYSTEM and Administrators; "
+                              "on macOS/Linux, use mode 0600 or 0400.") from error
         try:
             value = raw.decode("utf-8").strip()
         except UnicodeError as error:
