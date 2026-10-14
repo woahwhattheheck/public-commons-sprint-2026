@@ -189,3 +189,8 @@ source and three selected archives are retained beside the maintained runner.
 ## Original FFR130 episode-budget continuation
 
 The complete [FFR130EB integration](episode-budget-ffr130eb/README.md) retains the exact new candidate and five original fixtures, current official rules and the exact native Objective admission contract. All prior22arms/17phases and actual datasets remain intact. New changed-only T7–9/180s cells reuse the existing original simulation owner; the optional30-cell broad phase and three complete selected archives are available through the unchanged native runner and packager. Explicit retained historical source manifests now permit source-bound control reuse without rewriting old measurements.
+
+
+## Adaptive polishing from complete native histories
+
+The [adaptive recoverable continuation](adaptive-recoverable-7f24/README.md) retains all278 current14 logged points in a reusable offline trajectory reader, standalone figures and full CSV/JSON. It adds one exact stagnation-scheduled096 treatment, leaving all23 prior arms and19 phases intact. Three changed-arm native cells and a30-cell matched broad phase use the original operator; three whole archives retain unchanged096, unchanged fixed-late recoverable and the new adaptive implementation. The guide distinguishes measured original findings from the unmeasured schedule and keeps actual elapsed physical-budget admission explicit.

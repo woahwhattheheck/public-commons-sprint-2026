@@ -837,6 +837,61 @@
           }
         ]
       }
+    },
+    {
+      "id": "096-adaptive-stagnation-7f24",
+      "class": "AdaptiveRecoverablePolish096",
+      "submission": "adaptive-recoverable-7f24/submission.py",
+      "submission_bytes": 30447,
+      "submission_sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1",
+      "requirements": "adaptive-recoverable-7f24/requirements.txt",
+      "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+      "source_owner": "7F24 original native current14 analysis and complete RecoverablePolish096 continuation. Original096 and original fixed-late source remain unchanged controls.",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "polish_enabled": true,
+          "polish_start_fraction": 0.8,
+          "polish_quantum": 4,
+          "resume_explore_calls": 4,
+          "memory": 8,
+          "curvature_eps": 1e-8,
+          "qn_radius": 0.08,
+          "qn_min_radius": 0.000001,
+          "qn_max_radius": 0.3,
+          "qn_grow": 2,
+          "qn_shrink": 0.5,
+          "armijo_c1": 0.0001,
+          "trace_limit": 4096,
+          "polish_schedule": "stagnation",
+          "stagnation_fraction": 0.12,
+          "min_stagnant_explore_calls": 8,
+          "early_polish_time_fraction": 0.25,
+          "min_remaining_polish_calls": 2
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "algorithm_str"
+            ],
+            "equals": "tjlabs_096_adaptive_recoverable_polish_7f24"
+          },
+          {
+            "path": [
+              "configuration",
+              "polish_enabled"
+            ],
+            "equals": true
+          },
+          {
+            "path": [
+              "configuration",
+              "polish_schedule"
+            ],
+            "equals": "stagnation"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -1013,6 +1068,36 @@
       "source_map": "episode-budget-ffr130eb/SOURCE_MAP.json",
       "official_commit": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
       "performance": "Incoming source and five authored fixtures await the original native receiver. Existing numerical datasets and measured source identities remain unchanged."
+    },
+    "adaptive_recoverable_experiment": {
+      "operation": "L2D-ADAPTIVE-RECOVERABLE-7F24-20261014",
+      "candidate": {
+        "bytes": 30447,
+        "sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1"
+      },
+      "predecessor_sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+      "guide": "adaptive-recoverable-7f24/README.md",
+      "source_map": "adaptive-recoverable-7f24/SOURCE_MAP.json",
+      "source_ids": [
+        "096",
+        "096-recoverable-polish-7f24",
+        "096-adaptive-stagnation-7f24"
+      ],
+      "original096_preserved": true,
+      "original_fixed_late_preserved": true,
+      "native_modules_preserved": true,
+      "actual_motivation": {
+        "panel_sha256": "16793aa3838c04aacaebecb55fb3f3187445851fe452be131111a6b0d7f5ac65",
+        "points": 278,
+        "topologies": [
+          7,
+          8,
+          9
+        ],
+        "seconds": 180,
+        "analysis": "adaptive-recoverable-7f24/history/README.md"
+      },
+      "performance": "Unmeasured schedule hypothesis. Early allowance and remaining-call admission use predicted cost; actual elapsed is charged and a slow call can overshoot one admission. Original matched native outputs decide performance."
     }
   }
 }
