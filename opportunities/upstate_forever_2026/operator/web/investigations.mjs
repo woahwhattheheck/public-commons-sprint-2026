@@ -226,7 +226,7 @@ export function createInvestigationClient(options) {
       stable(task.payload)!==stable(p.body.payload) || !originalId(task.id))
    throw Error('The returned operation does not match this original workspace request.');
   p.acceptedOperationId=task.operation_id;p.joinedExistingTask=p.joinedExistingTask||joinedActive;
-  c.lastTask=task;p.taskId=task.id;p.taskState=task.state;p.error=null;
+  c.lastTask=task;p.taskId=task.id;p.taskState=task.state;p.providerWait=clone(task.provider_wait||null);p.error=null;
   if(task.state==='complete'){
    const r=task.result||{};c.lastResult=clone(r);c.pending=null;
    const intake=c.diagnosticIntake;
@@ -382,6 +382,14 @@ export function createInvestigationClient(options) {
   changed(c);return resumeDiagnostic(w);
  }
 
+ async function resumeOriginal(){
+  const c=context(getWorkspace()),p=c.pending;if(!p?.taskId)throw Error('Choose the retained original operation.');
+  return accept(await api('/api/task/resume',{method:'POST',body:JSON.stringify({id:p.taskId})}),c,p);
+ }
+ async function cancelOriginal(){
+  const c=context(getWorkspace()),p=c.pending;if(!p?.taskId)throw Error('Choose the retained original operation.');
+  await api('/api/task/cancel',{method:'POST',body:JSON.stringify({id:p.taskId})});return poll(c.workspace);
+ }
  function clearFinished(){
   const c=context(getWorkspace()),p=c.pending;
   if(!p || !['failed','interrupted','canceled','cancelled'].includes(p.taskState))
@@ -389,12 +397,19 @@ export function createInvestigationClient(options) {
   if(c.diagnosticIntake?.operation_id===p.body.operation_id){Object.assign(c.diagnosticIntake,{operation_id:null,phase:'staged',error:null});}
   c.pending=null;changed(c);
  }
- return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,clearFinished,openForDiagnostic,resumeDiagnostic,diagnostic,
+ return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,resumeOriginal,cancelOriginal,clearFinished,openForDiagnostic,resumeDiagnostic,diagnostic,
   saveDraft(draft,w=getWorkspace()){const c=context(w);c.draft=clone(draft);persist(c);},
   async acceptState(state){
    const c=context(workspaceId(state));
+   if(!c.pending){
+    const active=(state.tasks||[]).filter(t=>t.workspace===c.workspace&&t.action==='intelligence.ask'
+      &&t.payload?.session_id===c.sessionId&&['queued','running'].includes(t.state));
+    const resumed=active.find(t=>t.id===c.lastTask?.id)||(active.length===1?active[0]:null);
+    if(resumed){c.pending={body:{workspace:resumed.workspace,action:resumed.action,operation_id:resumed.operation_id,payload:clone(resumed.payload)},
+      taskId:resumed.id,acceptedOperationId:resumed.operation_id,taskState:resumed.state,providerWait:clone(resumed.provider_wait||null),error:null};changed(c);}
+   }
    if(c.pending?.taskId){const t=state.tasks?.find(x=>x.id===c.pending.taskId);
-    if(t && t.state!==c.pending.taskState)await poll(c.workspace);}
+    if(t && (t.state!==c.pending.taskState||stable(t.provider_wait||null)!==stable(c.pending.providerWait||null)))await poll(c.workspace);}
    if(c.diagnosticIntake && !c.pending && ['staged','waiting','submitted','received','receiving'].includes(c.diagnosticIntake.phase))await resumeDiagnostic(c.workspace);
    const submission=c.experimentSubmission;
    if(submission){const task=state.tasks?.find(x=>x.id===submission.taskId);
@@ -814,6 +829,11 @@ export function attachInvestigations(host) {
   nodes.pending.append(el('strong',actionNames[p.body.action]||p.body.action),el('p',p.taskState||'Sending original request'),
    el('p',p.body.operation_id,'intelligence-id'));
   if(p.joinedExistingTask)nodes.pending.append(el('p','Joined original task operation: '+p.acceptedOperationId,'intelligence-id'));
+  if(p.providerWait?.state==='waiting')nodes.pending.append(el('p','Waiting for provider quota until '+displayTime(p.providerWait.retry_at)+'. The original question and completed inspections remain retained.','intelligence-status'));
+  if(p.body.action==='intelligence.ask'&&p.taskId){
+   if(['failed','interrupted','cancelled'].includes(p.taskState))nodes.pending.append(button('Resume original question',()=>client.resumeOriginal()));
+   if(p.taskState==='running')nodes.pending.append(button('Cancel original question',()=>client.cancelOriginal()));
+  }
   if(p.error)nodes.pending.append(el('p',p.error,'intelligence-error'));
   if(p.taskId)nodes.pending.append(button('Open original operation',()=>host.showTask(p.taskId)),button('Refresh retained status',()=>client.poll()));
   else nodes.pending.append(button('Retry this original request',()=>client.retry()));
