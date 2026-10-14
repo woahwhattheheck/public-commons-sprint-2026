@@ -3716,5 +3716,24 @@ ALLOWED = ALLOWED | frozenset({
 })
 
 
+# Complete root opening guidance and retained native source continuation.
+ALLOWED = ALLOWED | frozenset({
+    "START_HERE.md",
+    "source_tools/collection_opening/build_guides.py",
+    "source_tools/collection_opening/session_api.py",
+    "source_tools/COLLECTION_GUIDANCE.md",
+    "integration/component_fragments/collection-opening-guidance.json",
+    "source_tools/native_resources.py",
+    "source_tools/storage_resources.py",
+    "source_tools/continue_original_capture.py",
+    "source_tools/http_capture_resume.py",
+    "docs/NATIVE_SOURCE_CONTINUATION.md",
+    "integration/component_fragments/native-source-continuation.json",
+    "model/gis_project_portable.py",
+    "docs/GIS_OPENING_WINDOWS_MAC.md",
+    "integration/component_fragments/gis-portable-receiving.json",
+})
+
+
 if __name__ == "__main__":
     main()
