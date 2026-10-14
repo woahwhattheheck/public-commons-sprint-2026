@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "offline-node-dependencies",
+  "source_reference": "ECO-NODE-OFFLINE-N816; approved portability item7; CURRENT_OWNER_DIRECTION.md2026-10-14.1; fixed original Node22.16.0 and workbook pins.",
+  "components": {
+    "offline-node-dependencies": {
+      "title": "Original offline native Measurements and workbook dependency producer",
+      "paths": [
+        "source_tools/build_node_payloads.py",
+        "source_tools/native_runtime/binary_dependencies.py",
+        "packaging/NODE_DEPENDENCIES.md",
+        "integration/component_fragments/offline-node-dependencies.json"
+      ]
+    }
+  },
+  "required_components": [
+    "offline-node-dependencies"
+  ]
+}
