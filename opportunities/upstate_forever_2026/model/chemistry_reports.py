@@ -8,13 +8,13 @@ from __future__ import annotations
 from copy import deepcopy
 import os
 from pathlib import Path, PurePosixPath
-import shutil
 import tempfile
 import zipfile
 
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                      held, identifier, now, read_json, verify_file)
-from .chemistry import Chemistry
+from .portable_fs import native_path, open_file, publish_file, relative_name, sync_directory
+from .chemistry import Chemistry, _copy_retained as _copy
 from .reach_chemistry.model import Project
 from .reach_chemistry.reporting import REPORT_EDITION, report, summary
 
@@ -25,38 +25,12 @@ FOLDER = "chemistry-reports"
 def _member(name):
     if not isinstance(name, str):
         raise ValueError("Chemical report member must be a relative path")
+    relative_name(name)
     value = PurePosixPath(name)
     if (not value.parts or value.is_absolute() or ".." in value.parts
             or value.as_posix() != name or "\\" in name or "\0" in name):
         raise ValueError("Nonportable chemical report member")
     return value
-
-
-def _copy(source, target):
-    source, target = Path(source), Path(target)
-    expected = {"bytes": source.stat().st_size, "sha256": file_digest(source)}
-    if target.exists():
-        if target.stat().st_size != expected["bytes"] or file_digest(target) != expected["sha256"]:
-            raise ValueError("Retained chemical report member differs")
-        return
-    target.parent.mkdir(parents=True, exist_ok=True)
-    pending = None
-    try:
-        with source.open("rb") as original, tempfile.NamedTemporaryFile(dir=target.parent, delete=False) as out:
-            pending = Path(out.name)
-            shutil.copyfileobj(original, out, 1024 * 1024)
-            out.flush()
-            os.fsync(out.fileno())
-        if pending.stat().st_size != expected["bytes"] or file_digest(pending) != expected["sha256"]:
-            raise ValueError("Original chemical file changed while retaining its report")
-        try:
-            os.link(pending, target)
-        except FileExistsError:
-            if target.stat().st_size != expected["bytes"] or file_digest(target) != expected["sha256"]:
-                raise ValueError("Concurrent chemical report member differs")
-    finally:
-        if pending is not None:
-            pending.unlink(missing_ok=True)
 
 
 def _basis(workspace, run_id):
@@ -96,18 +70,25 @@ def _archive(directory, paths):
     archive = directory / "scientific-report.zip"
     # A completed ZIP is verified against every original member before adoption.
     expected = {path: describe_file(directory, directory / path) for path in paths}
-    if archive.exists():
+    if native_path(archive).exists():
         _verify_archive(archive, expected)
         return archive
     pending = None
     try:
-        with tempfile.NamedTemporaryFile(dir=directory, prefix=".report-", suffix=".zip", delete=False) as stream:
+        with tempfile.NamedTemporaryFile(dir=native_path(directory), prefix=".report-", suffix=".zip", delete=False) as stream:
             pending = Path(stream.name)
-        with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED) as target:
-            for path in sorted(paths):
-                target.write(directory / path, path)
+        with pending.open("w+b") as stream:
+            with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as target:
+                for path in sorted(paths):
+                    target.write(native_path(directory / path), path)
+            stream.flush()
+            os.fsync(stream.fileno())
         _verify_archive(pending, expected)
-        os.replace(pending, archive)
+        try:
+            publish_file(pending, archive)
+        except FileExistsError:
+            _verify_archive(archive, expected)
+        sync_directory(directory)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -116,7 +97,7 @@ def _archive(directory, paths):
 
 def _verify_archive(path, expected):
     import hashlib
-    with zipfile.ZipFile(path) as archive:
+    with os.fdopen(open_file(path, os.O_RDONLY), "rb") as incoming, zipfile.ZipFile(incoming) as archive:
         names = archive.namelist()
         if len(names) != len(set(names)) or set(names) != set(expected):
             raise ValueError("Chemical scientific archive member inventory differs")
@@ -140,7 +121,7 @@ def prepare(workspace, run_id):
                  "renderer_sha256": file_digest(renderer), "source_stamp": stamp}
     key = digest(selection)
     directory = workspace.root / FOLDER / key
-    directory.mkdir(parents=True, exist_ok=True)
+    native_path(directory).mkdir(parents=True, exist_ok=True)
     with held(directory / ".report.lock", blocking=False):
         record_path = directory / "report.json"
         if record_path.exists():
@@ -156,14 +137,14 @@ def prepare(workspace, run_id):
         for item in native["artifacts"]:
             path = _member(item["path"])
             source = verify_file(service.root / native["id"], item)
-            _copy(source, directory / "original" / path)
+            _copy(source, directory / "original" / path, item)
         atomic_json(directory / "original" / "run.json", native, immutable=True)
         atomic_json(directory / "original" / "case.json", case, immutable=True)
         # Preserve the original complete source bodies and companions through
         # the maintained Chemistry transfer, not a second source-copy protocol.
         exported = service.export({"case_id": case["id"], "run_ids": [native["id"]]})
         editable = verify_file(workspace.root, exported["artifact"])
-        _copy(editable, directory / "editable-chemistry.zip")
+        _copy(editable, directory / "editable-chemistry.zip", exported["artifact"])
         description = summary(project, result, request)
         atomic_json(directory / "scientific-summary.json", description, immutable=True)
         links = [("Complete original editable Chemistry project", "editable-chemistry.zip"),
