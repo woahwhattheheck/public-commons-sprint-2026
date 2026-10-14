@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-source-continuation",
+  "components": {
+    "native-source-continuation": {
+      "title": "Portable original-source continuation",
+      "paths": [
+        "source_tools/native_resources.py",
+        "source_tools/storage_resources.py",
+        "source_tools/continue_original_capture.py",
+        "source_tools/http_capture_resume.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
+        "docs/NATIVE_SOURCE_CONTINUATION.md",
+        "integration/component_fragments/native-source-continuation.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "native-source-continuation"
+  ]
+}
