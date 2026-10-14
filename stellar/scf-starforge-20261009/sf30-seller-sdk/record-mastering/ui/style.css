@@ -3,3 +3,6 @@
 
 /* Preserve readable columns inside a horizontally scrollable table on narrow screens. */
 @media(max-width:650px){.table-wrap table{min-width:650px}th{overflow-wrap:normal;word-break:normal}.table-wrap .subtle{min-width:120px}dialog .panel{padding:14px}.candidate small{display:block}.field-head .status{align-self:flex-start}}
+
+/* Complete saved-delivery comparison keeps exact values and source text readable. */
+.comparison-value{white-space:pre-wrap;overflow-wrap:anywhere}.comparison-source{white-space:pre-wrap;overflow-wrap:anywhere;max-height:28rem;overflow:auto;font:13px/1.5 ui-monospace,monospace}.edition-card h3{overflow-wrap:anywhere}.form-grid>label{display:flex;flex-direction:column;gap:.4rem;min-width:0}.form-grid select{max-width:100%}
