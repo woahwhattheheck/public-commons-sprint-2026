@@ -6,12 +6,14 @@
     "original-table-explorer": {
       "paths": [
         "model/client_source_rows.py",
+        "model/portable_fs.py",
         "operator/client_source_intake.py",
         "operator/extensions/client-source-intake.json",
         "operator/web/client_source_rows.mjs",
         "operator/web/client_source_intake.mjs",
         "operator/web/client_source_intake.css",
         "operator/CLIENT_SOURCE_INTAKE.md",
+        "operator/CLIENT_SOURCE_PORTABLE_RECEIVING.md",
         "integration/component_fragments/original-table-explorer.json"
       ],
       "requires": [
