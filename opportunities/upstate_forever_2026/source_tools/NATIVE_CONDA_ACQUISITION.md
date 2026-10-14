@@ -58,13 +58,15 @@ and `parts.json` used by the existing receiving command below.
 
 Continue with the same command, work directory and original selection. Completed
 volumes are reused directly even when their original cache or network source is
-unavailable. After a process interruption, only that work directory's reserved
-`.a64pNNN.zip.streaming.partial` file for the unfinished volume is discarded and
-rebuilt. Other targets use their existing volume prefix. The kernel work lock
-prevents two writers from taking the same directory. A dropped transfer retries
-only the unfinished volume and respects the original publisher's Retry-After;
-completed volumes and external caches remain intact. Keep completed volumes in
-the producer directory until the operation has produced its final `parts.json`.
+unavailable. An unfinished volume retains each completed package through the
+reserved `.a64pNNN.zip.streaming.checkpoint.json`; a process restart restores its
+ZIP directory and resumes at the unfinished package. Other targets use their
+existing volume prefix. The kernel work lock prevents two writers from taking
+the same directory. A dropped transfer retries only the unfinished package and
+respects the original publisher's Retry-After. Completed volumes, checkpointed
+packages and external caches remain intact. A predecessor scratch file without
+a checkpoint can be rebuilt under that same work lock. Keep completed volumes
+in the producer directory until the operation has produced its final `parts.json`.
 
 Storage for this mode is one compressed package set in its transfer ZIPs, plus
 small indexes and any pre-existing solver cache. Packages are never extracted
@@ -85,28 +87,12 @@ Receiving compares the complete volume membership, package bytes and publisher d
 
 ## Compose with the existing original cache extractor
 
-The retained N29 native build-tools package already supplies `extract_package_cache.py`, original zstd and the conda-pack writer. Its extractor accepts `selection.json` package records; its `--archives` is one flat directory, so pass each selected subdirectory explicitly. With `SDK` set to the directory actually containing N29's extractor and `RECEIVED` set to the completed receiving directory:
-
-```python
-import json
-from pathlib import Path
-import subprocess
-import sys
-
-sdk = Path('/ABS/EXISTING/Ecosystem_Native_Build_Tools_N29')
-received = Path('/ABS/OWNED/Windows package cache')
-expanded = Path('/ABS/OWNED/windows-expanded-cache')
-selection = json.loads((received / 'selection.json').read_text(encoding='utf-8'))
-for subdir in sorted({p['subdir'] for p in selection['packages']}):
-    plan = received / ('extract-' + subdir + '.json')
-    plan.write_text(json.dumps({'packages': [p for p in selection['packages']
-                                           if p['subdir'] == subdir]}), encoding='utf-8')
-    subprocess.run([sys.executable, str(sdk / 'extract_package_cache.py'),
-                    '--plan', str(plan), '--archives', str(received / 'pkgs' / subdir),
-                    '--cache', str(expanded), '--target', selection['target']], check=True)
-```
-
-This runs on Linux Python 3.12 or newer and preserves each package's original `info/index.json`, `info/paths.json`, placeholders and license bodies. The resulting expanded cache is the explicit cache input for the existing origin-preserving prefix packer. Keep it with the original packages; do not fabricate a `link.source` path or replace the selected package's metadata.
+Use the maintained `receive --prepare-cache` continuation below, or
+`prepare-cache` for already-acquired original archives. Both paths call the
+existing N29 extractor directly with the complete original target selection,
+including noarch packages. There is no need to split the selection manually or
+flatten the received archive directories. The returned `packing_cache` is the
+extracted-cache input for the existing origin-preserving prefix packer.
 
 ## Native linking and current packing
 
@@ -129,6 +115,42 @@ One focused cache-transfer course covered all 15 requested package names with on
 Publisher references:
 - https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html
 - https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html
+
+
+## Durable package-level streaming continuation
+
+The `--stream-volumes` path now checkpoints each completed original package,
+inside the same unfinished stored ZIP, before beginning the next download.
+A dropped connection retries the unfinished package. Restarting the same command
+and `--work` directory after process termination also retains all checkpointed
+packages. The solver result, environment, package order, volume size, URLs,
+checksums, filenames, original archives and final `parts.json` format stay fixed.
+
+For every unfinished volume, the owned work directory contains the reserved
+`.NAME.streaming.partial` and `.NAME.streaming.checkpoint.json`. The checkpoint
+holds the ZIP central directory and its digest, not another copy of package
+bodies. It is bound to the exact ordered selection and transfer byte limit.
+A resume restores that directory, discards only an uncommitted member tail,
+checks every retained package against its publisher hashes, and continues the
+original acquisition. A successful final rename removes the checkpoint.
+Borrowed caches remain read-only. Completed final volumes remain reusable by
+both this producer and the unchanged receiving command.
+
+Continue an ended streaming acquisition with its original command, original
+`--solution`, `--package-cache` inputs and the same `--work`. Keep an already-live
+producer running; the original kernel work lock still gives a single writer.
+Do not change `--part-bytes` or `--stream-volumes` on an existing request-bound
+work directory. A pre-checkpoint predecessor's unfinished scratch can be rebuilt
+under its existing work lock; its previously completed final volumes survive.
+
+The focused receiving course used the actual retained upstream conda-pack
+`.conda` archive and the original micromamba binary artifact as transport inputs.
+An abrupt process exit occurred while writing the second member, after committing
+the first. The restarted process fetched only the second source. The complete
+7,850,084-byte output independently reopened with both original byte identities;
+the original conda archive was then received by the existing N29 extractor.
+The 461-byte checkpoint retained the already-completed package. The operation
+and original origins are recorded in `operating/RESULT.json`.
 
 ## Continue directly into the original extracted package cache
 
