@@ -176,12 +176,18 @@ class CustomerReviews:
 
     @staticmethod
     def _absolute_export_path(value):
-        if not isinstance(value, str) or "\\" in value or "\0" in value:
+        # Completed tasks store native Path text. Windows exports legitimately
+        # contain backslashes, drive roots, UNC shares and long-path prefixes.
+        # Preserve those exact task paths without accepting foreign-platform
+        # roots or noncanonical aliases as local operator output.
+        if not isinstance(value, str) or "\0" in value:
             raise ValueError("The export has an invalid original file path")
-        path = PurePosixPath(value)
+        if (os.name == "nt" and "/" in value) or (os.name != "nt" and "\\" in value):
+            raise ValueError("The export has an invalid original file path")
+        path = Path(value)
         if not path.is_absolute() or str(path) != value or ".." in path.parts:
             raise ValueError("The export has an invalid original file path")
-        return Path(value)
+        return path
 
     @staticmethod
     def _export_descriptor(value, path):
@@ -640,11 +646,8 @@ class CustomerReviews:
             raise self.Fault("REVIEW_EXPORT_GENERATION",
                              "This export belongs to another review or response generation.", 409)
         if not archive.exists():
-            pending = archive.parent / (".review-archive-" + archive.name + ".pending")
-            if pending.exists():
-                # This task exclusively owns this original helper temporary.
-                # All published review members remain in its inspected desk.
-                pending.unlink()
+            # The maintained archiver uses a unique fsynced temporary and
+            # native no-replace publication; no fixed-name stale-file cleanup.
             reviews.archive_packet(desk, archive)
         result = reviews.describe_export(desk, archive=archive)
         manifest_path = desk / "review-manifest.json"
@@ -683,7 +686,15 @@ class CustomerReviews:
         family = "customer-review-handbacks" if engineering else "customer-review-exports"
         manifest_name = review_handback.MANIFEST if engineering else "review-manifest.json"
         archive_name = "engineering-handback.zip" if engineering else "review-desk.zip"
-        directory = self._absolute_export_path(result["directory"])
+        try:
+            directory = self._absolute_export_path(result["directory"])
+        except (TypeError, ValueError):
+            # A transferred sender task can carry an absolute path from another
+            # OS. Rebuild the exact original selection on this machine instead
+            # of making the entire retained export appear corrupt.
+            if origins:
+                raise ReceivedExportUnavailable() from None
+            raise
         parts = directory.parts
         if (len(parts) < 5 or parts[-4:-2] != ("outputs", family)
                 or parts[-1] != "desk" or parts[-2] not in [task["id"], *origins]):
