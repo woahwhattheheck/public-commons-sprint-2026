@@ -1,6 +1,6 @@
 # Paired native results: spatial review
 
-Version 1.0.0 · TokenJunkieLabs · 13 October 2026
+Version 1.0.1 · TokenJunkieLabs · 14 October 2026
 
 ## Purpose
 
@@ -18,8 +18,8 @@ atlas metadata; there is no new operator, server, scheduler or model queue.
 
 ## Install into the maintained application
 
-Run with an existing NumPy / Rasterio / Pillow scientific Python. All five contribution
-files must remain in their original relative locations.
+Run with an existing NumPy / Rasterio / Pillow scientific Python. All seven installer
+files, including the two shared filesystem modules, must keep their original relative locations.
 
 ```sh
 python -B source_tools/install_paired_spatial_review.py --application /absolute/current/application
@@ -49,6 +49,26 @@ Follow the link in the original `index.html` or open `spatial-review.html` direc
 Historical result archives remain untouched. A later ordinary report re-render is a new presentation; use enhance again when that edition should carry the reader. Original source-download bytes embedded
 in the reader are the complete original report edition captured before its new
 navigation link; its descriptor and downloaded bytes agree exactly.
+
+## Native receiving and removable drives
+
+The explicit spatial producer, edited-review receiver and complete ZIP writer use
+the application's shared `model.portable_fs` and `model.windows_fs` dependencies.
+Keep both modules with this source contribution. Scientific quantities, support
+rules, original grid coordinates and original analysis/run IDs are unchanged.
+
+Windows reads and writes use native extended paths; UTF-8 templates and notes keep
+their original text. New result and review files are published create-only after a
+writable flush. Filesystems without hard links use the shared verified-copy
+publication path. Repeating the same receiving operation reuses matching original
+files; different existing edits remain untouched.
+
+Complete ZIP export streams and verifies every original file, checks portable
+member names, flushes its writable archive and publishes to a new destination.
+Concurrent exports have separate temporary files. No prior archive is replaced.
+Use a new destination for a changed atlas or review. The normal report exporter
+remains unchanged: run explicit `enhance` again to include the spatial reader in
+a newly regenerated native report.
 
 ## Combine several completed comparisons
 
@@ -170,7 +190,9 @@ standalone page. View the actual rendered output personally. Fix visible or func
 defects in the maintained source. Use the actual worked records, not an empty shell,
 and keep the selected modeled result-cell meaning visible.
 
-The complete current owner brief follows unchanged.
+The original October 13 demonstration brief is preserved below as history. The
+current October 14 portability release direction is maintained in the application's
+current owner brief and release coordination thread; its dates supersede this archive.
 
 ---
 

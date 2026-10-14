@@ -30,9 +30,10 @@ import rasterio
 from rasterio.windows import Window
 
 # Use the original source-bound canonical identity and file verification.
+from model import portable_fs as _fs
 from model.paired_ensemble.ensemble_store import digest, fingerprint, read, verify
 
-VERSION = '1.0.0'
+VERSION = '1.0.1'
 LABELS = {'nitrogen_export': 'Nitrogen', 'phosphorus_export': 'Phosphorus',
           'sediment_export': 'Sediment'}
 
@@ -43,39 +44,44 @@ def json_bytes(value):
 
 
 def safe(root: Path, name: str) -> Path:
-    p = Path(name)
-    if (not isinstance(name, str) or '\\' in name or p.is_absolute()
-            or '..' in p.parts or not p.parts or p.as_posix() != name):
-        raise ValueError('Expected a relative package member')
-    target = (root / p).resolve()
-    if not target.is_relative_to(root.resolve()):
+    root = _fs.native_path(root).resolve()
+    _fs.relative_name(name, windows=True)
+    target = (root / name).resolve()
+    if not target.is_relative_to(root):
         raise ValueError('Package member escapes its directory')
     return target
 
 
 def put(path: Path, body: bytes):
-    """Create-only, byte-exact restart: never replace someone else's edits."""
+    """Create-only, byte-exact restart on each native receiving filesystem."""
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    expected = {'bytes': len(body), 'sha256': hashlib.sha256(body).hexdigest()}
+    if path.is_symlink():
+        raise ValueError('Preserving symbolic link: ' + str(path))
     if path.exists():
-        if path.is_symlink() or path.read_bytes() != body:
+        if fingerprint(path) != expected:
             raise ValueError('Preserving differing existing file: ' + str(path))
         return
     fd, name = tempfile.mkstemp(prefix='.spatial-', dir=path.parent)
+    pending = _fs.native_path(name)
     try:
         with os.fdopen(fd, 'wb') as stream:
             stream.write(body)
             stream.flush()
             os.fsync(stream.fileno())
-        os.link(name, path)
-    except FileExistsError:
-        if path.read_bytes() != body:
-            raise ValueError('Another writer changed ' + str(path))
+        try:
+            _fs.publish_file(pending, path)
+        except FileExistsError:
+            if fingerprint(path) != expected:
+                raise ValueError('Another writer changed ' + str(path))
+        _fs.sync_directory(path.parent)
     finally:
-        Path(name).unlink(missing_ok=True)
+        pending.unlink(missing_ok=True)
 
 
 def read_product(root):
-    root = Path(root).resolve(strict=True)
+    root = _fs.native_path(root).resolve(strict=True)
     a = read(root / 'analysis.json')
     if (a.get('state') != 'complete' or a['id'] != digest(a['selection'])
             or a['selection'].get('schema') != 'upstate.paired-raster-ensemble/v1'):
@@ -90,6 +96,7 @@ def file_descriptor(path, root):
 
 
 def scan_product(source, output, tile_size, reports_override=None):
+    output = _fs.native_path(output)
     root, a = read_product(source)
     selected = a['selection']
     target = output / 'products' / a['id']
@@ -99,6 +106,7 @@ def scan_product(source, output, tile_size, reports_override=None):
         verify(root, descriptor)
         names.add(descriptor['path'])
     names.update(x['path'] for x in a['artifacts'].values())
+    _fs.validate_members(names, portable=True)
     for name in sorted(names):
         put(safe(target, name), json_bytes(reports) if name == 'reports.json' and reports_override is not None else safe(root, name).read_bytes())
     sources = selected.get('source_references', {})
@@ -177,7 +185,8 @@ def scan_product(source, output, tile_size, reports_override=None):
 
 
 def build(projects, output, title, classification, tile_size=128):
-    output = Path(output).resolve()
+    displayed_output = Path(output).absolute()
+    output = _fs.native_path(displayed_output).resolve()
     if not 16 <= tile_size <= 512:
         raise ValueError('Tile size must be between 16 and 512 cells')
     products = [read_product(p) for p in projects]
@@ -186,8 +195,8 @@ def build(projects, output, title, classification, tile_size=128):
     config = {'version': VERSION, 'title': title, 'classification': classification,
               'tile_size': tile_size,
               'products': [{'id': a['id'], **fingerprint(p/'analysis.json')} for p,a in products],
-              'producer_sha256': fingerprint(Path(__file__))['sha256'],
-              'template_sha256': fingerprint(Path(__file__).with_suffix('.html'))['sha256']}
+              'producer_sha256': fingerprint(_fs.native_path(__file__))['sha256'],
+              'template_sha256': fingerprint(_fs.native_path(__file__).with_suffix('.html'))['sha256']}
     output.mkdir(parents=True, exist_ok=True)
     if output.is_symlink() or any(output == p or output.is_relative_to(p) or p.is_relative_to(output) for p,a in products):
         raise ValueError('Build in a separate directory outside the original products')
@@ -197,16 +206,16 @@ def build(projects, output, title, classification, tile_size=128):
                 'id': digest(config), 'title': title, 'classification': classification,
                 'effect_direction': 'baseline minus alternative', 'products': records,
                 'review_semantics': 'A selection of modeled result cells for review, not a new intervention or a new model run.'}
-    template = Path(__file__).with_suffix('.html').read_text()
+    template = _fs.native_path(__file__).with_suffix('.html').read_text(encoding='utf-8')
     encoded = json.dumps(manifest, ensure_ascii=False, separators=(',', ':'), allow_nan=False).replace('<', '\\u003c')
     if template.count('/*__ATLAS_DATA__*/null') != 1:
         raise ValueError('Template data marker is missing or ambiguous')
     page = template.replace('/*__ATLAS_DATA__*/null', encoded)
     put(output/'START_HERE.html', page.encode())
     put(output/'atlas.json', json_bytes(manifest))
-    put(output/'source_tools'/'paired_spatial_review.py', Path(__file__).read_bytes())
-    put(output/'source_tools'/'paired_spatial_review.html', Path(__file__).with_suffix('.html').read_bytes())
-    return {'id': manifest['id'], 'directory': str(output), 'products': len(records),
+    put(output/'source_tools'/'paired_spatial_review.py', _fs.native_path(__file__).read_bytes())
+    put(output/'source_tools'/'paired_spatial_review.html', _fs.native_path(__file__).with_suffix('.html').read_bytes())
+    return {'id': manifest['id'], 'directory': str(displayed_output), 'products': len(records),
             'grid_cells': sum(p['grid']['width']*p['grid']['height'] for p in records),
             'statistic_rasters': sum(len(p['bands']) for p in records)}
 
@@ -221,7 +230,7 @@ def append_native_report_review(directory, report):
     composer and portable transfer without a parallel operator or job queue.
     """
     from model.paired_ensemble.ensemble_store import atomic
-    directory = Path(directory).resolve(strict=True)
+    directory = _fs.native_path(directory).resolve(strict=True)
     original, analysis = read_product(directory)
     with tempfile.TemporaryDirectory(prefix='paired-spatial-report-') as scratch:
         product = scan_product(original, Path(scratch), 128, reports_override=report)
@@ -230,27 +239,33 @@ def append_native_report_review(directory, report):
     classification = source_title + ' · Retained model outputs; source editions and working assumptions remain in the original report.'
     binding = {'analysis_sha256': product['analysis_sha256'],
                'sources': [{k:v for k,v in f.items() if k != 'content_base64'} for f in product['source_files']],
-               'producer_sha256': fingerprint(Path(__file__))['sha256'],
-               'template_sha256': fingerprint(Path(__file__).with_suffix('.html'))['sha256']}
+               'producer_sha256': fingerprint(_fs.native_path(__file__))['sha256'],
+               'template_sha256': fingerprint(_fs.native_path(__file__).with_suffix('.html'))['sha256']}
     manifest = {'schema':'upstate.paired-spatial-atlas/v1','version':VERSION,
                 'id':digest(binding),'title':'Native model results · spatial review',
                 'classification':classification,'effect_direction':'baseline minus alternative',
                 'products':[product]}
-    template = Path(__file__).with_suffix('.html').read_text()
+    template = _fs.native_path(__file__).with_suffix('.html').read_text(encoding='utf-8')
     encoded = json.dumps(manifest,ensure_ascii=False,separators=(',',':'),allow_nan=False).replace('<','\\u003c')
     if template.count('/*__ATLAS_DATA__*/null') != 1:
         raise ValueError('Template data marker is missing or ambiguous')
     body = template.replace('/*__ATLAS_DATA__*/null', encoded).encode()
     # The original export owns these derived artifacts, as it already owns index.html.
     def generated(path, body):
-        fd,name=tempfile.mkstemp(prefix='.spatial-report-',dir=directory)
+        fd, name = tempfile.mkstemp(prefix='.spatial-report-', dir=directory)
+        pending = _fs.native_path(name)
         try:
-            with os.fdopen(fd,'wb') as f:f.write(body);f.flush();os.fsync(f.fileno())
-            os.replace(name,path)
-        finally:Path(name).unlink(missing_ok=True)
+            with os.fdopen(fd, 'wb') as stream:
+                stream.write(body)
+                stream.flush()
+                os.fsync(stream.fileno())
+            _fs.replace(pending, _fs.native_path(path))
+            _fs.sync_directory(directory)
+        finally:
+            pending.unlink(missing_ok=True)
     generated(directory/'spatial-review.html',body)
     index_path=directory/'index.html'
-    index=index_path.read_text()
+    index=index_path.read_text(encoding='utf-8')
     if 'href="spatial-review.html"' not in index:
         if '<nav>' not in index:raise ValueError('Original report navigation was not found')
         index=index.replace('<nav>','<nav><a href="spatial-review.html">Interactive spatial review</a>',1)
@@ -275,7 +290,8 @@ def enhance(project):
     """
     from model.paired_ensemble.ensemble_report import export_reports
     from model.paired_ensemble.ensemble_store import atomic, held
-    directory = Path(project).resolve(strict=True)
+    displayed_project = Path(project).absolute()
+    directory = _fs.native_path(displayed_project).resolve(strict=True)
     export_reports(directory)
     with held(directory/'.report.lock', blocking=True):
         report = read(directory/'reports.json')
@@ -284,12 +300,12 @@ def enhance(project):
             raise ValueError('The current native report belongs to another result')
         append_native_report_review(directory, report)
         atomic(directory/'reports.json', report)
-    return {'project': str(directory), **report['spatial_review'], 'files': report['files']}
+    return {'project': str(displayed_project), **report['spatial_review'], 'files': report['files']}
 
 
 def receive(atlas_root, review_file, output):
     """Import an exact browser review into independent native GIS/report files."""
-    atlas_root = Path(atlas_root).resolve(strict=True)
+    atlas_root = _fs.native_path(atlas_root).resolve(strict=True)
     if atlas_root.is_file():
         atlas_path, atlas_root = atlas_root, atlas_root.parent
     else:
@@ -299,7 +315,8 @@ def receive(atlas_root, review_file, output):
     atlas = read(atlas_path)
     if atlas.get('schema') != 'upstate.paired-spatial-atlas/v1':
         raise ValueError('Select a retained paired spatial atlas')
-    original_review = Path(review_file).read_bytes()
+    with os.fdopen(_fs.open_file(_fs.native_path(review_file), os.O_RDONLY), 'rb') as stream:
+        original_review = stream.read()
     review = json.loads(original_review)
     if review.get('schema') != 'upstate.paired-spatial-review/v1' or review.get('atlas_id') != atlas['id']:
         raise ValueError('This review belongs to another atlas edition')
@@ -328,7 +345,7 @@ def receive(atlas_root, review_file, output):
         raise ValueError('Select unique original zero-based row-major cell indices')
     if not isinstance(review.get('note', ''), str):
         raise ValueError('Review note must be text')
-    output = Path(output).resolve()
+    output = _fs.native_path(output).resolve()
     if (output == atlas_root or output.is_relative_to(atlas_root) or atlas_root.is_relative_to(output)):
         raise ValueError('Receive into an independent directory outside the original atlas')
     output.mkdir(parents=True, exist_ok=True)
@@ -386,18 +403,48 @@ def receive(atlas_root, review_file, output):
 
 
 def pack(directory, archive):
-    root=Path(directory).resolve(strict=True); archive=Path(archive).resolve()
-    if archive==root or archive.is_relative_to(root):raise ValueError('Put the archive outside its source directory')
-    archive.parent.mkdir(parents=True,exist_ok=True)
-    pending=archive.with_name('.'+archive.name+'.pending')
+    """Publish a complete portable archive without replacing a prior delivery."""
+    root = _fs.native_path(directory).resolve(strict=True)
+    archive = _fs.native_path(archive).absolute()
+    if archive.parent.resolve().is_relative_to(root):
+        raise ValueError('Put the archive outside its source directory')
+    if archive.exists() or archive.is_symlink():
+        raise ValueError('Preserving an existing output archive')
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    members = []
+    for path in sorted(root.rglob('*')):
+        if path.is_symlink():
+            raise ValueError('Archive does not include symlinks')
+        if path.is_file():
+            members.append((path.relative_to(root).as_posix(), path, fingerprint(path)))
+    _fs.validate_members([name for name, _, _ in members], portable=True)
+    fd, name = tempfile.mkstemp(prefix='.spatial-pack-', suffix='.zip', dir=archive.parent)
+    pending = _fs.native_path(name)
     try:
-        with zipfile.ZipFile(pending,'w',zipfile.ZIP_DEFLATED,compresslevel=6) as z:
-            for p in sorted(root.rglob('*')):
-                if p.is_symlink():raise ValueError('Archive does not include symlinks')
-                if p.is_file():z.write(p,p.relative_to(root).as_posix())
-        if archive.exists():raise ValueError('Preserving an existing output archive')
-        os.link(pending,archive)
-    finally:pending.unlink(missing_ok=True)
+        with os.fdopen(fd, 'w+b') as stream:
+            with zipfile.ZipFile(stream, 'w', zipfile.ZIP_DEFLATED, compresslevel=6, allowZip64=True) as packed:
+                for name, path, expected in members:
+                    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.external_attr = 0o100644 << 16
+                    checksum, count = hashlib.sha256(), 0
+                    with os.fdopen(_fs.open_file(path, os.O_RDONLY), 'rb') as incoming:
+                        with packed.open(info, 'w', force_zip64=True) as outgoing:
+                            for chunk in iter(lambda: incoming.read(1024 * 1024), b''):
+                                count += len(chunk)
+                                if count > expected['bytes']:
+                                    raise ValueError('Original source grew during archive export: ' + name)
+                                checksum.update(chunk)
+                                outgoing.write(chunk)
+                    if ({'bytes': count, 'sha256': checksum.hexdigest()} != expected
+                            or fingerprint(path) != expected):
+                        raise ValueError('Original source changed during archive export: ' + name)
+            stream.flush()
+            os.fsync(stream.fileno())
+        _fs.publish_file(pending, archive)
+        _fs.sync_directory(archive.parent)
+    finally:
+        pending.unlink(missing_ok=True)
     return fingerprint(archive)
 
 

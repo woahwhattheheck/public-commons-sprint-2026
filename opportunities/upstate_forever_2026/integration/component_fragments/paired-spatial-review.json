@@ -8,10 +8,16 @@
         "source_tools/paired_spatial_review.py",
         "source_tools/paired_spatial_review.html",
         "source_tools/install_paired_spatial_review.py",
-        "docs/PAIRED_SPATIAL_REVIEW.md"
+        "docs/PAIRED_SPATIAL_REVIEW.md",
+        "model/portable_fs.py",
+        "model/windows_fs.py"
       ],
-      "requires": ["paired-ensemble"]
+      "requires": [
+        "paired-ensemble"
+      ]
     }
   },
-  "required_components": ["paired-spatial-review"]
+  "required_components": [
+    "paired-spatial-review"
+  ]
 }
