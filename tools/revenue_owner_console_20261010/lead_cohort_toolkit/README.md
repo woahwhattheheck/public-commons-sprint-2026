@@ -55,6 +55,8 @@ The selected URL must exactly equal a member of `sources`; case, query parameter
 
 The exact selected source travels through the original engine to customer JSON, HTML, CSV and Markdown, and into both message layouts. Every original URL remains in the contact/source detail.
 
+For a `company_fit` lead with a verified `company_domain`, the source URL is scoped to that company for duplicate detection. Distinct companies may therefore share an authoritative investment announcement without inventing URL aliases. Existing company, buyer and email duplicate checks still apply. Actual requests and leads without a company domain retain the original source-URL duplicate guard.
+
 ## Compose the complete message
 
 After reviewing the generated edition, supply the complete recipe documented in [VALUE_IN_MESSAGE.md](source/VALUE_IN_MESSAGE.md):
