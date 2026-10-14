@@ -44,7 +44,7 @@ export async function receiveConfigurationReview({page,applicationUrl,projectPat
   need(intakeBody.working.intake.source.text===texts.source&&intakeBody.working.intake.before.text===texts.before&&!intakeBody.working.project,'Exact original intake was not retained.');
   await tab('plan');await select('plan-file',{name:'original-plan.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(original.mapping,null,2)+'\n')});await noError();
   const first=await page.locator('[data-record]').first().getAttribute('data-record');
-  await page.locator('[data-record]').first().click();await page.locator('#overrides-json').fill('[{"path":');
+  await page.locator('[data-record]').first().click();const overrideEditor=page.locator('#overrides-json');if(!(await overrideEditor.isVisible()))await page.locator('#decision-form details > summary').click();need(await overrideEditor.isVisible(),'Reference override editor did not open.');await overrideEditor.fill('[{"path":');
   const unfinished=await download('save-working','unfinished-decision-working.json'),unfinishedBody=receiveSession(await fs.readFile(unfinished.path,'utf8'));
   need(unfinishedBody.working.editor.decisionDrafts[first].overridesText==='[{"path":','Unfinished decision text was lost.');
   await select('restore-file',unfinished.path);await noError();need(await page.locator('#overrides-json').inputValue()==='[{"path":','Unfinished decision did not reopen.');

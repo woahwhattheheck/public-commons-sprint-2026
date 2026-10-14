@@ -44,13 +44,13 @@
     },
     {
       "path": "browser-receive.mjs",
-      "bytes": 11714,
-      "sha256": "9de07e61a6ff2c1c5784bb38a2669dfebb1399d158f7160adc4642012ece1de6"
+      "bytes": 11933,
+      "sha256": "3c71c8b575c46cef47bfd55c7bab526f5e0c5caf2494d38792a8e48822208daa"
     },
     {
       "path": "build-review.mjs",
-      "bytes": 9367,
-      "sha256": "f599f1c40d07de437512b685881817661fc1d2a894c93c554b2c92f430db1112"
+      "bytes": 9790,
+      "sha256": "425c2790bbb8280f6a2cea130dbf71c3ebc8cc1b080cd1159e945c6e4acb0959"
     },
     {
       "path": "core.mjs",
@@ -169,8 +169,8 @@
     },
     {
       "path": "style.css",
-      "bytes": 6331,
-      "sha256": "c1084bc5517a222d83c32bac672c8e33ccffc33d7c081dab27c04e2bd10f9e62"
+      "bytes": 6550,
+      "sha256": "01a8eb961dbaedd35ed6ca4b78e940e35bced552c4b58d6016b89fa315382109"
     },
     {
       "path": "upstream/otobo/Kernel/Modules/AdminGenericAgentImportExport.pm",

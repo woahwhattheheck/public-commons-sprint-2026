@@ -8,6 +8,10 @@ import {sha256Utf8,utf8ByteLength} from './sha256.mjs';
 const ROOT='adaptations/otobo/',ENTRY=ROOT+'app.mjs';
 const need=(yes,message)=>{if(!yes)throw Error(message);};
 const stringify=value=>JSON.stringify(value,null,2)+'\n';
+function replaceOnce(source,marker,replacement){
+ const at=source.indexOf(marker);need(at>=0&&at===source.lastIndexOf(marker),'Expected one source placeholder: '+marker);
+ return source.replace(marker,()=>replacement);
+}
 function normalized(base,specifier){
  need(specifier.startsWith('.'),'Offline review imports only its retained relative source.');
  const parts=base.split('/');parts.pop();
@@ -71,11 +75,13 @@ export function buildOfflineReview({files}){
   files:[...selected].sort().map(path=>({path,bytes:utf8ByteLength(files[path]),sha256:sha256Utf8(files[path]).sha256,content:base64(encoder.encode(files[path]))}))};
  let html=files[ROOT+'index.html'];need(typeof html==='string'&&html.includes('<script type="module" src="./app.mjs"></script>'),'Keep the original complete review HTML.');
  need(html.includes('<link rel="stylesheet" href="./style.css">'),'Keep the original complete review stylesheet.');
- html=html.replace('<link rel="stylesheet" href="./style.css">','<style>'+files[ROOT+'style.css'].replace(/<\/style/gi,'<\\/style')+'</style>');
+ html=replaceOnce(html,'<link rel="stylesheet" href="./style.css">','<style>'+files[ROOT+'style.css'].replace(/<\/style/gi,'<\\/style')+'</style>');
  const toolbar='<section><h2>Offline review source</h2><p id="offline-source-count">Opening complete retained source…</p><div class="actions"><a id="offline-source">Download this complete review source</a><a id="offline-example" hidden>Download the authored reference project</a></div><p>Use Open working copy to receive a complete saved workspace or original attributed project. The authored reference demonstrates all ten native families and retains two intentional differences in the independently returned target. Native execution uses the complete maintained Migration Acceptance Workbench.</p></section>';
- html=html.replace('<main>','<main>'+toolbar);
+ html=replaceOnce(html,'<main>','<main>'+toolbar);
  const embedded=JSON.stringify(packet).replace(/</g,'\\u003c');
- html=html.replace('<script type="module" src="./app.mjs"></script>','<script id="provider-offline-source" type="application/json">'+embedded+'</script><script type="module">'+BOOTSTRAP+'</script>');
+ need(!/<\/script/i.test(embedded),'Escape closing script tags in the serialized source packet.');
+ need(!/<\/script/i.test(BOOTSTRAP),'Escape closing script tags in the embedded loader.');
+ html=replaceOnce(html,'<script type="module" src="./app.mjs"></script>','<script id="provider-offline-source" type="application/json">'+embedded+'</script><script type="module">'+BOOTSTRAP+'</script>');
  return{html,packet,bytes:utf8ByteLength(html),sha256:sha256Utf8(html).sha256};
 }
 async function main(){
