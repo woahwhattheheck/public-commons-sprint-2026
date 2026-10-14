@@ -678,6 +678,8 @@ class Connector:
         return result.hexdigest()
 
     def execute(self, request):
+        if STOP.is_set():
+            return
         request_id = request["id"]
         source = self.journal.body_path(request_id, "input")
         if source.is_symlink():
@@ -697,6 +699,10 @@ class Connector:
                 # No upstream call has happened; this same marker is safe to repeat.
                 self.journal.state(request_id, "ready")
                 raise
+            if STOP.is_set():
+                # The edge marker is retained, but no native call has occurred.
+                self.journal.state(request_id, "ready")
+                return
             response_path = self.journal.body_path(request_id, "response")
             headers = dict(request["headers"])
             headers["content-length"] = str(request["body_bytes"])
@@ -822,6 +828,8 @@ class Connector:
                                                    "X-Chunk-SHA256": digest(chunk)}, timeout=35)
 
     def handle(self, record):
+        if STOP.is_set():
+            return False
         request = self.validate(record)
         request_id = request["id"]
         with self.locks_guard:
@@ -872,7 +880,7 @@ class Connector:
         while not STOP.is_set():
             try:
                 self.register()
-                return True
+                return not STOP.is_set()
             except (OSError, http.client.HTTPException, ValueError, ConnectorError) as error:
                 if not transient_registration_error(error):
                     raise
@@ -889,6 +897,8 @@ class Connector:
             return
         # Resume retained response/input work even when a disconnect hid its edge lease.
         for request in self.journal.pending():
+            if STOP.is_set():
+                return
             try:
                 self.handle(request)
             except (OSError, http.client.HTTPException, ValueError, ConnectorError) as error:
