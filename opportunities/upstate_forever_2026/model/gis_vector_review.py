@@ -300,7 +300,7 @@ def _html(report):
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
         '<title>Working vector change review</title><style>',
-        'body{font:15px system-ui,sans-serif;color:#202020;background:#f5f5f5;margin:0;padding:28px;max-width:1300px}'
+        'body{font:15px system-ui,sans-serif;color:#202020;background:#f5f5f5;margin:0;padding:28px;max-width:1300px;overflow-wrap:anywhere}'
         'section,details{background:#fff;border:1px solid #bbb;padding:16px;margin:16px 0}'
         'table{border-collapse:collapse;width:100%}th,td{padding:8px;text-align:left;border:1px solid #bbb;vertical-align:top}'
         'pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}h1,h2{font-weight:600}'
