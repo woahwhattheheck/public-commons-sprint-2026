@@ -5,7 +5,7 @@ This builds physical source masks and class counts, not a model simulation.
 Original inputs are retained alongside derived masks. No raster is resampled.
 """
 from __future__ import annotations
-import argparse, csv, gzip, hashlib, json, math, shutil, sys, time
+import argparse, csv, gzip, hashlib, io, json, math, shutil, sys, time
 from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
@@ -18,7 +18,13 @@ sys.path.insert(0, str(_observer_directory))
 from process_resources import peak_memory, retain_source
 import geopandas as gpd
 import numpy as np
-import pyogrio, rasterio, shapely
+import rasterio, shapely
+try:
+    import pyogrio
+except ModuleNotFoundError as exc:
+    if exc.name != "pyogrio":
+        raise
+    pyogrio = None
 from rasterio.enums import MergeAlg
 from rasterio.features import rasterize
 from rasterio.windows import Window, bounds as window_bounds
@@ -59,6 +65,45 @@ def polygons_only(g):
     parts=[polygons_only(p) for p in getattr(g,'geoms',[])]
     return shapely.union_all([p for p in parts if not p.is_empty]) if parts else Polygon()
 
+def read_vector(source):
+    """Read unchanged source bytes or a path with an available native engine.
+
+    Fiona is part of the selected scientific environment. Pyogrio remains the
+    preferred engine when installed; its absence must not prevent either grid
+    compiler from starting. Broken installed engines still report their error.
+    """
+    if pyogrio is not None:
+        return pyogrio.read_dataframe(source)
+    if isinstance(source, (bytes, bytearray)):
+        source = io.BytesIO(source)
+    return gpd.read_file(source, engine="fiona")
+
+
+def write_geopackage(frame, path, layer, *, append=False):
+    """Keep existing layers when adding another original or working layer."""
+    if pyogrio is not None:
+        frame.to_file(path, layer=layer, driver="GPKG", engine="pyogrio", append=append)
+        return
+    import fiona
+    # Fiona's append mode opens an existing layer, unlike pyogrio's dataset
+    # append option. A new layer needs mode=w even when the GeoPackage exists;
+    # GDAL preserves its other named layers. Same-layer append stays append.
+    existing_layer = append and Path(path).exists() and layer in fiona.listlayers(path)
+    frame.to_file(path, layer=layer, driver="GPKG", engine="fiona",
+                  mode="a" if existing_layer else "w")
+
+
+def vector_runtime():
+    """Record the engine actually used rather than an unavailable dependency."""
+    if pyogrio is not None:
+        return {"vector_engine": "pyogrio", "vector_engine_version": pyogrio.__version__,
+                "pyogrio": pyogrio.__version__,
+                "gdal_vector": ".".join(map(str, pyogrio.__gdal_version__))}
+    import fiona
+    return {"vector_engine": "fiona", "vector_engine_version": fiona.__version__,
+            "pyogrio": None, "fiona": fiona.__version__, "gdal_vector": fiona.__gdal_version__}
+
+
 def read_retained(geo,selection):
     path=(geo/'workspace'/selection['object']).resolve()
     if not path.is_relative_to((geo/'workspace').resolve()):raise ValueError('Unsafe source path')
@@ -66,7 +111,7 @@ def read_retained(geo,selection):
     raw=path.read_bytes();raw=gzip.decompress(raw) if raw[:2]==b'\x1f\x8b' else raw
     if len(raw)!=selection['decoded_bytes'] or hashlib.sha256(raw).hexdigest()!=selection['decoded_sha256']:
         raise ValueError('Decoded original source mismatch: '+selection['source_id'])
-    df=pyogrio.read_dataframe(raw)
+    df=read_vector(raw)
     if len(df)!=selection['native_feature_count']:raise ValueError('Original feature count changed')
     return df
 
@@ -84,7 +129,7 @@ def compile_support(app,geo,out,tile=512,source_directory=None):
       'arjws_upstream':'upstream-57ec79c39ad77b0d030c7d53','prwd_upstream':'upstream-cae87067e9e9267765622747'}
     native={name:read_retained(geo,selections[sid]) for name,sid in ids.items()}
     planning=app/'source/geography/planning_basins2023'
-    reporting=gpd.read_file(planning/'PlanningBasins2023.shp');reporting=reporting.loc[reporting.Basin.eq('Upper Savannah')].copy()
+    reporting=read_vector(planning/'PlanningBasins2023.shp');reporting=reporting.loc[reporting.Basin.eq('Upper Savannah')].copy()
     if len(reporting)!=1:raise ValueError('Expected one original Upper Savannah reporting polygon')
     native['sc_reporting_original']=reporting;repairs=[]
     with rasterio.open(refpath) as ref:
@@ -175,10 +220,10 @@ def compile_support(app,geo,out,tile=512,source_directory=None):
         shutil.copy2(Path(__file__).resolve(),out/'source/compile_grid_support.py')
         retain_source(out/'source')
         gpkg=out/'vectors/geographic-support.gpkg'
-        for name,df in native.items():df.to_file(gpkg,layer=name,driver='GPKG',engine='pyogrio',append=gpkg.exists())
+        for name,df in native.items():write_geopackage(df,gpkg,name,append=gpkg.exists())
         working['huc12_full']=hucs
         for name in ('huc12_full','sc_reporting_original','protection_original'):
-            working[name].to_file(gpkg,layer=name+'_5070_working',driver='GPKG',engine='pyogrio',append=True)
+            write_geopackage(working[name],gpkg,name+'_5070_working',append=True)
         huc_rows=[]
         for i,r in hucs.iterrows():
             huc_rows.append({'zone_id':int(r.zone_id),'huc12':r.huc12,'name':r['name'],'states':r.states,'tohuc':r.tohuc,
@@ -253,8 +298,8 @@ def compile_support(app,geo,out,tile=512,source_directory=None):
         'Reuse masks only with matching CRS, dimensions and all six affine values, not nominal resolution alone.'],
       'runtime':{'started_at_utc':started,'completed_at_utc':datetime.now(timezone.utc).isoformat(),
         'elapsed_seconds':round(time.monotonic()-tick,3),**memory,'max_resident_mb':memory['peak_rss_mib'],
-        'tile_size':tile,'python':sys.version.split()[0],'rasterio':rasterio.__version__,'pyogrio':pyogrio.__version__,
-        'gdal_vector':'.'.join(map(str,pyogrio.__gdal_version__)),'shapely':shapely.__version__}}
+        'tile_size':tile,'python':sys.version.split()[0],'rasterio':rasterio.__version__,
+        **vector_runtime(),'shapely':shapely.__version__}}
     save_json(out/'support-summary.json',result);return result
 
 def main():
