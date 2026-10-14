@@ -24,10 +24,56 @@ function utf8(value) {
   }
   return out;
 }
-function utf8Text(bytes) {
-  if(!(bytes instanceof Uint8Array)) throw TypeError('UTF-8 bytes are required');
-  return decodeURIComponent(Array.from(bytes,b=>'%'+b.toString(16).padStart(2,'0')).join(''));
+/**
+ * Strict incremental UTF-8, preserving BOM and original Unicode code points.
+ * write returns complete decoded code points; finish rejects an incomplete tail.
+ * Scratch code units are bounded independently of the incoming chunk size.
+ */
+function createUtf8Decoder() {
+  let remaining=0,point=0,low=0x80,high=0xbf,failed=false,finished=false;
+  const invalid=()=>{failed=true;throw new URIError('URI malformed');};
+  return {
+    write(bytes) {
+      if(failed)throw new URIError('URI malformed');
+      if(finished)throw TypeError('UTF-8 decoder is already finished');
+      if(!(bytes instanceof Uint8Array))throw TypeError('UTF-8 bytes are required');
+      const parts=[],units=[];
+      const append=cp=>{
+        if(cp<=0xffff)units.push(cp);
+        else{cp-=0x10000;units.push(0xd800+(cp>>>10),0xdc00+(cp&1023));}
+        if(units.length>=8192){parts.push(String.fromCharCode(...units));units.length=0;}
+      };
+      for(const byte of bytes) {
+        if(!remaining) {
+          if(byte<0x80){append(byte);continue;}
+          low=0x80;high=0xbf;
+          if(byte>=0xc2&&byte<=0xdf){remaining=1;point=byte&31;}
+          else if(byte>=0xe0&&byte<=0xef){remaining=2;point=byte&15;if(byte===0xe0)low=0xa0;if(byte===0xed)high=0x9f;}
+          else if(byte>=0xf0&&byte<=0xf4){remaining=3;point=byte&7;if(byte===0xf0)low=0x90;if(byte===0xf4)high=0x8f;}
+          else invalid();
+        }else{
+          if(byte<low||byte>high)invalid();
+          point=(point<<6)|(byte&63);remaining--;low=0x80;high=0xbf;
+          if(!remaining)append(point);
+        }
+      }
+      if(units.length)parts.push(String.fromCharCode(...units));
+      return parts.join('');
+    },
+    finish() {
+      if(failed)throw new URIError('URI malformed');
+      if(remaining)invalid();
+      finished=true;
+      return '';
+    }
+  };
 }
+function utf8Text(bytes) {
+  const decoder=createUtf8Decoder(),text=decoder.write(bytes);
+  decoder.finish();
+  return text;
+}
+
 const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 function base64(bytes) {
   if(!(bytes instanceof Uint8Array)) throw TypeError('Binary bytes are required');
@@ -203,4 +249,4 @@ function readZipRecords(bytes,options,allowCompression) {
   return records;
 }
 function readZipArchive(bytes,options={}) { return require('./connected_zip_archive.cjs').readZipArchive(bytes,options); }
-module.exports={readZipArchive,utf8,utf8Text,base64,fromBase64,crc32,packStoredZip,readStoredZip,packZip,readZip};
+module.exports={readZipArchive,utf8,utf8Text,createUtf8Decoder,base64,fromBase64,crc32,packStoredZip,readStoredZip,packZip,readZip};
