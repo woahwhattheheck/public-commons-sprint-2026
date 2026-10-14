@@ -4,7 +4,6 @@ import contextlib
 import datetime as dt
 import os
 from pathlib import Path
-import shutil
 import signal
 import subprocess
 import sys
@@ -16,7 +15,7 @@ from model.common import (atomic_json, digest, file_digest, held, identifier,
 from model.verified_files import verified_operation
 from model.native_worker import SCHEMA, identity_matches, process_identity, signal_owned
 from model.native_execution import (process_failure, record_process_interruption,
-                                    resource_status, storage_exhausted)
+                                    resource_status, storage_exhausted, storage_status)
 
 from model.native_supervision import (PROTOCOL, StopProgress, bound_record, cancellation_state,
                                       reconcile_start, refresh_execution,
@@ -684,13 +683,15 @@ class NativeJobs:
     def snapshot(self, task):
         ws, run = self._selection(task)
         execution = self._latest(task)
+        storage = storage_status(ws.root)
         value = {"schema": "upstate.native-job-view/v1", "task_id": task["id"],
                  "run_id": run["id"], "task_state": task["state"],
                  "run_state": run["state"], "selection": run["selection"],
                  "stages": run.get("stages", {}), "artifacts": run.get("artifacts", {}),
                  "native_execution": run.get("execution"), "run_error": run.get("error"),
                  "alive": False, "stop_requested": False,
-                 "storage_free_bytes": shutil.disk_usage(ws.root).free}
+                 "storage_free_bytes": storage.get("available_bytes"),
+                 "storage_observation": storage}
         if task.get("_native_context"):
             value["programme_context"] = task["_native_context"]
         if task.get("_native_study_context"):
