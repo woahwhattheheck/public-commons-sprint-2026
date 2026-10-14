@@ -264,6 +264,16 @@
       "path": "anchor-state-regional/SOURCE_MAP.json",
       "bytes": 5310,
       "sha256": "49f2aa593780c8c837155f3a33d1bec12118dceb1e757e66cabfd292c0b942a6"
+    },
+    {
+      "path": "release_selected.py",
+      "bytes": 19522,
+      "sha256": "3987f4f856e94b664130cdb3c0217a7873e42c7e4c4ee67ffe09da2c666dce78"
+    },
+    {
+      "path": "official/final-validator-20261013.py",
+      "bytes": 24428,
+      "sha256": "fdc0ae8d4c341b6c493cd1559638246585517f38e171a5c9778fd23f926342e5"
     }
   ],
   "revision": "r7-anchor-state-regional",
