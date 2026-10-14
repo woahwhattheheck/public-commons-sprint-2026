@@ -1,0 +1,21 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-payload-completion",
+  "source_reference": "ECO-PORT-PAYLOAD-LINK-A9E1/1.0.0",
+  "components": {
+    "native-payload-completion": {
+      "paths": [
+        "source_tools/native_runtime/binary_dependencies.py",
+        "source_tools/native_runtime/payload_closure.py",
+        "source_tools/native_runtime/prefix_pack.py",
+        "source_tools/NATIVE_PAYLOAD_COMPLETION.md",
+        "integration/component_fragments/native-payload-completion.json"
+      ],
+      "requires": [],
+      "retained_only": []
+    }
+  },
+  "required_components": [
+    "native-payload-completion"
+  ]
+}
