@@ -283,6 +283,30 @@
       "id": "ffr130eb",
       "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271",
       "optimize_kwargs": {}
+    },
+    {
+      "id": "096-adaptive-stagnation-7f24",
+      "sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1",
+      "optimize_kwargs": {
+        "polish_enabled": true,
+        "polish_start_fraction": 0.8,
+        "polish_quantum": 4,
+        "resume_explore_calls": 4,
+        "memory": 8,
+        "curvature_eps": 1e-8,
+        "qn_radius": 0.08,
+        "qn_min_radius": 0.000001,
+        "qn_max_radius": 0.3,
+        "qn_grow": 2,
+        "qn_shrink": 0.5,
+        "armijo_c1": 0.0001,
+        "trace_limit": 4096,
+        "polish_schedule": "stagnation",
+        "stagnation_fraction": 0.12,
+        "min_stagnant_explore_calls": 8,
+        "early_polish_time_fraction": 0.25,
+        "min_remaining_polish_calls": 2
+      }
     }
   ],
   "common_objective": {
