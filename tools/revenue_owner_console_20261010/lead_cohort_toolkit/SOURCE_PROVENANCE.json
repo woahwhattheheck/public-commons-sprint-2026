@@ -1,0 +1,298 @@
+{
+  "schema": "commons.lead-cohort-toolkit-source.v1",
+  "operation_id": "LEAD-TOOLKIT-PUBLIC-COMPLETE-20261014",
+  "license": "Apache-2.0",
+  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity.",
+  "files": [
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
+      "bytes": 102428,
+      "sha256": "6c8d86e5aecd8fc4cb960b02a7eb7ef0f44e6bf339fedae58000fa9bb423317e"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_source_time.cjs",
+      "bytes": 2263,
+      "sha256": "e1476a0f2a0529ce089a336493ee48cbf73132f5b3025b3cdd7318e45a9aa694"
+    },
+    {
+      "path": "runtime/host/connected_sha256.cjs",
+      "bytes": 18336,
+      "sha256": "023b01f089168605a6153b9e5f3ccd7a66a0d0487fab3e79522897a1df226cc2"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_capture_core.cjs",
+      "bytes": 12338,
+      "sha256": "84b1e209e585c30f786929d4159207880cc3b841c6c05abbed8c1af974cb6e11"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/capture/capture_core.cjs",
+      "bytes": 9998,
+      "sha256": "ab7c7ba6411f58f6fb6d15e20685fa3c75c090f3e6fc8bd6c88f7eaf2ce198f6"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_files.cjs",
+      "bytes": 24808,
+      "sha256": "e42a22b27e7d6cf14d76a4b6782be1ea57b05b7de3d8bead34b25f815d039c04"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_package_retention.cjs",
+      "bytes": 9820,
+      "sha256": "c02e3eb19fdea3ecf7460eb7298b33ba9cb3bc82fb535d36f81137fa0f282c8c"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_archive_core.cjs",
+      "bytes": 5922,
+      "sha256": "551422229c93505d9eb9afd913424b52ba884fc463b76e1995bc8756219e4d3f"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_first_contact_core.cjs",
+      "bytes": 17248,
+      "sha256": "3549900a91fd60091b422a38d5621b511c46d38bfed62039c9cbb7062c616174"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_reconciliation_core.cjs",
+      "bytes": 20186,
+      "sha256": "92693c3a4ae14968f3da4461eee9afa927c1af8e2eefe05ba27be9808fb671b6"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_requests.cjs",
+      "bytes": 35457,
+      "sha256": "e93569600867bc3da48d8063b5d62c318472f04cb0d2cc08762ed20d649e6a7f"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/creator_programme_core.cjs",
+      "bytes": 84603,
+      "sha256": "419e8adbab9e26d2bfd061c6356a135f1ed0e59482623a44d19a5da07713a855"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_procurement_core.cjs",
+      "bytes": 30503,
+      "sha256": "39b935556dd732d1088f61967c7b67b21c8595bd150f049586f653b22090cc93"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_acquisition_intake.cjs",
+      "bytes": 34125,
+      "sha256": "dca0c64caa5ea12c748b30102283f51a7f6a4433f454279ed81b48112c2f4d6a"
+    },
+    {
+      "path": "runtime/host/connected_zip.cjs",
+      "bytes": 12090,
+      "sha256": "857c79f789e9cf4f6321bf22804e1c8d55af6758495ae1ba09d4fa72fd97bb26"
+    },
+    {
+      "path": "runtime/host/connected_gzip.cjs",
+      "bytes": 47127,
+      "sha256": "1fc9f3b218c60d029c96bf9f1c1e4de5fcb86918ed5a0570586dc81488440119"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_bundle.mjs",
+      "bytes": 6187,
+      "sha256": "fb61532928a1a13fc795242a55966f05ec6f5748330db059d326dd630349322b"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_file_export.mjs",
+      "bytes": 11878,
+      "sha256": "449e700219c53cc636aac093fbfa568c89b095baaf125b9bdfc3bd2c5e977e73"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_mail.mjs",
+      "bytes": 15090,
+      "sha256": "4a1c5a3e4a7e7391ad98ba89e879f9de6e3fa448fa581f6710aa57ab693256da"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_view.mjs",
+      "bytes": 40098,
+      "sha256": "1898339580d856e6f40a7a663edc98354458ab81f91790cc45bc98588198b032"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_procurement_view.mjs",
+      "bytes": 6444,
+      "sha256": "e76ee598083f52514280a561285a166dc726faef30fd34043b7475ac9e241e33"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_request_view.mjs",
+      "bytes": 5015,
+      "sha256": "5dd824c2420136e9f04570788aad05ae8c66322f7768076a3a235d17fe77b477"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_customer_file_view.mjs",
+      "bytes": 4324,
+      "sha256": "23a04684d3e9182a8bd3914a8a73656f0ae9beee08b7d360722c1b97b7e31eb8"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_reconciliation_view.mjs",
+      "bytes": 1355,
+      "sha256": "4b810782057b6810705643e27e872f4c2ae0662bd8e04074119dd1076181b9fa"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/creator_programme_view.mjs",
+      "bytes": 21140,
+      "sha256": "a5704bf5d850e8c4ac930e0648a46d72b6a62c4cb2de6819eee3e8797d0f3b96"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/creator_programme_measurement_panel.mjs",
+      "bytes": 4228,
+      "sha256": "87aa25a708dc4d16ee90d53a0cc057bebab6cb39d10924cfcca9c77bd9069a40"
+    },
+    {
+      "path": "runtime/host/connected_contact_attachments.cjs",
+      "bytes": 35372,
+      "sha256": "dc98599a669befaaa5a43fe98550ec2d46ff6cc3a5e8a21ff2802b49a161a8a6"
+    },
+    {
+      "path": "source/customer-renderer.cjs",
+      "bytes": 13814,
+      "sha256": "cf67df4f185d2604b9b82d57a52f0fffa33349ec01f1fae89ee0c9791bef9155"
+    },
+    {
+      "path": "source/customer-markdown.cjs",
+      "bytes": 5379,
+      "sha256": "d89ca6e64748e072c095c2a50a9a2c294df48053f0b3b75b398d4195b3e27660"
+    },
+    {
+      "path": "source/regenerate.mjs",
+      "bytes": 1278,
+      "sha256": "2ffa5112e8f0ceef09f9aaace9d6f214e1093d9a1cb2b9d29ef38b1c4fea573c"
+    },
+    {
+      "path": "source/cohort-builder.cjs",
+      "bytes": 6613,
+      "sha256": "4cbd897ee71ad880f70aa3236a3bbfe9d59d85dc69935ae3a6254fadbb47891b"
+    },
+    {
+      "path": "native/prepare-cohort.mjs",
+      "bytes": 7407,
+      "sha256": "aacb0adf7f3272a674afcbd91f31c95fd6ba24d94ae310e2c626e13e7744b31f"
+    },
+    {
+      "path": "native/reopen-cohort.mjs",
+      "bytes": 7871,
+      "sha256": "01b73f2f8addd06b89c32314c3c54f2c1584037a94d4fe801d5dfa05a9b438d0"
+    },
+    {
+      "path": "source/PREPARE_COHORT.md",
+      "bytes": 8206,
+      "sha256": "d9158eea027f43f5539f1b8eaf44e401814b60b363ed65b1e544a12b9136dcc8"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment.js",
+      "bytes": 130493,
+      "sha256": "716cc82926217bac899314246fb9b501ac7dcd923de345d19cb949917bea906c"
+    },
+    {
+      "path": "source/delivery-recorder.cjs",
+      "bytes": 14814,
+      "sha256": "b298efa8e588552bbf8e1921c06b8b3c925170515549897601f6e4d9794de097"
+    },
+    {
+      "path": "native/record-delivery.mjs",
+      "bytes": 10188,
+      "sha256": "ec75c71134dd5cd08dffef8c94e6194e5a6e0b5e2d9b498ed834b5018241b5a1"
+    },
+    {
+      "path": "native/materialize-source.py",
+      "bytes": 18786,
+      "sha256": "a1074978c5dd61e5cfe21087de116730cfab4b29e30682d780c8802e5ec265b4"
+    },
+    {
+      "path": "source/RECORD_DELIVERY.md",
+      "bytes": 9279,
+      "sha256": "41bed947101e507d30a33f6b8d386af3d16804bc1cb88c808764311729adedb4"
+    },
+    {
+      "path": "source/MATERIALIZE_SOURCE.md",
+      "bytes": 4200,
+      "sha256": "81a6d18b30ab772d806522b6807da7f44db7b55afd3972aff7b87c5fce7d74cf"
+    },
+    {
+      "path": "source/source-publication.cjs",
+      "bytes": 7589,
+      "sha256": "75d4a3e19852b1d84b01f7c099ffc6f75d84ed4c69d1b82187523d1dc769f738"
+    },
+    {
+      "path": "source/message-receipt.cjs",
+      "bytes": 6274,
+      "sha256": "7b78ea323c99585b393fac1e4b9a1243649fa9fbf01c3c8d08605bd95691b46f"
+    },
+    {
+      "path": "runtime/host/connected_archive_bytes.cjs",
+      "bytes": 5000,
+      "sha256": "34168cfbb40fa945caeed72b89aca5207ad2448c34debe027dd196101b33f3d0"
+    },
+    {
+      "path": "runtime/host/connected_mime.cjs",
+      "bytes": 16222,
+      "sha256": "540f2aaf909550bdfe95e6b6adb902b95570ae2b1e42ad06dd381cc54b270ff5"
+    },
+    {
+      "path": "runtime/host/connected_gmail_raw.cjs",
+      "bytes": 8375,
+      "sha256": "7eaac24e1549b64ad0896bef51abe4b983f2a2bbac19144b3452c39f281b18ed"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_value_message_core.cjs",
+      "bytes": 14822,
+      "sha256": "b30b131393d5d6b3c05111c09e9b532641b968f52da4b906a7c9b7a4be0f9ae4"
+    },
+    {
+      "path": "source/value-message.cjs",
+      "bytes": 242,
+      "sha256": "c6e0e1bb5a25224c3e7cdb6e5fe46bb83aa3993a66c0c9d8d91e505aaf891852"
+    },
+    {
+      "path": "source/VALUE_IN_MESSAGE.md",
+      "bytes": 11035,
+      "sha256": "cc7c1653a55588a08110789a9180f44d4b2ed65df20a50febb810665d0e23aea"
+    },
+    {
+      "path": "native/compose-message.mjs",
+      "bytes": 4281,
+      "sha256": "725a676a8ba1e80ffc78de42d2ee4922e8711df1c80da9a5f11e5d67b18e6727"
+    },
+    {
+      "path": "README.md",
+      "bytes": 8683,
+      "sha256": "3c90a9d4a26189be3cc80713bac47101ffe19f156ee49f9a8ea60a55f0bdb37e"
+    },
+    {
+      "path": "source/VALUE_FIRST_CUSTOMER_PRESENTATION.md",
+      "bytes": 1084,
+      "sha256": "6945e94743352976aebd53a5e0bb8da8b87f0195306f4d0738a903f53f2561ac"
+    },
+    {
+      "path": "source/MARKDOWN_MIME_RECEIVING.md",
+      "bytes": 702,
+      "sha256": "2f23ba21398869625a5d20387619da484a4e38b5a5f1c14527185c2d71d6a3ef"
+    },
+    {
+      "path": "source/source-archive.cjs",
+      "bytes": 7666,
+      "sha256": "12dc2214f2df093bd90d2f4b0646d905d91dad23598076efd723a837967c135c"
+    },
+    {
+      "path": "native/pack-source.mjs",
+      "bytes": 8161,
+      "sha256": "5b4c494f06717caf1da1a984192d88c5d61f24526820631b1409ce93a1bcfb33"
+    },
+    {
+      "path": "source/SOURCE_ARCHIVES.md",
+      "bytes": 8959,
+      "sha256": "a8d46085670e2b420eee4ed2f47019e126f6f50ca16381bcc78f491d9495327a"
+    },
+    {
+      "path": "source/PACK_SCOPED_LEAD_RECORDS.md",
+      "bytes": 4054,
+      "sha256": "79f7be10ca80d627ed09ce51b9642306fd9171a6e39a0e42363cf481f4137c02"
+    },
+    {
+      "path": "LICENSE",
+      "bytes": 11358,
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    },
+    {
+      "path": "NOTICE",
+      "bytes": 301,
+      "sha256": "21cf446bc8cf3e6dc9ee401251ffa1dc4ac60f6a94c022370ef06c74d128f390"
+    }
+  ]
+}

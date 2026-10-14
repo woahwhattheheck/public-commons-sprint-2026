@@ -1,0 +1,47 @@
+/** Customer requests and the original lead replacement workflow. */
+const input=(name,label,type='text',extra='')=>'<label>'+label+'<input name="'+name+'" type="'+type+'" '+extra+'></label>';
+const area=(name,label,rows=3,extra='')=>'<label>'+label+'<textarea name="'+name+'" rows="'+rows+'" '+extra+'></textarea></label>';
+export function renderLeadCustomerRequestsPanel(){
+  return [
+    '<section id="customer-requests-panel" class="customer-requests" hidden aria-labelledby="customer-requests-title">',
+    '<div class="section-heading"><div><p class="eyebrow">Customer care</p><h2 id="customer-requests-title">Requests and corrections</h2></div>',
+    '<button id="cr-new" type="button">Record a request or observation</button></div>',
+    '<p>Keep the original message, review the affected leads, and prepare an approved replacement in the same customer history.</p>',
+    '<p id="cr-summary" role="status"></p><div id="cr-list"></div>',
+    '<details id="cr-intake-panel"><summary>Original request or operator observation</summary>',
+    '<form id="cr-intake-form"><div class="form-grid">',
+    '<label>Record type<select name="source_kind"><option value="operator_observation">Operator observation before or after delivery</option><option value="customer_message">Original customer message after a recorded delivery</option></select></label>',
+    '<label>Original customer edition<select name="edition_id" required></select></label>',
+    '<label>Original recorded delivery<select name="delivery_id"></select></label>',
+    '<label>Follow-up to an earlier request<select name="previous_request_id"></select></label>',
+    input('title','Request title','text','required maxlength="300"'),
+    input('actor','Recording operator','text','required maxlength="500"'),
+    input('author','Message author or observing operator','text','required maxlength="500"'),
+    input('occurred_at','Original message or observation time','datetime-local','required step="0.001"'),
+    input('channel','Original channel','text','required placeholder="Email, customer portal, internal review…" maxlength="120"'),
+    input('provider_id','Original message or observation reference','text','required maxlength="500"'),
+    input('reference_url','Original source link (when available)','url'),
+    '<label>Source format<select name="format"><option value="text">Complete text</option><option value="json">Complete JSON</option></select></label>',
+    '</div><label>Read a complete original UTF-8 file<input id="cr-source-file" type="file" accept=".txt,.json,.eml,text/plain,application/json,message/rfc822"></label>',
+    '<p id="cr-source-status">Paste the complete original text or select its file, up to 1 MiB.</p>',
+    area('content','Complete original message or observation',8,'required spellcheck="false"'),
+    '<button id="cr-use-paste" type="button">Clear the selected file and enter text</button>',
+    '<h3>Affected leads in this edition</h3><p>Select the affected leads and retain the reported statement for each. An operator observation remains identified as an internal review.</p>',
+    '<div id="cr-intake-items"></div>',area('note','Internal intake note',3),
+    '<div class="actions"><button type="submit">Save original request</button><button type="button" data-cr-discard="cr-intake-form">Discard this draft</button></div></form></details>',
+    '<details id="cr-review-panel"><summary>Review each reported item</summary>',
+    '<form id="cr-review-form"><label>Saved request<select name="request_id" required></select></label>',
+    '<p id="cr-review-context"></p>',input('actor','Reviewing operator','text','required maxlength="500"'),
+    '<p>Reasons and the evidence below appear in the customer resolution. Use the internal note for team-only context.</p>',
+    '<div id="cr-review-items"></div>',area('note','Internal review note',3),
+    '<div class="actions"><button type="submit">Save complete review</button><button type="button" data-cr-discard="cr-review-form">Discard this draft</button></div></form></details>',
+    '<details id="cr-replace-panel"><summary>Prepare approved corrections</summary>',
+    '<form id="cr-replace-form"><label>Reviewed request<select name="request_id" required></select></label>',
+    '<p id="cr-replace-context"></p>',input('actor','Preparing operator','text','required maxlength="500"'),
+    '<div id="cr-replace-items"></div>',area('note','Internal preparation note',3),
+    '<div class="actions"><button id="cr-preview" type="button">Review revised selection</button><button id="cr-prepare" type="submit">Prepare complete replacement</button><button type="button" data-cr-discard="cr-replace-form">Discard this draft</button></div>',
+    '<div id="cr-replace-preview" role="status"></div></form></details>',
+    '<p class="muted">Prepared files become a recorded delivery only when the actual delivery is saved in Prepared customer editions. Existing commercial scope, invoices and payments stay with the original case.</p>',
+    '</section>'
+  ].join('');
+}
