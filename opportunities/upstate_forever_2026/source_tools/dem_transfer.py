@@ -407,7 +407,7 @@ def bundle(directory, archive):
                 for member in members:
                     out.write(directory / member["path"], member["path"])
                 out.writestr("transfer-bundle.json", canonical(manifest) + b"\n")
-            with pending.open("rb") as stream:
+            with pending.open("r+b" if os.name == "nt" else "rb") as stream:
                 os.fsync(stream.fileno())
             _fs.replace(pending, archive)
             _fs.sync_directory(archive.parent)
