@@ -6,6 +6,8 @@ same strong source validator. No geographic request is made by this module.
 """
 from __future__ import annotations
 
+from model import portable_fs as _fs
+
 import argparse
 import hashlib
 import json
@@ -35,11 +37,7 @@ def _positive(value, label):
 
 
 def _sync_directory(path):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    _fs.sync_directory(path)
 
 
 def _headers(value):
@@ -135,7 +133,7 @@ def _complete(path, receipt_path, original, selection, state):
     value.pop("error", None)
     atomic_json(receipt_path, value)
     if target != path:
-        os.replace(target, path)
+        _fs.replace(target, path)
         _sync_directory(path.parent)
     value["state"] = "complete"
     atomic_json(receipt_path, value)
@@ -180,7 +178,7 @@ def resume(path, *, maximum_bytes, chunk_bytes=DEFAULT_CHUNK_BYTES, progress=Non
                     or file_digest(existing) != receipt.get("sha256")):
                 raise ValueError("The completed original entity differs from its source receipt")
             if existing != path:
-                os.replace(existing, path)
+                _fs.replace(existing, path)
                 _sync_directory(path.parent)
             if receipt["state"] != "complete":
                 receipt["state"] = "complete"
