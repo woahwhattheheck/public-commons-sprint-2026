@@ -41,6 +41,14 @@ class Engine:
             raise IntelligenceError('Restore the exact original table, worksheet and reviewed reading options.',409) from error
         if preview is None:
             raise IntelligenceError('Choose the original table worksheet before reading its rows.',409)
+        choice=client.get('selection',{})
+        if any(type(choice.get(name)) is not int or choice[name]<0 for name in ('file_index','part_index')):
+            raise IntelligenceError('Restore the original file and worksheet selection.',409)
+        if preview.get('original_header_row')!=preview.get('reading_options',{}).get('header_row'):
+            raise IntelligenceError('Restore the matching original header-row selection.',409)
+        if path.suffix.lower() in {'.xlsx','.xlsm'} and (not isinstance(preview.get('original_worksheet'),str)
+                or preview['original_worksheet']!=record.get('sheet')):
+            raise IntelligenceError('Choose the exact original worksheet saved for this source.',409)
         return {name:preview.get(name) for name in ('original_fields','original_worksheet',
             'original_header_row','reading_options','source_format')}
 

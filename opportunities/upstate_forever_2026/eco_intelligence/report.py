@@ -66,7 +66,7 @@ def _table(headers, rows) -> str:
     return ('<div class="table-scroll"><table><thead><tr>'
             + ''.join('<th scope="col">'+html.escape(str(x))+'</th>' for x in headers)
             + '</tr></thead><tbody>'
-            + ''.join('<tr>'+''.join('<td>'+html.escape('â€”' if x is None else str(x))+'</td>' for x in row)+'</tr>' for row in rows)
+            + ''.join('<tr>'+''.join('<td>'+html.escape('-' if x is None else str(x))+'</td>' for x in row)+'</tr>' for row in rows)
             + '</tbody></table></div>')
 
 
