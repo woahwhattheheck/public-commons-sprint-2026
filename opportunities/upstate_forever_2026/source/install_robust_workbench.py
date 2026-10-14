@@ -1653,6 +1653,11 @@ ALLOWED = ALLOWED | frozenset({
     "source_tools/operator_source_intake.py",
 })
 
+# Restore retained collection Workspaces through the existing native receiver.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/collection_opening/receive_collection_studies.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
