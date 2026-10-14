@@ -1,0 +1,73 @@
+{
+  "schema": "upstate.collection-opening-component/v1",
+  "component": "ECO-PORT-OPENING-CLOUD-6795",
+  "owner_direction": "2026-10-14.1",
+  "files": [
+    {
+      "path": "Open_Workbench.cmd",
+      "bytes": 496,
+      "sha256": "3a3e643172b9de6ce8ce9f58a238405a6bf4147cc5589637a9d8b0ea0e374c4a",
+      "predecessor_sha256": [
+        "8db71f5571f8b0822ec748d7fd5a21736f942e6c7e12c26de9fbc143e1994f0e"
+      ],
+      "mode": "0644"
+    },
+    {
+      "path": "Open_Workbench.ps1",
+      "bytes": 3594,
+      "sha256": "66fa0ad5424c9c3ff1fbda5e7fd3a88be952bee999ede2f2434cdef283993bbe",
+      "predecessor_sha256": [],
+      "mode": "0644"
+    },
+    {
+      "path": "Open_Workbench.command",
+      "bytes": 2543,
+      "sha256": "6b3a6818c65d2f18f097ac11cd581f3fee40f2bc2184be3b8ec1bf3dda43df7e",
+      "predecessor_sha256": [],
+      "mode": "0755"
+    },
+    {
+      "path": "open_native_collection.py",
+      "bytes": 6946,
+      "sha256": "dc2d7880329983b5c9eb71aa4b20114684ab1ffd2b2c4b3d61d1f118e23c9031",
+      "predecessor_sha256": [],
+      "mode": "0644"
+    },
+    {
+      "path": "OPEN.sh",
+      "bytes": 1410,
+      "sha256": "0572bf3a058df28ab7557bc7a8a86c729a562523bc677022a3dd0e1efc59bdaf",
+      "predecessor_sha256": [
+        "4cfbf7a0e5bb0ceb699805156de096ee8cfaebed55d14f313a48b239c0136073"
+      ],
+      "mode": "0755"
+    },
+    {
+      "path": "Open_Native_Collection.sh",
+      "bytes": 4088,
+      "sha256": "a48dd6b5f50176760063c4e9834e951387fac4b08e115a2e28a75af213efe65e",
+      "predecessor_sha256": [
+        "85f0ba8c392e0d3beb80df8bf932b2076ac0e46c63167d8187ad3613eacce774"
+      ],
+      "mode": "0755"
+    },
+    {
+      "path": "prepare_runtime_dependencies.py",
+      "bytes": 15021,
+      "sha256": "de8c517e869981b6f3e2e12f7fab586def8b13ac65686813c13c9c79875afbb6",
+      "predecessor_sha256": [
+        "0fce3e9eb9d6e03c061c2fb7c88ceb557bdd7bd3e8198c9c4a82bffd85ed6284"
+      ],
+      "mode": "0644"
+    },
+    {
+      "path": "open_collection.py",
+      "bytes": 12395,
+      "sha256": "2c1ec455fd560dc7a2e37d928a96e877f1f9084aa73a4e199ca8c208d29b3398",
+      "predecessor_sha256": [
+        "5975d4ff9a4a3c491c6a104f9d2522ec48a82267ef637b83fd30ce14ecd4b25c"
+      ],
+      "mode": "0644"
+    }
+  ]
+}
