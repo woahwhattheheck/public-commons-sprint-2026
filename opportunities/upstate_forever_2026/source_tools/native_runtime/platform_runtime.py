@@ -21,7 +21,7 @@ def system_name(value=None):
 
 def machine_name(value):
     value = str(value).lower()
-    return {"amd64": "x86_64", "x64": "x86-64", "x86-64": "x86_64",
+    return {"amd64": "x86_64", "x64": "x86_64", "x86-64": "x86_64",
             "aarch64": "arm64"}.get(value, value)
 
 
