@@ -15,6 +15,7 @@ from urllib.parse import quote
 import numpy as np
 import rasterio
 from PIL import Image
+from .. import portable_fs as _fs
 from .ensemble_store import (atomic, digest, fingerprint, held, read, verify,
                              native_provenance as read_native_provenance)
 
@@ -26,17 +27,18 @@ SUPPORT_LABELS = {'all_pairs': 'All selected pairs, separately for each pollutan
 
 
 def text_file(path, text):
-    path = Path(path)
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = None
     try:
         with tempfile.NamedTemporaryFile(dir=path.parent, prefix='.report-', delete=False) as out:
-            pending = Path(out.name)
+            pending = _fs.native_path(out.name)
             out.write(text.encode('utf-8'))
             out.flush()
             os.fsync(out.fileno())
-        os.replace(pending, path)
+        _fs.replace(pending, path)
         pending = None
+        _fs.sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -67,6 +69,7 @@ def _number(value, decimals=5):
 
 def _preview(path, target, statistic):
     """Overview only; full-resolution quantitative data remain in the TIFF."""
+    path, target = _fs.native_path(path), _fs.native_path(target)
     with rasterio.open(path) as ds:
         scale = min(1.0, 760 / max(ds.width, ds.height))
         width, height = max(1, round(ds.width*scale)), max(1, round(ds.height*scale))
@@ -89,9 +92,19 @@ def _preview(path, target, statistic):
     else:
         low = high = None
     target.parent.mkdir(parents=True, exist_ok=True)
-    pending = target.with_name('.' + target.name + '.pending')
-    Image.fromarray(gray).save(pending, format='PNG')
-    os.replace(pending, target)
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.preview-', delete=False) as output:
+            pending = _fs.native_path(output.name)
+            Image.fromarray(gray).save(output, format='PNG')
+            output.flush()
+            os.fsync(output.fileno())
+        _fs.replace(pending, target)
+        pending = None
+        _fs.sync_directory(target.parent)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
     return {'path': target.name, 'width': width, 'height': height,
             'display_minimum': low, 'display_maximum': high,
             'sampled_minimum': lo, 'sampled_maximum': hi,
@@ -193,7 +206,7 @@ def _native_version_section(directory, analysis, descriptor):
     return section, [descriptor['path'], 'native-versions.csv'], record
 
 def export_reports(directory, *, native_provenance=None):
-    directory = Path(directory).resolve(strict=True)
+    directory = _fs.native_path(directory).resolve(strict=True)
     state = read(directory / 'analysis.json')
     if state.get('state') != 'complete' or state['id'] != digest(state['selection']):
         raise ValueError('Complete the original ensemble before exporting its report')
