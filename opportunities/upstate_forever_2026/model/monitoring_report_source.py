@@ -18,6 +18,8 @@ from pathlib import Path, PurePosixPath
 from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
                      file_digest, held, identifier, now, read_json, relative_file,
                      verify_file)
+from .portable_fs import (native_path as _native_fs_path,
+                          sync_directory as _sync_directory, publish_file as publish_new)
 
 SCHEMA = "upstate.monitoring-report-source/v1"
 EDITION = "monitoring-report-source/1"
@@ -83,7 +85,7 @@ def _copy_file(source, destination):
     pending = None
     try:
         with source.open("rb") as src, tempfile.NamedTemporaryFile(
-                dir=destination.parent, prefix=".report-", delete=False) as out:
+                dir=_native_fs_path(destination.parent), prefix=".report-", delete=False) as out:
             pending = Path(out.name)
             shutil.copyfileobj(src, out, 1024 * 1024)
             out.flush()
@@ -91,15 +93,11 @@ def _copy_file(source, destination):
         if pending.stat().st_size != size or file_digest(pending) != checksum:
             raise ValueError("Source changed during monitoring report capture")
         try:
-            os.link(pending, destination)
+            publish_new(pending, destination)
         except FileExistsError:
             if destination.stat().st_size != size or file_digest(destination) != checksum:
                 raise ValueError("Concurrent report member differs")
-        fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _sync_directory(destination.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -169,21 +167,20 @@ def _bundle(path, selection, *, target=None):
                         raise ValueError("Previously retained native manifest differs")
                     continue
                 destination.parent.mkdir(parents=True, exist_ok=True)
-                with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False,
-                                                  prefix=".extract-") as out:
-                    pending = Path(out.name)
-                    try:
+                pending = None
+                try:
+                    with tempfile.NamedTemporaryFile(dir=_native_fs_path(destination.parent),
+                                                      delete=False, prefix=".extract-") as out:
+                        pending = Path(out.name)
                         with archive.open(name) as src:
                             shutil.copyfileobj(src, out, 1024 * 1024)
                         out.flush()
                         os.fsync(out.fileno())
-                    except BaseException:
-                        pending.unlink(missing_ok=True)
-                        raise
-                try:
                     _copy_file(pending, destination)
                 finally:
-                    pending.unlink(missing_ok=True)
+                    # Windows must close the temporary handle before removing it.
+                    if pending is not None:
+                        pending.unlink(missing_ok=True)
         return {"plan": plan, "network": network, "campaign": campaign,
                 "history": history, "events": events, "manifest": manifest,
                 "utility_contexts": utility_contexts}

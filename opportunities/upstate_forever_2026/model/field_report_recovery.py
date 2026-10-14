@@ -19,6 +19,8 @@ import uuid
 from . import field_report_adoption as adoption
 from . import field_report_presentation as presentation
 from .common import atomic_bytes, canonical, describe_file, digest, identifier, read_json
+from .portable_fs import (native_path as _native_fs_path,
+                          sync_directory as _sync_directory, publish_file as publish_new)
 from .implementation import ImplementationStore, _file_lock
 from .implementation_schema import ImplementationError, canonical_bytes
 from .portable_implementation import report_edition
@@ -208,7 +210,7 @@ def _copy(source, target, expected):
         if _identity(source) != expected:
             raise ImplementationError("The original member changed after recovery admission.")
         return
-    temporary = target.with_name(".recovery-copy-" + uuid.uuid4().hex)
+    temporary = _native_fs_path(target.with_name(".recovery-copy-" + uuid.uuid4().hex))
     try:
         before = source.stat()
         checksum, size = hashlib.sha256(), 0
@@ -226,12 +228,13 @@ def _copy(source, target, expected):
         if {"bytes": size, "sha256": checksum.hexdigest()} != expected:
             raise ImplementationError("A complete copied source differs from its original inventory.")
         try:
-            os.link(temporary, target)
+            publish_new(temporary, target)
         except FileExistsError:
             if _identity(target) != expected:
                 raise ImplementationError("A different recovery member already occupies this exact path.")
         if _identity(target) != expected:
             raise ImplementationError("The retained recovery copy changed.")
+        _sync_directory(target.parent)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -270,17 +273,9 @@ def _preserve_initial_staging(directory, expected_bodies):
         _copy(path, destination, identity)
         if _identity(path) != identity:
             raise ImplementationError("An initial staging member changed before private retention.")
-        fd = os.open(retained, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _sync_directory(retained)
         path.unlink()
-    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    _sync_directory(directory)
 
 
 def _load_renderer(directory, kind, files):

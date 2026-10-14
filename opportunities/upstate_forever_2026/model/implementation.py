@@ -19,6 +19,9 @@ from .implementation_schema import (
     _safe_id, _integer, _timestamp,
 )
 from .implementation_reporting import render_report_html, report_csv
+from .portable_fs import (native_path as _native_fs_path, replace as _replace_original,
+                          sync_directory as _sync_directory, locked as _held,
+                          publish_file as publish_new)
 
 
 def _source_references(row):
@@ -75,16 +78,13 @@ def _same_json(left, right) -> bool:
 
 
 def _fsync_directory(directory: Path) -> None:
-    if os.name != "nt":
-        descriptor = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+    _sync_directory(directory)
 
 
 def _atomic_bytes(path: Path, content: bytes, *, replace: bool = False) -> Path:
-    """Publish fully flushed bytes, using an exclusive link unless replace is requested."""
+    """Publish fully flushed bytes without overwriting an existing revision."""
+    original = path
+    path = _native_fs_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.is_symlink():
         raise ImplementationError(f"Refusing to write through symlink: {path}")
@@ -96,16 +96,16 @@ def _atomic_bytes(path: Path, content: bytes, *, replace: bool = False) -> Path:
             handle.flush()
             os.fsync(handle.fileno())
         if replace:
-            os.replace(temporary, path)
+            _replace_original(temporary, path)
         else:
-            # Same-filesystem hard link is atomic and cannot overwrite a concurrent create.
-            os.link(temporary, path)
-            temporary.unlink()
+            # Retain exclusive-create semantics on every supported filesystem.
+            publish_new(temporary, path)
+            temporary.unlink(missing_ok=True)
         _fsync_directory(path.parent)
-        return path
+        return original
     finally:
         if temporary.exists():
-            temporary.unlink()
+            temporary.unlink(missing_ok=True)
 
 
 def _safe_output(path: str | Path, content: str, overwrite: bool) -> str:
@@ -121,35 +121,12 @@ def _safe_output(path: str | Path, content: str, overwrite: bool) -> str:
 
 @contextmanager
 def _file_lock(lock_path, *, blocking=True):
-    """Use the same advisory lock for native writes and portable capture."""
-    lock_path = Path(lock_path)
-    lock_path.parent.mkdir(parents=True, exist_ok=True)
+    """Use the platform's same exclusive lock for writes and portable capture."""
+    lock_path = _native_fs_path(lock_path)
     if lock_path.is_symlink():
         raise ImplementationError("Plan lock path must not be a symlink.")
-    flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
-    descriptor = os.open(lock_path, flags, 0o600)
-    handle = os.fdopen(descriptor, "r+b", buffering=0)
-    try:
-        if os.name == "nt":
-            import msvcrt
-            if os.fstat(descriptor).st_size == 0:
-                handle.write(b"\0")
-                handle.flush()
-            handle.seek(0)
-            msvcrt.locking(descriptor, msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(descriptor, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
-        try:
-            yield
-        finally:
-            if os.name == "nt":
-                handle.seek(0)
-                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
-            else:
-                fcntl.flock(descriptor, fcntl.LOCK_UN)
-    finally:
-        handle.close()
+    with _held(lock_path, blocking=blocking):
+        yield
 
 
 class ImplementationStore:
@@ -531,7 +508,7 @@ class ImplementationStore:
             if attachments.is_symlink():
                 raise ImplementationError("Attachment directory must not be a symlink.")
             attachments.mkdir(exist_ok=True)
-            descriptor, temporary_name = tempfile.mkstemp(prefix=".pending-", dir=attachments)
+            descriptor, temporary_name = tempfile.mkstemp(prefix=".pending-", dir=_native_fs_path(attachments))
             temporary = Path(temporary_name)
             digest = hashlib.sha256()
             byte_count = 0
@@ -553,7 +530,7 @@ class ImplementationStore:
                 if destination_path.is_symlink():
                     raise ImplementationError(f"Attachment destination is a symlink: {destination_path}")
                 try:
-                    os.link(temporary, destination_path)
+                    publish_new(temporary, destination_path)
                 except FileExistsError:
                     check = hashlib.sha256()
                     with destination_path.open("rb") as existing:
@@ -589,7 +566,7 @@ class ImplementationStore:
                 return dict(plan=saved, source_link=link, file_ref=str(destination_path))
             finally:
                 if temporary.exists():
-                    temporary.unlink()
+                    temporary.unlink(missing_ok=True)
 
     def export_json(self, plan_id: str, path: str | Path,
                     revision: int | None = None, *, overwrite: bool = False) -> str:
@@ -632,8 +609,8 @@ class ImplementationStore:
             # If interrupted, manifest.json is absent until the final move below.
             parent.mkdir()
             for filename in filenames:
-                os.replace(staging / filename, parent / filename)
-            os.replace(staging / "manifest.json", parent / "manifest.json")
+                _replace_original(staging / filename, parent / filename)
+            _replace_original(staging / "manifest.json", parent / "manifest.json")
             _fsync_directory(parent)
             _fsync_directory(parent.parent)
             return dict(

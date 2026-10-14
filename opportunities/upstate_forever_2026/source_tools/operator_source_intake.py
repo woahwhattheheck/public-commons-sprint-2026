@@ -2,9 +2,16 @@
 """Prepare and compose original regional sources through a running native operator."""
 from __future__ import annotations
 
+import sys as _platform_sys
+from pathlib import Path as _PlatformPath
+_platform_root = str(_PlatformPath(__file__).resolve().parents[1])
+if _platform_root not in _platform_sys.path:
+    _platform_sys.path.insert(0, _platform_root)
+from model import portable_fs as _fs
+
 import argparse
 import datetime as dt
-import fcntl
+fcntl = _fs.file_locks
 import hashlib
 import ipaddress
 import json
@@ -81,16 +88,19 @@ def operation(prefix, suffix):
 
 def secret(args):
     if args.capability_file:
-        flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(args.capability_file, flags)
-        with os.fdopen(fd, "rb") as handle:
-            info = os.fstat(handle.fileno())
-            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
-                    or stat.S_IMODE(info.st_mode) & 0o077):
-                raise IntakeError("The capability file must be an ordinary file owned by this user with mode 0600 or 0400.")
-            raw = handle.read(4097)
-            if len(raw) > 4096:
-                raise IntakeError("The capability file must contain only the current operator capability.")
+        # Support both module import and the original direct-script entry point.
+        try:
+            from source_tools.private_capability import read_private_file
+        except ModuleNotFoundError as error:
+            if error.name != "source_tools":
+                raise
+            from private_capability import read_private_file
+        try:
+            raw = read_private_file(args.capability_file)
+        except (OSError, ValueError) as error:
+            raise IntakeError("Choose a private capability file owned by the current user. "
+                              "On Windows, allow only this user, SYSTEM and Administrators; "
+                              "on macOS/Linux, use mode 0600 or 0400.") from error
         try:
             value = raw.decode("utf-8").strip()
         except UnicodeError as error:
@@ -289,13 +299,9 @@ def save(path, value):
             handle.write(canonical(value) + b"\n")
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(pending, path)
+        _fs.replace(pending, path)
         pending = None
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _fs.sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -458,7 +464,7 @@ def run(client, args, state, project, catalog):
     output = Path(os.path.abspath(args.output))
     output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock_path = output.with_name(output.name + ".lock")
-    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    fd = _fs.open_file(lock_path, os.O_CREAT | os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if output.is_symlink():
@@ -776,8 +782,8 @@ def run_source_plan(client, args, state, project, catalog):
                  "registered_ids": manifests, "operation_id": args.operation_id, "title": title}
     output = Path(os.path.abspath(args.output))
     output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd = os.open(output.with_name(output.name + ".lock"),
-                 os.O_CREAT | os.O_RDWR | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    fd = _fs.open_file(output.with_name(output.name + ".lock"),
+                 os.O_CREAT | os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if output.is_symlink():

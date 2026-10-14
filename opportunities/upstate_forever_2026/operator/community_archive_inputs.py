@@ -16,6 +16,9 @@ import tempfile
 import zipfile
 
 from model import community_report_context, community_report_handover
+from model.portable_fs import (native_path as _native_fs_path,
+                               sync_directory as _sync_directory, publish_file as publish_new,
+                               open_file, fd_stat, path_stat)
 
 PACKAGE_BYTES = 270296
 PACKAGE_SHA256 = "dd952535cc715a9a12aa2f665c5cddae0878dcb55d11792cd70e8cdbd1cc685e"
@@ -40,16 +43,16 @@ def _identity(value):
 
 def _read(path, expected_bytes=None, expected_sha256=None):
     path = Path(path).absolute()
-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
+    descriptor = open_file(path, os.O_RDONLY)
     with os.fdopen(descriptor, "rb") as stream:
-        before = os.fstat(stream.fileno())
+        before = fd_stat(stream.fileno())
         if not stat.S_ISREG(before.st_mode):
             raise ValueError("Receive the original as a regular file: " + str(path))
         if expected_bytes is not None and before.st_size != expected_bytes:
             raise ValueError("The original byte count changed: " + str(path))
         body = stream.read()
-        if (_identity(os.fstat(stream.fileno())) != _identity(before)
-                or _identity(path.lstat()) != _identity(before)):
+        if (_identity(fd_stat(stream.fileno())) != _identity(before)
+                or _identity(path_stat(path)) != _identity(before)):
             raise ValueError("The original changed during receiving: " + str(path))
     if expected_sha256 is not None and _sha(body) != expected_sha256:
         raise ValueError("The complete original SHA256 changed: " + str(path))
@@ -119,22 +122,18 @@ def _retain(root, relative, body):
         # Keep an interrupted temporary write outside the frozen original-member
         # directory, so it cannot prevent continuation of the same selected input.
         staging = _directory(root.parent, (".community-input-staging",))
-        with tempfile.NamedTemporaryFile(dir=staging, prefix=".community-input-",
+        with tempfile.NamedTemporaryFile(dir=_native_fs_path(staging), prefix=".community-input-",
                                          delete=False) as stream:
             temporary = Path(stream.name)
             stream.write(body)
             stream.flush()
             os.fsync(stream.fileno())
         try:
-            os.link(temporary, destination)
+            publish_new(temporary, destination)
         except FileExistsError:
             if _read(destination, len(body), _sha(body)) != body:
                 raise ValueError("An original input was concurrently changed")
-        directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+        _sync_directory(parent)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
