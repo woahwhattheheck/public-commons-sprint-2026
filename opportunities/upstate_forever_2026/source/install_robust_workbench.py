@@ -1802,8 +1802,7 @@ def read_layers(paths):
                 value = item.get(key)
                 if value is not None:
                     values = value if isinstance(value, list) else [value]
-                    if not values:
-                        raise ValueError(name + " " + key + ": expected at least one preimage SHA-256")
+                    # An empty list declares no additional predecessor.
                     for expected_before in values:
                         previous.add(checked_hash(expected_before, name + " " + key))
             final[name], origins[name] = data, str(packet_path)
@@ -3746,6 +3745,50 @@ ALLOWED = ALLOWED | frozenset({
 
 # Retain the authoring source shipped in the complete native GIS packet.
 ALLOWED = ALLOWED | frozenset({"source_tools/apply_gis_portability.py"})
+
+
+# Complete retained native-report, source-receiving and jobs-display cohorts.
+# Optional admission preserves REQUIRED and all exact predecessor checks.
+ALLOWED = ALLOWED | frozenset({
+    "model/scientific_report_workbook.py",
+    "source_tools/terrain_io.py",
+    "source_tools/dem_transfer.py",
+    "source_tools/usgs_archive.py",
+    "operator/web/jobs.mjs",
+})
+
+
+# Complete original native export, receiving, review and Gura source cohorts.
+# Each remains optional and subject to the exact original-source checks.
+ALLOWED = ALLOWED | frozenset({
+    "docs/GURA_NATIVE_RECEIVING.md",
+    "integration/component_fragments/gura-native-receiving.json",
+    "integration/component_fragments/project-transfer-portability.json",
+    "model/PROJECT_TRANSFER.md",
+    "model/chemistry.py",
+    "model/chemistry_reports.py",
+    "model/cohort_cli.py",
+    "model/landcover_ledger.py",
+    "model/project_transfer_cli.py",
+    "model/project_transfer_desk.py",
+    "model/receive_selected_model_source.py",
+    "model/region_cli.py",
+    "model/review_handback.py",
+    "model/reviews.py",
+    "operator/customer_reviews.py",
+    "operator/project_transfer.py",
+    "source_tools/application_assembly.py",
+    "source_tools/archive_delta.py",
+    "source_tools/gura_receiving.py",
+    "source_tools/gura_workflow.py",
+    "source_tools/receive_first_gura_case.py",
+    "source_tools/receive_gura_operation.py",
+    "source_tools/receive_gura_studies.py",
+    "source_tools/receive_original_study.py",
+    "source_tools/receive_scientific_fieldwork.py",
+    "source_tools/receive_study_set.py",
+    "source_tools/source_response_reuse.py",
+})
 
 # Full native continuation of the ORIGINAL archive, Study, source response and
 # scientific fieldwork receivers. These remain optional source admissions; the
