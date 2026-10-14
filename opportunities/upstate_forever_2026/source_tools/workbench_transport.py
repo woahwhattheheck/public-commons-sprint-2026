@@ -193,6 +193,15 @@ class Controller:
             fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
             os.close(fd)
+            retained = _private_json(self.root / "workbench-transport.json")
+            if (retained.get("schema") != SCHEMA
+                    or retained.get("hostname") != socket.gethostname()
+                    or retained.get("application") != self.prepared["application"]
+                    or retained.get("project_id") != self.prepared["project_id"]
+                    or retained.get("config") != self.prepared["config"]):
+                raise ValueError("The existing HTTPS connection belongs to another private selection. "
+                                 "Reopen its matching configuration or close its owning terminal "
+                                 "before selecting a different configuration.")
             self.reused = True
             print(json.dumps({"event": "workbench_https", "state": "existing-owner"}), flush=True)
             return
