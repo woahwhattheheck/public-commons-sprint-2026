@@ -1,0 +1,3 @@
+# Actual Markdown MIME receiving
+
+An actual customer message used text/plain for two .md customer attachments. The maintained manifest allowed only text/markdown for .md and rejected the real original payload before byte comparison. This successor admits text/plain as an additional .md representation. The original MIME type is retained throughout manifest, original payload, FULL, RAW and receipt; filename, source bytes, content hashes, total size and all part positions still must match exactly. All other extension/type restrictions remain. The actual five-attachment message now reopens with one delivery and exact same-ID replay; changing the .md MIME to application/octet-stream still rejects.
