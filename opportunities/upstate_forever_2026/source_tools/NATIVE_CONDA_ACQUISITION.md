@@ -24,6 +24,53 @@ The current environment has 15 requested packages. Original environment SHA-256:
 
 The maintained file, not this sentence, supplies every package constraint. Python 3.12 and InVEST 3.20.0 stay selected; their transitive dependencies are the solver's complete actual selection. Package names, versions, builds, subdirectories, public origins and publisher digests travel together.
 
+## Stream directly into volumes on a small network host
+
+When the connected host cannot hold both the compressed cache and its transfer
+copy, add `--stream-volumes` to the same acquisition command. Use a new owned
+transfer directory for this mode, and adopt the existing `--solution` and caches;
+the environment is not solved again. All targets use the same implementation:
+
+```sh
+python source_tools/native_runtime/conda_cache.py acquire \
+  --environment environment.yml --target macos-arm64 \
+  --work /ABS/OWNED/arm-streamed-transfer \
+  --solution /ABS/EXISTING/arm-solver.json \
+  --package-cache /ABS/EXISTING/pkgs --stream-volumes
+```
+
+This streams each original compressed package directly from a matching read-only
+cache or its original HTTPS origin into the final stored ZIP volume. It checks
+the original solver's package size and publisher checksum while copying, keeps
+all metadata and license bodies untouched, and creates no `pkgs` copy in the
+transfer directory. The selected package sizes are required to keep every
+volume under its declared transfer limit. The standard cached mode remains
+available unchanged.
+
+`solver.json` and `selected-plan.json` expose the complete original selection
+before package acquisition. Each completed volume is flushed and committed,
+then announced on standard output with its filename, size, hashes and members.
+`transfer-progress.json` retains those completed volume identities immediately,
+so the existing private file carrier can move their bytes while the next volume
+is being acquired. It is a progress record, not the final receiving manifest.
+The completed operation writes the same `selection.json`, `upstream-explicit.txt`
+and `parts.json` used by the existing receiving command below.
+
+Continue with the same command, work directory and original selection. Completed
+volumes are reused directly even when their original cache or network source is
+unavailable. After a process interruption, only that work directory's reserved
+`.a64pNNN.zip.streaming.partial` file for the unfinished volume is discarded and
+rebuilt. Other targets use their existing volume prefix. The kernel work lock
+prevents two writers from taking the same directory. A dropped transfer retries
+only the unfinished volume and respects the original publisher's Retry-After;
+completed volumes and external caches remain intact. Keep completed volumes in
+the producer directory until the operation has produced its final `parts.json`.
+
+Storage for this mode is one compressed package set in its transfer ZIPs, plus
+small indexes and any pre-existing solver cache. Packages are never extracted
+on the network host. The healthy receiving host performs cache extraction,
+native linking and the maintained source-preserving packing path.
+
 ## Move completed acquisition to another cloud
 
 Transfer `parts.json` and every listed `w64pNNN.zip` from that same work directory. Also retain `environment.yml`, `solver.json`, `selection.json` and `upstream-explicit.txt` alongside the original operation. Volumes default to 384 MiB and contain unchanged compressed packages, not another installed environment. The completed manifest is written after every required package and volume has completed.

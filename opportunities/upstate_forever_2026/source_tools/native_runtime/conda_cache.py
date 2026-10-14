@@ -375,11 +375,154 @@ def make_parts(work, selection, limit):
             "license_bodies": "Original archives retain all publisher-supplied metadata and info/licenses bodies"}
 
 
+
+def stream_package(reader, writer, package):
+    """Copy an original compressed package once, verifying publisher metadata."""
+    sha, md5, size = hashlib.sha256(), hashlib.md5(), 0
+    expected = package["expected_bytes"]
+    for block in iter(lambda: reader.read(BLOCK), b""):
+        size += len(block)
+        if size > expected:
+            raise AcquisitionError("Package exceeds its selected size: " + package["filename"])
+        if writer is not None:
+            writer.write(block)
+        sha.update(block)
+        md5.update(block)
+    observed = {"bytes": size, "sha256": sha.hexdigest(), "md5": md5.hexdigest()}
+    if size != expected or any(observed[key] != value for key, value in package["publisher"].items()):
+        raise AcquisitionError("Publisher checksum or size mismatch: " + package["filename"])
+    return {**package, **observed}
+
+
+@contextmanager
+def package_reader(package, work, caches, offline):
+    """Borrow matching caches read-only; otherwise stream the original HTTPS URL."""
+    for cache in [work, *map(Path, caches)]:
+        candidates = (cache / package["filename"], cache / package["subdir"] / package["filename"],
+                      cache / package["cache_path"])
+        for source in candidates:
+            if matches(source, package):
+                with source.open("rb") as reader:
+                    yield reader
+                return
+    if offline:
+        raise AcquisitionError("Original package bytes missing from supplied caches: " + package["filename"])
+    request = Request(package["url"], headers={"User-Agent": "Ecosystem-Software-Acquisition/1.0"})
+    with urlopen(request, timeout=90) as reader:
+        if urlsplit(reader.geturl()).scheme != "https":
+            raise AcquisitionError("Package download redirected outside HTTPS: " + package["filename"])
+        yield reader
+
+
+def stream_parts(work, selection, caches, offline, limit):
+    """Keep one compressed copy, in final transfer volumes, on a constrained host.
+
+    Each volume is an independently committed unit. A dropped transfer retries
+    only the current unfinished volume. Completed volumes retain their names,
+    original package bodies and the existing receiver's manifest format.
+    """
+    if limit < 2 * BLOCK or limit > 500 * BLOCK:
+        raise AcquisitionError("Select transfer volumes between 2 and 500 MiB")
+    budget = limit - BLOCK
+    groups, current, amount = [], [], 0
+    for package in selection["packages"]:
+        expected = package.get("expected_bytes")
+        if not isinstance(expected, int) or isinstance(expected, bool) or expected <= 0:
+            raise AcquisitionError("Streaming requires the original solver package size: " + package["filename"])
+        if expected > budget:
+            raise AcquisitionError("A package exceeds the selected part limit: " + package["filename"])
+        if current and amount + expected > budget:
+            groups.append(current)
+            current, amount = [], 0
+        current.append(package)
+        amount += expected
+    if current:
+        groups.append(current)
+    parts, completed = [], []
+    prefix = PREFIXES[selection["subdir"]]
+    for number, packages in enumerate(groups, 1):
+        name = prefix + "p" + str(number).zfill(3) + ".zip"
+        output = work / name
+        expected_members = [p["cache_path"] for p in packages]
+        if output.exists() or output.is_symlink():
+            if output.is_symlink() or not output.is_file() or output.stat().st_size > limit:
+                raise AcquisitionError("Changed existing transfer volume: " + name)
+            found = []
+            with zipfile.ZipFile(output) as archive:
+                if archive.namelist() != expected_members:
+                    raise AcquisitionError("Existing transfer volume belongs to another selection: " + name)
+                for member, package in zip(archive.infolist(), packages):
+                    if member.file_size != package["expected_bytes"]:
+                        raise AcquisitionError("Existing transfer volume has changed: " + name)
+                    with archive.open(member) as reader:
+                        found.append(stream_package(reader, None, package))
+        else:
+            for attempt in range(3):
+                # This reserved scratch name belongs to the request-bound work
+                # directory and its kernel lock. Resume discards only that same
+                # unfinished volume, including after process termination.
+                temporary = work / ("." + name + ".streaming.partial")
+                if temporary.is_symlink() or (temporary.exists() and not temporary.is_file()):
+                    raise AcquisitionError("Unexpected streaming scratch path: " + str(temporary))
+                if temporary.exists():
+                    temporary.unlink()
+                fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                os.close(fd)
+                found = []
+                try:
+                    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
+                        for package in packages:
+                            with package_reader(package, work, caches, offline) as reader:
+                                with archive.open(package["cache_path"], "w", force_zip64=True) as writer:
+                                    found.append(stream_package(reader, writer, package))
+                    if os.path.getsize(temporary) > limit:
+                        raise AcquisitionError("Transfer ZIP exceeds the selected byte limit")
+                    # Commit the completed volume before publishing its identity.
+                    with open(temporary, "r+b") as stream:
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    os.replace(temporary, output)
+                    break
+                except (URLError, TimeoutError, ConnectionError) as error:
+                    if isinstance(error, HTTPError) and error.code not in (408, 429, 500, 502, 503, 504):
+                        raise
+                    if attempt == 2:
+                        raise
+                    delay = attempt + 1
+                    if isinstance(error, HTTPError) and error.headers.get("Retry-After"):
+                        retry = error.headers["Retry-After"]
+                        try:
+                            delay = max(delay, int(retry))
+                        except ValueError:
+                            delay = max(delay, parsedate_to_datetime(retry).timestamp() - time.time())
+                        if delay > 120:
+                            raise AcquisitionError("Publisher requested Retry-After " + retry + "; resume this same work later") from error
+                    time.sleep(delay)
+                finally:
+                    if os.path.exists(temporary):
+                        os.unlink(temporary)
+        completed.extend(found)
+        part = {"filename": name, **digests(output), "members": expected_members}
+        parts.append(part)
+        write_json(work / "transfer-progress.json", {
+            "schema": "upstate.native-conda-transfer-progress/v1",
+            "target": selection["target"], "solver_sha256": selection["solver_sha256"],
+            "environment_sha256": selection["environment_sha256"],
+            "parts": parts, "completed_packages": completed,
+            "total_packages": len(selection["packages"]), "total_parts": len(groups),
+        })
+        print(json.dumps({"part": part, "completed": len(completed),
+                          "total": len(selection["packages"])}), flush=True)
+    return {"schema": SCHEMA, "selection": {**selection, "packages": completed}, "parts": parts,
+            "license_bodies": "Original archives retain all publisher-supplied metadata and info/licenses bodies"}
+
 def acquire(args):
     raw, roots = read_environment(args.environment)
     request = {"schema": SCHEMA, "environment_sha256": hashlib.sha256(raw).hexdigest(),
                "target": args.target, "subdir": TARGETS[args.target], "roots": roots,
                "part_bytes": args.part_bytes}
+    if getattr(args, "stream_volumes", False):
+        request["transfer_mode"] = "stream-volumes"
     with locked(args.work) as work:
         prior = work / "request.json"
         if prior.exists() and json.loads(prior.read_text()) != request:
@@ -389,15 +532,26 @@ def acquire(args):
         selected = solve(request, work, args.manager, args.solution, args.offline)
         packages = selected_packages(selected, request["subdir"], roots)
         caches = list(args.package_cache) + [str(work / "solver-cache" / "pkgs")]
-        completed = []
-        for package in packages:
-            completed.append(acquire_package(package, work, caches, args.offline))
-            print(json.dumps({"package": package["filename"], "completed": len(completed), "total": len(packages)}), flush=True)
-        selection = {**request, "solver_sha256": digests(work / "solver.json")["sha256"], "packages": completed}
+        selection = {**request, "solver_sha256": digests(work / "solver.json")["sha256"], "packages": packages}
+        if getattr(args, "stream_volumes", False):
+            # The plan is the full original solve, available before byte acquisition.
+            # Only the final selection/parts files assert complete received bytes.
+            write_json(work / "selected-plan.json", selection)
+            manifest = stream_parts(work, selection, caches, args.offline, args.part_bytes)
+            selection = manifest["selection"]
+            completed = selection["packages"]
+        else:
+            completed = []
+            for package in packages:
+                completed.append(acquire_package(package, work, caches, args.offline))
+                print(json.dumps({"package": package["filename"], "completed": len(completed), "total": len(packages)}), flush=True)
+            selection = {**selection, "packages": completed}
+            manifest = None
         write_json(work / "selection.json", selection)
         lines = ["@EXPLICIT"] + [p["url"] + ("#" + p["md5"] if p.get("md5") else "") for p in completed]
         atomic_bytes(work / "upstream-explicit.txt", ("\n".join(lines) + "\n").encode())
-        manifest = make_parts(work, selection, args.part_bytes)
+        if manifest is None:
+            manifest = make_parts(work, selection, args.part_bytes)
         write_json(work / "parts.json", manifest)
         return {"state": "complete", "manifest": str(work / "parts.json"),
                 "packages": len(completed), "package_bytes": sum(p["bytes"] for p in completed),
@@ -484,6 +638,8 @@ def parser():
     command.add_argument("--package-cache", action="append", default=[], help="read-only existing cache, may be repeated")
     command.add_argument("--offline", action="store_true")
     command.add_argument("--part-bytes", type=int, default=384 * BLOCK)
+    command.add_argument("--stream-volumes", action="store_true",
+                         help="stream original packages directly into transfer ZIPs without a duplicate local cache")
     command = commands.add_parser("receive", help="receive complete original packages and write a local explicit lock")
     command.add_argument("--manifest", required=True, type=Path)
     command.add_argument("--destination", required=True, type=Path)
