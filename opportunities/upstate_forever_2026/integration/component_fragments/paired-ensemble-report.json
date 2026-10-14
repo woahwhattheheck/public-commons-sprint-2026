@@ -10,6 +10,7 @@
         "model/paired_ensemble/ensemble_store.py",
         "model/paired_ensemble/ensemble_portable.py",
         "model/paired_ensemble/ensemble_report.py",
+        "model/paired_ensemble/ensemble_rasters.py",
         "model/portable_fs.py",
         "model/windows_fs.py",
         "model/paired_ensemble/REPORT_SOURCE.md",
