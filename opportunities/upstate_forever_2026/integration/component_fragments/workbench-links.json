@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "workbench-links",
+  "components": {
+    "workbench-links": {
+      "paths": [
+        "operator/workbench_links.py",
+        "operator/web/workbench_links.mjs",
+        "operator/web/workbench_links.css",
+        "operator/web/workbench_recovery_sw.mjs",
+        "operator/web/workbench_reopen.html",
+        "operator/server.py",
+        "operator/web/app.mjs",
+        "operator/web/index.html",
+        "WORKBENCH_LINKS.md",
+        "source_tools/apply_workbench_links.py"
+      ],
+      "requires": []
+    }
+  },
+  "required_components": [
+    "workbench-links"
+  ],
+  "source_reference": "Owner direction 2026-10-14.1; RL59 items55/59"
+}
