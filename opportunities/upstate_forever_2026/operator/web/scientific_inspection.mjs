@@ -2,6 +2,7 @@
  * Readable inspection of original operator records.
  * Read-only: no requests, model calculation, source edits or task submission.
  */
+import {renderSourceInspectionSummary,SOURCE_INSPECTION_SUMMARY_CSS} from './source_inspection_summary.mjs';
 export const SCIENTIFIC_INSPECTION_VERSION='upstate.scientific-inspection/v1';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const own=(v,k)=>v!==null&&typeof v==='object'&&Object.prototype.hasOwnProperty.call(v,k);
@@ -27,7 +28,7 @@ const labels={
  threshold_flow_accumulation:'Stream-initiation threshold (cells)',flow_dir_algorithm:'Flow-routing algorithm',
  k_param:'Connectivity shape parameter k',subsurface_critical_length_n:'Subsurface nitrogen retention length (m)',
  subsurface_eff_n:'Maximum subsurface nitrogen retention fraction',runoff_proxy_av:'Runoff-proxy average',
- sdr_max:'Maximum sediment delivery ratio',ic_0_param:'Connectivity-index midpoint',l_max:'Maximum slope length (m)',
+ sdr_max:'Maximum sediment delivery ratio',ic_0_param:'Connectivity-index midpoint',l_max:'Maximum L factor (dimensionless)',
  lucode:'Land-cover code',lucodes:'Land-cover codes',from_codes:'Original land-cover codes',to_code:'Destination land-cover code',
  load_n:'Nitrogen loading',load_p:'Phosphorus loading',load_type_n:'Nitrogen loading basis',load_type_p:'Phosphorus loading basis',
  eff_n:'Nitrogen retention fraction',eff_p:'Phosphorus retention fraction',crit_len_n:'Nitrogen retention length (m)',
@@ -164,6 +165,34 @@ export function scientificTask(task,data={}){
  if(attempts.length)html+='<details class="scientific-group"><summary>'+attempts.length+' retained execution '+(attempts.length===1?'attempt':'attempts')+'</summary>'+attempts.map((a,i)=>'<section><h4>Attempt '+esc(a.number??i+1)+'</h4>'+scientificFields(Object.fromEntries(Object.entries(a).filter(([k])=>k!=='error')),{data})+(a.error?scientificError(a.error,{state:a.state}):'')+'</section>').join('')+'</details>';
  return html+'</section>';
 }
+/** Retained native comparison totals; presentation only, with no new calculation. */
+export function scientificComparison(record,data={}){
+ if(!object(record)||!Array.isArray(record.alternatives))return '';
+ const number=value=>typeof value==='number'&&Number.isFinite(value)?value.toLocaleString('en-US',{maximumFractionDigits:6}):plain(value);
+ const annualUnits=item=>String(item?.sum_units||item?.units||'Not supplied').replace('/pixel','').replace('metric_tonnes','metric tonnes');
+ const name=id=>namedRecord(data,'runs',id)||('Run '+String(id||'Not supplied').slice(0,12));
+ const baseline=name(record.baseline_run_id);
+ let html='<section class="scientific-section comparison-summary"><h2>Annual change from the baseline</h2><p class="comparison-baseline"><strong>Baseline:</strong> '+esc(baseline)+'</p>'+
+  '<p class="scientific-note">Signed differences: '+esc(record.direction||'Direction not supplied')+'. Annual changes and valid-cell counts are copied from this saved comparison. Original raster-cell units and provenance remain in the expandable details.</p>';
+ if(!record.alternatives.length)return html+'<p>No alternative results are retained in this comparison.</p></section>';
+ for(const alternative of record.alternatives){
+  const profile=alternative.profile_changed===true?'Yes':alternative.profile_changed===false?'No':'Not retained';
+  const artifacts=object(alternative.artifacts)?Object.entries(alternative.artifacts):[];
+  html+='<section class="comparison-alternative"><h3>Alternative: '+esc(name(alternative.run_id))+'</h3><p><strong>Parameter profile also changes:</strong> '+esc(profile)+'</p>';
+  if(artifacts.length){
+   html+='<table class="comparison-table"><thead><tr><th>Output</th><th>Signed annual change</th><th>Units for annual total</th><th>Valid cells</th></tr></thead><tbody>'+artifacts.map(([key,item])=>
+    '<tr><td data-label="Output">'+esc(scientificLabel(key))+'</td><td class="comparison-number" data-label="Signed annual change">'+esc(number(item?.sum_change))+'</td><td data-label="Units for annual total">'+esc(annualUnits(item))+'</td><td class="comparison-number" data-label="Valid cells">'+esc(number(item?.valid_cells))+'</td></tr>').join('')+'</tbody></table>';
+  }else html+='<p>No annual-change artifacts are retained for this alternative.</p>';
+  html+='</section>';
+ }
+ return html+'</section>';
+}
+const COMPARISON_INSPECTION_CSS=`
+.comparison-summary{font-size:15px}.comparison-summary>h2{font-size:22px}.comparison-baseline{font-size:16px;overflow-wrap:anywhere}.comparison-alternative{margin-top:22px}.comparison-alternative h3{font-size:17px;overflow-wrap:anywhere}.comparison-table{width:100%;border-collapse:collapse;table-layout:fixed;margin:12px 0}.comparison-table th,.comparison-table td{padding:12px 10px;border:1px solid #d3dbe1;text-align:left;vertical-align:top;overflow-wrap:anywhere}.comparison-table th{background:#edf1f3;font-size:13px}.comparison-table td{font-size:15px}.comparison-table .comparison-number{font-variant-numeric:tabular-nums}.comparison-table td:first-child{font-weight:600}.comparison-technical .scientific-fields{display:block}.comparison-technical .scientific-fields>dt{padding:8px 0 2px;border:0}.comparison-technical .scientific-fields>dd{padding:2px 0 9px}.comparison-technical .scientific-fields>dd .scientific-fields{padding-left:12px;border-left:2px solid #d6dee4}
+@media(max-width:600px){.comparison-table,.comparison-table tbody,.comparison-table tr,.comparison-table td{display:block;width:auto}.comparison-table thead{display:none}.comparison-table tr{margin:14px 0;border:1px solid #cbd2d8}.comparison-table td{display:grid;grid-template-columns:minmax(110px,1fr) minmax(0,1.2fr);gap:12px;border:0;border-bottom:1px solid #e2e6e9;padding:11px}.comparison-table td:before{content:attr(data-label);font-size:12px;color:#435361;font-weight:600}.comparison-table td:last-child{border-bottom:0}.comparison-technical .scientific-list{padding-left:16px}}
+@media print{.comparison-alternative{break-inside:avoid}.comparison-table th{background:#edf1f3}}
+`;
+
 export const SCIENTIFIC_INSPECTION_CSS="\n#detail-title,#detail-body>p,#detail-body td{overflow-wrap:anywhere}\n#detail-body td button{overflow-wrap:normal;white-space:nowrap}\n.scientific-inspection,.scientific-section,.scientific-diagnostic,.scientific-fields,.scientific-downloads{color:#202b33;background:#fff;box-sizing:border-box}\n.scientific-inspection{font:14px/1.5 Arial,Helvetica,sans-serif;max-width:1100px;margin:0 auto;padding:24px}\n.scientific-inspection h1{font-size:26px;line-height:1.25;margin:0 0 12px;overflow-wrap:anywhere}\n.scientific-inspection h2,.scientific-section h3{font-size:18px;line-height:1.35;margin:0 0 12px}\n.scientific-inspection h3,.scientific-inspection h4,.scientific-section h4{margin:18px 0 10px}\n.scientific-section{margin:16px 0;border:1px solid #cbd2d8;padding:18px;border-radius:4px}\n.scientific-fields{display:grid;grid-template-columns:minmax(135px,1fr) minmax(0,2fr);gap:0;margin:12px 0;font-size:13px;min-width:0}\n.scientific-fields>dt,.scientific-fields>dd{margin:0;padding:9px 0;border-bottom:1px solid #e2e6e9;overflow-wrap:anywhere;min-width:0}\n.scientific-fields>dt{padding-right:16px;font-weight:600;color:#435361}\n.scientific-fields>dd .scientific-fields{margin:0;grid-template-columns:minmax(115px,1fr) minmax(0,1.5fr)}\n.scientific-fields>dd .scientific-fields>dt{font-weight:400}\n.scientific-fields a,.scientific-inspection a{color:#174b67}\n.scientific-value{white-space:pre-wrap;overflow-wrap:anywhere}\n.scientific-identity{display:block;font:11px/1.5 ui-monospace,monospace;color:#52616b;margin-top:4px;overflow-wrap:anywhere}\n.scientific-list{margin:0;padding-left:24px}\n.scientific-list>li{margin:4px 0;padding-left:3px}\n.scientific-group{margin:12px 0;color:#202b33;background:#fff}\n.scientific-group>summary,.scientific-diagnostic summary{cursor:pointer;padding:7px 0;font-weight:600;color:#344856}\n.scientific-note,.scientific-empty{font-size:13px;line-height:1.6;color:#53616b}\n.scientific-note{margin:14px 0 0}\n.scientific-diagnostic{border:1px solid #c9bba9;border-left:4px solid #8d7356;padding:14px 16px;border-radius:3px;margin:12px 0}\n.scientific-diagnostic h3{font-size:14px;margin:0 0 7px;overflow-wrap:anywhere}\n.scientific-diagnostic p{font-size:13px;margin:0}\n.scientific-diagnostic pre,.scientific-inspection pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f3f5f6;color:#23303b;border:1px solid #d4dce1;padding:12px;font:12px/1.5 ui-monospace,monospace;max-height:420px;overflow:auto}\n.scientific-downloads{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:0 0 14px}\n.scientific-downloads button{border:1px solid #aeb9c1;border-radius:3px;padding:8px 12px;font:13px/1.4 Arial,Helvetica,sans-serif;color:#202b33;background:#fff;cursor:pointer}\n.scientific-downloads button:hover{background:#edf1f4}\n.scientific-downloads button:disabled{color:#58646d;background:#eceff1;opacity:1;cursor:wait}\n.scientific-downloads button:focus-visible,.scientific-group>summary:focus-visible,.scientific-diagnostic summary:focus-visible{outline:3px solid #6b8ba0;outline-offset:2px}\n@media(max-width:600px){.scientific-inspection{padding:16px}.scientific-section{padding:13px}.scientific-fields,.scientific-fields>dd .scientific-fields{grid-template-columns:1fr}.scientific-fields>dt{padding:10px 0 2px;border:0}.scientific-fields>dd{padding:3px 0 10px}.scientific-fields>dd .scientific-fields{border-left:2px solid #d6dee4;padding-left:12px}.scientific-downloads{align-items:stretch}.scientific-downloads button{flex:1 1 180px}}\n@media print{.scientific-inspection{max-width:none;padding:0}.scientific-section{break-inside:avoid}.scientific-inspection pre{max-height:none;overflow:visible}}\n";
 
 /** Exclude ephemeral download tickets; original scientific fields stay unchanged. */
@@ -172,13 +201,32 @@ export function scientificRecord(record){
 }
 export function scientificDocument({kind,record,title:heading,data={}}){
  const original=scientificRecord(record),context={data,collectionId:record?.source_collection_id||record?.source?.source_collection_id};
- const view=kind==='runs'?scientificRunContext(original,data):kind==='task'?scientificTask(original,data):'';
+ const sourceView=renderSourceInspectionSummary(original,{data,kind});
+ const comparisonView=kind==='comparisons'?scientificComparison(original,data):'';
+ const view=sourceView||comparisonView||(kind==='runs'?scientificRunContext(original,data):kind==='task'?scientificTask(original,data):'');
  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>'+esc(heading)+'</title><style>'+
- SCIENTIFIC_INSPECTION_CSS+'</style></head><body><main class="scientific-inspection"><p class="scientific-note">Upper Savannah · Retained scientific inspection</p><h1>'+esc(heading)+'</h1>'+
- '<p>This read-only document contains the selected saved '+esc(scientificLabel(kind))+' record. It is not a complete Workspace backup. Original scientific inputs and values are retained below; this document cannot execute tasks. Top-level temporary download controls are omitted; links within the retained scientific provenance stay unchanged.</p>'+view+
- '<section class="scientific-section"><h2>Complete retained fields</h2>'+scientificFields(original,context)+'</section>'+
+ SCIENTIFIC_INSPECTION_CSS+SOURCE_INSPECTION_SUMMARY_CSS+COMPARISON_INSPECTION_CSS+'</style></head><body><main class="scientific-inspection"><p class="scientific-note">Upper Savannah · Retained scientific inspection</p><h1>'+esc(heading)+'</h1>'+
+ (sourceView?'<p>Read the original source contents, saved choices and linked scientific settings below. Expand the provenance for every retained field and the original structured record.</p>':comparisonView?'<p>Completed baseline and alternative native results. Read their recorded annual change, units, coverage and parameter-profile relationship below.</p>':'<p>This read-only document contains the selected saved '+esc(scientificLabel(kind))+' record. It is not a complete Workspace backup. Original scientific inputs and values are retained below; this document cannot execute tasks. Top-level temporary download controls are omitted; links within the retained scientific provenance stay unchanged.</p>')+view+
+ (sourceView?'<details class="scientific-group"><summary>Complete source provenance and retained fields</summary>'+scientificFields(original,context)+'</details>':comparisonView?'<details class="scientific-group comparison-technical"><summary>Original selections, raster provenance and complete retained fields</summary>'+scientificFields(original,context)+'</details>':'<section class="scientific-section"><h2>Complete retained fields</h2>'+scientificFields(original,context)+'</section>')+
  '<details class="scientific-group"><summary>Original structured record</summary><pre>'+esc(JSON.stringify(original,null,2))+'</pre></details>'+
  '<p class="scientific-note">TokenJunkieLabs · '+SCIENTIFIC_INSPECTION_VERSION+'</p></main></body></html>\n';
+}
+/** Use the original operator's typed source report for completed source intake.
+ * The ticket stays bound to its frozen record and Workspace; the full original
+ * JSON remains independently downloadable below.
+ */
+export function scientificSourceReport(record,workspace){
+ const action=record?.action||record?._client_source?.action;
+ if(!['client-source.inspect','client-source.commit'].includes(action))return null;
+ const tickets=Array.isArray(record?._downloads)?record._downloads:[];
+ const report=tickets.find(value=>value?.role==='source-inspection-report'&&value.kind==='html');
+ if(!report)return null;
+ if(report.workspace!==workspace||typeof report.url!=='string'||
+    !/^\/api\/file\/[a-f0-9]{64}$/.test(report.url)||
+    typeof report.filename!=='string'||!/^[^\\/\u0000-\u001f]+\.html$/.test(report.filename)||
+    !/^[a-f0-9]{64}$/.test(report.sha256||'')||
+    !Number.isSafeInteger(report.bytes)||report.bytes<1)return null;
+ return {...report};
 }
 export function createScientificInspection({getState,getWorkspace,reportError}){
  let release=null;
@@ -188,11 +236,13 @@ export function createScientificInspection({getState,getWorkspace,reportError}){
  function bind(container,selection){
   clear();if(!container||!selection?.record)return;
   const workspace=getWorkspace(),record=scientificRecord(selection.record);
+  const sourceReport=scientificSourceReport(selection.record,workspace);
+  const sourceTask=['client-source.inspect','client-source.commit'].includes(selection.record.action||selection.record._client_source?.action);
   // Snapshot the rendered edition once. A later state refresh cannot relabel this export.
-  const html=scientificDocument({...selection,record,data:data()});
+  const html=sourceReport?null:scientificDocument({...selection,record,data:data()});
   const json=JSON.stringify(record,null,2)+'\n';
   const controls=document.createElement('div');controls.className='scientific-downloads';
-  controls.innerHTML='<button type="button" data-scientific-download="html">Download readable inspection</button><button type="button" data-scientific-download="json">Download original record JSON</button>';
+  controls.innerHTML='<button type="button" data-scientific-download="html">'+(sourceTask&&!sourceReport?'Download technical inspection':'Download readable inspection')+'</button><button type="button" data-scientific-download="json">Download original record JSON</button>';
   let active=true;
   const onClick=event=>{
    const button=event.target.closest('[data-scientific-download]');
@@ -200,7 +250,12 @@ export function createScientificInspection({getState,getWorkspace,reportError}){
    event.preventDefault();event.stopPropagation();
    try{
     if(!active||!controls.isConnected||getWorkspace()!==workspace)throw Error('Reopen this record in its original Workspace before downloading.');
-    const type=button.dataset.scientificDownload,content=type==='html'?html:json;
+    const type=button.dataset.scientificDownload;
+    if(type==='html'&&sourceReport){
+     const anchor=document.createElement('a');anchor.href=sourceReport.url+'?download=1';
+     anchor.download=sourceReport.filename;document.body.append(anchor);anchor.click();anchor.remove();return;
+    }
+    const content=type==='html'?html:json;
     const name=String(selection.title||selection.kind||'scientific-record').normalize('NFKC').replace(/[^a-zA-Z0-9._-]+/g,'-').replace(/^-+|-+$/g,'').slice(0,100)||'scientific-record';
     const url=URL.createObjectURL(new Blob([content],{type:type==='html'?'text/html;charset=utf-8':'application/json;charset=utf-8'}));
     const anchor=document.createElement('a');anchor.href=url;anchor.download=name+'-inspection.'+type;document.body.append(anchor);anchor.click();anchor.remove();

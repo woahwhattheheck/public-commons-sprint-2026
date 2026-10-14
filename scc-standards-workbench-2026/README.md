@@ -6,10 +6,10 @@ The application runs on your computer. Its SQLite workspace contains the current
 
 ## Install and open
 
-Python 3.10 or newer is required. The package uses `python-docx 1.2.0` and `reportlab 4.4.9` to generate editable Word documents and PDFs. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc_standards_workbench-0.3.0-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
+Python 3.10 or newer is required. The package declares `python-docx 1.2.0`, `reportlab 4.4.9`, `pypdf 6.20.1` and `pdfplumber 0.11.10` for editable Word documents, PDF generation and original-form reading. Download the [complete source package](https://github.com/woahwhattheheck/public-commons-sprint-2026/raw/main/scc-standards-workbench-2026/releases/scc-standards-workbench-0.4.1-source.zip) and install it into your usual Python environment. The archive contains the application, browser assets, original public sources and declared build metadata:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.3.0-source.zip
+python -m pip install ./scc-standards-workbench-0.4.1-source.zip
 standards-workbench --workspace ./standards-workspace --demo
 ```
 
@@ -18,6 +18,16 @@ Open the localhost address printed by the command, normally `http://127.0.0.1:87
 The command installs the package and its declared document dependencies; it does not require an account, API key or database server. The source package is an application, not a self-contained Python runtime. A controlled offline installation can supply the same dependency wheels through the ordinary pip `--no-index --find-links` options.
 
 For an empty working project, omit `--demo` and choose **New project**. The public and authored examples have stable, distinct IDs; selecting an example again opens the retained project without overwriting its edits. A later example source edition requires a fresh workspace or an explicit archive of the existing one.
+
+## Version 0.4.1: completed ballot and application corrections
+
+This complete source edition includes the original consultation, individual-member ballot and prime-application desks. It incorporates the original equipped course's decision export, multiline vote fields, offline response and narrow-screen corrections, plus the later responsive decision tables and application save/freeze comparison. Saving an application and reopening its JSON preserves its values regardless of object-key order. Saved-edition rows remain readable at narrow widths.
+
+The original equipped operation completed the ballot return/adoption, closure, procedural review, publication and independent private restoration. It subsequently completed the original application save, freeze, downloads and cold reopening, and inspected the actual PDF, Word, HTML and CSV outputs in their recipient views. The final operated source identity is `222b3c877a992e1a270820863d54aa1bfa96d040049160308f3b76a24525f5ff`; the earlier completed ballot source `cd0d5a03baede5b3611b733a1b36fa9d5c81216fc372bbe2df81b91e1589dc39` and its output remain preserved.
+
+This packaged edition additionally finishes source-edition continuation in the receiving programme. It keeps each edition's attachments, screenshots and result immutable, retains original root results, publishes an explicit current-result pointer, and closes all owned resources even after an earlier cleanup failure. The original stage/request records remain authoritative, so updating the source continues the saved operation. The source manifest identifies the exact packaged files; its following receiver source is distinct from the earlier completed native edition.
+
+See the [0.4.1 receiving and source record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scc-standards-workbench-2026/releases/RECEIVING-0.4.1.md) for the exact sources and continuation instructions. Keep the complete private project export when upgrading; earlier immutable source releases remain available.
 
 ## Exchange a bilingual review packet
 

@@ -1,0 +1,15 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "sampling-design-comparison",
+  "extend_components": {
+    "monitoring-recommendations": {
+      "paths": [
+        "model/monitoring_sampling_comparison.py",
+        "operator/web/monitoring_sampling_comparison.mjs",
+        "source/NATIVE_OBSERVATIONS_SAMPLING.md",
+        "integration/component_fragments/sampling-design-comparison.json"
+      ],
+      "requires": []
+    }
+  }
+}

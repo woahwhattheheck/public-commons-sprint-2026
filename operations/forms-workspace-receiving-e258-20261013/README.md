@@ -1,3 +1,26 @@
+# Forms workspace — retained upload and complete source continuation
+
+This edition repairs the original prepared browser upload and narrow inspector layout, and supports updating the same workspace while retaining complete original and maintained source editions. The full product remains 42 files.
+
+| Current artifact | Identity |
+| --- | --- |
+| Source files | 42 files; 1300320 bytes |
+| Forms_Workspace_Source.zip | 343864 bytes; SHA256 5edb57e1efed1edb3179c33faf1d57bca3cc510c73bb220e3c1ee126ce85643e |
+| SOURCE_SELECTION.json | 11304 bytes; SHA256 aa8796fd761f75d7c53107c4360c7c7f08c73b1c36c7f4066f2d327acea929e6 |
+| Complete source commit | 1e501124c7ed9d766a3f009d4830f64336817a3c |
+| Changed source members | forms_workspace.py, forms_workspace_server.py, forms_server.py, forms_report.py, forms_workspace_report.py, FORMS_WORKSPACE.md |
+| Previous complete release | 8489255dad91a05ac2bd69f3ce650b6c5ed28195 |
+
+Read the updated FORMS_WORKSPACE.md section **Continue an existing workspace after a maintained source update** before operating an existing workspace. Extract this complete ZIP into a separate source directory. The supported adopt-source command preserves its original metadata, source, data and HTTP origin, then retains the complete maintained runtime. Resume the original native/browser operation from its original inputs and profile. Existing completed native A/B/C runs stay selected.
+
+The same prepared upload ID receives404 only if both valid body and receipt are absent, then streams its complete original PUT. One retained regular body or valid receipt returns typed409 UPLOAD_INCOMPLETE: the browser then permits only the same-ID original PUT, and the server compares full byte identity before restoring its missing member. Old inspectors verify their own original selected program and display the retained calculation through the maintained renderer. Full workspace export carries both complete source editions plus continue_workspace.py, which selects the maintained runtime after independent extraction.
+
+The original receiver operates Python and the complete upload→mapping→run→handover course. Open and LOOK at the final desktop and390-pixel screens, every produced image and PDF page, all complete JSON, both ZIPs and their member inventories. The source package below contains complete runnable files and fixtures.
+
+## Previous release guide — retained in full
+
+The remainder preserves the predecessor's complete guide and original release identities. Its original42-file source/ZIP references describe the previous edition; use the current identities above and the updated product guide for same-workspace source adoption.
+
 # Forms source and mapping workspace — complete source and receiving
 
 TokenJunkieLabs

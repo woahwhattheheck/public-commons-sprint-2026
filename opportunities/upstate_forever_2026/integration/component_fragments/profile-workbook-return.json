@@ -1,0 +1,42 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "profile-workbook-return",
+  "source_reference": "https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791923373568539",
+  "components": {
+    "profile-workbook-return": {
+      "title": "Saved Profile values returned to original workbook cells with editable Study receiving",
+      "paths": [
+        "integration/component_fragments/profile-workbook-return.json",
+        "model/profile_workbook_return.py",
+        "model/profile_workbook_xml.py",
+        "measurement_workspace/engine/source_workbook_append.py",
+        "model/profile_workbook_study_transfer.py",
+        "model/study_transfer.py",
+        "model/portable.py",
+        "operator/profile_workbook_return.py",
+        "operator/profile_workbench.py",
+        "operator/extensions/profile-workbench.json",
+        "operator/web/profile_workbench.mjs",
+        "operator/web/profile_workbook_return.mjs",
+        "operator/web/profile_workbook_return_storage.mjs",
+        "operator/web/profile_workbook_return.css",
+        "operator/PROFILE_WORKBOOK_RETURN.md",
+        "source_tools/receive_profile_workbook_return.py",
+        "source_tools/receive_profile_workbook_return_browser.mjs",
+        "source_tools/PROFILE_WORKBOOK_RETURN_RECEIVING.md"
+      ],
+      "requires": [
+        "core",
+        "profile-workbench",
+        "project-transfer",
+        "study-transfer"
+      ],
+      "import_roots": [
+        "operator"
+      ]
+    }
+  },
+  "required_components": [
+    "profile-workbook-return"
+  ]
+}

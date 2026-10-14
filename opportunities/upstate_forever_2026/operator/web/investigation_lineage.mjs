@@ -60,7 +60,10 @@ export function createLineageNavigator({host,onSelectRefs,onOpenCollection,onNot
    const item={selected:clone(selected),lineage_sha256:pinned,label:query.run_id?'Run '+query.run_id:'Grid '+query.grid_id};
    if(!history.some(row=>same(row.selected,item.selected)&&row.lineage_sha256===item.lineage_sha256))history.push(item);
    return value;
-  }catch(error){if(g===generation&&w===workspace&&id===flight)message=error.message;throw error;}
+  }catch(error){
+   if(g!==generation||w!==workspace||id!==flight)return null;
+   message=error.message;throw error;
+  }
   finally{if(g===generation&&w===workspace&&id===flight){busy=false;changed();}}
  }
  async function source(row){
@@ -72,16 +75,24 @@ export function createLineageNavigator({host,onSelectRefs,onOpenCollection,onNot
    if(value.workspace_key!==w||value.lineage_sha256!==sha||value.source?.key!==selectedKey)
     throw Error('The selected source details belong to another original edition.');
    detail=value;message='';render();root.querySelector('[data-lineage-detail]')?.focus({preventScroll:true});
-  }catch(error){if(g===generation&&w===workspace&&id===detailFlight){detail={error:error.message,key:selectedKey};render();}throw error;}
+  }catch(error){
+   if(g!==generation||w!==workspace||id!==detailFlight||graph?.lineage_sha256!==sha)return;
+   detail={error:error.message,key:selectedKey};render();throw error;
+  }
  }
  async function prepared(row){
   const g=generation,w=workspace,id=++detailFlight,sha=graph.lineage_sha256;
   detail={loading:true};render();
-  const value=await host.api(endpoint('lineage-file',scope({dataset_id:row.ref.id}),w));
-  if(g!==generation||w!==workspace||id!==detailFlight||graph?.lineage_sha256!==sha)return;
-  if(value.workspace_key!==w||value.lineage_sha256!==sha||value.file?.ref?.id!==row.ref.id)
-   throw Error('The prepared file belongs to another original selection.');
-  detail={prepared:value};render();
+  try{
+   const value=await host.api(endpoint('lineage-file',scope({dataset_id:row.ref.id}),w));
+   if(g!==generation||w!==workspace||id!==detailFlight||graph?.lineage_sha256!==sha)return;
+   if(value.workspace_key!==w||value.lineage_sha256!==sha||value.file?.ref?.id!==row.ref.id)
+    throw Error('The prepared file belongs to another original selection.');
+   detail={prepared:value};render();
+  }catch(error){
+   if(g!==generation||w!==workspace||id!==detailFlight||graph?.lineage_sha256!==sha)return;
+   detail={error:error.message};render();throw error;
+  }
  }
  function selectRefs(refs){
   if(!Array.isArray(refs)||!refs.length)throw Error('No complete registered originals are selected.');
@@ -175,7 +186,7 @@ export function createLineageNavigator({host,onSelectRefs,onOpenCollection,onNot
  return {
   async mount(node,w){this.detach();root=node;workspace=w;generation++;selected=null;pinned=null;history=[];filter='';message='';
    try{load(w);}catch(error){message=error.message;}
-   render();if(selected)await open(selected,{expected:pinned}).catch(error=>{message=error.message;render();});},
+   const g=generation;render();if(selected)await open(selected,{expected:pinned}).catch(error=>{if(g!==generation||w!==workspace||!root)return;message=error.message;render();});},
   open,
   async openResource(resource,state){
    if(resource?.kind==='job')return open({run_id:resource.id});

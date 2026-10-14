@@ -254,3 +254,98 @@ Include this complete instruction in delegated assignments and the active owner-
 
 Owner instruction and coordinated propagation: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791881496221999
 Canonical attachment/media clarification: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791885532614949
+
+
+## Continue an existing workspace after a maintained source update
+
+A calculated project binds its original program, and a workspace retains the
+42-file program that created it. Updating HTTP or presentation must preserve
+both. The supported update operation leaves `workspace.json`, its database
+identity/revisions, every capture, draft history, request, project, project ZIP
+and the private HTTP origin unchanged. It retains complete original and updated
+programs as separate `source-editions/` members.
+
+1. Keep the original complete source directory and receiving/browser output.
+   Materialize the complete new source into a **separate** directory. Do not
+   replace files in the original source directory or rewrite old receipts.
+2. Stop the actual workspace server gracefully after its current request
+   finishes. The workspace's existing process lock prevents concurrent adoption.
+   Its owned inspectors should close through the existing shutdown path; retain
+   all private origin, lease, receipt and browser-profile files.
+3. From the complete new source directory run:
+
+   ```sh
+   python forms_workspace.py adopt-source \
+     --workspace /absolute/original/workspace \
+     --original-software /absolute/original/source
+   ```
+
+   The command verifies the original 42-file selection, all captured/project
+   contents, each calculated edition's actual retained program, and the absence
+   of a native RUNNING request. A browser PREPARED upload is not a native running
+   calculation. Import/calculation engines must remain byte-identical; this
+   update path admits maintained HTTP, renderer, workspace, guide and receiving
+   code. Both complete source editions are copied and checked before their
+   immutable selection record becomes available. Repeating the command with the
+   same files returns the same adopted directory.
+4. Start the updated `forms_workspace_server.py` with the **same** workspace
+   and a **new** private receipt path. Its original private controls retain the
+   same loopback port and access token. The receipt and `workspace.describe`
+   expose the original `source_files` and separate `runtime_source_files`.
+   The original receipt remains usable as the retained URL; its historical PID
+   identifies that earlier server, so use the new receipt for process ownership.
+5. Resume the existing browser using its original selected helper, original
+   receiving JSON, original helper arguments and `--resume`. Preserve the
+   browser-input JSON, journal, profile, tab ID, original capture ZIP and
+   PREPARED upload ID. The unchanged old helper resumes against the retained
+   origin; do not create a new operation, reset its journal, or alter its source
+   fingerprint. Select the same original capture file when continuing upload.
+
+The repaired GET upload lookup returns **404 only when neither a valid upload
+body nor its receipt exists**. This lets the browser perform its first complete
+PUT under the retained upload ID. Malformed IDs, symbolic links and changed complete pairs remain explicit
+errors. A single retained regular body or valid receipt returns409 with exact
+code `UPLOAD_INCOMPLETE`. Only that typed response permits the browser to
+reselect and PUT its same complete original under the retained ID. An existing
+body must match its full hash, and an existing receipt is checked against the
+full incoming hash before a missing body is linked. GET and PUT use the same locks,
+so GET cannot observe the short body/receipt publication interval. A completed
+same-ID upload returns its original descriptor and retains its exact bytes.
+
+Old projects continue to validate against their complete original selected
+program, including all original archived program members. The maintained
+inspector renders their original result through the current presentation code;
+their original `report.html`, calculated result and ZIP remain unchanged.
+SHA-256 notices wrap within the panel, and handover links occupy a contained
+box at narrow widths. New calculated editions declare the currently executing
+complete program.
+
+### Complete updated handover and cold continuation
+
+A new whole workspace ZIP carries the original `software/`, all complete
+`source-editions/`, the native database and all existing content, plus
+`continue_workspace.py`. The archive manifest declares
+`runtime_source_files` and `runtime_path` separately from original
+`source_files`. Receive this ZIP using the maintained `forms_workspace.py`:
+
+```sh
+python /absolute/updated/source/forms_workspace.py receive \
+  --archive Forms_Complete_Workspace.zip --output /absolute/new/received
+python /absolute/new/received/continue_workspace.py \
+  --receipt /absolute/private/new-received-server.json
+```
+
+The receiver checks every archived member and each original/updated source
+selection before publishing the receiving directory. The launcher selects the
+same maintained runtime from within the complete received archive; it does not
+depend on the sender's path. Legacy archives without source updates remain
+receivable with their original selected source.
+
+For the original authoring receiving operation, continue the existing
+upload → mapping → saved/unfinished draft → calculated run → inspector →
+working-copy and full-workspace handover course. Open and **look at** desktop
+and 390-pixel screens, all captured images and every PDF page; open all
+delivered JSON and both ZIPs and inspect their complete member inventories.
+Use the actual original and independently received editions. Record any
+remaining functional or visual exception in that same operation so its source
+owner can fix the actual workflow.

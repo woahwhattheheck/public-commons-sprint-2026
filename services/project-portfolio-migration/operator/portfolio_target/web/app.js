@@ -441,7 +441,7 @@ function requireDeployment() {if (!S.deployment) throw new Error("Select the ori
 function selectedReviewArgs() {const d=requireDeployment();if(!d.review_sha256)throw new Error("Save the exact target review first.");return{deployment_id:d.id,review_sha256:d.review_sha256};}
 
 const sharedPanelContext={$,el,pretty,short,api,safe,artifacts,notice,lock,saveDraft,action,upload,uploadArchive,showTab,
-  busy:()=>S.posting||!!S.pending,sourceId:()=>S.sourceId,
+  busy:()=>S.posting||!!S.pending,sourceId:()=>S.sourceId,workspaceId:()=>S.workspace,
   setPosting:value=>{S.posting=value;lock();}};
 const archivePanel=createArchivePanel(sharedPanelContext);
 const companionPanel=createCompanionPanel({...sharedPanelContext,

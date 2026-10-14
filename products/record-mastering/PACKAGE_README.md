@@ -104,3 +104,7 @@ Before presenting this product or calling it ready, its producing worker must op
 Open every outgoing attachment in its normal recipient-facing viewer: the CSV, configuration, provenance, conflicts, instructions, archive contents and editable workspace. Inspect every relevant report page; play any accompanying media. Actual screenshots must be viewed. Repair unreadable text, poor contrast, clipping, overflowing controls or broken navigation in the maintained source and inspect the affected outgoing version again.
 
 Source review and pure composition establish source selection only. They do not establish a successful Node installation, native SQLite operation, rendered browser or completed customer handover. Preserve the original actual receiving result and any precise unresolved runtime issue without inventing acceptance.
+
+## Saved customer delivery comparison
+
+The existing Deliveries desk compares two immutable editions with complete record, field, exact-text, resolution and original-provenance changes. The same native read powers CLI, typed client and Merchant query. Complete JSON/HTML/CSV exports and verified reopen retain both original deliveries; source activation and editing remain with the original workspace. See [the full comparison guide](../../stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/DELIVERY_COMPARISON.md).

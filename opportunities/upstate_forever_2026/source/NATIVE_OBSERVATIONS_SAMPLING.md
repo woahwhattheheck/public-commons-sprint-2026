@@ -140,3 +140,99 @@ The same `native-observations/` output contains `original-source-input.json`, `o
 Preserve the original network sources and exact SV-833 station assignment. An observation input never establishes a station geometry or missing network membership. The existing network builder verifies the retained domain/station sources and returns the actual network ID before the authored Sampling selection is compiled.
 
 The full owner direction above remains in force. Open and operate the actual populated desktop and390px product and every final report, CSV/JSON, original source and extracted editable Study, then reopen the contained application. Record the actual process/output and any failure in the same receiving operation. Source review is not rendered or native acceptance.
+
+
+## Explicit field dates within the original native rounds
+
+Current delivery direction is CURRENT_OWNER_DIRECTION.md version 2026-10-13.5: finish the same independent recipient application, qualified scientific/Measurements runtime and original projects; use actual own-data, scientific controls, API, AI, readable reports and cold reopening. Preserve the original operations and sources. The native producing owner must operate and LOOK at the exact final desktop/narrow application and every affected attachment. The complete current direction remains in the application; source review and passing checks do not establish recipient readiness.
+
+The original Monitoring calendar now accepts an optional `calendar.selected_round_dates` object. Each key is the original one-based round number written as a canonical decimal string. Its value is a nonempty, ascending array of distinct ISO dates. For example:
+
+~~~json
+{"selected_round_dates":{"2":["2026-12-04"]}}
+~~~
+
+The scheduler first derives the unchanged original rounds and all eligible dates from the explicit start/end, interval, round window, weekdays, selected months and real blackouts. Every selected round must exist; every selected date must already be eligible in that round. Unknown rounds, malformed or duplicate dates, empty date arrays, and dates outside the original constraints are rejected. Only then does the unchanged crew/visit/travel capacity calculation use the selected dates. A narrower selection can make required sites infeasible; it never bypasses field capacity. Selected date arrays provide the available days for that round, and the original deterministic scheduler fills them in order. Unspecified rounds retain their original earliest-eligible-date behavior. Configurations without this option retain their original round/calendar representation.
+
+In Sampling, open the exact saved proposal, choose its retained native design, and select **Use selected design configuration**. The ordinary design editor now has **Selected field dates by original round**. Enter one line such as `2 = 2026-12-04`; multiple selected field days use commas. Clear the field to restore default scheduling. The editor displays the exact configuration difference and preserves these values in its existing working JSON and native queued design request. **Prepare Monitoring design** creates a separate immutable native design. The original proposal, observations, native plan, field campaign and baseline exports remain retained. Existing full configuration editing and ordinary Monitoring native APIs support the same option.
+
+### Same SV-833 case: a separate December allocation
+
+The actually completed baseline is native design `8ad9222d3c1e9e37d4fd05e0dea243d6fe897bde658b8fab67ff371c6568da20`, plan `beae7fed355d10fc5ea31e9ba8800bea61d78ade2c1998a40c0506c4a22ff8cc`, proposal `b666b4abbd1f1f46c60790952979102a018bd00e50ed2d8d837d8b5f7b08977a` in original project `b9d5d257-c6bb-4f07-b975-8e8c63705db3`. Its three saved dates are November 2, November 30 and December 28, 2026. Four laboratory targets share each physical station visit.
+
+For an explicit alternative, open that exact saved design and select December 4 for original round 2. The native validator must confirm December 4 lies in the retained round's eight-day window and its actual weekdays/months/blackouts. Preserve the entire actual configuration, including costs and the original network, and change only `selected_round_dates` plus the new design's title/operation identity. No blackout is invented and no historical record is changed. If valid, the same original scheduler prepares November 2, December 4 and December 28 with the same three visits. Actual returned cost/status/date identities, including the separate unknown laboratory prices, must be inspected rather than assumed.
+
+A native owner can prepare the ordinary CLI request from the original saved design without reconstructing its settings:
+
+~~~python
+import copy
+from pathlib import Path
+from model.workspace import Workspace
+from model.monitoring_common import atomic_json
+from model.monitoring_campaign import rounds
+from model.monitoring_recommendations import inspect_design
+
+workspace = Workspace(ACTUAL_WORKSPACE_PATH)
+if workspace.project["id"] != "b9d5d257-c6bb-4f07-b975-8e8c63705db3":
+    raise ValueError("Use the original SV-833 Workspace")
+baseline = inspect_design(workspace, "8ad9222d3c1e9e37d4fd05e0dea243d6fe897bde658b8fab67ff371c6568da20")
+if baseline["plan_id"] != "beae7fed355d10fc5ea31e9ba8800bea61d78ade2c1998a40c0506c4a22ff8cc":
+    raise ValueError("The original baseline differs")
+configuration = copy.deepcopy(baseline["configuration"])
+configuration["calendar"]["selected_round_dates"] = {"2": ["2026-12-04"]}
+rounds(configuration["calendar"])
+request = {
+    "recommendation_id": baseline["recommendation_id"],
+    "configuration": configuration,
+    "operation_id": "sv833-explicit-december-round-20261013",
+    "title": "SV-833 — explicit December field dates",
+}
+atomic_json(Path(NEW_REQUEST_PATH), request)
+~~~
+
+Use that retained request with the existing native entry:
+
+~~~text
+python -m model.monitoring_recommendations --workspace ACTUAL_WORKSPACE design --request ACTUAL_REQUEST_JSON --output ACTUAL_RESULT_JSON
+~~~
+
+Resume the same operation/request after interruption. Inspect the returned native design and its original plan; use the existing proposal export for its exact calendar CSV/HTML and the existing Study/full-Workspace route for cold reopening. If the original UI is being exercised, use its saved-design editor and queue instead of issuing a second CLI operation. Do not run both independently.
+
+The selected historical window remains January 20, 2021 through April 1, 2026. Its December target-date shortfalls are 2, 1, 2 and 1. Two distinct future December visits offer two planned sampling opportunities for each applicable target; they do not close that historical window or prove future observations, laboratory suitability, reporting limits, flow events or regulatory attainment. Those results require actual valid retained measurements and an explicitly reviewed later evidence window. The baseline and alternative therefore compare planned allocation while preserving all208 original observations, exact analytical cohorts, original unknowns and separate historical date counts.
+
+## Compare two exact saved Sampling designs
+
+The existing Sampling desk now compares two actual native designs from one saved recommendation. Open the original saved Sampling edition and expand **Compare two saved designs**. Select the left and right designs explicitly. This is a read-only operation: it verifies each immutable recommendation/design/plan binding and uses the recorded calendar, original configuration and native cost. It does not invoke the optimizer, change a campaign or create a source record.
+
+The comparison shows original status, selected catchments, geographic costs, exact original physical visits, target-by-month planned dates, unchanged historical date goals and complete configuration differences. Presence and explicit null remain distinct. Missing/infeasible calendars remain disclosed by native status. A geographic cost delta is shown only when both original totals are known and use the same recorded currency. Itemized target costs remain a separate authored estimate; unknown laboratory prices are not replaced with a geographic budget or zero.
+
+For the completed SV-833 baseline and the separately authored December alternative, choose their actual saved design IDs after the existing native operation returns. Do not guess an alternative ID or substitute the baseline twice. The expected difference is a planned round date only when the native result confirms it. Four target opportunities on one shared station/date remain one physical visit. Historical distinct-date gaps across the selected evidence window do not change because a later plan adds future December dates. No field observation, successful analysis, event occurrence, reporting-limit attainment or regulatory conclusion follows from the comparison.
+
+### Downloads and cold reopening
+
+The comparison provides four complete ordinary downloads:
+
+- `sampling-design-comparison.json`: deterministic comparison plus both COMPLETE native design records, both original plans and the complete source-bound recommendation/context snapshot.
+- `sampling-design-comparison.html`: readable grayscale comparison with original calendar, target-month evidence, exact configuration changes, costs, unknowns and source identities.
+- `sampling-design-months.csv`: literal historical window/date counts/gaps beside separate planned date arrays.
+- `sampling-design-visits.csv`: each native visit key and complete original before/after visit, including missing-side state.
+
+Use **Export original recommendation and all sources** for the maintained native source/report archive and **Export editable Study** for the original typed recommendation root, which includes its actual retained designs. No parallel transfer root or incomplete source reconstruction is introduced. After ordinary Study restoration into its own application, open the original saved recommendation, then choose **Reopen a comparison JSON**. The same native reader recomputes the pair from its exact retained sources; the entire comparison must equal the downloaded record. The JSON is never silently imported as native scientific records and no optimizer is invoked on reopen.
+
+The existing authenticated `/api/monitoring-recommendations` reader accepts `action="compare-designs"` with exactly `{recommendation_id,left_design_id,right_design_id}` in its original payload. It returns the original Workspace/project binding, `comparison` and the four complete `files` text bodies. The original operator authorization and Workspace selection still apply. There is no new queued mutation.
+
+Within the original native application, the same read can be invoked directly:
+
+~~~python
+from model.monitoring_sampling_comparison import compare, files
+value = compare(
+    workspace,
+    recommendation_id=ACTUAL_SAVED_RECOMMENDATION_ID,
+    left_design_id=ACTUAL_LEFT_SAVED_DESIGN_ID,
+    right_design_id=ACTUAL_RIGHT_SAVED_DESIGN_ID,
+)
+# files(value) returns the four exact original downloadable texts.
+# Preserve each filename/media_type/text through the existing receiving output.
+~~~
+
+The producing native peer must personally open the affected populated/empty/error/loading Sampling interface at desktop and390, operate both explicit selectors and all four downloads, and reopen the full JSON after ordinary cold Study receiving before claiming presentation readiness. The full owner direction v2026-10-13.5 remains in force. This feature's source publication does not substitute for that actual final-product use.

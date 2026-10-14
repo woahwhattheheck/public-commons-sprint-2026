@@ -1,4 +1,5 @@
 // MIT. DOM-only rendering keeps source values as text; one native operation API.
+import { attachDeliveryComparison } from './delivery-comparison.js';
 function uuid() { if (typeof crypto.randomUUID === 'function')
     return crypto.randomUUID(); const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128; const h = Array.from(b, x => x.toString(16).padStart(2, '0')).join(''); return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`; }
 const $ = q => document.querySelector(q), content = $('#content'), dialog = $('#dialog'), modal = $('#dialog-content');
@@ -276,6 +277,10 @@ async function deliveries() {
     content.append(p);
     const retained = panel('Retained delivery editions', 'Every saved edition keeps its exact original CSV and supporting files. Download the complete package, or one file.');
     const rows = await api('deliveries');
+    const comparison = el('section', '', 'panel');
+    content.append(comparison);
+    const comparisonWorkspaceId = state.id;
+    attachDeliveryComparison(comparison, { editions: rows, workspaceId: comparisonWorkspaceId, api, download, isCurrent: () => tab === 'deliveries' && state.id === comparisonWorkspaceId });
     for (const d of rows) {
         const card = el('div', '', 'edition-card');
         append(card, el('h3', d.title), el('p', `${formatDate(d.created)} · ${n(d.row_count)} records · ${n(d.conflict_count)} unresolved fields`), append(el('div', '', 'toolbar'), button('Complete delivery', () => download('/api/delivery/' + d.id, 'master-delivery.gz')), button('Master CSV', () => download('/api/file/' + d.id + '/master.csv', 'master.csv'), true), button('Dataset configuration', () => download('/api/file/' + d.id + '/dataset.json', 'dataset.json'), true), button('Field provenance', () => download('/api/file/' + d.id + '/field-provenance.jsonl', 'field-provenance.jsonl'), true), button('Unresolved fields', () => download('/api/file/' + d.id + '/conflicts.csv', 'conflicts.csv'), true)));

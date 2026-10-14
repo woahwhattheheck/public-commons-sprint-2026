@@ -358,7 +358,7 @@ def packet_files(state, packet_id):
 
 def _table(headings, rows):
     return "<div class='table-wrap'><table><thead><tr>" + "".join("<th>" + html.escape(str(x)) + "</th>" for x in headings) + \
-        "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>" + html.escape(str(x)) + "</td>" for x in row) + "</tr>" for row in rows) + "</tbody></table></div>"
+        "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td><div class='prose'>" + html.escape(str(x)) + "</div></td>" for x in row) + "</tr>" for row in rows) + "</tbody></table></div>"
 
 
 def decision_files(state, ballot_id, originals):
@@ -419,5 +419,5 @@ def decision_files(state, ballot_id, originals):
         [r["version"], r["status"], r["issued"], r["authority"]] for r in publications])
     body += "<p>decision.json retains every frozen packet, corrected return, adoption before/after and exact closure input. "
     body += "sources.json indexes the complete retained original files. Restore the separately selected full private project archive for editable continuation.</p>"
-    files["decision.html"] = consultation._document(ballot["title"], body).encode()
+    files["decision.html"] = consultation._document(ballot["title"], body)
     return files

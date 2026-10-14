@@ -83,6 +83,7 @@ component, such as `sf30-seller-sdk`, does not need another component entry.
 | --- | --- |
 | `components` | Original source directories included by the builder. |
 | `supportFiles` | Explicit additional original files. |
+| `pinnedSourceManifests` | Original JSON inventories whose member paths, Git blobs, byte counts and SHA-256 values must agree with the selected source. |
 | `excludeFiles` | Explicit omissions under the original builder rules. |
 | `commands` | Lowercase command names mapped to original Node `.mjs` entrypoints. |
 | `commandDescriptions` | Help for commands declared in the same file. |
@@ -107,6 +108,27 @@ selection and native-driver preparation still apply.
 Browser servers keep using `readBrowserAssets`. Contributions give the existing
 collector those same server manifests. [BROWSER_ASSETS.md](BROWSER_ASSETS.md)
 defines the URL mapping and original asset closure.
+
+## Pinned scientific source
+
+Measurements uses `pinnedSourceManifests` with its existing
+`stellar-forge.measurement-workspace-source.v1` inventory at
+`products/measurement-workspace/original-source.json`. Declare that original
+path in the owning contribution; a source selection can declare it directly
+too. The list composes like `supportFiles` and retains the original JSON and
+all pinned members through the existing source filters and explicit exclusions.
+The inventory keeps its producer commit as provenance and the builder compares
+every member's original Git blob, byte count and SHA-256 with the selected tree.
+It does not rewrite source or require the later build commit to equal the
+inventory's producer commit.
+
+When a pinned scientific member changes, refresh and commit its complete
+inventory with the source edition. A stale inventory fails before output
+materialization, with the affected inventory and member named. Installed
+registration loading also checks the pinned identities against the retained
+outer manifest. Other inventory schemas are rejected explicitly; the separate
+name-only managed source schema remains unchanged. See [BUILDING.md](BUILDING.md)
+for continuation and exact archive receiving.
 
 ## Applications providers
 

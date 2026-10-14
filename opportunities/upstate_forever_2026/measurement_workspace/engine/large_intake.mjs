@@ -3,8 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {DatabaseSync} from 'node:sqlite';
 import {createHash,randomUUID} from 'node:crypto';
-import {fieldReader,normaliseWQP,hash,stable,FIELDS} from './normalise.mjs';
-import {InputError,clean,number} from './parse.mjs';
+import {fieldReader,normaliseWQP,hash,stable,FIELDS,sourceLineMapping} from './normalise.mjs';
+import {InputError,clean,number,SOURCE_LINE_EDITION} from './parse.mjs';
 import {csvRows} from './stream_csv.mjs';
 import {CHUNK,identifier,atomicJSON,readJSON,fileChunks,fileDigest,copyVerified,withDirectoryLock,writeAll} from './large_io.mjs';
 const FORMAT='upper-savannah-file-intake/v1';
@@ -91,10 +91,18 @@ function prefixDigest(file,bytes){
  if(remaining)throw new InputError('Retained original is shorter than its acknowledged prefix',409);
  return digest.digest('hex');
 }
+function intakeLineEndings(value){
+ const mode=value.lineEndings??(value.mapping?._csv_lines===SOURCE_LINE_EDITION?'physical':'legacy');
+ sourceLineMapping(value.mapping||{},mode);return mode;
+}
+function sameLineSelection(value,input){
+ if(input.lineEndings!==undefined&&input.lineEndings!==intakeLineEndings(value))throw new InputError('This intake retains another source-line interpretation; use a new intake identifier',409);
+}
 function sameLocalDefinition(value,input){
  const definition={kind:input.kind,label:clean(input.label),bytes:input.bytes,mapping:input.mapping||{},origin:input.origin||{type:'file'}};
  for(const key of Object.keys(definition))if(stable(value[key])!==stable(definition[key]))
   throw new InputError('This intake identifier already retains a different original definition',409);
+ sameLineSelection(value,input);
 }
 /** Freeze the complete selected source without changing the acknowledged original. */
 function stageLocalFile(file,target,expectedBytes){
@@ -119,18 +127,19 @@ export function beginIntake(w,input){
  if(!Number.isSafeInteger(input.bytes)||input.bytes<1)throw new InputError('Declare the complete nonempty original file size');
  const label=clean(input.label);if(!label)throw new InputError('Name the original file');
  if(input.mapping!==undefined&&(!input.mapping||typeof input.mapping!=='object'||Array.isArray(input.mapping)))throw new InputError('Column mapping must be an object');
+ sourceLineMapping(input.mapping||{},input.lineEndings??'physical');
  const id=input.id??hash(randomUUID());if(!identifier(id))throw new InputError('Invalid intake identifier');
  const root=intakeRoot(w,id),definition={kind:input.kind,label,bytes:input.bytes,mapping:input.mapping||{},origin:input.origin||{type:'file'}};
  return withDirectoryLock(root,()=>{
   const stateFile=path.join(root,'intake.json');
   if(fs.existsSync(stateFile)){
    const old=readJSON(stateFile);for(const key of Object.keys(definition))if(stable(old[key])!==stable(definition[key]))throw new InputError('This intake identifier already retains a different original definition',409);
-   return recoverLocalIntake(root,old);
+   sameLineSelection(old,input);return recoverLocalIntake(root,old);
   }
   const original=path.join(root,'original');
   if(fs.existsSync(original)){if(fs.statSync(original).size!==0)throw new InputError('Interrupted initial intake has unexpected original bytes',409);}
   else fs.closeSync(fs.openSync(original,'wx',0o600));
-  const value={format:FORMAT,id,...definition,offset:0,phase:'uploading',createdAt:new Date().toISOString()};
+  const value={format:FORMAT,id,...definition,lineEndings:input.lineEndings??'physical',offset:0,phase:'uploading',createdAt:new Date().toISOString()};
   atomicJSON(stateFile,value);return value;
  });
 }
@@ -156,11 +165,11 @@ export function putChunk(w,id,{offset,base64,sha256,check=false}){
 export function intakeStatus(w,id){const value=descriptor(w,id);const p=path.join(intakeRoot(w,id),'prepared.json');return {...value,...(fs.existsSync(p)?{prepared:readJSON(p)}:{})};}
 export function listIntakes(w){const root=ownRoot(w);if(!fs.existsSync(root))return [];return fs.readdirSync(root).filter(id=>identifier(id)&&fs.existsSync(path.join(root,id,'intake.json'))).map(id=>descriptor(w,id)).sort((a,b)=>b.createdAt.localeCompare(a.createdAt));}
 function normalizeStation(raw,get){const id=get(raw,'station');if(!id)throw new InputError('Station identifier is missing');const lat=number(get(raw,'latitude')),lon=number(get(raw,'longitude'));if((lat!==null&&Math.abs(lat)>90)||(lon!==null&&Math.abs(lon)>180))throw new InputError('Station coordinate outside valid range');return {id,name:get(raw,'name')||id,latitude:lat,longitude:lon,datum:get(raw,'datum'),raw};}
-export function* normalizedCSV(chunks,kind,mapping){
+export function* normalizedCSV(chunks,kind,mapping,{lineEndings='physical'}={}){
  let reader;
- for(const item of csvRows(chunks)){
+ for(const item of csvRows(chunks,{lineEndings})){
   if(item.type==='header'){
-   reader=fieldReader(item.headers,mapping);
+   reader=fieldReader(item.headers,sourceLineMapping(mapping,lineEndings));
    if(!reader.mapping.station)throw new InputError('Missing station column; choose the correct column mapping');
    if(kind==='wqp'&&(!reader.mapping.characteristic||(!reader.mapping.date&&!reader.mapping.datetime)))throw new InputError('Missing characteristic/date columns; choose the correct column mapping');
    yield {...item,mapping:reader.mapping};continue;
@@ -185,13 +194,13 @@ export function prepareIntake(w,id){
     CREATE TABLE rejected(category INTEGER NOT NULL,sequence INTEGER NOT NULL,line INTEGER NOT NULL,data TEXT NOT NULL,PRIMARY KEY(category,sequence));
     CREATE TABLE stations(id TEXT PRIMARY KEY); CREATE TABLE counts(kind TEXT,key TEXT,n INTEGER,PRIMARY KEY(kind,key));`);
    const insert=db.prepare('INSERT INTO accepted VALUES(?,?,?)'),reject=db.prepare('INSERT INTO rejected VALUES(?,?,?,?)'),station=db.prepare('INSERT OR IGNORE INTO stations VALUES(?)'),count=db.prepare('INSERT INTO counts VALUES(?,?,1) ON CONFLICT(kind,key) DO UPDATE SET n=n+1');
-   for(const item of normalizedCSV(fileChunks(original),value.kind,value.mapping)){
+   for(const item of normalizedCSV(fileChunks(original),value.kind,value.mapping,{lineEndings:intakeLineEndings(value)})){
     if(item.type==='header'){headers=item.headers;mapping=item.mapping;continue;}
     if(item.type==='rejected'){reject.run(item.category,rejected++,item.entry.line,JSON.stringify(item.entry));continue;}
     const row=item.row;insert.run(accepted++,item.line,JSON.stringify(row));station.run(row.stationId||row.id);if(row.parameter)count.run('parameter',row.parameter);if(row.censor&&row.censor!=='none')censored++;for(const issue of row.issues||[])count.run('issue',issue);
    }
    db.exec('COMMIT');
-   const summary={rows:accepted,rejectedCount:rejected,stationCount:db.prepare('SELECT COUNT(*) n FROM stations').get().n,censored,parameters:Object.fromEntries(db.prepare("SELECT key,n FROM counts WHERE kind='parameter' ORDER BY key").iterate().map(x=>[x.key,x.n])),issues:Object.fromEntries(db.prepare("SELECT key,n FROM counts WHERE kind='issue' ORDER BY key").iterate().map(x=>[x.key,x.n]))};
+   const summary={...(intakeLineEndings(value)==='physical'?{sourceLineEdition:SOURCE_LINE_EDITION}:{}),rows:accepted,rejectedCount:rejected,stationCount:db.prepare('SELECT COUNT(*) n FROM stations').get().n,censored,parameters:Object.fromEntries(db.prepare("SELECT key,n FROM counts WHERE kind='parameter' ORDER BY key").iterate().map(x=>[x.key,x.n])),issues:Object.fromEntries(db.prepare("SELECT key,n FROM counts WHERE kind='issue' ORDER BY key").iterate().map(x=>[x.key,x.n]))};
    if(!accepted&&rejected)throw new InputError('Every source row was rejected. Correct mapping or values before committing.');
    const result={id,importId:hash(stable([value.kind,digest.sha256,mapping])),sourceSha256:digest.sha256,bytes:digest.bytes,kind:value.kind,label:value.label,headers,mapping,summary,normalizedStage:fileDigest(stageFile),normalizerPin:normalizerPin(),sample:[...db.prepare('SELECT line,data FROM accepted ORDER BY sequence LIMIT 25').iterate()].map(r=>({...JSON.parse(r.data),sourceLine:r.line})),rejected:[...db.prepare('SELECT data FROM rejected ORDER BY category,sequence LIMIT 25').iterate()].map(r=>JSON.parse(r.data)),mappingFields:Object.keys(FIELDS)};
    atomicJSON(preparedFile,result);value.phase='prepared';value.sourceSha256=digest.sha256;atomicJSON(path.join(root,'intake.json'),value);return result;
@@ -279,7 +288,8 @@ export function reconfigureIntake(w,id,input){
  const root=intakeRoot(w,id);return withDirectoryLock(root,()=>{
   const value=recoverLocalIntake(root,descriptor(w,id));if(value.phase==='committed')throw new InputError('The original import is immutable; make a new source edition for later changes',409);
   if(input.mapping!==undefined&&(!input.mapping||typeof input.mapping!=='object'||Array.isArray(input.mapping)))throw new InputError('Column mapping must be an object');
-  if(input.mapping!==undefined)value.mapping=input.mapping;
+  sameLineSelection(value,input);
+  if(input.mapping!==undefined){sourceLineMapping(input.mapping,intakeLineEndings(value));value.mapping=input.mapping;}
   if(input.label!==undefined){const label=clean(input.label);if(!label)throw new InputError('Name the original file');value.label=label;}
   value.phase=value.offset===value.bytes?'uploaded':'uploading';
   for(const name of ['prepared.json','normalized.sqlite','normalized.sqlite-journal','normalized.sqlite-wal','normalized.sqlite-shm'])fs.rmSync(path.join(root,name),{force:true});

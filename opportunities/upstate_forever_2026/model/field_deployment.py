@@ -24,7 +24,7 @@ from .implementation_observations import _attachment_inventory
 from .monitoring_packet import add_member, file_member, retain_packet
 
 SCHEMA = "upstate.field-deployment/v1"
-VERSION = "field-crew-packet/2-declared-coordinates"
+VERSION = "field-crew-packet/3-sampling-protocols"
 HEX = re.compile(r"[0-9a-f]{64}")
 APPLICATION = Path(__file__).resolve().parents[1]
 
@@ -266,6 +266,20 @@ def _context(workspace, plan_id, revision, selection):
         if activity["kind"] == "sample" and not activity.get("custody_ref"):
             issues.append({"visit_id": activity["visit_id"], "activity_id": activity["id"],
                            "code": "custody", "message": "This retained sample has no recorded custody reference."})
+    # Validate the retained scientific assignment before a crew packet is issued.
+    sampling = _sampling_records({"original_plan": plan, "visits": visits, "sites": sites, "monitoring_plans": protocols})
+    if sampling:
+        from . import monitoring_sampling_protocol
+        identity["sampling_protocol_implementation"] = describe_file(
+            APPLICATION, Path(monitoring_sampling_protocol.__file__))
+    for item in sampling:
+        for target in item["current_targets"]:
+            if target["applicability"] != "matches_source_station":
+                issues.append({"visit_id": item["visit_id"], "target_id": target["target_id"],
+                               "code": "sampling_" + target["applicability"],
+                               "message": "Sampling target " + target["target_id"] + ": " +
+                                          target["applicability"].replace("_", " ") +
+                                          "; retain the intended source station and review this actual assignment."})
     groups = defaultdict(list)
     for visit in visits:
         calendar = _calendar(visit)
@@ -293,6 +307,324 @@ def preview(workspace, plan_id, revision, selection):
     return {"schema": SCHEMA, "state": "preview",
             **{name: value[name] for name in ("id", "plan", "selection", "summary", "issues",
                                              "visits", "sites", "monitoring_plans", "attachment_inventory", "coordinate_inventory")}}
+
+
+def _sampling_value(value):
+    """Display retained absence, null and empty values without conflating them."""
+    if value is None:
+        return "Explicit null"
+    if value == "":
+        return "Empty text"
+    if isinstance(value, bool):
+        return "Yes" if value else "No"
+    if isinstance(value, list) and not value:
+        return "Empty list"
+    if isinstance(value, dict) and not value:
+        return "Empty object"
+    return _text(value)
+
+
+def _sampling_field(row, key):
+    return _sampling_value(row[key]) if key in row else "Not supplied"
+
+
+def _sampling_cohort(row, key):
+    fields = row.get("fields", {})
+    field = fields.get(key)
+    if not isinstance(field, dict) or field.get("present") is not True:
+        return "Not supplied"
+    return _sampling_value(field.get("value"))
+
+
+def _sampling_visit(document, protocol, visit, site):
+    """Show protected scientific scope beside retained, potentially edited fields."""
+    declared = protocol is not None and "sampling_requirements" in protocol
+    assigned = "sampling_requirements" in visit
+    has_protected = any(isinstance(link.get("snapshot"), dict)
+                        and "sampling_protocols" in link["snapshot"]
+                        for link in document.get("source_links", []))
+    if not declared and not assigned and not has_protected:
+        return None
+    current_protocol = deepcopy(protocol.get("sampling_requirements")) if protocol else None
+    current_assignment = deepcopy(visit.get("sampling_requirements"))
+    item = {"protocol": None, "assignment": None, "actual_assignment": current_assignment,
+            "requirements": [], "current_station_id": site.get("monitoring_station_id"),
+            "current_targets": [], "actual_protocol": current_protocol,
+            "actual_protocol_present": declared, "actual_assignment_present": assigned,
+            "source_binding": None, "scope_state": "unverified",
+            "scope_message": "No protected original Sampling protocol is available for this fieldwork row."}
+    if protocol is None:
+        return item if assigned else None
+    # This shared resolver reads immutable source snapshots, with no native
+    # model/data lookup; locally edited protocol fields remain separate.
+    from .monitoring_sampling_protocol import sampling_source
+    try:
+        protected = sampling_source(document, protocol, visit)
+    except ValueError as error:
+        item["scope_message"] = "The original Sampling source could not be verified: " + str(error)
+        return item
+    if protected is None:
+        return item if declared or assigned else None
+    value, assignment = protected["protocol"], protected.get("visit")
+    item.update(protocol=deepcopy(value), assignment=deepcopy(assignment),
+                source_binding=deepcopy(protected), scope_state="original_scope",
+                scope_message="The original Sampling requirements and visit assignment are retained in the protected campaign source.")
+    if current_protocol != value or current_assignment != assignment:
+        item.update(scope_state="locally_edited_scope",
+                    scope_message="The fieldwork protocol or visit assignment differs from its protected original Sampling scope. "
+                                  "Original requirements are shown separately; the full edited values are retained below.")
+    if assignment is None:
+        item.update(scope_state="assignment_not_recorded",
+                    scope_message="This fieldwork visit has no protected original Sampling calendar assignment. "
+                                  "No original target is inferred for this user-authored visit.")
+        return item
+    if (not isinstance(assignment, dict)
+            or assignment.get("schema") != "upstate.monitoring-sampling-visit/v1"
+            or assignment.get("protocol_id") != value["id"]
+            or assignment.get("recommendation_id") != value.get("recommendation_id")
+            or assignment.get("recommendation_design_id") != value.get("recommendation_design_id")
+            or not isinstance(assignment.get("visit_key"), str)
+            or "station_id" not in assignment
+            or not isinstance(assignment.get("targets"), list)):
+        item.update(scope_state="unverified",
+                    scope_message="The protected original visit assignment could not be read. "
+                                  "No target assignment is inferred; original and edited records remain available.")
+        return item
+    required = [row for row in value["requirements"]
+                if assignment["visit_key"] in row["calendar"]["visit_keys"]]
+    expected = []
+    for row in required:
+        original, actual = row["station"].get("network_station_id"), assignment["station_id"]
+        applicability = ("unbound_station" if actual is None else
+                         "matches_source_station" if actual == original else "different_station")
+        expected.append({"target_id": row["target_id"], "expected_station_id": original,
+                         "actual_station_id": actual, "applicability": applicability})
+    if assignment["targets"] != expected:
+        item.update(scope_state="unverified",
+                    scope_message="The protected target assignments do not match their retained calendar and source-station scope. "
+                                  "No target assignment is inferred from these records.")
+        return item
+    current_targets = []
+    for original in expected:
+        actual = {"target_id": original["target_id"],
+                  "expected_station_id": original["expected_station_id"],
+                  "actual_station_id": item["current_station_id"],
+                  "applicability": ("unbound_station" if item["current_station_id"] is None else
+                      "matches_source_station" if item["current_station_id"] == original["expected_station_id"] else
+                      "different_station")}
+        current_targets.append(actual)
+    item.update(requirements=required, current_targets=current_targets)
+    return item
+
+
+def _sampling_records(context):
+    protocols = {row["id"]: row for row in context["monitoring_plans"]}
+    sites = {row["id"]: row for row in context["sites"]}
+    rows = []
+    for visit in context["visits"]:
+        item = _sampling_visit(context["original_plan"], protocols.get(visit.get("monitoring_plan_id")),
+                               visit, sites[visit["site_id"]])
+        if item is None:
+            continue
+        rows.append({"visit_id": visit["id"], "site_id": visit["site_id"],
+                     "planned_date": visit.get("planned_date"),
+                     "monitoring_plan_id": visit.get("monitoring_plan_id"), **item})
+    return rows
+
+
+def _sampling_csv_rows(records):
+    rows = []
+    for record in records:
+        protocol, assignment = record["protocol"] or {}, record["assignment"]
+        assignment_dict = assignment if isinstance(assignment, dict) else {}
+        base = {key: deepcopy(record[key]) for key in
+                ("visit_id", "site_id", "planned_date", "monitoring_plan_id")}
+        base.update(protocol_id=protocol.get("id"),
+                    recommendation_id=protocol.get("recommendation_id"),
+                    recommendation_design_id=protocol.get("recommendation_design_id"),
+                    monitoring_design_id=protocol.get("monitoring_design_id"),
+                    scope_state=record["scope_state"], scope_message=record["scope_message"],
+                    actual_protocol_present=record["actual_protocol_present"],
+                    actual_assignment_present=record["actual_assignment_present"],
+                    visit_key=assignment_dict.get("visit_key"),
+                    actual_station_id=record["current_station_id"],
+                    retained_assigned_station_id=assignment_dict.get("station_id"))
+        if not record["requirements"]:
+            rows.append({**base, "assignment_state": ("no_target_for_visit"
+                         if record["scope_state"] in {"original_scope", "locally_edited_scope"}
+                         else record["scope_state"]), "target_count": 0,
+                         "original_protocol": deepcopy(record["protocol"]),
+                         "actual_protocol": deepcopy(record["actual_protocol"]),
+                         "original_assignment": deepcopy(assignment),
+                         "actual_assignment": deepcopy(record["actual_assignment"])})
+        for row, applicability in zip(record["requirements"], record["current_targets"]):
+            target, cohort = row["target"], row["cohort"]
+            rows.append({**base, "assignment_state": applicability["applicability"],
+                         "target_count": len(record["requirements"]), "target_id": row["target_id"],
+                         "expected_station_id": applicability["expected_station_id"],
+                         "source_station_id": target.get("station_id"),
+                         "cohort_id": target.get("cohort_id"),
+                         "characteristic": _sampling_cohort(cohort, "characteristic"),
+                         "method": _sampling_cohort(cohort, "method"),
+                         "fraction": _sampling_cohort(cohort, "fraction"),
+                         "unit": _sampling_cohort(cohort, "unit"),
+                         "requested_reporting_limit": _sampling_field(target, "reporting_limit"),
+                         "reporting_limit_basis": _sampling_field(target, "reporting_limit_basis"),
+                         "months": deepcopy(target.get("months")),
+                         "flow_goal": _sampling_field(target, "flow_goal"),
+                         "reason": _sampling_field(target, "reason"),
+                         "sensitivity_basis": _sampling_field(target, "sensitivity_basis"),
+                         "original_target": deepcopy(target), "original_station": deepcopy(row["station"]),
+                         "original_cohort": deepcopy(cohort), "original_calendar": deepcopy(row["calendar"]),
+                         "current_applicability": deepcopy(applicability),
+                         "actual_protocol": deepcopy(record["actual_protocol"]),
+                         "actual_assignment": deepcopy(record["actual_assignment"])})
+    return rows
+
+
+def _sampling_calendar_lines(item):
+    if item is None:
+        return []
+    assignment = item["assignment"]
+    original = item["protocol"] or {}
+    lines = ["Sampling scope: " + item["scope_message"],
+             "Protected Sampling protocol: " + _sampling_field(original, "id"),
+             "Saved Sampling design: " + _sampling_field(original, "recommendation_design_id")]
+    if item["scope_state"] in {"unverified", "assignment_not_recorded", "edited_or_unverified_assignment"}:
+        lines.append("No verified original target assignment is claimed for this visit.")
+    elif not item["requirements"]:
+        lines.append("No Sampling target is assigned to this retained calendar visit.")
+    for row, applicability in zip(item["requirements"], item["current_targets"]):
+        target, cohort = row["target"], row["cohort"]
+        lines.extend([
+            "Sampling target: " + row["target_id"] + "; " + applicability["applicability"].replace("_", " "),
+            "Expected native station: " + _sampling_field(applicability, "expected_station_id")
+            + "; actual station: " + _sampling_field(applicability, "actual_station_id"),
+            "Analyte: " + _sampling_cohort(cohort, "characteristic")
+            + "; method: " + _sampling_cohort(cohort, "method")
+            + "; fraction: " + _sampling_cohort(cohort, "fraction")
+            + "; unit: " + _sampling_cohort(cohort, "unit"),
+            "Requested reporting limit: " + _sampling_field(target, "reporting_limit")
+            + "; basis: " + _sampling_field(target, "reporting_limit_basis"),
+            "Requested months: " + _sampling_field(target, "months")
+            + "; flow goal: " + _sampling_field(target, "flow_goal"),
+            "Authored rationale: " + _sampling_field(target, "reason")])
+    lines.append("These are proposed field/laboratory requirements, not collected results or confirmed attainment.")
+    return lines
+
+
+def _sampling_edits(original, actual, path):
+    """Complete, type-aware structural differences; no field is silently adopted."""
+    if isinstance(original, dict) and isinstance(actual, dict):
+        rows = []
+        for key in sorted(set(original) | set(actual)):
+            name = path + "." + key
+            if key not in original:
+                rows.append([name, "Not supplied", _sampling_value(actual[key])])
+            elif key not in actual:
+                rows.append([name, _sampling_value(original[key]), "Not supplied"])
+            else:
+                rows.extend(_sampling_edits(original[key], actual[key], name))
+        return rows
+    if isinstance(original, list) and isinstance(actual, list):
+        rows = []
+        for index in range(max(len(original), len(actual))):
+            name = path + "[" + str(index) + "]"
+            if index >= len(original):
+                rows.append([name, "Not supplied", _sampling_value(actual[index])])
+            elif index >= len(actual):
+                rows.append([name, _sampling_value(original[index]), "Not supplied"])
+            else:
+                rows.extend(_sampling_edits(original[index], actual[index], name))
+        return rows
+    if type(original) is type(actual) and original == actual:
+        return []
+    return [[path, _sampling_value(original), _sampling_value(actual)]]
+
+
+def _sampling_html(item):
+    if item is None:
+        return ""
+    value, assignment = item["protocol"], item["assignment"]
+    parts = ['<section class="sampling-scope"><h3>Sampling and laboratory requirements</h3>',
+             "<p>Protected requirements, when available below, retain the exact saved Sampling proposal and native design. "
+             "A scheduled visit does not establish an actual collection, high-flow event, laboratory result "
+             "or achieved reporting limit. Unbound and different stations require scientific review.</p>"]
+    parts.append('<p class="sampling-applicability"><strong>' + escape(item["scope_message"]) + "</strong></p>")
+    if value is not None:
+        edits = [*_sampling_edits({"present": True, "value": value},
+                     {"present": item["actual_protocol_present"], "value": item["actual_protocol"]}, "protocol"),
+                 *_sampling_edits({"present": assignment is not None, "value": assignment},
+                     {"present": item["actual_assignment_present"], "value": item["actual_assignment"]}, "visit_assignment")]
+        if edits:
+            parts.append("<h4>Local fieldwork changes</h4><p>These saved edits remain separate from the "
+                         "original scientific requirements below. Their scientific applicability is not assumed.</p>"
+                         + _table(["Field", "Protected original", "Current fieldwork value"], edits))
+    if item["scope_state"] in {"unverified", "assignment_not_recorded", "edited_or_unverified_assignment"}:
+        parts.append("<p><strong>No original Sampling target assignment is claimed for this visit.</strong> "
+                     "The original source scope, when available, and all edited fieldwork values are retained below.</p>")
+    elif not item["requirements"]:
+        parts.append("<p><strong>No Sampling target is assigned to this retained calendar visit.</strong> "
+                     "The original protocol retains its other targets; none is inferred for this date or site.</p>")
+    if isinstance(assignment, dict) and "station_id" in assignment and item["current_station_id"] != assignment["station_id"]:
+        parts.append('<p class="sampling-applicability"><strong>The current fieldwork station differs from '
+                     "the retained visit assignment.</strong> Retained assigned station: "
+                     + escape(_sampling_field(assignment, "station_id"))
+                     + "; current actual station: " + escape(_sampling_value(item["current_station_id"]))
+                     + ". The following applicability uses the current saved fieldwork site.</p>")
+    for row, applicability in zip(item["requirements"], item["current_targets"]):
+        target, cohort, station, calendar = (row[key] for key in ("target", "cohort", "station", "calendar"))
+        state = {"matches_source_station": "Matches the retained source-station binding",
+                 "unbound_station": "Unbound station — the intended Sampling location is not confirmed",
+                 "different_station": "Different station — this visit does not use the intended source-station binding"}[applicability["applicability"]]
+        parts.append("<h4>Target " + escape(row["target_id"]) + '</h4><p class="sampling-applicability"><strong>'
+                     + escape(state) + "</strong></p>")
+        parts.append(_table(["Requirement", "Exact retained scope"], [
+            ["Source station", _sampling_field(target, "station_id")],
+            ["Expected native station", _sampling_field(applicability, "expected_station_id")],
+            ["Current actual station", _sampling_field(applicability, "actual_station_id")],
+            ["Catchment", _sampling_field(station, "catchment_id")],
+            ["Analyte / characteristic", _sampling_cohort(cohort, "characteristic")],
+            ["Method", _sampling_cohort(cohort, "method")],
+            ["Method identifier / context", _sampling_cohort(cohort, "method_id") + " / " + _sampling_cohort(cohort, "method_context")],
+            ["Method name / specification", _sampling_cohort(cohort, "method_name") + " / " + _sampling_cohort(cohort, "method_specification")],
+            ["Fraction / analytical fraction", _sampling_cohort(cohort, "fraction") + " / " + _sampling_cohort(cohort, "analytical_fraction")],
+            ["Speciation / unit", _sampling_cohort(cohort, "speciation") + " / " + _sampling_cohort(cohort, "unit")],
+            ["Sample medium / subdivision", _sampling_cohort(cohort, "sample_media") + " / " + _sampling_cohort(cohort, "sample_media_subdivision")],
+            ["Sample fraction / weight basis", _sampling_cohort(cohort, "sample_fraction") + " / " + _sampling_cohort(cohort, "weight_basis")],
+            ["Activity type", _sampling_cohort(cohort, "activity_type")],
+            ["Result value type / value type", _sampling_cohort(cohort, "result_value_type") + " / " + _sampling_cohort(cohort, "value_type")],
+            ["Sample depth / unit", _sampling_cohort(cohort, "depth_value") + " / " + _sampling_cohort(cohort, "depth_unit")],
+            ["Result depth / unit", _sampling_cohort(cohort, "result_depth_value") + " / " + _sampling_cohort(cohort, "result_depth_unit")],
+            ["Requested reporting limit", _sampling_field(target, "reporting_limit")],
+            ["Reporting-limit unit", _sampling_cohort(cohort, "unit")],
+            ["Reporting-limit basis", _sampling_field(target, "reporting_limit_basis")],
+            ["Requested months (1–12)", _sampling_field(target, "months")],
+            ["Minimum historical distinct dates per month", _sampling_field(target, "minimum_dates_per_month")],
+            ["Proposed future visits", _sampling_field(target, "proposed_visits")],
+            ["Native calendar visits in requested months", _sampling_field(calendar, "calendar_visits_in_selected_months")],
+            ["Calendar count meets requested count", _sampling_field(calendar, "calendar_count_meets_request")],
+            ["Flow goal", _sampling_field(target, "flow_goal")],
+            ["Authored rationale", _sampling_field(target, "reason")],
+            ["Sensitivity rationale", _sampling_field(target, "sensitivity_basis")],
+        ]))
+        extra = [(key.replace("_", " "), _sampling_cohort(cohort, key))
+                 for key in ("time_basis", "temperature_basis", "particle_size_basis",
+                             "time_support", "quantity_basis", "measurement_support", "project_id", "organization_id")
+                 if key in cohort.get("fields", {})]
+        if extra:
+            parts.append(_table(["Additional original cohort definition", "Retained value"], extra))
+    parts.append("<details><summary>Protected original scope, actual fieldwork edits and current applicability</summary><pre>"
+                 + escape(json.dumps({"protected_source": item["source_binding"],
+                                      "original_protocol": value, "actual_protocol": item["actual_protocol"],
+                                      "original_assignment": assignment,
+                                      "actual_assignment": item["actual_assignment"],
+                                      "actual_protocol_present": item["actual_protocol_present"],
+                                      "actual_assignment_present": item["actual_assignment_present"],
+                                      "current_station_id": item["current_station_id"],
+                                      "current_targets": item["current_targets"]}, ensure_ascii=False, indent=2))
+                 + "</pre></details></section>")
+    return "".join(parts)
 
 
 def _copy_file(source, target, descriptor):
@@ -358,6 +690,7 @@ def calendar_bytes(context):
              "CALSCALE:GREGORIAN"]
     sites = {row["id"]: row for row in context["sites"]}
     coordinates = _coordinate_index(context)
+    sampling = {row["visit_id"]: row for row in _sampling_records(context)}
     for visit in context["visits"]:
         if not visit.get("planned_date"):
             continue
@@ -373,6 +706,7 @@ def calendar_bytes(context):
             "Original latitude/longitude: " + _text(site.get("latitude")) + " / " + _text(site.get("longitude")),
             "Original coordinate reference system: " + _text(site.get("coordinate_reference_system")),
             "Exported coordinate: " + _coordinate_label(coordinates[site["id"]]),
+            *_sampling_calendar_lines(sampling.get(visit["id"])),
             "Open the retained crew packet and existing field workbench for original protocol and actual field capture.",
         ])
         lines.extend(["BEGIN:VEVENT", "UID:" + uid + "@upstate-field",
@@ -403,15 +737,18 @@ def render_html(context):
     sites = {row["id"]: row for row in context["sites"]}
     protocols = {row["id"]: row for row in context["monitoring_plans"]}
     visits = {row["id"]: row for row in context["visits"]}
+    sampling = {row["visit_id"]: row for row in _sampling_records(context)}
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
              "<title>" + escape(context["selection"]["title"]) + "</title>",
-             "<style>body{font:15px/1.5 system-ui,sans-serif;max-width:1120px;margin:32px auto;padding:0 20px;color:#222;background:#fff}h1,h2,h3{line-height:1.25}h2{border-top:2px solid #555;padding-top:18px}a{color:#222}table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #aaa;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}.sheet{border:1px solid #888;padding:18px;margin:20px 0}.line{min-height:38px;border-bottom:1px solid #aaa}.muted{color:#555}@media print{body{font-size:11px;margin:0;max-width:none}.screen{display:none}.sheet{break-before:page;border:0;padding:0}thead{display:table-header-group}tr{break-inside:avoid}.table{overflow:visible}a{color:#222;text-decoration:none}}</style>",
+             "<style>body{font:15px/1.5 system-ui,sans-serif;max-width:1120px;margin:32px auto;padding:0 20px;color:#222;background:#fff}h1,h2,h3{line-height:1.25}h2{border-top:2px solid #555;padding-top:18px}a{color:#222}table{border-collapse:collapse;width:100%;margin:12px 0}th,td{border:1px solid #aaa;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}.sheet{border:1px solid #888;padding:18px;margin:20px 0}.line{min-height:38px;border-bottom:1px solid #aaa}.muted{color:#555}.sampling-scope{max-width:100%}.sampling-applicability{border-left:3px solid #555;padding:8px 12px;background:#f4f4f4}h3,h4{break-after:avoid}@media print{body{font-size:11px;margin:0;max-width:none}.screen,.sampling-scope details{display:none}.sheet{break-before:page;border:0;padding:0}thead{display:table-header-group}tr{break-inside:avoid}.table{overflow:visible}a{color:#222;text-decoration:none}}</style>",
              "<h1>" + escape(context["selection"]["title"]) + "</h1>",
              "<p>" + escape(plan["title"]) + " · saved revision " + str(plan["revision"]) + "</p>",
              '<p class="screen"><a href="field-workbench.html">Open field workbench</a> · <a href="original-plan.json" download>Complete editable plan</a> · <a href="visits.ics" download>Calendar</a> · <a href="sites.geojson" download>Site geometry</a></p>',
              "<p>Open the field workbench to continue the included original plan. Choose a selected visit in the packet toolbar, record actual visits, samples and observations, then export the completed plan and files as a complete ZIP. Import that ZIP in the original Workspace and review its saved revision before returning completed work to its original Monitoring campaign.</p>",
              "<p>The packet groups original visits by planned date, original crew and observer. Local clock values remain as recorded. Calendar events cover the stated day. Source search areas remain identified where no station point is available.</p>",
              "<p>Original site coordinates and their declared datum are retained. GeoJSON and calendar coordinates use WGS84 only after an explicit declaration or a recorded native transformation. Unstated or unavailable transformations leave geometry empty; coordinate-inventory.json retains each original coordinate and operation.</p>"]
+    if sampling:
+        parts.append('<p class="screen"><a href="sampling-requirements.csv" download>Per-visit Sampling requirements CSV</a> · <a href="sampling-protocols.json" download>Complete original Sampling protocols and assignments</a></p>')
     parts.append(_table(["Day", "Original crew", "Observer", "Visits"], [
         [row["planned_date"], row["crew"], row["observer"], len(row["visit_ids"])] for row in context["summary"]["groups"]]))
     parts.append("<h2>Preparation notes</h2>" + _table(["Visit / activity", "Recorded preparation detail"], [
@@ -440,7 +777,9 @@ def render_html(context):
             ]))
             if protocol:
                 parts.append("<h3>Monitoring protocol</h3>" + _table(["Field", "Original saved value"], [
-                    [key.replace("_", " "), value] for key, value in protocol.items()]))
+                    [key.replace("_", " "), value] for key, value in protocol.items()
+                    if key != "sampling_requirements"]))
+            parts.append(_sampling_html(sampling.get(visit["id"])))
             parts.append("<h3>Original activities and sample custody</h3>" + _table(
                 ["Activity", "Kind", "Sample ID", "Collected at", "Method", "Custody reference", "Notes"],
                 [[row["id"], row["kind"], row.get("sample_id"), row.get("collected_at"), row.get("method"),
@@ -491,6 +830,15 @@ def prepare(workspace, plan_id, revision, selection, *, expected_id):
             ("observations", ["id", "activity_id", "parameter", "result_type", "original_text", "unit"]),
         ):
             atomic_bytes(directory / (name + ".csv"), _csv(records[name], headers), immutable=True)
+        sampling = _sampling_records(context)
+        if sampling:
+            atomic_json(directory / "sampling-protocols.json", {
+                "schema": "upstate.field-deployment-sampling/v1",
+                "plan": context["plan"], "visits": sampling}, immutable=True)
+            atomic_bytes(directory / "sampling-requirements.csv", _csv(_sampling_csv_rows(sampling),
+                ["visit_id", "site_id", "planned_date", "target_id", "assignment_state",
+                 "expected_station_id", "actual_station_id", "characteristic", "method", "fraction",
+                 "unit", "requested_reporting_limit", "months", "reason"]), immutable=True)
         coordinates = _coordinate_index(context)
         features = []
         for site in context["sites"]:
@@ -519,12 +867,16 @@ def prepare(workspace, plan_id, revision, selection, *, expected_id):
                     ("schema", "bytes", "sha256", "inputs", "field_packet")}, immutable=True)
         for name, descriptor in context["identity"]["offline_application_sources"].items():
             verify_file(APPLICATION, descriptor)
+        if context["identity"].get("sampling_protocol_implementation"):
+            verify_file(APPLICATION, context["identity"]["sampling_protocol_implementation"])
         for path, descriptor in context["attachment_files"]:
             _copy_file(path, directory / descriptor["retained_path"], descriptor)
         names = ["intent.json", "original-plan.json", "original-revision.json", "selected-records.json",
                  "selection.json", "attachment-inventory.json", "preparation.json", "coordinate-inventory.json",
                  "visits.csv", "sites.csv", "monitoring_plans.csv", "activities.csv", "observations.csv",
                  "sites.geojson", "visits.ics", "crew-packet.html", "field-workbench.html", "offline-build.json"]
+        if sampling:
+            names.extend(["sampling-protocols.json", "sampling-requirements.csv"])
         names.extend(row["retained_path"] for row in context["attachment_inventory"] if row["state"] == "retained")
         members = {name: describe_file(directory, directory / name) for name in dict.fromkeys(names)}
         index = {"schema": SCHEMA, "id": context["id"], "identity": context["identity"],

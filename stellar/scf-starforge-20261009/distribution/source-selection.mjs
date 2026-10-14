@@ -50,7 +50,7 @@ export function sourceSelectionPath(id) {
 export function validateSourceSelection(value, path) {
   need(plain(value) && value.schema === sourceSelectionSchema &&
     Object.keys(value).every(key => ['schema', 'id', 'title', 'description', 'base',
-      'contributions', 'components', 'supportFiles', 'managedSourceManifests', 'excludeFiles', 'product'].includes(key)),
+      'contributions', 'components', 'supportFiles', 'managedSourceManifests', 'pinnedSourceManifests', 'excludeFiles', 'product'].includes(key)),
   'Unsupported distribution source selection');
   identifier(value.id, 'ID');
   if (path !== undefined) need(path === sourceSelectionPath(value.id),
@@ -75,6 +75,10 @@ export function validateSourceSelection(value, path) {
   if (value.managedSourceManifests !== undefined) list(value.managedSourceManifests, 'managed source manifest', entry => {
     sourcePath(entry, 'managed source manifest');
     need(entry.endsWith('.json'), 'A managed source manifest must name original JSON');
+  });
+  if (value.pinnedSourceManifests !== undefined) list(value.pinnedSourceManifests, 'pinned source manifest', entry => {
+    sourcePath(entry, 'pinned source manifest');
+    need(entry.endsWith('.json'), 'A pinned source manifest must name original JSON');
   });
   if (value.excludeFiles !== undefined) list(value.excludeFiles, 'excluded file', sourcePath);
   need(value.components.length > 0, 'A source selection needs at least one complete original component');
@@ -109,6 +113,9 @@ export function selectDistributionSources({ base, contributions, selection }) {
   selected.supportFiles = [...recipe.supportFiles];
   selected.managedSourceManifests = [...new Set([...(recipe.managedSourceManifests ?? []),
     ...(base.managedSourceManifests ?? []).filter(path => selected.supportFiles.includes(path) ||
+      selected.components.some(root => path.startsWith(root + '/')))])];
+  selected.pinnedSourceManifests = [...new Set([...(recipe.pinnedSourceManifests ?? []),
+    ...(base.pinnedSourceManifests ?? []).filter(path => selected.supportFiles.includes(path) ||
       selected.components.some(root => path.startsWith(root + '/')))])];
   selected.excludeFiles = [...new Set([...(base.excludeFiles ?? []), ...(recipe.excludeFiles ?? [])])];
   selected.commands = selectMap(base.commands, recipe.base.commands, 'command');

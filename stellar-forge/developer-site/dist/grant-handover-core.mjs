@@ -9,7 +9,7 @@ export const SOURCE_ROLES = ['application','source-index','budget','product-and-
 export const EVIDENCE_KINDS = ['source','review-export','operated-result','issuer-instructions','other'];
 export const RETURN_KINDS = ['submission-observation','issuer-acknowledgement','issuer-message','operator-note'];
 const HASH = /^[a-f0-9]{64}$/;
-const B64 = /^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/;
+const B64 = { test: value => value.length % 4 === 0 && /^[A-Za-z0-9+/]*={0,2}$/.test(value) };
 const clone = value => JSON.parse(JSON.stringify(value));
 const need = (value,message) => { if (!value) throw new Error(message); };
 const own = (value,key) => Object.prototype.hasOwnProperty.call(value,key);

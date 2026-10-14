@@ -6,13 +6,19 @@ import {join,resolve} from 'node:path';
 const sha=raw=>createHash('sha256').update(raw).digest('hex');
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 export async function receiveWorkbookMeasurements({page,api,openView,workspace,
-  sourceCollectionId,sourceId,kind,label,reviewer,mapping,interpretation='',output}){
+  sourceCollectionId,sourceId,kind,label,reviewer,mapping,interpretation='',identifierColumns=[],output}){
   assert(page&&typeof api==='function'&&typeof openView==='function');
   assert(['wqp','stations'].includes(kind)&&label&&reviewer);
+  assert(Array.isArray(identifierColumns)&&identifierColumns.length<=16384&&
+    identifierColumns.every(value=>typeof value==='string'&&/^c(?:0|[1-9][0-9]*)$/.test(value))&&
+    new Set(identifierColumns).size===identifierColumns.length,'Choose each original identifier column once.');
+  identifierColumns=[...identifierColumns].sort((a,b)=>Number(a.slice(1))-Number(b.slice(1)));
   const root=resolve(output);await mkdir(root,{recursive:true});
   const checkpoint=join(root,'workbook-measurements-operation.json');
   let record;try{record=JSON.parse(await readFile(checkpoint,'utf8'));}catch(e){if(e.code!=='ENOENT')throw e;}
   const intent={workspace,sourceCollectionId,sourceId,kind,label,reviewer,mapping,interpretation};
+  // Empty choices preserve the exact original checkpoint shape.
+  if(identifierColumns.length)intent.identifierColumns=identifierColumns;
   if(record)assert.deepEqual(record.intent,intent,'Keep the original complete receiving selection.');
   else record={schema:'eco.workbook-measurements-receiving/v1',intent,createdAt:new Date().toISOString(),artifacts:[]};
   async function save(){const pending=checkpoint+'.pending';await writeFile(pending,JSON.stringify(record,null,2)+'\n');await rename(pending,checkpoint);}
@@ -33,7 +39,8 @@ export async function receiveWorkbookMeasurements({page,api,openView,workspace,
     for(const file of record.artifacts){const raw=await readFile(file.path);assert.equal(raw.length,file.bytes);assert.equal(sha(raw),file.sha256);}
     const saved=await native('/intake/'+record.preparationId+'/export');
     assert.equal(saved.workspaceId,record.targetWorkspaceId);
-    assert(saved.editions.some(e=>e.id===record.preparationId&&e.revision===record.importReceipt.revision));
+    const edition=saved.editions.find(e=>e.id===record.preparationId&&e.revision===record.importReceipt.revision);
+    assert(edition);assert.deepEqual(edition.value.lineage?.identifier_formatting?.columns||[],identifierColumns);
     assert(saved.receipts.some(r=>JSON.stringify(r)===JSON.stringify(record.importReceipt)));
     const copied=await native('/intake/'+record.copyId+'/export');assert.deepEqual(copied.originals,saved.originals);
     return record;
@@ -43,6 +50,12 @@ export async function receiveWorkbookMeasurements({page,api,openView,workspace,
   const desk=page.locator('.ci-desk').filter({has:page.getByRole('heading',{name:'Prepare workbook measurements',exact:true})});
   await desk.locator('select[name=source]').selectOption(sourceCollectionId+'|'+sourceId);
   await desk.locator('select[name=kind]').selectOption(kind);
+  const identifierInputs=desk.locator('[name=identifier_column]');
+  const availableIdentifiers=await identifierInputs.evaluateAll(inputs=>inputs.map(input=>input.value));
+  assert(identifierColumns.every(value=>availableIdentifiers.includes(value)),
+    'Select identifier columns from this actual retained workbook.');
+  for(let index=0;index<availableIdentifiers.length;index++)
+    await identifierInputs.nth(index).setChecked(identifierColumns.includes(availableIdentifiers[index]));
   await desk.locator('[name=label]').fill(label);await desk.locator('[name=reviewer]').fill(reviewer);
   await desk.locator('[name=note]').fill('Original retained workbook receiving; scientific mapping is reviewed in Measurements.');
   if(!record.taskId){
@@ -71,6 +84,8 @@ export async function receiveWorkbookMeasurements({page,api,openView,workspace,
   assert.equal(unedited.value.lineage.original.sha256,source.sha256);
   assert.equal(unedited.value.lineage.source_collection_id,sourceCollectionId);
   assert.equal(unedited.value.lineage.source_id,sourceId);
+  assert.deepEqual(unedited.value.lineage.identifier_formatting?.columns||[],identifierColumns,
+    'The saved preparation must retain this exact reviewed identifier choice.');
   // Review in the actual existing Measurements component, not a recreated form.
   await openView('measured-observations');
   const guided=page.locator('.mi.mw-panel');await guided.locator('[data-select]').selectOption(record.preparationId);

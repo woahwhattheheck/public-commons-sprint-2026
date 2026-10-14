@@ -3,7 +3,7 @@ import {randomUUID} from 'node:crypto';
 import {CHARACTERISTIC_FIELDS,CHARACTERISTIC_MAPPING,WQP_CHARACTERISTIC_EDITIONS} from './characteristics.mjs';
 import {buildIntakeComparison,compareIntakeIdentity} from './intake_comparison.mjs';
 import {initialiseLineage,originalMap,retainOriginals,readOriginal,validateStoredLineage,exportOriginals,validateLineagePacket,sourceLineages} from './source_lineage.mjs';
-import {parseCSV, safeJSON, InputError} from './parse.mjs';
+import {parseCSV, safeJSON, InputError, sourceLineEndings, SOURCE_LINE_EDITION} from './parse.mjs';
 import {FIELDS, fieldReader, hash, stable, parseSource, WQP_DETECTION_EDITION, USGS_DAILY_EDITION} from './normalise.mjs';
 export const INTAKE_FORMAT='upper-savannah-measurement-intake/v1';
 const kinds=['wqp','stations','usgs-daily'];
@@ -27,7 +27,7 @@ function draft(value){
   if(!object(value.mapping))fail('Preparation mapping must be an object.');
   v.mapping={};
   for(const [k,x]of Object.entries(value.mapping)){
-    if(k===CHARACTERISTIC_MAPPING&&WQP_CHARACTERISTIC_EDITIONS.includes(x)||k==='_wqp_detection'&&x===WQP_DETECTION_EDITION||k==='_usgs_daily'&&x===USGS_DAILY_EDITION){v.mapping[k]=x;continue;}
+    if(k==='_csv_lines'&&x===SOURCE_LINE_EDITION||k===CHARACTERISTIC_MAPPING&&WQP_CHARACTERISTIC_EDITIONS.includes(x)||k==='_wqp_detection'&&x===WQP_DETECTION_EDITION||k==='_usgs_daily'&&x===USGS_DAILY_EDITION){v.mapping[k]=x;continue;}
     if(!(Object.hasOwn(FIELDS,k)||Object.hasOwn(CHARACTERISTIC_FIELDS,k))||typeof x!=='string')fail('Invalid preparation mapping: '+k);
     v.mapping[k]=x;
   }
@@ -97,7 +97,7 @@ export function inspectIntake(s,input){
     }catch(e){if(!(e instanceof InputError))throw e;result.issues.push(e.message);return result;}
   }else{
     let parsed;
-    try{parsed=parseCSV(input.text);}catch(e){if(!(e instanceof InputError))throw e;result.issues.push(e.message);return result;}
+    try{parsed=parseCSV(input.text,{lineEndings:input.lineEndings||'physical'});}catch(e){if(!(e instanceof InputError))throw e;result.issues.push(e.message);return result;}
     result.headers=parsed.headers;result.sample=parsed.rows.slice(0,12);result.rawRows=parsed.rows.length;result.rawRejectedCount=parsed.rejected.length;
     result.rawRejected=parsed.rejected.slice(0,12);
     try{result.mapping=fieldReader(parsed.headers,input.mapping||{}).mapping;}catch(e){if(!(e instanceof InputError))throw e;result.issues.push(e.message);return result;}
@@ -113,7 +113,7 @@ export function inspectIntake(s,input){
 }
 export function previewSavedIntake(s,id,revision){
   const saved=readIntake(s,id,revision),value=saved.value;
-  const inspected=inspectIntake(s,{kind:value.kind,text:saved.text,mapping:value.mapping});
+  const inspected=inspectIntake(s,{kind:value.kind,text:saved.text,mapping:value.mapping,lineEndings:value.lineage?.schema==='upper-savannah-measurement-source-lineage/v1'?'legacy':'physical'});
   return {...inspected,id:saved.id,revision:saved.revision,digest:saved.digest,previewSha:hash(stable([saved.id,saved.revision,saved.digest,inspected]))};
 }
 export function importIntake(s,id,input){
@@ -127,8 +127,8 @@ export function importIntake(s,id,input){
   const value=saved.value;
   // Original import identity is kind + original content + original resolved mapping.
   // If the process stops after import, the same saved edition recovers that import.
-  const imported=s.import({kind:value.kind,text:saved.text,label:value.label,mapping:value.mapping,contentSha:value.sourceSha,origin:{type:'guided-file',filename:value.sourceName,context:value.context,...(value.lineage?{lineage:value.lineage}:{}),intake:{id,revision:input.revision,reviewer:value.reviewer,note:value.note}}});
-  const completed={id,revision:input.revision,previewSha:input.previewSha,importId:imported.id,sourceSha:value.sourceSha,rows:imported.rows,rejectedCount:imported.rejectedCount,completedAt:new Date().toISOString()};
+  const imported=s.import({kind:value.kind,text:saved.text,label:value.label,mapping:value.mapping,lineEndings:value.lineage?.schema==='upper-savannah-measurement-source-lineage/v1'?'legacy':'physical',contentSha:value.sourceSha,origin:{type:'guided-file',filename:value.sourceName,context:value.context,...(value.lineage?{lineage:value.lineage}:{}),intake:{id,revision:input.revision,reviewer:value.reviewer,note:value.note}}});
+  const completed={id,revision:input.revision,...(imported.sourceLineEdition?{sourceLineEdition:imported.sourceLineEdition}:{}),previewSha:input.previewSha,importId:imported.id,sourceSha:value.sourceSha,rows:imported.rows,rejectedCount:imported.rejectedCount,completedAt:new Date().toISOString()};
   return s.atomic(()=>{
     const existing=receipt(s,id,input.revision);if(existing)return existing;
     s.db.prepare('INSERT INTO intake_receipts VALUES(?,?,?)').run(id,input.revision,JSON.stringify(completed));
@@ -162,7 +162,7 @@ export function validateIntakes(value,imports=null,depth=0){
   for(const r of value.receipts){
     const key=r.id+':'+r.revision,e=editions.get(key),imp=imports?.find(x=>x.id===r.importId);
     if(receipts.has(key)||!e||r.sourceSha!==e.value.sourceSha||(imports&&!imp))fail('Intake receipt does not match its original imported source.');
-    const parsed=parseSource({kind:e.value.kind,text:sources.get(r.sourceSha),mapping:e.value.mapping});
+    const parsed=parseSource({kind:e.value.kind,text:sources.get(r.sourceSha),mapping:e.value.mapping,lineEndings:sourceLineEndings(r)});
     if(hash(stable([e.value.kind,r.sourceSha,parsed.mapping]))!==r.importId||(imp&&imp.sha!==r.sourceSha))fail('Intake receipt import identity mismatch.');
     receipts.add(key);
   }
@@ -216,7 +216,7 @@ export function compareIntakePreparations(s,id,input){
 export function reopenIntakeComparison(report){
  compareIntakeIdentity(report);
  validateIntakes(report.project);
- const fresh=buildIntakeComparison(report.project,report.before.revision,report.after.revision);
+ const fresh=buildIntakeComparison(report.project,report.before.revision,report.after.revision,{lineEndings:sourceLineEndings(report)});
  if(stable(fresh)!==stable(report))fail('This saved comparison differs from the complete original preparation or the current normaliser. Keep the unchanged selected file; it was not installed or imported.',409);
  return fresh;
 }

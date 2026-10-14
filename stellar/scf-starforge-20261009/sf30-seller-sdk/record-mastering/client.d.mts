@@ -221,7 +221,34 @@ export type DeliveryReceiveResult = {
     }[];
     rowCount: number;
 };
+
+export type DeliveryFieldProvenance = {
+    master_id: string; field: string; value: string;
+    status: Field['status']; sources: Candidate[]; decision: Decision | null;
+};
+export type DeliveryComparisonCell = {
+    field: string; before: DeliveryFieldProvenance | null; after: DeliveryFieldProvenance | null;
+    valueChanged: boolean; statusChanged: boolean; provenanceChanged: boolean;
+    change: 'added' | 'removed' | 'changed' | 'unchanged' | 'not_delivered';
+};
+export type DeliveryComparisonEdition = {
+    id: string; document: DeliveryDocument;
+    inventory: { name: string; bytes: number; sha256: string }[];
+    /** Complete byte-exact original files encoded as base64. */ files: Record<string,string>;
+};
+export type DeliveryComparison = {
+    schema: 'stellar-forge.record-mastering.v1.delivery-comparison'; sha256: string;
+    workspace: { id: string; title: string };
+    before: DeliveryComparisonEdition; after: DeliveryComparisonEdition;
+    fields: { shared: string[]; added: string[]; removed: string[] };
+    summary: Record<'beforeRecords'|'afterRecords'|'addedRecords'|'removedRecords'|'changedRecords'|'unchangedRecords'|'valueChanges'|'statusChanges'|'provenanceChanges',number>;
+    rows: { masterId: string; change: 'added'|'removed'|'changed'|'unchanged'; cells: DeliveryComparisonCell[] }[];
+    interpretation: { alignment: string; values: string; membership: string; provenance: string };
+};
+export type DeliveryComparisonResult = { comparison: DeliveryComparison; reportHtml: string; changesCSV: string };
+
 export interface OperationInputs {
+    'delivery.compare': { beforeId: string; afterId: string; workspaceId?: string; expectedSha256?: string };
     status: {};
     binding: {};
     feeds: {};
@@ -296,6 +323,7 @@ export interface OperationInputs {
     };
 }
 export interface OperationOutputs {
+    'delivery.compare': DeliveryComparisonResult;
     status: Status;
     binding: Binding;
     feeds: Feed[];

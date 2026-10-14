@@ -46,7 +46,151 @@ class Moments:
                 'population_stddev': math.sqrt(max(0., self.m2 / self.n)) if self.n else None}
 
 
-def rows(path: Path) -> Iterator[dict[str, Any]]:
+def selected_reading(source: dict, retained_preview: dict | None = None) -> dict | None:
+    """Use the retained edition's reviewed worksheet/layer and reading choices."""
+    metadata = source.get('metadata') or {}
+    binding = metadata.get('source_binding') or {}
+    entry = metadata.get('source') or {}
+    if metadata.get('native_kind') != 'retained_source' or binding.get('role') != 'primary':
+        return None
+    client = entry.get('client_source') or {}
+    if entry.get('kind') == 'table' and client:
+        # A saved biophysical projection is its own registered CSV. Its original
+        # workbook header/worksheet must not be applied a second time.
+        if entry.get('field_projection'):
+            return None
+        choice = client.get('selection') or {}
+        if any(type(choice.get(name)) is not int or choice[name] < 0 for name in ('file_index','part_index')):
+            raise IntelligenceError('Restore the original file and worksheet selection.',409)
+        if retained_preview is not None:
+            part = {'kind':'table','fields':retained_preview['original_fields'],
+                    'sheet':retained_preview['original_worksheet'],
+                    'header_row':retained_preview['original_header_row']}
+            supplied_options = retained_preview['reading_options']
+        else:
+            preview = client.get('inspection')
+            if not isinstance(preview, dict) or preview.get('schema') != 'upstate.client-source-preview/v1':
+                raise IntelligenceError('Open this source in Review my files and retain its worksheet and reading choices before Assistant table analysis.', 409)
+            part = preview.get('part') or {}
+            if preview.get('source_sha256') != source.get('sha256'):
+                raise IntelligenceError('The selected table preview belongs to another original file.',409)
+            supplied_options = preview.get('options')
+        if (client.get('source_sha256') != source.get('sha256')
+                or entry.get('body',{}).get('sha256') != source.get('sha256')
+                or part.get('kind') != 'table' or not isinstance(part.get('fields'), list)
+                or part.get('sheet') != entry.get('sheet')):
+            raise IntelligenceError('The selected table edition has inconsistent original worksheet evidence.', 409)
+        from model.client_source_files import options
+        reading = options(supplied_options)
+        if reading['header_row'] != part.get('header_row'):
+            raise IntelligenceError('The selected table header differs from its retained reading choices.', 409)
+        fields = part['fields']
+        labels = [field.get('label') for field in fields]
+        keys = labels if all(isinstance(label, str) and label for label in labels) and len(set(labels)) == len(labels) else [field.get('id') for field in fields]
+        if not fields or any(not isinstance(key, str) or not key for key in keys) or len(set(keys)) != len(keys):
+            raise IntelligenceError('The selected table has no unambiguous retained column identities.', 409)
+        return {'kind': 'table', 'options': reading, 'sheet': part.get('sheet'),
+                'fields': fields, 'column_keys': keys,
+                'source_sha256': source['sha256'],
+                'interpretation': 'Original selected worksheet and cells; column_keys retain unique original labels, or the reviewed positional column IDs when labels repeat or are empty.'}
+    if entry.get('kind') == 'vector' and entry.get('layer') is not None:
+        return {'kind': 'vector', 'layer': entry['layer']}
+    if entry.get('kind') == 'raster' and client:
+        selected = client.get('selection') or {}
+        # The retained projection already contains the selected original band.
+        part_index = selected.get('part_index')
+        band = (1 if entry.get('band_projection') else
+                part_index + 1 if type(part_index) is int and part_index >= 0 else None)
+        if band is not None:
+            if type(band) is not int or band < 1:
+                raise IntelligenceError('Choose the retained raster band.', 409)
+            return {'kind': 'raster', 'band': band,
+                    'original_band': entry.get('band_projection', {}).get('original_band', band)}
+    return None
+
+
+def reviewed_records(path: Path, reading: dict) -> Iterator[dict[str, Any]]:
+    from model.client_source_files import table_records, headers, scalar
+    iterator = table_records(path, reading['options'], reading.get('sheet'))
+    header_row = reading['options']['header_row']
+    found_header = False
+    try:
+        for record in iterator:
+            if record['row'] < header_row:
+                continue
+            values = record['values']
+            if record['row'] == header_row:
+                retained = [{key: field.get(key) for key in ('id', 'index', 'label', 'display')}
+                            for field in reading['fields']]
+                from .common import public_metadata
+                original_fields = headers(values)
+                if original_fields != retained and public_metadata(original_fields) != retained:
+                    raise IntelligenceError('The original table header differs from its retained inspection.', 409)
+                # Registry metadata sanitizes URL-like labels. Recover their exact
+                # original spelling from the verified file for scientific results.
+                reading['fields'] = original_fields
+                labels = [field['label'] for field in original_fields]
+                reading['column_keys'] = (labels if all(labels) and len(set(labels)) == len(labels)
+                                          else [field['id'] for field in original_fields])
+                found_header = True
+                continue
+            if (len(values) > len(reading['column_keys'])
+                    and any(value is not None and value != '' for value in values[len(reading['column_keys']):])):
+                raise IntelligenceError('An original table row has more cells than its reviewed header. Review the source header before analysis.', 409)
+            cells = {key: scalar(values[index]) if index < len(values) else None
+                     for index, key in enumerate(reading['column_keys'])}
+            position = {key: record[key] for key in ('row', 'line_start', 'line_end')}
+            if 'cell_metadata' in record:
+                position['cell_metadata'] = {
+                    key: record['cell_metadata'][index]
+                    for index, key in enumerate(reading['column_keys'])
+                    if index < len(record['cell_metadata'])}
+            yield {'cells': cells, 'source_row': position}
+        if not found_header:
+            raise IntelligenceError('The selected original header row is absent.', 409)
+    except (ValueError, UnicodeError, csv.Error) as error:
+        raise IntelligenceError(str(error), 422) from error
+    finally:
+        iterator.close()
+
+
+def reviewed_rows(path: Path, reading: dict) -> Iterator[dict[str, Any]]:
+    iterator = reviewed_records(path, reading)
+    try:
+        for record in iterator:
+            yield record['cells']
+    finally:
+        iterator.close()
+
+
+def table_page(path: Path, offset: int, limit: int, reading: dict | None = None) -> dict:
+    reviewed = reading is not None and reading.get('kind') == 'table'
+    iterator = (reviewed_records(path, reading) if reviewed else
+                ({'cells': row} for row in rows(path, reading)))
+    page, positions, more = [], [], False
+    try:
+        for index, record in enumerate(iterator):
+            if index < offset:
+                continue
+            if len(page) == limit:
+                more = True
+                break
+            page.append(record['cells'])
+            if reviewed:
+                positions.append(record['source_row'])
+    finally:
+        iterator.close()
+    return {'format': 'table_rows', 'population': 'original row page',
+            'offset': offset, 'rows': page, 'complete_page': True,
+            'next_offset': offset + len(page) if more else None,
+            **({'selected_reading': reading, 'original_rows': positions} if reviewed else {}),
+            'interpretation': 'Original literal cells and reviewed source positions. Excel cell type and number_format are retained where available; displayed identifier formatting requires the explicit retained Measurements projection. This page is not a statistical sample or a substituted numeric measurement.'}
+
+
+def rows(path: Path, reading: dict | None = None) -> Iterator[dict[str, Any]]:
+    if reading is not None and reading.get('kind') == 'table':
+        yield from reviewed_rows(path, reading)
+        return
     suffix = path.suffix.lower()
     if suffix in {'.csv', '.tsv'}:
         with path.open(encoding='utf-8-sig', newline='') as f:
@@ -70,10 +214,10 @@ def rows(path: Path) -> Iterator[dict[str, Any]]:
         raise IntelligenceError('Tabular analysis supports CSV, TSV, JSONL and NDJSON.')
 
 
-def table_profile(path: Path) -> dict:
+def table_profile(path: Path, reading: dict | None = None) -> dict:
     columns: dict[str, dict] = {}
     count = 0
-    for row in rows(path):
+    for row in rows(path, reading):
         for key in row:
             if key not in columns:
                 columns[key] = {'missing': count, 'non_numeric': 0, 'numeric': Moments()}
@@ -89,17 +233,21 @@ def table_profile(path: Path) -> dict:
                     col['numeric'].add(number)
         count += 1
     return {'format': 'table', 'population': 'complete', 'rows': count,
+            **({'selected_reading': reading} if reading is not None else {}),
             'columns': {k: {'missing': v['missing'], 'non_numeric_or_nonfinite': v['non_numeric'],
                             'numeric': v['numeric'].result()} for k, v in columns.items()}}
 
 
-def raster_profile(path: Path) -> dict:
+def raster_profile(path: Path, reading: dict | None = None) -> dict:
     import numpy as np
     import rasterio
     from rasterio.windows import Window
     bands = []
     with rasterio.open(path) as src:
-        for band in range(1, src.count + 1):
+        selected = [reading['band']] if reading is not None else range(1, src.count + 1)
+        if any(band > src.count for band in selected):
+            raise IntelligenceError('The retained raster band is absent from this original file.', 409)
+        for band in selected:
             unit_info = raster_unit_declarations(src, band)
             moments = Moments()
             for top in range(0, src.height, 512):
@@ -112,15 +260,23 @@ def raster_profile(path: Path) -> dict:
                           'excluded_masked_or_nonfinite': src.width * src.height - moments.n,
                           'statistics': moments.result()})
         return {'format': 'raster', 'population': 'complete', 'width': src.width, 'height': src.height,
+                **({'selected_reading': reading} if reading is not None else {}),
                 'crs': str(src.crs) if src.crs else None, 'bounds': list(src.bounds),
                 'transform': list(src.transform)[:6], 'dtype': list(src.dtypes), 'bands': bands,
                 'interpretation': 'Numeric cell statistics in declared raster units; interpret sums using their units and coverage.'}
 
 
-def vector_profile(path: Path) -> dict:
+def vector_profile(path: Path, reading: dict | None = None) -> dict:
     import fiona
-    with fiona.open(path) as src:
+    from contextlib import nullcontext
+    environment = nullcontext
+    if reading is not None:
+        from model.rasters import vector_environment
+        environment = vector_environment
+    selected = {'layer': reading['layer']} if reading is not None else {}
+    with environment(), fiona.open(path, **selected) as src:
         result = {'format': 'vector', 'population': 'complete', 'features': 0,
+                  **({'selected_reading': reading} if reading is not None else {}),
                   'crs': str(src.crs), 'bounds': list(src.bounds), 'schema': dict(src.schema),
                   'null_geometries': 0, 'geometry_types': {}}
         for feature in src:
@@ -134,7 +290,16 @@ def vector_profile(path: Path) -> dict:
         return result
 
 
-def profile(path: Path) -> dict:
+def profile(path: Path, reading: dict | None = None) -> dict:
+    if reading is not None:
+        kind = reading.get('kind')
+        if kind == 'table':
+            return table_profile(path, reading)
+        if kind == 'vector':
+            return vector_profile(path, reading)
+        if kind == 'raster':
+            return raster_profile(path, reading)
+        raise IntelligenceError('Choose a supported retained source interpretation.', 409)
     suffix = path.suffix.lower()
     if suffix in {'.csv', '.tsv', '.jsonl', '.ndjson'}:
         return table_profile(path)
@@ -149,26 +314,32 @@ def profile(path: Path) -> dict:
     raise IntelligenceError(f'No analysis adapter is installed for {suffix or "this file type"}.')
 
 
-def compare_rasters(left: Path, right: Path, band: int = 1) -> dict:
+def compare_rasters(left: Path, right: Path, band: int = 1, *,
+                    left_reading: dict | None = None, right_reading: dict | None = None) -> dict:
     import numpy as np
     import rasterio
     from rasterio.windows import Window
+    if any(reading is not None and reading.get('kind') != 'raster'
+           for reading in (left_reading, right_reading)):
+        raise IntelligenceError('Choose two retained raster editions for raster comparison.')
+    left_band = left_reading['band'] if left_reading is not None else band
+    right_band = right_reading['band'] if right_reading is not None else band
     baseline, candidate, delta = Moments(), Moments(), Moments()
     both_missing = left_only = right_only = increased = decreased = unchanged = 0
     with rasterio.open(left) as a, rasterio.open(right) as b:
         if (a.crs != b.crs or a.width != b.width or a.height != b.height or
                 not a.transform.almost_equals(b.transform)):
             raise IntelligenceError('Rasters have different grids. Align CRS, resolution and transform explicitly before comparison.')
-        if not 1 <= band <= min(a.count, b.count):
-            raise IntelligenceError('Band does not exist in both rasters.')
-        left_unit_info = raster_unit_declarations(a, band)
-        right_unit_info = raster_unit_declarations(b, band)
+        if not 1 <= left_band <= a.count or not 1 <= right_band <= b.count:
+            raise IntelligenceError('A selected band does not exist in its original raster.')
+        left_unit_info = raster_unit_declarations(a, left_band)
+        right_unit_info = raster_unit_declarations(b, right_band)
         if left_unit_info['unit'] != right_unit_info['unit']:
             raise IntelligenceError('Band units disagree.')
         for top in range(0, a.height, 512):
             for leftx in range(0, a.width, 512):
                 w = Window(leftx, top, min(512,a.width-leftx), min(512,a.height-top))
-                x, y = a.read(band,window=w,masked=True), b.read(band,window=w,masked=True)
+                x, y = a.read(left_band,window=w,masked=True), b.read(right_band,window=w,masked=True)
                 va = ~np.ma.getmaskarray(x) & np.isfinite(x.data)
                 vb = ~np.ma.getmaskarray(y) & np.isfinite(y.data)
                 paired = va & vb
@@ -180,6 +351,9 @@ def compare_rasters(left: Path, right: Path, band: int = 1) -> dict:
                 increased += int((difference > 0).sum()); decreased += int((difference < 0).sum())
                 unchanged += int((difference == 0).sum())
         return {'format': 'raster_comparison', 'population': 'complete aligned grid', 'paired_cells': delta.n,
+                'selected_bands': {'baseline': left_band, 'candidate': right_band},
+                **({'selected_readings': {'baseline': left_reading, 'candidate': right_reading}}
+                   if left_reading is not None or right_reading is not None else {}),
                 'baseline_only_cells': left_only, 'candidate_only_cells': right_only,
                 'both_excluded_cells': both_missing, 'increased': increased, 'decreased': decreased, 'unchanged': unchanged,
                 'unit': left_unit_info['unit'], 'units_status':'declared' if left_unit_info['unit'] else 'not declared in either raster',
@@ -192,7 +366,8 @@ def compare_rasters(left: Path, right: Path, band: int = 1) -> dict:
 
 def pair_tables(observed: Path, predicted: Path, keys: list[str], observed_key: str,
                 predicted_key: str, *, retain_points: bool = False,
-                canonical_time: bool = False) -> tuple[dict, list[dict], list[dict]]:
+                canonical_time: bool = False, observed_reading: dict | None = None,
+                predicted_reading: dict | None = None) -> tuple[dict, list[dict], list[dict]]:
     """Disk-backed exact-key join, streaming summaries; points are optional for native fits.
 
     Canonical time pairing maps ISO timestamps to UTC before duplicate detection.
@@ -215,7 +390,8 @@ def pair_tables(observed: Path, predicted: Path, keys: list[str], observed_key: 
             db.execute('CREATE TABLE pred (k TEXT PRIMARY KEY, value REAL) WITHOUT ROWID')
             counts = {'observations':0, 'predictions':0, 'invalid_observations':0, 'invalid_predictions':0}
             for table, path, value_key, count_key in [('obs',observed,observed_key,'observations'), ('pred',predicted,predicted_key,'predictions')]:
-                for row in rows(path):
+                reading = observed_reading if table == 'obs' else predicted_reading
+                for row in rows(path, reading):
                     counts[count_key] += 1
                     if any(key not in row or row[key] is None or row[key] == '' for key in keys) or value_key not in row:
                         raise IntelligenceError('A pairing key or requested value column is missing.')
@@ -246,6 +422,8 @@ def pair_tables(observed: Path, predicted: Path, keys: list[str], observed_key: 
             db.close()
     n=obs.n; sse=errors.m2 + errors.n * errors.mean**2
     return ({'population':'complete exact-key join','keys':keys,'coverage':counts,
+             **({'selected_readings': {'observed': observed_reading, 'predicted': predicted_reading}}
+                if observed_reading is not None or predicted_reading is not None else {}),
              'key_normalization':'ISO timestamps to UTC' if canonical_time else 'exact stored strings',
              'observed':obs.result(),'predicted':pred.result(),
              'rmse':math.sqrt(sse/n) if n else None,'mae':absolute.mean if n else None,

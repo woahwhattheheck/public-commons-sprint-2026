@@ -10,13 +10,50 @@ from .common import IntelligenceError, digest, public_metadata, now
 from .repository import Repository
 from .store import Store
 from .schemas import Inspect, Action
-from .profiling import profile, compare_rasters, pair_tables
+from .profiling import profile, table_page, compare_rasters, pair_tables, selected_reading
 
 class Engine:
     def __init__(self, repository: Repository, store: Store, native_app=None, calibration=None, gateway=None):
         self.repo, self.store, self.native_app = repository, store, native_app
         self.calibration = calibration
         self.gateway = gateway
+
+    def selected_reading(self, tenant, source):
+        """Join a retained primary table to its exact native source edition."""
+        metadata = source.get('metadata') or {}
+        entry = metadata.get('source') or {}
+        binding = metadata.get('source_binding') or {}
+        if (metadata.get('native_kind') != 'retained_source'
+                or binding.get('role') != 'primary' or entry.get('kind') != 'table'
+                or not isinstance(entry.get('client_source'),dict) or entry.get('field_projection')):
+            return selected_reading(source)
+        owner = getattr(self.repo,'owner',None)
+        if owner is None or not hasattr(owner,'operator'):
+            return selected_reading(source)
+        from model.client_source_inspection_report import retained_table_preview
+        from model.common import digest as native_digest
+        try:
+            workspace = owner.operator.ws(tenant)
+            collection = workspace.retained_item('sources',binding['collection_id'])
+            if native_digest(collection) != metadata.get('source_record_sha256'):
+                raise ValueError('The selected source collection changed.')
+            matching = [item for item in collection.get('entries',[])
+                        if item.get('id') == binding.get('source_id')]
+            if len(matching) != 1 or matching[0].get('body',{}).get('sha256') != source.get('sha256'):
+                raise ValueError('The selected original source changed.')
+            original = matching[0]
+            preview = retained_table_preview(workspace,original)
+            if preview is None:
+                raise ValueError('The selected original table inspection is absent.')
+            if (preview.get('source_format') in {'xlsx','xlsm'}
+                    and (not isinstance(preview.get('original_worksheet'),str)
+                         or preview['original_worksheet'] != original.get('sheet'))):
+                raise ValueError('The selected original worksheet changed.')
+        except (ValueError,KeyError,FileNotFoundError) as error:
+            raise IntelligenceError('Restore this exact original source, worksheet and reviewed reading choices.',409) from error
+        # The existing native validator handles embedded and legacy operation
+        # previews. This local reading view never rewrites either immutable record.
+        return selected_reading({**source,'metadata':{**metadata,'source':original}},preview)
 
     def inspect(self, tenant: str, sid: str, request: Inspect) -> dict:
         op = request.operation
@@ -35,17 +72,26 @@ class Engine:
                 raise IntelligenceError('Select a registered input.')
             path, source = self.repo.source(tenant,request.ref.model_dump(exclude_none=True))
             sources.append(source)
+            reading = self.selected_reading(tenant,source)
             if op == 'profile':
-                result = public_metadata(profile(path))
+                original_profile = profile(path, reading)
+                # Profiles contain scientific source values and original column
+                # identities, not private registry paths or provider credentials.
+                # Do not redact keys or URLs inside the selected scientific data.
+                result = original_profile
+            elif op == 'table_rows':
+                result = table_page(path, request.offset, request.limit, reading)
             else:
                 if request.other is None:
                     raise IntelligenceError('Select a second registered input.')
                 other, source2 = self.repo.source(tenant,request.other.model_dump(exclude_none=True))
                 sources.append(source2)
                 if op == 'raster_compare':
-                    result = compare_rasters(path,other,request.band)
+                    result = compare_rasters(path,other,request.band,
+                                             left_reading=reading, right_reading=self.selected_reading(tenant,source2))
                 else:
-                    result, _, _ = pair_tables(path,other,request.keys,request.observed_column,request.predicted_column)
+                    result, _, _ = pair_tables(path,other,request.keys,request.observed_column,request.predicted_column,
+                                               observed_reading=reading, predicted_reading=self.selected_reading(tenant,source2))
                     result['unit_note'] = 'Values compared as stored; confirm identical units, period and spatial support before scientific interpretation.'
             for item in sources:
                 self.repo.assert_unchanged(tenant,item)
@@ -60,7 +106,9 @@ class Engine:
             raise IntelligenceError('Provide matching explicit units for observations and predictions. Convert data before calibration.')
         pa, sa = self.repo.source(tenant,action.observed.model_dump(exclude_none=True))
         pb, sb = self.repo.source(tenant,action.predicted.model_dump(exclude_none=True))
-        summary, obs, pred = pair_tables(pa,pb,[action.time_column],action.observed_column,action.predicted_column,retain_points=True,canonical_time=True)
+        summary, obs, pred = pair_tables(pa,pb,[action.time_column],action.observed_column,action.predicted_column,
+                                        retain_points=True,canonical_time=True,
+                                        observed_reading=self.selected_reading(tenant,sa), predicted_reading=self.selected_reading(tenant,sb))
         # Original calibrator sorts string dates. Canonical UTC timestamps guarantee chronological holdout.
         seen = set()
         for o,p in zip(obs,pred):

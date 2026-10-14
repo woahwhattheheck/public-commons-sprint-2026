@@ -152,3 +152,7 @@ The new cohort opens in the same Archive tab. Original models and source files c
 ## Native receiving continuation
 
 native/receive.py and native/browser.mjs extend the original equipped portfolio receiving operation with the reporting workflow. They consume actual editions from that operation, preserve deterministic original action IDs and checkpoints, exercise the full CSV/SQLite/query/package/source-absent receive path, and use the same authenticated browser and original action API. Keep the parent operation's selected MPXJ runtime, source fixtures and provider custody.
+
+## Compare retained reporting publications
+
+Use **Compare retained publications** in the original Archive desk to select two completed publications and explicitly pair their business-project keys. Exact scalar and native period totals retain currency, unit, native definition and coverage differences; unmatched groups remain visible. Download the complete comparison JSON, HTML, every-row CSV and both original source ZIPs. [COMPARISON.md](COMPARISON.md) describes interpretation, original typed client/CLI, full reopening and the same existing native receiving course.

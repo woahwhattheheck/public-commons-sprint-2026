@@ -213,6 +213,17 @@
     "products/measurement-workspace/SCIENTIFIC_OPERATIONS.md",
     "opportunities/upstate_forever_2026/source_tools/flow_comparisons.mjs",
     "opportunities/upstate_forever_2026/source_tools/flow_editions.mjs",
-    "opportunities/upstate_forever_2026/source_tools/flow_load_comparisons.mjs"
+    "opportunities/upstate_forever_2026/source_tools/flow_load_comparisons.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/eco_handover_cli.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/eco_handover.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/handover_archive.py",
+    "opportunities/upstate_forever_2026/measurement_workspace/engine/large-collection-receiving.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/collection_folder.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/eco_handovers.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/edition_reader.mjs",
+    "opportunities/upstate_forever_2026/measurement_workspace/web/edition_review.mjs"
+  ],
+  "pinnedSourceManifests": [
+    "products/measurement-workspace/original-source.json"
   ]
 }

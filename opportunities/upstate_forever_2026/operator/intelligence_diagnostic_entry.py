@@ -9,7 +9,11 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from pathlib import Path
-import fcntl
+import os
+if os.name == "nt":
+    from model import windows_fs as fcntl
+else:
+    import fcntl
 import hashlib
 import re
 

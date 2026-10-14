@@ -1,4 +1,5 @@
 import {createTimephasedPanel} from './timephased.js';
+import {createPublicationComparisonPanel} from './comparison-panel.js';
 /* Original portfolio archive desk. All mutations use the existing saved operator action. */
 export function createArchivePanel(C) {
   const {$,el,pretty,short,api,safe,artifacts,notice,lock,saveDraft,action,uploadArchive}=C;
@@ -43,6 +44,7 @@ export function createArchivePanel(C) {
     for(const row of A.rows)choose.append(new Option(row.name+" · revision "+row.revision,row.id));
     if(A.id&&!A.rows.some(x=>x.id===A.id))choose.append(new Option(short(A.id)+" · selected cohort",A.id));
     choose.value=A.id;$("archive-more").hidden=!A.cursor;
+    comparison.updateCohorts(A.rows);
   }
   function renderMembers() {
     const body=$("archive-members").tBodies[0];body.replaceChildren();
@@ -243,8 +245,9 @@ export function createArchivePanel(C) {
     publicationId:A.publicationId,inspection:A.inspection?{schema:A.inspection.schema,source:A.inspection.source,archive:A.inspection.archive,
       manifest_sha256:A.inspection.manifest_sha256,review_sha256:A.inspection.review_sha256,request_id:A.inspection.request_id,
       file_count:A.inspection.file_count,approval:A.inspection.approval}:null,upload:A.upload,
-    sql:$("archive-sql").value,parameters:$("archive-parameters").value};}
+    sql:$("archive-sql").value,parameters:$("archive-parameters").value,comparison:comparison.snapshot()};}
   function restore(value={}) {
+    comparison.restore(value.comparison);
     A.id=value.id||"";A.drafts=value.drafts||{};A.version=value.version||0;A.publicationId=value.publicationId||"";
     A.inspection=value.inspection||null;A.upload=value.upload||null;
     if(value.sql)$("archive-sql").value=value.sql;if(value.parameters)$("archive-parameters").value=value.parameters;
@@ -252,6 +255,7 @@ export function createArchivePanel(C) {
       $("archive-receive").dataset.unavailable="false";}
     paint();
   }
+  const comparison=createPublicationComparisonPanel(C);
   const timephased=createTimephasedPanel({$,el,pretty,safe,lock,mutate,profileValue,setProfile,api,
     getDraft:draft,getCoverage:()=>A.coverage,getReview:()=>A.loaded?.review?.value,
     getIdentity:()=>A.id,readFields,tableView});

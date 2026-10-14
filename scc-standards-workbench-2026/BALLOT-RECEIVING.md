@@ -90,9 +90,20 @@ A failure record names the actual active stage and native/browser error. Resolve
 | `Ballot_Complete_Project.private.zip` | Whole producer project, every event/request and retained original. |
 | `Received_Complete_Project.private.zip` | Independently restored and re-exported whole editable project. |
 | `final-native-records.json` | Actual project, ballot, original vote, closure, review and publication identities. |
-| `outgoing-attachments.json` and `views.json` | Exact final attachment members, rendered PDF pages and actual browser screenshots for the producing owner. |
+| `receiving/<source-identity>/outgoing-attachments.json` and `views.json` | Exact edition attachment members, rendered PDF pages and actual browser screenshots for the producing owner. |
+| `receiving/<source-identity>/result.json` and root `current-result.json` | Immutable complete edition result and the explicit current selection. Earlier root results/indexes remain unchanged. |
 
 The selected decision handover contains member identities and original returns. Preserve that audience when sharing it. Use the publication export for the selected bilingual public-facing edition and its permitted source projection. The full private continuation is the editable receiving artifact; a publication ZIP is a different selected handover.
+
+## Continue an existing source edition
+
+Keep the same configuration, workspace, output, operation lock and saved request files. When selecting a following complete source, set `continuation_from_source_identity` to the exact retained `progress.json.source_identity` and supply a meaningful `source_change_note`. The programme records that transition and retains all completed native stages. Never remove progress or replace the original requests to force a repeat.
+
+Read-only presentation exports remain under `presentation/<full-source-identity>/`. Their inventory excludes its own metadata file, so an interruption after writing that file can resume exactly. Original packet bindings and the current native project are compared before and after export.
+
+Each selected source has a separate `receiving/<full-source-identity>/` directory containing its attachment index, view index, content-addressed screenshots, PDF renderings and final result. A retained attachment index is checked and adopted after an interrupted stage acknowledgment. The complete result is sealed only after cleanup; reopening it checks every pinned artifact and selects it through `current-result.json`. Completed results, older root `result.json`/`views.json`/`outgoing-attachments.json`, and previous source editions are never rewritten by the successor.
+
+Owned resources are established inside the guarded lifetime. Cleanup attempts browser context, browser, native server, attachment server and log closure independently. Native shutdown has bounded SIGINT, SIGTERM and SIGKILL waits. A primary operating error remains primary, with failed cleanup outcomes retained alongside it. A cleanup failure leaves the operation resumable instead of publishing a new complete result.
 
 ## Inspect and use the actual outputs
 

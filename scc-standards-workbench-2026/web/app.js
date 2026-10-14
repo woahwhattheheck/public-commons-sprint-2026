@@ -87,7 +87,7 @@ const LIST_REFS={consultation_ids:"consultations",source_ids:"sources",evidence_
  agreement_source_ids:"sources",appointment_source_ids:"sources",exception_source_ids:"sources",sponsor_endorsement_source_ids:"sources",
  materials_en_source_ids:"sources",materials_fr_source_ids:"sources",contributor_ids:"people",participant_ids:"people",membership_ids:"memberships",
  dependencies:"tasks",case_ids:"cases",scope_deliverable_ids:"deliverables",content_source_ids:"sources",submission_source_ids:"sources",response_source_ids:"sources",calendar_source_ids:"sources"};
-const LONG_FIELDS=new Set(["body","body_en","body_fr","purpose","purpose_fr","preface_en","preface_fr","rationale","summary","instruction","description",
+const LONG_FIELDS=new Set(["body","body_en","body_fr","purpose","purpose_fr","preface_en","preface_fr","rationale","summary","instruction","description","justification","notification_evidence",
  "national_international_relationship","negative_resolution","exception_rationale","calendar_basis","notes","audience","audience_fr","exclusions","exclusions_fr","services_provided","interpretation_source"]);
 function notify(message){$("#notice").textContent=message;$("#notice").classList.add("visible");clearTimeout(noticeTimer);noticeTimer=setTimeout(()=>$("#notice").classList.remove("visible"),6500);}
 async function api(path,options={}){
@@ -337,7 +337,7 @@ function editableTable(name,rows){
  '<button type="button" data-action="table-add-row" data-table="'+esc(name)+'">Add row</button><button type="button" data-action="table-add-column" data-table="'+esc(name)+'">Add column</button></div><small>Each cell preserves its own text, including line breaks. First row is rendered as the table header.</small></div>';
 }
 function fieldControl(name,spec,value){
- let inner="",kind=spec.kind,caption=name==="acceptance_source_ids"?"Receipt / acceptance sources":name==="summary"&&editor?.operation==="phase.freeze"?"Progress, risks and report narrative":fieldLabel(name),full=LONG_FIELDS.has(name)||kind==="json"||kind==="list"||["table_en","table_fr"].includes(name);
+ let inner="",kind=spec.kind,caption=name==="acceptance_source_ids"?"Receipt / acceptance sources":name==="summary"&&editor?.operation==="phase.freeze"?"Progress, risks and report narrative":fieldLabel(name),full=LONG_FIELDS.has(name)||(kind==="text"&&/[\r\n]/.test(String(value??"")))||kind==="json"||kind==="list"||["table_en","table_fr"].includes(name);
  if(name==="id"||name==="revision")return"";
  if(kind==="boolean")return '<label class="field check"><input type="checkbox" data-field="'+esc(name)+'" '+(value?"checked":"")+'><span>'+esc(caption)+'</span></label>';
  if(["table_en","table_fr"].includes(name))inner=editableTable(name,value||[]);
@@ -355,7 +355,7 @@ function fieldControl(name,spec,value){
   inner='<textarea data-field="'+esc(name)+'" rows="3" placeholder="One value per line">'+esc((value||[]).join("\n"))+'</textarea><small>One value per line'+(name==="roadmap_issues"?" · eligible call issue numbers":"")+'.</small>';
  }else if(kind==="json"){
   inner='<textarea class="code" data-field="'+esc(name)+'" spellcheck="false">'+esc(pretty(value))+'</textarea><small>Preserve the structured source or record as JSON.</small>';
- }else if(LONG_FIELDS.has(name)){
+ }else if(LONG_FIELDS.has(name)||(kind==="text"&&/[\r\n]/.test(String(value??"")))){
   inner='<textarea data-field="'+esc(name)+'" class="'+(["body_en","body_fr"].includes(name)?"long":"")+'" '+(spec.required?"required":"")+'>'+esc(value??"")+'</textarea>';
  }else{
   const type=kind==="date"?"date":kind==="integer"?"number":"text";

@@ -6,6 +6,7 @@ import {attachReceivedStudies,receivedFieldworkPreview} from '../received_studie
  * TokenJunkieLabs. Uses the original task queue, downloads and receiving form.
  */
 const ROOTS = [
+  ['sources', 'Saved source collections'],
   ['experiment-diagnostics', 'Scientific analyses'],
   ['experiments', 'Experiment programmes'],
   ['parameter-studies', 'Parameter studies'],
@@ -18,6 +19,7 @@ const ROOTS = [
   ['parameter-working', 'Parameter working designs'],
   ['climate-working', 'Climate forcing working designs'],
   ['climate-management-working', 'Climate management working designs'],
+  ['climate-management-working-comparisons', 'Saved Management design comparisons'],
   ['multivariate-controls', 'Matched-control designs'],
   ['multivariate-control-outcomes', 'Matched-control native outcomes'],
   ['climate-forcing-studies', 'Climate forcing studies'],
@@ -104,7 +106,7 @@ export function attachStudyTransfer(host) {
   let exportsPage={items:[],total:0,offset:0,limit:50,next_offset:null};
   let selected=new Map(),title='Selected scientific study',kind='',query='',selectedOnly=false,offset=0;
   let related=true,plan=null,planSignature=null,busy=false,catalogueBusy=false,exportBusy=false;
-  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0,spatialRequest=0;
+  let taskSignature='',lastError='',requestSerial=0,receivingRequest=0,sourceWaterRequest=0,retainedRecordRequest=0,spatialRequest=0,sourceCollectionRequest=0;
   let pendingSubmission=null;
   let transferHandler=typeof host.openStudyTransfer==='function'?host.openStudyTransfer:
     typeof host.openExtension==='function'?
@@ -283,6 +285,19 @@ export function attachStudyTransfer(host) {
     try{return await host.openDesk('climate-forcing','openWorkingRevision',{workspace_key:origin,revision_id:id});}
     catch(error){if(workspaceNow()!==origin)return null;throw error;}
   }
+  function managementComparisonControl(row){
+    if(row?.kind!=='climate-management-working-comparisons'||row.state==='unreadable'||
+       !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
+    return button('open-management-working-comparison','Open saved-design comparison','data-comparison-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openManagementComparison(id){
+    const row=[...visiblePage().items,...(plan?.nodes||[])].find(value=>
+      value.kind==='climate-management-working-comparisons'&&value.id===id&&value.state!=='unreadable');
+    if(!row||typeof host.openDesk!=='function')throw Error('Refresh the original saved-design comparison.');
+    const origin=workspaceNow();
+    try{return await host.openDesk('climate-management','openWorkingComparison',{workspace_key:origin,report_id:id});}
+    catch(error){if(workspaceNow()!==origin)return null;throw error;}
+  }
   function managementWorkingControl(row){
     if(row?.kind!=='climate-management-working'||row.state==='unreadable'||
        !/^[0-9a-f]{64}$/.test(row?.id||'')||typeof host.openDesk!=='function')return '';
@@ -388,6 +403,25 @@ export function attachStudyTransfer(host) {
     return host.openExtension('receiving-waters',recordKind==='plan'?'openPlan':'openAnalysis',
       {id:row.id,workspace_key:captured.workspace});
   }
+  function sourceCollectionControl(row){
+    if(row?.kind!=='sources'||!/^[0-9a-f]{64}$/.test(row.id||'')||
+        row.state==='unreadable'||typeof host.openItem!=='function')return '';
+    return button('open-source-collection','Open source collection',
+      'data-study-id="'+escapeHTML(row.id)+'"');
+  }
+  async function openSourceCollection(id){
+    if(!/^[0-9a-f]{64}$/.test(id||'')||typeof host.openItem!=='function')
+      throw Error('Choose an original saved source collection.');
+    const available=[...visiblePage().items,...selected.values(),...(plan?.nodes||[])]
+      .some(row=>row.kind==='sources'&&row.id===id&&row.state!=='unreadable');
+    if(!available)throw Error('Refresh the original source collection before opening it.');
+    const captured=stamp(),serial=++sourceCollectionRequest;
+    const row=await request(endpoint('/api/item',{kind:'sources',id}));
+    if(!current(captured)||serial!==sourceCollectionRequest)return null;
+    if(row?.id!==id||row.schema!=='upstate.sources/v1'||!Array.isArray(row.entries))
+      throw Error('The saved source reply differs from the selected collection.');
+    return host.openItem('sources',id);
+  }
   function renderCatalogue() {
     if(!root)return;
     const page=visiblePage(),body=root.querySelector('[data-study-catalogue]');
@@ -395,7 +429,7 @@ export function attachStudyTransfer(host) {
       body.innerHTML='<p class="st-empty">Reading saved studies…</p>';
     }else if(!page.items.length){
       body.innerHTML='<p class="st-empty">'+(selectedOnly?'No selected studies match this view.':
-        'No saved studies match this view. Saved analyses, programmes, native runs and decision studies appear here.')+'</p>';
+        'No saved studies match this view. Saved source collections, analyses, programmes, native runs and decision studies appear here.')+'</p>';
     }else{
       body.innerHTML='<div class="st-table-scroll"><table class="st-table"><thead><tr>'+
         '<th scope="col"><span class="st-sr">Select</span></th><th scope="col">Study</th>'+
@@ -408,7 +442,7 @@ export function attachStudyTransfer(host) {
             '<strong>'+escapeHTML(row.title||row.id.slice(0,12))+'</strong>'+
             '<small class="st-identity" title="'+escapeHTML(row.id)+'">'+escapeHTML(row.id.slice(0,16))+'</small>'+
             (scope?'<small>'+escapeHTML(scope)+'</small>':'')+
-            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+climateWorkingControl(row)+managementWorkingControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
+            (row.error?.message?'<small class="st-row-error">'+escapeHTML(row.error.message)+'</small>':'')+sourceCollectionControl(row)+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+climateWorkingControl(row)+managementWorkingControl(row)+managementComparisonControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+
             (row.state!=='unreadable'&&samplingOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
               ?button('open-sampling','Open sampling priorities','data-study-open="'+escapeHTML(key)+'"'):'')+
             (row.state!=='unreadable'&&monitoringOpenKinds.has(row.kind)&&typeof host.openDesk==='function'
@@ -451,6 +485,9 @@ export function attachStudyTransfer(host) {
       '<p class="st-description">The archive also includes the application source. Its final download size appears after compression.</p>'+
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Contents</th>'+
       '<th scope="col">Files</th><th scope="col">Uncompressed size</th></tr></thead><tbody>'+groups+'</tbody></table></div>';
+    if(plan.client_source_previews?.length)html+='<p class="st-description">'+
+      number(plan.client_source_previews.length)+' older saved table'+(plan.client_source_previews.length===1?' includes':'s include')+
+      ' the original native worksheet inspection and original files. Original columns, reading choices and recorded sample rows remain available after reopening.</p>';
     if(plan.scientific_report_editions?.length)html+='<section class="st-details"><h4>Original report order</h4>'+
       plan.scientific_report_editions.map(edition=>'<div><strong>'+escapeHTML(edition.title)+'</strong>'+retainedStudyControl(host,{kind:'scientific-report-editions',id:edition.id})+
         '<ol>'+edition.sources.map(source=>'<li>'+escapeHTML(source.title||source.source_id)+
@@ -473,7 +510,7 @@ export function attachStudyTransfer(host) {
       '<div class="st-table-scroll"><table class="st-table"><thead><tr><th scope="col">Record</th>'+
       '<th scope="col">Type</th><th scope="col">Reason included</th></tr></thead><tbody>'+
       plan.nodes.map(row=>'<tr><td><strong>'+escapeHTML(row.title)+'</strong><small class="st-identity">'+
-        escapeHTML(row.id.slice(0,16))+'</small>'+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+climateWorkingControl(row)+managementWorkingControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
+        escapeHTML(row.id.slice(0,16))+'</small>'+sourceCollectionControl(row)+receivingControl(row)+controlDesignControl(row)+controlOutcomeControl(row)+climateForcingControl(row)+climateWorkingControl(row)+managementWorkingControl(row)+managementComparisonControl(row)+terrainControl(row)+climateManagementControl(row)+managementDesignControl(row)+sourceWaterControl(row)+spatialControl(row)+retainedStudyControl(host,row)+'</td><td>'+escapeHTML(rootLabels[row.kind]||row.kind.replaceAll('-',' '))+
         '</td><td>'+escapeHTML(row.reasons.join('; '))+'</td></tr>').join('')+'</tbody></table></div></details>';
     if(plan.related_result_issues?.length)html+='<details class="st-details"><summary>'+
       number(plan.related_result_issues.length)+' additional comparison records need repair</summary><ul>'+
@@ -678,12 +715,14 @@ export function attachStudyTransfer(host) {
           workspace_key:captured.workspace,current:()=>current(captured)&&serial===retainedRecordRequest,
         });
       }
+      else if(action==='open-source-collection'){await openSourceCollection(target.dataset.studyId);}
       else if(action==='open-management-design'){await openManagementDesign(target.dataset.studyId);}
       else if(action==='open-control-design'){await openControlDesign(target.dataset.studyId);}
       else if(action==='open-control-outcome'){await openControlOutcome(target.dataset.studyId);}
       else if(action==='open-terrain'){await openTerrain(target.dataset.studyKind,target.dataset.studyId);}
       else if(action==='open-climate-working'){await openClimateWorking(target.dataset.revisionId);}
       else if(action==='open-climate-management-working'){await openManagementWorking(target.dataset.revisionId);}
+      else if(action==='open-management-working-comparison'){await openManagementComparison(target.dataset.comparisonId);}
       else if(action==='open-climate-forcing'){await openClimateForcing(target.dataset.studyId);}
       else if(action==='open-climate-management'){await openClimateManagement(target.dataset.studyId);}
       else if(action==='open-source-water'){await openSourceWater(target.dataset.studyKind,target.dataset.studyId);}

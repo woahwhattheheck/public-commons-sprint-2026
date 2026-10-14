@@ -4,6 +4,14 @@ Operation: ECO-INPUT-LINEAGE-E258-20261013
 
 Investigations connects a selected native run or prepared grid to the scientific inputs actually selected by that recipe. It displays the prepared grid, profile and full ordered scenario changes, then opens the complete original source file and every declared companion. The original Workspace and collection exporter retain the records and bytes.
 
+## Existing questions and selected scientific data
+
+This edition composes the maintained native Assistant continuation with the original input navigator. An explicit **Resume original question** keeps its original task, request, question, selected source, completed tools, provider usage and pending completion. Earlier public pending-completion records migrate inside that same request transaction; a different question, model or source selection is rejected. Cancellation, received provider responses and subsequent recovery remain visible in the conversation and readable export.
+
+A selected source's reviewed metadata is matched by the complete source collection, source ID, original file hash and selected file/part positions. Original worksheet/header/reading choices come from the retained native inspection. Both embedded source-only previews and older complete-Workspace inspection records use the existing native validator before rows are read. The source records and original bytes stay immutable. Selected vector layers and raster bands retain their existing native interpretation.
+
+Readable exports preserve original column order and declared Identifier/Label roles alongside cancellation and resume history. Native source navigation opens exact prepared files and companions, and a failed verification displays its current error. A late response from another Workspace or source edition cannot replace the current view.
+
 ## Operator journey
 
 Open the maintained authenticated operator, select the scientific Workspace and choose **Investigations**. Create an investigation or reopen the intended saved one when you want to retain analyses or export a collection. Source navigation itself is read-only and does not require a new investigation.

@@ -151,6 +151,13 @@ def read(operator, workspace_key, payload):
             raise ValueError("Sampling catalog takes no selection")
         return {"workspace_key": workspace_key, "project_id": workspace.project["id"],
                 **recommendations.catalog(workspace)}
+    if action == "compare-designs":
+        if set(values) != {"recommendation_id", "left_design_id", "right_design_id"}:
+            raise ValueError("Choose one exact recommendation and two saved designs")
+        from model import monitoring_sampling_comparison as comparison
+        value = comparison.compare(workspace, **values)
+        return {"workspace_key": workspace_key, "project_id": workspace.project["id"],
+                "comparison": value, "files": comparison.files(value)}
     if action == "working-list":
         if values:
             raise ValueError("Saved working-copy list takes no selection")

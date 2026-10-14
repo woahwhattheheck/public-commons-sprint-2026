@@ -23,6 +23,7 @@ import zipfile
 from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
 from . import portable, study_delivery_transfer as delivery_transfer
+from .common import _sync_directory, _path_stat
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 from . import scientific_report_study_transfer as report_editions
 from . import paired_ensemble_study_transfer as paired_transfer
@@ -32,6 +33,7 @@ from . import climate_forcing_study_transfer as forcing_transfer
 from . import joint_parameter_study_transfer as joint_transfer
 from . import terrain_conditioning_study_transfer as terrain_transfer
 from . import source_disturbance_study_transfer as disturbance_transfer
+from . import profile_workbook_study_transfer as workbook_return_transfer
 from . import climate_management_study_transfer as climate_management_transfer
 from . import management_case_study_transfer as management_transfer
 from . import calibration_study_transfer as calibration_transfer
@@ -40,6 +42,7 @@ from . import parameter_study_transfer as parameter_transfer
 from . import parameter_working_transfer as working_transfer
 from . import climate_working_transfer as climate_working_transfer
 from . import climate_management_working_transfer as management_working_transfer
+from . import climate_management_working_comparison_transfer as management_working_comparison_transfer
 from . import ensemble_study_transfer as ensemble_transfer, gauge_study_transfer as gauge_transfer
 from . import community_study_transfer as community_transfer
 from . import conservation_study_transfer as conservation_transfer
@@ -54,15 +57,16 @@ from . import chemistry_study_transfer as chemistry_transfer
 SELECTION_SCHEMA = "upstate.study-selection/v1"
 PLAN_SCHEMA = "upstate.study-transfer-plan/v1"
 RECEIPT_SCHEMA = "upstate.study-transfer/v1"
-ROOT_KINDS = ("experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "climate-management-working", "runs", "robust-decisions",
+ROOT_KINDS = ("sources", "experiment-diagnostics", "experiments", "parameter-studies", "parameter-working", "climate-working", "climate-management-working", "climate-management-working-comparisons", "runs", "robust-decisions",
               "receiving-water-plans", "receiving-water-analyses",
               "spatial-reviews", "spatial-exports",
               *monitoring_transfer.ROOT_KINDS, *report_editions.ROOT_KINDS,
               *community_transfer.ROOT_KINDS, *receptor_transfer.ROOT_KINDS, *conservation_transfer.ROOT_KINDS,
               *customer_review_transfer.ROOT_KINDS, *paired_transfer.ROOT_KINDS,
               *report_changes_transfer.ROOT_KINDS, *control_transfer.ROOT_KINDS, *forcing_transfer.ROOT_KINDS, *joint_transfer.ROOT_KINDS, *terrain_transfer.ROOT_KINDS, *climate_management_transfer.ROOT_KINDS,
-              *management_transfer.ROOT_KINDS, *calibration_native.ROOT_KINDS, *disturbance_transfer.ROOT_KINDS)
-IMMUTABLE_KINDS = ("parameter-working", "climate-working", "climate-management-working", "sources", "profiles", "scenarios", "observations",
+              *management_transfer.ROOT_KINDS, *calibration_native.ROOT_KINDS, *disturbance_transfer.ROOT_KINDS,
+              *workbook_return_transfer.ROOT_KINDS)
+IMMUTABLE_KINDS = ("parameter-working", "climate-working", "climate-management-working", "climate-management-working-comparisons", "sources", "profiles", "scenarios", "observations",
                    "observation-comparisons", *delivery_transfer.IMMUTABLE_KINDS,
                    *monitoring_transfer.IMMUTABLE_KINDS, *calibration_transfer.IMMUTABLE_KINDS,
                    *community_transfer.IMMUTABLE_KINDS, *customer_review_transfer.IMMUTABLE_KINDS, *terrain_transfer.IMMUTABLE_KINDS,
@@ -75,6 +79,7 @@ DOCUMENTS = {
     **report_editions.DOCUMENTS, **paired_transfer.DOCUMENTS,
     **report_changes_transfer.DOCUMENTS, **control_transfer.DOCUMENTS, **forcing_transfer.DOCUMENTS, **joint_transfer.DOCUMENTS, **climate_management_transfer.DOCUMENTS,
     **receptor_transfer.DOCUMENTS, **conservation_transfer.DOCUMENTS, **disturbance_transfer.DOCUMENTS,
+    **workbook_return_transfer.DOCUMENTS,
 }
 LOCKS = {
     "grids": ".grid.lock", "runs": ".run.lock",
@@ -90,6 +95,7 @@ LABELS = {
     "parameter-working": "Parameter working designs",
     "climate-working": "Climate forcing working designs",
     "climate-management-working": "Climate management working designs",
+    "climate-management-working-comparisons": "Saved Management design comparisons",
     "runs": "Native runs", "robust-decisions": "Decision studies",
     "profiles": "Parameter profiles", "scenarios": "Land-cover scenarios",
     "sources": "Source collections", "grids": "Prepared grids",
@@ -103,6 +109,7 @@ LABELS = {
     **community_transfer.LABELS,
     **receptor_transfer.LABELS, **conservation_transfer.LABELS,
     **customer_review_transfer.LABELS, **terrain_transfer.LABELS, **management_transfer.LABELS, **disturbance_transfer.LABELS,
+    **workbook_return_transfer.LABELS,
 }
 
 # Chemistry selected-study lineage: v1
@@ -147,7 +154,7 @@ def normalise(selection):
 
 
 def _identity(path):
-    value = path.lstat()
+    value = _path_stat(path)
     if not stat.S_ISREG(value.st_mode):
         raise ValueError("A study member must be a retained regular file: " + str(path))
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
@@ -193,7 +200,8 @@ class _Closure:
                  geographic_native_studies=None, climate_forcing_studies=None,
                  management_case_studies=None, climate_management_records=None,
                  joint_parameter_lineage=True, calibration_studies=None,
-                 source_disturbance_studies=None):
+                 source_disturbance_studies=None, profile_workbook_returns=None,
+                 client_source_previews=True, client_source_preview_keys=None):
         self.workspace = workspace
         self.root = Path(workspace.root).resolve()
         self.selection = normalise(selection)
@@ -235,6 +243,11 @@ class _Closure:
         self.management_case_selection = copy.deepcopy(management_case_studies)
         self.management_case_records = {}
         self.source_disturbance_selection = copy.deepcopy(source_disturbance_studies)
+        self.profile_workbook_return_selection = copy.deepcopy(profile_workbook_returns)
+        self.client_source_previews_enabled = client_source_previews
+        self.client_source_preview_keys = (None if client_source_preview_keys is None
+                                          else frozenset(client_source_preview_keys))
+        self.client_source_preview_records = {}
 
     def add_file(self, relative, expected=None):
         path = _member(self.root, relative)
@@ -379,6 +392,50 @@ class _Closure:
         for field, kind in (("grid_id", "grids"), ("profile_id", "profiles"), ("scenario_id", "scenarios")):
             self.need(kind, selection[field], reason, required=required)
 
+    def _client_source_preview(self, collection_id, entry):
+        """Keep an older saved table's exact native inspection in new studies."""
+        client = entry.get("client_source")
+        token = (collection_id, entry.get("id"))
+        if (not self.client_source_previews_enabled
+                or (self.client_source_preview_keys is not None
+                    and token not in self.client_source_preview_keys)
+                or entry.get("kind") != "table" or not isinstance(client, dict)
+                or entry.get("field_projection") or client.get("inspection") is not None):
+            return
+        from .client_source_inspection_report import retained_table_preview
+        key = identifier(client.get("inspection_id"))
+        relative = "client-source-intake/" + key + "/operation.json"
+        record = self.read(relative)
+        if (record.get("schema") != "upstate.client-source-operation/v1"
+                or record.get("id") != key or record.get("project_id") != self.workspace.project["id"]
+                or record.get("action") != "client-source.inspect" or record.get("state") != "complete"
+                or not record.get("files")
+                or any(record.get(field) for field in
+                       ("selection_file", "manifest_file", "source_collection_id", "source_ids"))):
+            raise ValueError("Retain the completed original inspection, without another commit record.")
+        for original in record["files"]:
+            if ("inspection" in original) == ("error" in original):
+                raise ValueError("The original inspection lost a complete file outcome.")
+            self._body(original["original"])
+        retained_table_preview(self.workspace, entry)
+        if _identity(_member(self.root, relative)) != self.files[relative]["identity"]:
+            raise ValueError("The saved source inspection changed during selection.")
+        descriptor = self.files[relative]
+        binding = {"source_collection_id": collection_id, "source_id": entry["id"],
+                   "inspection_id": key, "inspection_sha256": digest(record),
+                   "source_sha256": client["source_sha256"],
+                   "selection_sha256": digest(client["selection"]),
+                   "record": {"path": relative, "bytes": descriptor["bytes"],
+                              "sha256": descriptor["sha256"]}}
+        previous = self.client_source_preview_records.get(token)
+        if previous is not None and previous != binding:
+            raise ValueError("A selected source changed its original worksheet inspection.")
+        self.client_source_preview_records[token] = binding
+
+    def _client_source_preview_receipt(self):
+        return [copy.deepcopy(value) for unused, value in
+                sorted(self.client_source_preview_records.items())]
+
     def _immutable(self, kind, key, value, reason):
         if value.get("schema") != "upstate." + kind + "/v1" or digest(value) != key:
             raise ValueError("The retained " + kind + " record changed: " + key)
@@ -389,6 +446,7 @@ class _Closure:
                 for companion in entry.get("companions", []):
                     self._body(companion)
                 report_transfer.include(self, key, entry)
+                self._client_source_preview(key, entry)
         elif kind in {"profiles", "scenarios"}:
             self.need("sources", value["source_collection_id"], reason)
             self._source_refs(value, reason)
@@ -534,6 +592,8 @@ class _Closure:
             pass
         elif disturbance_transfer.visit(self, kind, key, value):
             pass
+        elif workbook_return_transfer.visit(self, kind, key, value):
+            pass
         elif forcing_transfer.visit(self, kind, key, value):
             pass
         elif control_transfer.visit(self, kind, key, value):
@@ -553,6 +613,8 @@ class _Closure:
         elif climate_working_transfer.visit(self, kind, key, value, reason):
             pass
         elif management_working_transfer.visit(self, kind, key, value, reason):
+            pass
+        elif management_working_comparison_transfer.visit(self, kind, key, value, reason):
             pass
         elif parameter_transfer.visit(self, kind, key, value, reason):
             pass
@@ -661,6 +723,7 @@ class _Closure:
                 paired_transfer.related(self)
                 report_changes_transfer.related(self)
                 management_transfer.related(self)
+                workbook_return_transfer.related(self)
                 while self.pending:
                     self._visit(*self.pending.popleft())
                 if len(self.nodes) == count:
@@ -731,14 +794,17 @@ class _Closure:
             "climate_management_records": climate_management_transfer.receipt(self),
             "management_case_studies": management_transfer.receipt(self),
             "source_disturbance_studies": disturbance_transfer.receipt(self),
+            "profile_workbook_returns": workbook_return_transfer.receipt(self),
             "parameter_studies": parameter_transfer.native_receipt(self),
             "calibration_studies": calibration_native.receipt(self),
             "joint_parameter_studies": joint_transfer.receipt(self),
             "parameter_working": working_transfer.receipt(self),
             "climate_working": climate_working_transfer.receipt(self),
             "climate_management_working": management_working_transfer.receipt(self),
+            "management_working_comparisons": management_working_comparison_transfer.receipt(self),
             "monitoring_history": monitoring_transfer.receipt(self),
             "scientific_report_sources": report_transfer.receipt(self),
+            "client_source_previews": self._client_source_preview_receipt(),
             "scientific_report_editions": report_editions.receipt(self),
             "paired_ensembles": paired_transfer.receipt(self),
             "report_comparisons": report_changes_transfer.receipt(self),
@@ -775,7 +841,7 @@ def _capture_locks(stack, closure, already):
                      *gauge_transfer.lock_paths(closure), *paired_transfer.lock_paths(closure),
                      *report_changes_transfer.lock_paths(closure), *control_transfer.lock_paths(closure),
                      *forcing_transfer.lock_paths(closure), *terrain_transfer.lock_paths(closure), *climate_management_transfer.lock_paths(closure), *management_transfer.lock_paths(closure),
-                     *disturbance_transfer.lock_paths(closure)):
+                     *disturbance_transfer.lock_paths(closure), *workbook_return_transfer.lock_paths(closure)):
         token = ("original-study-owner-lock", relative)
         if token not in already:
             stack.enter_context(held(closure.root / relative, blocking=False))
@@ -1028,6 +1094,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["parameter_working"] = working_transfer.receipt(closure)
         if getattr(closure, "climate_working_records", {}):
             identity["climate_working"] = climate_working_transfer.receipt(closure)
+        if getattr(closure, "management_working_comparison_records", {}):
+            identity["management_working_comparisons"] = management_working_comparison_transfer.receipt(closure)
         if getattr(closure, "climate_management_working_records", {}):
             identity["climate_management_working"] = management_working_transfer.receipt(closure)
         if closure.joint_parameter_records:
@@ -1046,8 +1114,12 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
             identity["management_case_studies"] = management_transfer.receipt(closure)
         if disturbance_transfer.receipt(closure):
             identity["source_disturbance_studies"] = disturbance_transfer.receipt(closure)
+        if workbook_return_transfer.receipt(closure):
+            identity["profile_workbook_returns"] = workbook_return_transfer.receipt(closure)
         if closure.report_source_records:
             identity["scientific_report_sources"] = report_transfer.receipt(closure)
+        if closure.client_source_preview_records:
+            identity["client_source_previews"] = closure._client_source_preview_receipt()
         if closure.customer_review_records:
             identity["customer_reviews"] = customer_review_transfer.receipt(closure)
         if closure.scientific_report_records:
@@ -1111,11 +1183,7 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         closure.assert_unchanged()
         report("publishing", archive_bytes=result["bytes"])
         os.link(archive_path, destination)
-        directory_fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(directory_fd)
-        finally:
-            os.close(directory_fd)
+        _sync_directory(destination.parent)
         result.update(id=transfer_id, path=str(destination), study=receipt,
                       source_files=source_files, source_bytes=source_bytes)
         report("complete", archive_bytes=result["bytes"], id=transfer_id)
@@ -1140,8 +1208,12 @@ def verify_received_studies(workspace, *, joint_only=False):
                            climate_management_records=receipt["identity"].get("climate_management_records", []),
                            management_case_studies=receipt["identity"].get("management_case_studies", []),
                            source_disturbance_studies=receipt["identity"].get("source_disturbance_studies", []),
+                           profile_workbook_returns=receipt["identity"].get("profile_workbook_returns", []),
                            joint_parameter_lineage="joint_parameter_studies" in receipt["identity"],
                            report_lineage="scientific_report_sources" in receipt["identity"],
+                           client_source_previews="client_source_previews" in receipt["identity"],
+                           client_source_preview_keys={(row["source_collection_id"], row["source_id"])
+                                                       for row in receipt["identity"].get("client_source_previews", [])},
                            implementation_lineage="implementation_report_sources" in receipt["identity"],
                            customer_review_lineage="customer_reviews" in receipt["identity"],
                            implementation_source_keys={(row["source_collection_id"], row["source_id"])
@@ -1155,14 +1227,18 @@ def verify_received_studies(workspace, *, joint_only=False):
         working_transfer.verify_receipt(closure, receipt["identity"].get("parameter_working", []))
         climate_working_transfer.verify_receipt(closure, receipt["identity"].get("climate_working", []))
         management_working_transfer.verify_receipt(closure, receipt["identity"].get("climate_management_working", []))
+        management_working_comparison_transfer.verify_receipt(closure, receipt["identity"].get("management_working_comparisons", []))
         forcing_transfer.verify_receipt(closure, receipt["identity"].get("climate_forcing_studies", []))
         climate_management_transfer.verify_receipt(closure, receipt["identity"].get("climate_management_records", []))
         management_transfer.verify_receipt(closure, receipt["identity"].get("management_case_studies", []))
         disturbance_transfer.verify_receipt(closure, receipt["identity"].get("source_disturbance_studies", []))
+        workbook_return_transfer.verify_receipt(closure, receipt["identity"].get("profile_workbook_returns", []))
         delivery_transfer.verify_receipt(closure, receipt["identity"].get("completed_deliveries", []))
         monitoring_history = monitoring_transfer.verify_receipt(
             closure, receipt["identity"].get("monitoring_history"))
         report_transfer.verify_receipt(closure, receipt["identity"].get("scientific_report_sources", []))
+        if closure._client_source_preview_receipt() != receipt["identity"].get("client_source_previews", []):
+            raise ValueError("The received Study changed an original saved worksheet inspection.")
         report_editions.verify_receipt(closure, receipt["identity"].get("scientific_report_editions", []))
         paired_transfer.verify_receipt(closure, receipt["identity"].get("paired_ensembles", []))
         report_changes_transfer.verify_receipt(closure, receipt["identity"].get("report_comparisons", []))
@@ -1192,6 +1268,7 @@ def verify_received_studies(workspace, *, joint_only=False):
                        "climate_management_records": climate_management_transfer.receipt(closure),
                        "management_case_studies": management_transfer.receipt(closure),
                        "source_disturbance_studies": disturbance_transfer.receipt(closure),
+                       "profile_workbook_returns": workbook_return_transfer.receipt(closure),
                        "investigations": history, "decision_history": decision_history,
                        "monitoring_history": monitoring_history,
                        "conservation_design_history": design_history,
@@ -1211,8 +1288,32 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
     for selected_kind in ROOT_KINDS:
         if kind and selected_kind != kind:
             continue
+        if selected_kind == "sources":
+            for path in sorted((workspace.root / "sources").glob("*.json")):
+                key = path.stem
+                try:
+                    identifier(key)
+                    value = read_json(_member(workspace.root, path.relative_to(workspace.root).as_posix()))
+                    if value.get("schema") != "upstate.sources/v1" or digest(value) != key:
+                        raise ValueError("The retained source collection changed: " + key)
+                    entries = value.get("entries", [])
+                    row = {"kind": "sources", "id": key,
+                           "title": value.get("title") or (entries[0].get("title") if entries else None) or key[:12],
+                           "state": "complete", "updated_at": value.get("captured_at") or value.get("created_at") or "",
+                           "selection": {}, "counts": {"sources": len(entries)}}
+                except Exception as error:
+                    row = {"kind": "sources", "id": key, "title": key[:12], "state": "unreadable",
+                           "updated_at": "", "error": {"type": type(error).__name__, "message": str(error)}}
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
         if selected_kind == "climate-working":
             for row in climate_working_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind == management_working_comparison_transfer.KIND:
+            for row in management_working_comparison_transfer.catalogue(workspace):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue
@@ -1248,6 +1349,11 @@ def catalog(workspace, *, kind=None, query="", offset=0, limit=200):
             continue
         if selected_kind in climate_management_transfer.ROOT_KINDS:
             for row in climate_management_transfer.catalogue(workspace):
+                if not query or query in canonical(row).decode("utf-8").casefold():
+                    rows.append(row)
+            continue
+        if selected_kind in workbook_return_transfer.ROOT_KINDS:
+            for row in workbook_return_transfer.catalogue(workspace):
                 if not query or query in canonical(row).decode("utf-8").casefold():
                     rows.append(row)
             continue

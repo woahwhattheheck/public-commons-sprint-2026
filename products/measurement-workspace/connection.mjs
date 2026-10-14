@@ -67,7 +67,7 @@ export async function inspectSource(){
   const seen=new Set(),files=[];
   for(const item of v.files){
     need(plain(item)&&typeof item.path==='string'&&!item.path.includes('\\')&&item.path.split('/').every(x=>x&&x!=='.'&&x!=='..')&&
-      (item.path.startsWith('opportunities/upstate_forever_2026/measurement_workspace/')||item.path.startsWith('opportunities/upstate_forever_2026/source_tools/')||item.path==='opportunities/upstate_forever_2026/source_data/wqp_eight_20261013/wqp_eight_native.csv')&&!seen.has(item.path)&&/^[a-f0-9]{64}$/.test(item.sha256)&&
+      (item.path.startsWith('opportunities/upstate_forever_2026/measurement_workspace/')||item.path.startsWith('opportunities/upstate_forever_2026/source_tools/')||item.path==='opportunities/upstate_forever_2026/source_data/wqp_eight_20261013/wqp_eight_native.csv'||item.path==='opportunities/upstate_forever_2026/operator/web/intake_comparison.mjs'||item.path==='opportunities/upstate_forever_2026/operator/web/measured_intake.mjs')&&!seen.has(item.path)&&/^[a-f0-9]{64}$/.test(item.sha256)&&
       Number.isSafeInteger(item.bytes)&&item.bytes>=0,'MEASUREMENTS_SOURCE_MANIFEST');
     seen.add(item.path);const selected=await regular(join(SOURCE_ROOT,item.path),{maximum:Math.max(item.bytes,1)});
     need(selected.bytes.length===item.bytes&&selected.sha256===item.sha256,'MEASUREMENTS_SOURCE_CHANGED','Selected original source differs: '+item.path,409);

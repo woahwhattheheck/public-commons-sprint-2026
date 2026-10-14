@@ -50,6 +50,7 @@ from task_requests import TaskRequests
 from team_access import TeamAccess, CONTEXT
 from study_catalogues import StudyCatalogues
 from programme_activity import ProgrammeActivity
+from origin_policy import OriginPolicy, OriginError, advertised_origin as validate_advertised_origin
 
 JSON_GZIP_MIN_BYTES = 32 * 1024
 JSON_ENCODING_QUALITY = re.compile(r"(?:0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\Z")
@@ -143,6 +144,11 @@ def safe_relative(value):
     p = PurePosixPath(value)
     if p.is_absolute() or not p.parts or any(x in (".", "..") for x in p.parts) or str(p) != value:
         raise Fault("SOURCE_PATH", "Source members must use canonical relative paths.")
+    if os.name == "nt":
+        try:
+            portable.member_name(value)
+        except ValueError as error:
+            raise Fault("SOURCE_PATH", str(error)) from error
     return p
 
 def json_body(data):
@@ -543,6 +549,7 @@ class Operator:
                 task["execution_requested_by"] = actor
                 task.setdefault("resumptions", []).append({"at": now(), "by": actor})
             task.pop("error", None)
+            task.pop("cancel_requested", None)
             atomic_json(self.root / "tasks" / (key + ".json"), task)
             self.pool.submit(self._perform, key)
             return task
@@ -553,6 +560,15 @@ class Operator:
             self.team.check_workspace(task["workspace"], write=True)
             if self.native_jobs.supports(task) and task["state"] != "queued":
                 return self.native_jobs.request_stop(task)
+            if task["action"] == "intelligence.ask" and task["state"] == "running":
+                requested_at = now()
+                actor = self.team.actor()
+                if not task.get("cancel_requested"):
+                    task.setdefault("cancellations", []).append({"at": requested_at, "by": actor})
+                task.update(cancel_requested=True, cancel_requested_at=requested_at,
+                            cancelled_by=actor)
+                atomic_json(self.root / "tasks" / (key + ".json"), task)
+                return task
             if task["state"] != "queued":
                 raise Fault("TASK_RUNNING", "Only a task that has not started can be cancelled here.", 409)
             task.update(state="cancelled", ended_at=now(), cancelled_by=self.team.actor())
@@ -580,14 +596,23 @@ class Operator:
             attempt.update(state="complete", ended_at=task["ended_at"])
         except BaseException as error:
             detail, status = summary_error(error)
+            ask_cancelled = (task["action"] == "intelligence.ask" and
+                             (getattr(error, "status", None) == 499 or
+                              type(error).__name__ == "AskCancelled"))
             final_state = ("interrupted" if isinstance(error, NativeJobDetached) else
-                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")
+                           "cancelled" if isinstance(error, NativeJobCancelled) or ask_cancelled
+                           else "failed")
             task.update(state=final_state, error=detail, ended_at=now())
             attempt.update(state=final_state, error=detail, ended_at=task["ended_at"])
             error_file = self.root / "tasks" / (key + ".attempt-" + str(attempt["number"]) + ".error.txt")
             with contextlib.suppress(OSError):
                 error_file.write_text(traceback.format_exc(), encoding="utf-8")
         with self.lock:
+            if task["action"] == "intelligence.ask":
+                retained = self.task(key)
+                for field in ("cancel_requested", "cancel_requested_at", "cancelled_by", "cancellations", "provider_wait"):
+                    if field in retained:
+                        task[field] = retained[field]
             atomic_json(self.root / "tasks" / (key + ".json"), task)
             # Complete revision references travel with the scientific Workspace.
             binding = (self.ws(task["workspace"]).root / "run-revisions"
@@ -709,6 +734,8 @@ class Operator:
         filename = urllib.parse.unquote(filename)
         if not filename or Path(filename).name != filename or "/" in filename or "\\" in filename or "\0" in filename or len(filename) > 240:
             raise Fault("UPLOAD_NAME", "Choose a file with an ordinary filename.")
+        if os.name == "nt":
+            safe_relative(filename)
         h = hashlib.sha256()
         pending = None
         try:
@@ -749,6 +776,12 @@ class Operator:
         entries = archive.infolist()
         if len(entries) > 20000 or sum(x.file_size for x in entries) > self.extraction_limit:
             raise Fault("SOURCE_CAPACITY", "The source archive exceeds the selected member or extraction capacity.", 413)
+        if os.name == "nt":
+            try:
+                portable.validate_receiving_names(
+                    info.filename.rstrip("/") if info.is_dir() else info.filename for info in entries)
+            except ValueError as error:
+                raise Fault("SOURCE_PATH", str(error)) from error
         files = {}
         for info in entries:
             name = info.filename.rstrip("/") if info.is_dir() else info.filename
@@ -978,6 +1011,12 @@ class Operator:
         path, entry = self.ws(workspace).source_file(collection, source)
         result = {"source": entry, "download": self._ticket(workspace, path, entry["body"], entry["title"])}
         if entry["kind"] == "table":
+            if isinstance(entry.get("client_source"), dict) and not entry.get("field_projection"):
+                from model.client_source_inspection_report import retained_table_preview
+                retained = retained_table_preview(self.ws(workspace), entry)
+                if retained is not None:
+                    result.update(retained)
+                    return result
             import csv
             with path.open(encoding="utf-8-sig", newline="") as original:
                 reader = csv.DictReader(original)
@@ -1172,11 +1211,10 @@ class Handler(BaseHTTPRequestHandler):
         return self.server.operator
 
     def check_host(self):
-        if self.headers.get("Host") != urllib.parse.urlsplit(self.app.origin).netloc:
-            raise Fault("HOST_INVALID", "Open the original local operator URL.", 403)
-        origin = self.headers.get("Origin")
-        if origin and origin != self.app.origin:
-            raise Fault("ORIGIN_INVALID", "Use the original local operator page.", 403)
+        try:
+            self.checked_origin = self.app.origin_policy.request_origin(self.headers, self.path)
+        except OriginError as error:
+            raise Fault(error.code, str(error), 403) from error
 
     def team_cookie(self):
         jar = cookies.SimpleCookie()
@@ -1225,9 +1263,11 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("X-Content-Type-Options", "nosniff")
         if cookie:
             value = self.app.team.session(self.principal)
-            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + value + "; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=28800")
+            attributes = self.app.origin_policy.cookie_attributes(self.checked_origin)
+            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + value + attributes)
         if getattr(self, "clear_team_cookie", False):
-            self.send_header("Set-Cookie", self.app.team.cookie_name + "=; HttpOnly; SameSite=Strict; Path=/api/; Max-Age=0")
+            attributes = self.app.origin_policy.cookie_attributes(self.checked_origin, clear=True)
+            self.send_header("Set-Cookie", self.app.team.cookie_name + "=" + attributes)
         self.end_headers()
         self.wfile.write(body)
 
@@ -1282,7 +1322,8 @@ class Handler(BaseHTTPRequestHandler):
                     return self.send_json(200, self.app.team.state(self.principal, self.app.public_workspaces()))
                 if url.path == "/api/whoami":
                     return self.send_json(200, {"person": self.principal, "workspaces": self.app.public_workspaces(),
-                                               "default_workspace": self.app.team.default_workspace(self.principal, self.app.primary)})
+                                               "default_workspace": self.app.team.default_workspace(self.principal, self.app.primary),
+                                               "advertised_origin": self.app.origin_policy.advertised})
                 if url.path == "/api/task":
                     task = self.app.task(one("id"))
                     self.selected_workspace(task["workspace"])
@@ -1364,7 +1405,7 @@ class Handler(BaseHTTPRequestHandler):
                         {name: values[0] for name, values in query.items()}))
                 raise Fault("ROUTE_MISSING", "This operator route does not exist.", 404)
             selected = "index.html" if url.path == "/" else url.path.removeprefix("/web/")
-            if selected not in (({'app.mjs', 'scenario_input_review.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'native_presentation.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'parameter_case_console.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
+            if selected not in (({'app.mjs', 'startup_guide.mjs', 'startup_guide.css', 'scenario_input_review.mjs', 'community.css', 'community.mjs', 'conservation.css', 'conservation.mjs', 'conservation_optimization.css', 'conservation_optimization.mjs', 'conservation_optimization_bridge.mjs', 'experiments.css', 'experiments.mjs', 'index.html', 'jobs.css', 'jobs.mjs', 'native_presentation.mjs', 'observed_series.mjs', 'parameter_studies.css', 'parameter_studies.mjs', 'parameter_working.mjs', 'parameter_case_console.mjs', 'portfolio.css', 'portfolio.mjs', 'programmes.css', 'programmes.mjs', 'receiving_water_spatial.mjs', 'receiving_waters.css', 'receiving_waters.mjs', 'reviews.css', 'reviews.mjs', 'spatial.mjs', 'style.css', 'observation_support.mjs', 'observed_reports.mjs'} | self.app.extensions.web_assets | {"delivery_review.mjs", "delivery_review.css"} | {"rehearsal.mjs", "rehearsal.css", "team.html", "team.mjs", "team.css"})):
                 raise Fault("PAGE_MISSING", "This operator page does not exist.", 404)
             data = (Path(__file__).parent / "web" / selected).read_bytes()
             self.close_connection = True
@@ -1400,7 +1441,7 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/api/team":
                 result = self.app.team.change(self.principal, value)
                 if result.get("access_token"):
-                    result["access_url"] = self.app.origin + "/#token=" + result.pop("access_token")
+                    result["access_url"] = self.checked_origin + "/#token=" + result.pop("access_token")
                 return self.send_json(201 if value.get("operation") == "create" else 200, result)
             if url.path == "/api/session":
                 return self.send_json(200, {"connected": True, "person": self.principal,
@@ -1508,7 +1549,8 @@ class Handler(BaseHTTPRequestHandler):
 
 def start_server(directory, *, state_directory=None, create=False, title=None,
                  source_manifests=(), source_roots=(), port=0, restore_directory=None,
-                 upload_limit=4*1024**3, extraction_limit=64*1024**3):
+                 upload_limit=4*1024**3, extraction_limit=64*1024**3, advertised_origin=None):
+    advertised_origin = validate_advertised_origin(advertised_origin)
     directory = Path(directory).resolve()
     operator = Operator(directory, state_directory or directory.with_name(directory.name + "-operator"),
                         create=create, title=title, source_manifests=source_manifests, source_roots=source_roots,
@@ -1522,8 +1564,13 @@ def start_server(directory, *, state_directory=None, create=False, title=None,
     server.daemon_threads = True
     server.operator = operator
     operator.origin = "http://127.0.0.1:" + str(server.server_address[1])
-    return server, {"origin": operator.origin, "operator_url": operator.origin + "/#token=" + operator.capability,
-                    "workspace_key": operator.primary, "project": operator.ws(operator.primary).project}
+    operator.origin_policy = OriginPolicy(operator.origin, advertised_origin)
+    receipt = {"origin": operator.origin, "operator_url": operator.origin + "/#token=" + operator.capability,
+               "workspace_key": operator.primary, "project": operator.ws(operator.primary).project}
+    if advertised_origin:
+        # Only the private local receipt carries the native operator capability.
+        receipt["advertised_origin"] = advertised_origin
+    return server, receipt
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -1532,29 +1579,55 @@ def main():
     parser.add_argument("--create", action="store_true")
     parser.add_argument("--title")
     parser.add_argument("--port", type=int, default=0)
+    parser.add_argument("--advertised-origin", help="Exact canonical HTTPS origin of the authenticated transport")
     parser.add_argument("--source-manifest", action="append", default=[])
     parser.add_argument("--source-root", action="append", default=[], help="Original source directory available to registered preparation desks")
     parser.add_argument("--restore-directory")
     parser.add_argument("--upload-limit-mib", type=int, default=4096)
     parser.add_argument("--source-extraction-limit-mib", type=int, default=65536)
+    parser.add_argument("--launcher-signals", help=argparse.SUPPRESS)
     args = parser.parse_args()
+    try:
+        validate_advertised_origin(args.advertised_origin)
+    except OriginError as error:
+        parser.error(str(error))
     if not 1 <= args.upload_limit_mib <= 65536 or not 1 <= args.source_extraction_limit_mib <= 1048576:
         parser.error("Choose positive explicit upload and source extraction capacities.")
-    server, receipt = start_server(args.workspace, state_directory=args.operator_state, create=args.create,
-                                   title=args.title, source_manifests=args.source_manifest, source_roots=args.source_root, port=args.port,
-                                   restore_directory=args.restore_directory,
-                                   upload_limit=args.upload_limit_mib*1024**2,
-                                   extraction_limit=args.source_extraction_limit_mib*1024**2)
-    print(json.dumps(receipt), flush=True)
+    if args.launcher_signals is not None and not re.fullmatch(r"[0-9a-f]{48}", args.launcher_signals):
+        parser.error("Use the maintained launcher for its private shutdown handshake.")
+    server = None
+    stopping = threading.Event()
     def drain(*_):
-        threading.Thread(target=server.shutdown, daemon=True).start()
+        if stopping.is_set():
+            return
+        stopping.set()
+        if server is not None:
+            threading.Thread(target=server.shutdown, daemon=True).start()
     signal.signal(signal.SIGTERM, drain)
     signal.signal(signal.SIGINT, drain)
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, drain)
+    if args.launcher_signals is not None:
+        if os.name != "nt" or not hasattr(signal, "SIGBREAK"):
+            parser.error("The Windows launcher handshake requires SIGBREAK.")
+        print(json.dumps({"schema": "upstate.workbench-launch-signals/v1",
+            "pid": os.getpid(), "key": args.launcher_signals, "signal": "SIGBREAK"}), flush=True)
     try:
-        server.serve_forever(poll_interval=.3)
+        server, receipt = start_server(args.workspace, state_directory=args.operator_state, create=args.create,
+                                       title=args.title, source_manifests=args.source_manifest, source_roots=args.source_root, port=args.port,
+                                       restore_directory=args.restore_directory,
+                                       upload_limit=args.upload_limit_mib*1024**2,
+                                       extraction_limit=args.source_extraction_limit_mib*1024**2,
+                                       advertised_origin=args.advertised_origin)
+        if not stopping.is_set():
+            print(json.dumps(receipt), flush=True)
+            server.serve_forever(poll_interval=.3)
     finally:
-        server.server_close()
-        server.operator.close()
+        if server is not None:
+            try:
+                server.server_close()
+            finally:
+                server.operator.close()
 
 
 # Native source-refresh registration. Preserve the original server and queue.

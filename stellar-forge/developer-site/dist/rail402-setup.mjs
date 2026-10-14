@@ -2,7 +2,8 @@ import {RAIL402_SCHEMA, RAIL402_SOURCE, readRail402Bundle, importRail402Draft,
   createRail402Packet, sha256} from './rail402-onboarding.mjs';
 
 const $ = id => document.getElementById(id);
-let sourceText = '', source = null, generation = 0, assetsPromise, indexPromise, exporting = false;
+let sourceText = '', source = null, sourceLabel = '', sourceChoice = 'weather', generation = 0,
+  assetsPromise, indexPromise, exporting = false, loading = false;
 const controls = ['packet-folder','private-directory','intent-id','actor','payer'];
 const keys = ['folder','privateDirectory','intentId','actor','payer'];
 const facts = ['capture-time','resource-url','http-response','offer-network','offer-amount',
@@ -10,7 +11,11 @@ const facts = ['capture-time','resource-url','http-response','offer-network','of
 const notice = (text, kind = 'success') => { $('notice').textContent = text; $('notice').dataset.kind = kind; $('notice').hidden = !text; };
 const show = (id, value) => { $(id).textContent = value; };
 const input = () => ({schema:RAIL402_SCHEMA,...Object.fromEntries(controls.map((id,index)=>[keys[index],$(id).value.trim()])),sourceText});
-const enable = value => { $('download-packet').disabled = !value || exporting; $('save-draft').disabled = !value || exporting; };
+const enable = value => {
+  $('download-packet').disabled = !value || exporting || loading;
+  $('save-draft').disabled = !value || exporting || loading;
+  controls.forEach(id => { $(id).disabled = loading; });
+};
 function atomicUSDC(value) {
   const padded = value.padStart(8,'0');
   return padded.slice(0,-7) + '.' + padded.slice(-7).replace(/0+$/,'').padEnd(1,'0');
@@ -34,21 +39,30 @@ function download(name, content, type) {
   document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function beginSource() {
-  enable(false); sourceText = ''; source = null;
-  show('source-status','Reading original request and response bytes…');
-  facts.forEach(id=>show(id,'Loading…')); $('resource-url').removeAttribute('href');
+  loading = true; enable(false);
+  show('source-status',source ? 'Checking incoming source… Current preparation retained.' : 'Reading original request and response bytes…');
+  if (!source) { facts.forEach(id=>show(id,'Loading…')); $('resource-url').removeAttribute('href'); }
+  notice('');
   return ++generation;
 }
 function failSource(error, current) {
   if (current !== generation) return;
-  facts.forEach(id=>show(id,'—')); $('resource-url').removeAttribute('href');
-  show('source-status','Choose a complete original source bundle.');
-  notice(error.message,'error'); enable(false);
+  loading = false; $('capture-choice').value = sourceChoice;
+  if (source) {
+    show('source-status',sourceLabel + ' · original bytes retained');
+    notice(error.message + ' Your current source and preparation are unchanged.','error');
+    enable(true);
+  } else {
+    facts.forEach(id=>show(id,'—')); $('resource-url').removeAttribute('href');
+    show('source-status','Choose a complete original source bundle.');
+    notice(error.message,'error'); enable(false);
+  }
 }
 async function applySource(text, label, current) {
   const parsed = await readRail402Bundle(text);
   if (current !== generation) return false;
-  sourceText = text; source = parsed;
+  sourceText = text; source = parsed; sourceLabel = label; loading = false;
+  $('capture-choice').value = sourceChoice;
   show('capture-time',parsed.capturedAt); show('resource-url',parsed.bundle.seller); $('resource-url').href = parsed.bundle.seller;
   show('http-response',parsed.bundle.method + ' 402 · facilitator GET 200');
   show('offer-network',parsed.selected.network);
@@ -77,15 +91,22 @@ async function capturedSources() {
   }).catch(error => { indexPromise = undefined; throw error; });
   return indexPromise;
 }
-async function defaultSource() {
+async function defaultSource(resetPreparation = false) {
+  const chosen = $('capture-choice').value;
   const current = beginSource();
   try {
-    const chosen = $('capture-choice').value;
     const entry = (await capturedSources()).find(row => row.id === chosen);
     if (!entry) throw new Error('Select one of the original merchant requests.');
     const text = await asset(entry.path);
     if (await sha256(text) !== entry.sha256) throw new Error('The retained source bundle changed. Reload its matching receiving page.');
-    if (await applySource(text,entry.label,current)) show('source-meaning',entry.behavior);
+    if (!await applySource(text,entry.label,current)) return;
+    sourceChoice = entry.id; $('capture-choice').value = sourceChoice;
+    if (resetPreparation) {
+      $('intent-id').value = 'rail402-' + entry.id + '-' + crypto.randomUUID();
+      $('packet-folder').value = 'rail402-' + entry.id + '-receiving';
+      $('private-directory').value = '';
+    }
+    show('source-meaning',entry.behavior);
   } catch (error) { failSource(error,current); }
 }
 async function selectedFile(element) {
@@ -95,14 +116,8 @@ async function selectedFile(element) {
   return file.text();
 }
 $('intent-id').value = 'rail402-weather-' + crypto.randomUUID();
-$('capture-choice').addEventListener('change',() => {
-  const choice = $('capture-choice').value;
-  $('intent-id').value = 'rail402-' + choice + '-' + crypto.randomUUID();
-  $('packet-folder').value = 'rail402-' + choice + '-receiving';
-  $('private-directory').value = '';
-  defaultSource();
-});
-$('load-default').addEventListener('click',defaultSource);
+$('capture-choice').addEventListener('change',() => defaultSource(true));
+$('load-default').addEventListener('click',() => defaultSource());
 $('source-file').addEventListener('change',async event => {
   if (!event.target.files?.[0]) return;
   const current = beginSource();
@@ -121,19 +136,19 @@ $('draft-file').addEventListener('change',async event => {
   } catch (error) { failSource(error,current); } finally { event.target.value = ''; }
 });
 $('save-draft').addEventListener('click',()=>{
-  if (!source) return;
+  if (!source || loading || exporting) return;
   download('setup-input.json',JSON.stringify(input(),null,2) + '\n','application/json');
   notice('Editable draft downloaded. Open this file here to continue the same preparation.');
 });
 $('receiving-form').addEventListener('submit',async event => {
   event.preventDefault();
-  if (!source || exporting) return;
+  if (!source || exporting || loading) return;
   const saved = input();
   exporting = true; enable(false);
   try {
     const packet = await createRail402Packet(saved,await nativeAssets());
     download(saved.folder + '.zip',packet.zip,'application/zip');
-    notice('Receiving packet downloaded: ' + packet.files.length + ' files with the original request, source and native run guide.');
+    notice('Receiving packet downloaded for ' + saved.intentId + ': ' + packet.files.length + ' files with the original request, source and native run guide.');
   } catch (error) { notice(error.message,'error'); }
   finally { exporting = false; enable(Boolean(source)); }
 });

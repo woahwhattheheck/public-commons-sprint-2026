@@ -1,4 +1,4 @@
-import {sha256Utf8,sha256Bytes} from './sha256.mjs';
+import {sha256Utf8,sha256Bytes,utf8Length} from './sha256.mjs';
 
 export const WORKSPACE_SCHEMA='tjlabs.fixed-asset-migration-workspace.v1';
 export const LIMITS=Object.freeze({csvBytes:32*1024*1024,workspaceBytes:128*1024*1024,rows:100000,columns:512,sources:128,operations:10000,cellCharacters:1000000,supportingBytes:32*1024*1024,supportingFiles:128});
@@ -7,7 +7,7 @@ const clone=x=>JSON.parse(JSON.stringify(x));
 const plain=x=>x!==null&&typeof x==='object'&&!Array.isArray(x);
 const fail=(code,message,details)=>{const e=new Error(message);e.code=code;if(details!==undefined)e.details=details;throw e;};
 const need=(ok,code,message,details)=>{if(!ok)fail(code,message,details);};
-const text=(x,name,max=2000,empty=false)=>{need(typeof x==='string'&&x.length<=max&&(empty||x.length>0),'INVALID_INPUT','Supply '+name+'.');sha256Utf8(x);return x;};
+const text=(x,name,max=2000,empty=false)=>{need(typeof x==='string'&&x.length<=max&&(empty||x.length>0),'INVALID_INPUT','Supply '+name+'.');utf8Length(x);return x;};
 const id=(x,name)=>{text(x,name,128);need(/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(x),'INVALID_ID','Use a stable '+name+' containing letters, numbers, dot, colon, underscore or hyphen.');return x;};
 function instant(x,name){text(x,name,64);need(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/.test(x)&&Number.isFinite(Date.parse(x))&&validDate(x.slice(0,10)),'INVALID_TIME','Supply the actual ISO timestamp for '+name+'.');return x;}
 function validDate(x){if(!/^\d{4}-\d{2}-\d{2}$/.test(x))return false;const d=new Date(x+'T00:00:00.000Z');return Number.isFinite(d.getTime())&&d.toISOString().slice(0,10)===x;}
@@ -70,7 +70,7 @@ function normalizePolicy(value){
 
 const b64Alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
 function decodeBase64(value){
- need(typeof value==='string'&&value.length<=Math.ceil(LIMITS.supportingBytes/3)*4&&/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(value),'INVALID_BASE64','Retain complete canonical Base64 bytes without whitespace.');
+ need(typeof value==='string'&&value.length<=Math.ceil(LIMITS.supportingBytes/3)*4&&value.length%4===0&&!/[^A-Za-z0-9+/=]/.test(value)&&(!value.includes('=')||value.indexOf('=')>=value.length-2&&/^={1,2}$/.test(value.slice(value.indexOf('=')))),'INVALID_BASE64','Retain complete canonical Base64 bytes without whitespace.');
  const size=value.length/4*3-(value.endsWith('==')?2:value.endsWith('=')?1:0);need(size<=LIMITS.supportingBytes,'SUPPORTING_FILE_TOO_LARGE','Choose a complete supporting file within32 MiB.');
  const out=new Uint8Array(size);let at=0;
  for(let i=0;i<value.length;i+=4){

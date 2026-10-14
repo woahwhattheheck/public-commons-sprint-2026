@@ -176,16 +176,18 @@ class Desk:
                     if selected.fragment:
                         raise TargetError("HTTP_PATH", "Invalid local path.")
                     path = selected.path
-                    if path in ("/", "/assets/app.js", "/assets/style.css", "/assets/archive.js", "/assets/companions.js", "/assets/timephased.js", "/assets/commissioning.js", "/assets/commissioning.css"):
+                    if path in ("/", "/assets/app.js", "/assets/style.css", "/assets/archive.js", "/assets/companions.js", "/assets/timephased.js", "/assets/commissioning.js", "/assets/commissioning.css", "/assets/comparison.mjs", "/assets/comparison-panel.js", "/assets/comparison.css"):
                         if self.headers.get("Host") != desk.allowed_host:
                             raise TargetError("HTTP_HOST", "Open the exact local operator address.")
                         filename = {"/": "index.html", "/assets/app.js": "app.js",
                                     "/assets/style.css": "style.css", "/assets/archive.js": "archive.js",
                                     "/assets/companions.js": "companions.js", "/assets/timephased.js": "timephased.js",
+                                    "/assets/comparison.mjs": "comparison.mjs", "/assets/comparison-panel.js": "comparison-panel.js", "/assets/comparison.css": "comparison.css",
                                     "/assets/commissioning.js": "commissioning.js", "/assets/commissioning.css": "commissioning.css"}[path]
-                        raw = ((ARCHIVE_ASSETS if filename in ("archive.js", "companions.js", "timephased.js") else ASSETS) / filename).read_bytes()
+                        raw = ((ARCHIVE_ASSETS if filename in ("archive.js", "companions.js", "timephased.js", "comparison.mjs", "comparison-panel.js", "comparison.css") else ASSETS) / filename).read_bytes()
                         media = {"index.html": "text/html", "app.js": "text/javascript",
-                                 "style.css": "text/css", "archive.js": "text/javascript", "companions.js": "text/javascript", "timephased.js": "text/javascript",
+                                 "style.css": "text/css", "archive.js": "text/javascript", "companions.js": "text/javascript", "timephased.js": "text/javascript", "comparison.mjs": "text/javascript",
+                                 "comparison-panel.js": "text/javascript", "comparison.css": "text/css",
                                  "commissioning.js": "text/javascript", "commissioning.css": "text/css"}[filename] + "; charset=utf-8"
                         self._headers(200, len(raw), media)
                         self.wfile.write(raw)
@@ -271,7 +273,15 @@ class Desk:
                         self._json(200, desk.workspace.request_result(checked_id(path.removeprefix("/api/requests/"))))
                     elif path.startswith("/api/objects/"):
                         identity = checked_id(path.removeprefix("/api/objects/"))
-                        self._json(200, desk.workspace.store.read(identity))
+                        representation = one("representation", "json")
+                        if representation == "source":
+                            raw = desk.workspace.store.read_bytes(identity)
+                            self._json(200, {"schema": "portfolio.original-json-source.v1",
+                                             "sha256": identity, "text": raw.decode("utf-8")})
+                        elif representation == "json":
+                            self._json(200, desk.workspace.store.read(identity))
+                        else:
+                            raise TargetError("OBJECT_REPRESENTATION", "Choose the original JSON or source representation.")
                     elif path.startswith("/api/archives/"):
                         identity = checked_id(path.removeprefix("/api/archives/"))
                         request = desk.workspace.request_result(identity)

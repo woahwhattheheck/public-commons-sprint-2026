@@ -11,9 +11,12 @@ from contextvars import ContextVar
 from copy import deepcopy
 from dataclasses import dataclass
 import errno
-import fcntl
 import json
 import os
+if os.name == "nt":
+    from model import windows_fs as fcntl
+else:
+    import fcntl
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -23,7 +26,7 @@ import threading
 import uuid
 from typing import Callable, Iterable
 
-from model.common import digest as native_digest, file_digest, identifier, read_json
+from model.common import digest as native_digest, file_digest, identifier, read_json, _native_fs_path
 from .adapters import CallbackGateway, StoreBackedRepository
 from .common import IntelligenceError, digest, dumps, now, public_metadata
 from .engine import Engine
@@ -59,10 +62,10 @@ def _member(value):
 
 
 def _inside(root, value, *, existing=False):
-    root = Path(root).resolve(strict=True)
+    root = _native_fs_path(root).resolve(strict=True)
     path = Path(value)
     path = path if path.is_absolute() else root / path
-    resolved = path.resolve(strict=existing)
+    resolved = _native_fs_path(path).resolve(strict=existing)
     if not resolved.is_relative_to(root):
         raise IntelligenceError("The registered source leaves its original workspace.", 403)
     if existing and (not resolved.is_file() or path.is_symlink()):
@@ -107,6 +110,32 @@ def _registered(value, trail=()):
     elif isinstance(value, list):
         for index, item in enumerate(value):
             yield from _registered(item, trail + (str(index),))
+
+
+def _run_registered(run):
+    """Yield files owned by this run, following the native stage registries.
+
+    Reused stages copy and register their retained files under this run.
+    Their reused_from and assembly records describe the donor, whose relative
+    paths belong to that donor's directory. Those records remain in native_record
+    and must never be resolved as files of this run.
+    """
+    yield from _registered(run.get("artifacts", {}), ("artifacts",))
+    for name, stage in run.get("stages", {}).items():
+        for field in ("artifact", "files", "companions", "additional_files",
+                      "arguments", "requested_arguments"):
+            if field in stage:
+                yield from _registered(stage[field], ("stages", str(name), field))
+
+
+def _derived_registered(family, record):
+    """Use the original comparison's output registry, not its run provenance."""
+    if family == "comparisons":
+        for index, alternative in enumerate(record.get("alternatives", [])):
+            yield from _registered(alternative.get("artifacts", {}),
+                                   ("alternatives", str(index), "artifacts"))
+    else:
+        yield from _registered(record)
 
 
 @dataclass(frozen=True)
@@ -648,7 +677,7 @@ class UpstateInvestigations:
                 else:
                     root = ws.root
                 selected = {}
-                for trail, body in _registered(record):
+                for trail, body in _derived_registered(family, record):
                     member = str(_member(body["path"]))
                     path = _inside(ws.root, root / member)
                     label = path.relative_to(ws.root).as_posix()
@@ -664,6 +693,8 @@ class UpstateInvestigations:
                                 "native_kind": family, "native_id": key, "native_selection": record.get("selection", record.get("spec")),
                                 "source_record_sha256": record_sha, "file": body,
                                 "registry_locations": [list(trail)],
+                                **({"native_version_provenance": _copy(record["native_version_provenance"])}
+                                   if "native_version_provenance" in record else {}),
                             },
                         }
                     else:
@@ -759,7 +790,7 @@ class UpstateInvestigations:
         run = self._native_run(tenant, ws, job_id)
         root = ws.root / "runs" / run["id"]
         selected = {}
-        for trail, body in _registered(run):
+        for trail, body in _run_registered(run):
             member = str(_member(body["path"]))
             path = _inside(ws.root, root / member)
             prior = selected.get(member)
@@ -785,7 +816,7 @@ class UpstateInvestigations:
                        "member": locator["member"], "role": locator["role"]}
             if row["id"] != _dataset_id("source", binding):
                 raise IntelligenceError("The selected source binding changed.", 409)
-            if locator["role"] == "primary" and primary.resolve() != Path(row["path"]).resolve():
+            if locator["role"] == "primary" and _native_fs_path(primary).resolve() != _native_fs_path(row["path"]).resolve():
                 raise IntelligenceError("The original source view returned a different member.", 409)
         elif locator.get("kind") == "observation":
             record = ws._get("observations", identifier(locator["observation_id"]))

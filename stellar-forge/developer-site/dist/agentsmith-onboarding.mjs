@@ -89,8 +89,9 @@ export function validateAgentSmithInput(input) {
 
 export function importAgentSmithDraft(text) {
   const draft = JSON.parse(text);
-  need(object(draft) && draft.schema === AGENTSMITH_SCHEMA && typeof draft.sourceText === 'string',
-    'Select the complete saved receiving draft.');
+  need(object(draft) && draft.schema === AGENTSMITH_SCHEMA && typeof draft.sourceText === 'string' &&
+    ['folder','privateDirectory','intentId','actor','payer'].every(key => typeof draft[key] === 'string'),
+    'Select the complete saved receiving draft, including its editable preparation fields.');
   return draft;
 }
 
