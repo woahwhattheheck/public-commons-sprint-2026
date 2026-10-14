@@ -32,24 +32,29 @@ WHEELS = (
 
 ROOT = Path(__file__).resolve().parent
 _WINDOWS_FS = None
+_FILESYSTEM = None
 
 
 def portable_fs(application: Path) -> None:
-    global _WINDOWS_FS
-    if os.name == "nt":
-        sys.path.insert(0, str(application))
-        from model import windows_fs
-        _WINDOWS_FS = windows_fs
+    global _WINDOWS_FS, _FILESYSTEM
+    sys.path.insert(0, str(application))
+    from model import portable_fs as filesystem
+    _FILESYSTEM = filesystem
+    _WINDOWS_FS = filesystem.file_locks if os.name == "nt" else None
+
+
+def native_path(path) -> Path:
+    return _FILESYSTEM.native_path(path) if _FILESYSTEM is not None else Path(path)
 
 
 def no_follow_open(path, flags, mode=0o600):
-    if _WINDOWS_FS is not None:
-        return _WINDOWS_FS.no_follow_open(path, flags, mode)
+    if _FILESYSTEM is not None:
+        return _FILESYSTEM.open_file(path, flags, mode)
     return os.open(path, flags | getattr(os, "O_NOFOLLOW", 0), mode)
 
 
 def fd_stat(fd):
-    return _WINDOWS_FS.fd_stat(fd) if _WINDOWS_FS is not None else os.fstat(fd)
+    return _FILESYSTEM.fd_stat(fd) if _FILESYSTEM is not None else os.fstat(fd)
 
 
 def platform_key() -> str:
@@ -146,13 +151,14 @@ def install_wheels(python: Path, prefix: Path, pending, env, lease_fd):
 
 
 def regular(path: Path):
-    value = (_WINDOWS_FS.path_stat(path) if _WINDOWS_FS is not None else path.lstat())
+    value = (_FILESYSTEM.path_stat(path) if _FILESYSTEM is not None else path.lstat())
     if not stat.S_ISREG(value.st_mode):
         raise ValueError("Expected an original regular file: " + str(path))
     return value
 
 
-def checked(path: Path, expected: tuple[int, str]) -> None:
+def checked(path: Path, expected: tuple[int, str]):
+    path = native_path(path)
     before = regular(path)
     fd = no_follow_open(path, os.O_RDONLY)
     try:
@@ -172,11 +178,13 @@ def checked(path: Path, expected: tuple[int, str]) -> None:
             raise ValueError("File changed while checking: " + str(path))
         if (size, digest.hexdigest()) != expected:
             raise ValueError("Preserved differing file; receive the original payload: " + str(path))
+        return current
     finally:
         os.close(fd)
 
 
 def directory(path: Path) -> None:
+    path = native_path(path)
     for parent in path.parents:
         if parent.is_symlink() or (parent.exists() and getattr(parent.lstat(), "st_file_attributes", 0) & 0x400):
             raise ValueError("Runtime directory parent is an alias: " + str(parent))
@@ -189,22 +197,44 @@ def directory(path: Path) -> None:
 
 
 def sync_directory(path: Path) -> None:
-    if _WINDOWS_FS is not None:
-        _WINDOWS_FS.sync_directory(path)
+    if _FILESYSTEM is None:
+        raise RuntimeError("Load the selected application's portable filesystem first")
+    _FILESYSTEM.sync_directory(path)
+
+
+def received_mode(path: Path, expected: tuple[int, str], mode: int, *, created=False) -> None:
+    """Restore execute permission only on the byte-verified original executable.
+
+    Windows ZIP round trips and the shared no-hardlink fallback may remove POSIX
+    modes. Repair the owned installed file, never its original supplied payload.
+    """
+    before = checked(path, expected)
+    if os.name == "nt":
         return
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    desired = mode if created else stat.S_IMODE(before.st_mode) | (mode & 0o111)
+    if stat.S_IMODE(before.st_mode) != desired:
+        fd = no_follow_open(path, os.O_RDONLY)
+        try:
+            opened = fd_stat(fd)
+            identity = lambda v: (v.st_dev, v.st_ino, v.st_size, v.st_mtime_ns, v.st_ctime_ns)
+            if identity(opened) != identity(before):
+                raise ValueError("Runtime file changed before mode restoration: " + str(path))
+            os.fchmod(fd, desired)
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+        checked(path, expected)
+    if mode & 0o111 and not os.access(path, os.X_OK):
+        raise ValueError("The verified runtime file cannot be executed: " + str(path))
 
 
 def install_exact(source: Path, destination: Path, expected: tuple[int, str], mode: int) -> None:
+    if _FILESYSTEM is None:
+        raise RuntimeError("Load the selected application's portable filesystem first")
+    source, destination = native_path(source), native_path(destination)
     directory(destination.parent)
     if destination.exists() or destination.is_symlink():
-        checked(destination, expected)
-        if mode & 0o111 and not os.access(destination, os.X_OK):
-            raise ValueError("Matching runtime executable has no execute permission: " + str(destination))
+        received_mode(destination, expected, mode)
         return
     temporary = destination.with_name("." + destination.name + ".receiving-" + uuid.uuid4().hex)
     fd = no_follow_open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
@@ -212,13 +242,14 @@ def install_exact(source: Path, destination: Path, expected: tuple[int, str], mo
         source_fd = no_follow_open(source, os.O_RDONLY)
         digest, size = hashlib.sha256(), 0
         with os.fdopen(source_fd, "rb") as incoming, os.fdopen(fd, "wb", closefd=False) as outgoing:
-            if not stat.S_ISREG(os.fstat(source_fd).st_mode):
-                raise ValueError("Payload is not a regular file")
+            before = fd_stat(source_fd)
             for block in iter(lambda: incoming.read(BLOCK), b""):
                 outgoing.write(block)
                 digest.update(block)
                 size += len(block)
-            if (size, digest.hexdigest()) != expected:
+            after = fd_stat(source_fd)
+            identity = lambda v: (v.st_dev, v.st_ino, v.st_size, v.st_mtime_ns, v.st_ctime_ns)
+            if (size, digest.hexdigest()) != expected or identity(before) != identity(after):
                 raise ValueError("Payload changed while receiving: " + str(source))
             outgoing.flush()
             if hasattr(os, "fchmod"):
@@ -226,18 +257,21 @@ def install_exact(source: Path, destination: Path, expected: tuple[int, str], mo
             else:
                 os.chmod(temporary, mode)
             os.fsync(fd)
+        # Close the writable staging handle before either native publication
+        # path. The existing installation lock remains held by the caller.
+        os.close(fd)
+        fd = None
+        created = False
         try:
-            # An occupied path is never replaced, including another opener's file.
-            if os.name == "nt":
-                # Unlike os.replace, Windows rename refuses an occupied name.
-                os.rename(temporary, destination)
-            else:
-                os.link(temporary, destination, follow_symlinks=False)
+            _FILESYSTEM.publish_file(temporary, destination)
+            created = True
         except FileExistsError:
             checked(destination, expected)
+        received_mode(destination, expected, mode, created=created)
         sync_directory(destination.parent)
     finally:
-        os.close(fd)
+        if fd is not None:
+            os.close(fd)
         temporary.unlink(missing_ok=True)
 
 
@@ -266,12 +300,13 @@ def main() -> int:
     root = Path(__file__).resolve().parent
     application = args.application.expanduser().resolve(strict=True)
     portable_fs(application)
+    root, application = native_path(root), native_path(application)
     payloads = native_dependencies(root, args.spec)
     probe = application / "measurement_workspace/node_runtime.py"
     if not probe.is_file():
         raise ValueError("Receive the complete application Measurements runtime source")
-    prefix = Path(sys.prefix).resolve(strict=True)
-    selected_python = Path(os.path.abspath(sys.executable))
+    prefix = native_path(Path(sys.prefix).resolve(strict=True))
+    selected_python = native_path(Path(os.path.abspath(sys.executable)))
     # Match the maintained selector's runtime-sibling location, including its
     # treatment of a selected executable symlink.
     node = selected_python.resolve(strict=True).parent / ("node.exe" if os.name == "nt" else "node")
