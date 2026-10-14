@@ -4,16 +4,20 @@ import argparse
 import csv
 import html
 import json
+import os
+import tempfile
+import zipfile
 import sys
 from pathlib import Path
+from . import portable_fs as _fs
 from .project_transfer import (TransferStore, TransferError, Cancelled, canonical,
-                              load_json, receive_directory, verify_directory)
+                              load_json, receive_directory, verify_directory, regular_reader, _path_text, parse_json)
 
 
 def export_report(store, snapshot_id, directory):
     """Complete machine-readable and human-readable transfer inventory."""
     value = store.report(snapshot_id)
-    out = Path(directory)
+    out = _fs.native_path(directory)
     out.mkdir(parents=True, exist_ok=True)
     from .project_transfer import _atomic
     _atomic(out / "transfer-report.json", canonical(value) + b"\n", replace=True)
@@ -37,7 +41,42 @@ table{{border-collapse:collapse;width:100%}}td,th{{border-bottom:1px solid #aaa;
 <p><a href="transfer-report.json">Complete JSON report</a> · <a href="files.csv">Complete file table</a></p>
 <table><thead><tr><th>Retained file</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody>{rows}</tbody></table></main></html>'''
     _atomic(out / "index.html", body.encode(), replace=True)
-    return {"snapshot_id": snapshot_id, "directory": str(out.absolute()), "files": ["index.html", "files.csv", "transfer-report.json"]}
+    return {"snapshot_id": snapshot_id, "directory": _path_text(out.absolute()), "files": ["index.html", "files.csv", "transfer-report.json"]}
+
+
+def archive_report(directory, destination):
+    """Publish the existing HTML/CSV/JSON report as one immutable download."""
+    source, target = _fs.native_path(directory), _fs.native_path(destination)
+    if target.exists():
+        # The same completed task keeps its original downloadable report.
+        with regular_reader(target) as incoming, zipfile.ZipFile(incoming) as archive:
+            if set(archive.namelist()) != {"index.html", "files.csv", "transfer-report.json"}:
+                raise TransferError("The retained report archive is not the original report download")
+            previous = parse_json(archive.read("transfer-report.json"))
+            current = load_json(source / "transfer-report.json")
+            if previous.get("snapshot_id") != current.get("snapshot_id"):
+                raise TransferError("The retained report belongs to another project edition")
+            if archive.testzip() is not None:
+                raise TransferError("The retained report archive is damaged")
+        return target
+    target.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, name = tempfile.mkstemp(prefix=".transfer-report-", suffix=".zip", dir=target.parent)
+    pending = Path(name)
+    try:
+        with os.fdopen(descriptor, "w+b") as sink:
+            with zipfile.ZipFile(sink, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for member in ("files.csv", "index.html", "transfer-report.json"):
+                    with regular_reader(source / member) as incoming:
+                        with archive.open(member, "w", force_zip64=True) as outgoing:
+                            while block := incoming.read(1024 * 1024):
+                                outgoing.write(block)
+            sink.flush()
+            os.fsync(sink.fileno())
+        _fs.publish_file(pending, target)
+        _fs.sync_directory(target.parent)
+    finally:
+        pending.unlink(missing_ok=True)
+    return target
 
 
 def parser():
@@ -98,8 +137,9 @@ def main(argv=None):
                       store.write_parts(args.snapshot_id, args.directory, request=request, payload_bytes=args.payload_bytes, progress=progress))
         elif cmd == "receive": result = [store.receive_pack(p, progress=progress) for p in args.parts]
         elif cmd == "receive-range":
-            with args.file.open("rb") as source:
-                result = store.receive_block(args.snapshot_id, args.block_id, source, offset=args.offset, length=args.file.stat().st_size, progress=progress)
+            with regular_reader(args.file) as source:
+                result = store.receive_block(args.snapshot_id, args.block_id, source, offset=args.offset,
+                                             length=_fs.fd_stat(source.fileno()).st_size, progress=progress)
         elif cmd == "assemble": result = store.materialize_archive(args.snapshot_id, args.output, progress=progress)
         elif cmd == "open-copy": result = receive_directory(store, args.snapshot_id, args.directory, progress=progress)
         elif cmd == "verify-copy": result = verify_directory(store, args.snapshot_id, args.directory)
