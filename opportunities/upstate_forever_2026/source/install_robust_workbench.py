@@ -3744,5 +3744,9 @@ ALLOWED = ALLOWED | frozenset({
 })
 
 
+# Retain the authoring source shipped in the complete native GIS packet.
+ALLOWED = ALLOWED | frozenset({"source_tools/apply_gis_portability.py"})
+
+
 if __name__ == "__main__":
     main()
