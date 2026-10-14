@@ -24,7 +24,11 @@ PR5021_INSTALLER = "fee31b1fa3ee5a202efbb95b727fd35bc9cbd3cd"
 PR5034_INSTALLER = "50ac07131c2ecb74e33c31b2e2ef09ed1a6dc209"
 PR5040_INSTALLER = "404f167cb6fef47ae82638588fdd8f2bdc4efe52"
 PR5042_INSTALLER = "6607d25f7a2bd5987bdbd8eb75fb7718a03b794f"
-JOINED_INSTALLER = "d8208156ac3b5f6837819fbf7b05b530f91b5398"
+PR5044_INSTALLER = "d8208156ac3b5f6837819fbf7b05b530f91b5398"
+C97_FIRST_INSTALLER = "891d74ea6b4fcd338fcd44d09fb6017a127ae0b4"
+C97_COMPLETE_INSTALLER = "1b81abb843d61a06658fbc97bb19f8aff96ae39b"
+PR5065_INSTALLER = "f245e47ee51d569f1429e5e365c9ffdcfdd01441"
+JOINED_INSTALLER = "f87c5a975c5bf34f63da81cb37e160c772b498e0"
 ORIGINALS = {
     JOBS: "357b637d098f808cb8fc821a74b7cccc3b5deab60e6cc0221fcd47c5ea92f981",
     INSTALLER: "192a48f1e693519d9ee917ffc4c58053d74ff9c5a172e74d8518f7514ba4311d",
@@ -101,9 +105,81 @@ GIS_AUTHORING_BLOCK = '''
 # Retain the authoring source shipped in the complete native GIS packet.
 ALLOWED = ALLOWED | frozenset({"source_tools/apply_gis_portability.py"})
 '''
-STAGES = (PAIRED_BLOCK, PAYLOAD_BLOCK, OPENING_BLOCK, LAB_BLOCK, GIS_AUTHORING_BLOCK)
+COHORT_BLOCK = '''
+
+# Complete retained native-report, source-receiving and jobs-display cohorts.
+# Optional admission preserves REQUIRED and all exact predecessor checks.
+ALLOWED = ALLOWED | frozenset({
+    "model/scientific_report_workbook.py",
+    "source_tools/terrain_io.py",
+    "source_tools/dem_transfer.py",
+    "source_tools/usgs_archive.py",
+    "operator/web/jobs.mjs",
+})
+'''
+EMPTY_PREIMAGE_CHECK = '                    if not values:\n                        raise ValueError(name + " " + key + ": expected at least one preimage SHA-256")\n'
+NATIVE_OPERATIONS_BLOCK = '''
+
+# Complete original native export, receiving, review and Gura source cohorts.
+# Each remains optional and subject to the exact original-source checks.
+ALLOWED = ALLOWED | frozenset({
+    "docs/GURA_NATIVE_RECEIVING.md",
+    "integration/component_fragments/gura-native-receiving.json",
+    "integration/component_fragments/project-transfer-portability.json",
+    "model/PROJECT_TRANSFER.md",
+    "model/chemistry.py",
+    "model/chemistry_reports.py",
+    "model/cohort_cli.py",
+    "model/landcover_ledger.py",
+    "model/project_transfer_cli.py",
+    "model/project_transfer_desk.py",
+    "model/receive_selected_model_source.py",
+    "model/region_cli.py",
+    "model/review_handback.py",
+    "model/reviews.py",
+    "operator/customer_reviews.py",
+    "operator/project_transfer.py",
+    "source_tools/application_assembly.py",
+    "source_tools/archive_delta.py",
+    "source_tools/gura_receiving.py",
+    "source_tools/gura_workflow.py",
+    "source_tools/receive_first_gura_case.py",
+    "source_tools/receive_gura_operation.py",
+    "source_tools/receive_gura_studies.py",
+    "source_tools/receive_original_study.py",
+    "source_tools/receive_scientific_fieldwork.py",
+    "source_tools/receive_study_set.py",
+    "source_tools/source_response_reuse.py",
+})
+'''
+ARCHIVE_CONTINUATION_BLOCK = '''
+# Full native continuation of the ORIGINAL archive, Study, source response and
+# scientific fieldwork receivers. These remain optional source admissions; the
+# existing REQUIRED set, source predecessor checks and scientific semantics stay
+# exactly as published. Include complete original guides/component sources so
+# the canonical application's recipient can reopen these existing workflows.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/archive_delta.py",
+    "source_tools/archive_delta_view.py",
+    "docs/INCREMENTAL_STUDY_DELIVERY.md",
+    "integration/component_fragments/archive-delta.json",
+    "source_tools/receive_study_set.py",
+    "source_tools/RECEIVE_STUDY_SET.md",
+    "source_tools/source_response_reuse.py",
+    "source_tools/SOURCE_ACQUISITION_CONTINUATION.md",
+    "source_tools/receive_original_study.py",
+    "source_tools/receive_scientific_fieldwork.py",
+    "docs/SCIENTIFIC_FIELDWORK_COURSE.md",
+    "integration/component_fragments/scientific-fieldwork-course.json",
+})
+
+'''
+STAGES = (PAIRED_BLOCK, PAYLOAD_BLOCK, OPENING_BLOCK, LAB_BLOCK, GIS_AUTHORING_BLOCK,
+          COHORT_BLOCK, NATIVE_OPERATIONS_BLOCK, ARCHIVE_CONTINUATION_BLOCK)
 STAGE_BY_BLOB = {C47F_INSTALLER: 0, PR5021_INSTALLER: 1,
-                 PR5034_INSTALLER: 2, PR5040_INSTALLER: 3, PR5042_INSTALLER: 4}
+                 PR5034_INSTALLER: 2, PR5040_INSTALLER: 3, PR5042_INSTALLER: 4,
+                 PR5044_INSTALLER: 5, C97_FIRST_INSTALLER: 6,
+                 C97_COMPLETE_INSTALLER: 7}
 
 
 def git_blob(data: bytes) -> str:
@@ -170,13 +246,31 @@ def joined_installer(data: bytes) -> bytes:
     identity = git_blob(data)
     if identity == JOINED_INSTALLER:
         return data
+    if identity == PR5065_INSTALLER:
+        # Retain the concurrently merged full admission group at the final stage.
+        text = data.decode("utf-8")
+        suffix = ARCHIVE_CONTINUATION_BLOCK + ENTRYPOINT
+        if not text.endswith(suffix):
+            raise ValueError("The concurrent original receiving cohort differs")
+        data = (text[:-len(suffix)] + ENTRYPOINT).encode("utf-8")
+        identity = git_blob(data)
+        if identity != PR5044_INSTALLER:
+            raise ValueError("The concurrent installer has additional source changes")
     stage = STAGE_BY_BLOB.get(identity)
     if stage is None:
         raise ValueError("Retain and compose the different installer edition: " + identity)
     text = data.decode("utf-8")
     if not text.endswith(ENTRYPOINT):
         raise ValueError("The complete original installer entrypoint differs")
-    result = (text[:-len(ENTRYPOINT)] + "".join(STAGES[stage:]) + ENTRYPOINT).encode("utf-8")
+    result_text = text[:-len(ENTRYPOINT)] + "".join(STAGES[stage:]) + ENTRYPOINT
+    if stage < 6:
+        if result_text.count(EMPTY_PREIMAGE_CHECK) != 1:
+            raise ValueError("The retained predecessor-list reader differs")
+        result_text = result_text.replace(
+            EMPTY_PREIMAGE_CHECK, "                    # An empty list declares no additional predecessor.\n")
+    elif EMPTY_PREIMAGE_CHECK in result_text:
+        raise ValueError("The cumulative predecessor-list reader differs")
+    result = result_text.encode("utf-8")
     if git_blob(result) != JOINED_INSTALLER:
         raise ValueError("Composed installer differs from the complete published source")
     return result
@@ -207,7 +301,7 @@ def compose(document: dict) -> dict:
                       "git_blob": git_blob(data), "before_sha256": sorted(previous),
                       "content": data.decode("utf-8")})
     return {"schema": "commons.source-map/1",
-            "source_reference": "ECO-CURRENT195-PORTABILITY-J76/5",
+            "source_reference": "ECO-CURRENT195-PORTABILITY-J76/8",
             "description": "Final explicit source layer after the original full portability cohorts.",
             "files": files}
 
