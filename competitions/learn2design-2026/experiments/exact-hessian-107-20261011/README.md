@@ -167,3 +167,11 @@ existing selector. Twelve-cell development and forty-cell broad phases pair
 all three recovery modes with096 on fresh original Objectives. Four complete
 selected ZIPs, original v7 source/history bindings, current-validator commands
 and the twenty-cell full-budget incumbent continuation are included.
+
+## Original feasible-retention candidates
+
+The [complete feasible-retention course](feasible-retention-comparison/README.md)
+adds unchanged FFR130 and reviewed FALQN127 to the native selector alongside096,
+with all original source/review history, nine-cell development, thirty-cell
+broad comparison and three complete current-manifest selected ZIPs. Existing
+source declarations, admitted phases and original operator remain intact.
