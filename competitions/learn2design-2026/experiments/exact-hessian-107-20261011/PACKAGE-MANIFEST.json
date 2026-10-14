@@ -182,8 +182,8 @@
     },
     {
       "path": "RUN_PLAN.json",
-      "bytes": 12121,
-      "sha256": "b706b0259858179a432dc287c7c75ed09079e2da6069bf3cfd83d98c70eb3128"
+      "bytes": 13989,
+      "sha256": "9712787227aae872441cee8d1e2fff9c7c4b0b1e8929873fdef76f8ebad30388"
     },
     {
       "path": "runner/invocation.py",
@@ -217,8 +217,8 @@
     },
     {
       "path": "SOURCES.json",
-      "bytes": 22307,
-      "sha256": "426e046659c0ba39510d5b0a9792b665b14fe6da9070babc7a1a95db982b90de"
+      "bytes": 24867,
+      "sha256": "fb4ca10ca3b458ec0ab9e37cd30b2e6bd41f1bd211ad053221d232fed5c05f9f"
     },
     {
       "path": "submission-zips/099.zip",
@@ -239,13 +239,50 @@
       "path": "submission-zips/107-original.zip",
       "bytes": 10644,
       "sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
+    },
+    {
+      "path": "anchor-state-regional/submission.py",
+      "bytes": 17487,
+      "sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4"
+    },
+    {
+      "path": "anchor-state-regional/requirements.txt",
+      "bytes": 27,
+      "sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a"
+    },
+    {
+      "path": "anchor-state-regional/retained-v7-pilot-summary.json",
+      "bytes": 9532,
+      "sha256": "613216c4f1bcf28fda9f4eb15726af8f3e9624ddf15e5ec782a652baa6333892"
+    },
+    {
+      "path": "anchor-state-regional/README.md",
+      "bytes": 9645,
+      "sha256": "ab6315f6cb7ba09ff95f2f0d04739d7fe6bb0ef7a0dbebf70ac46dfe58ec7ff9"
+    },
+    {
+      "path": "anchor-state-regional/SOURCE_MAP.json",
+      "bytes": 5310,
+      "sha256": "49f2aa593780c8c837155f3a33d1bec12118dceb1e757e66cabfd292c0b942a6"
+    },
+    {
+      "path": "release_selected.py",
+      "bytes": 19522,
+      "sha256": "3987f4f856e94b664130cdb3c0217a7873e42c7e4c4ee67ffe09da2c666dce78"
+    },
+    {
+      "path": "official/final-validator-20261013.py",
+      "bytes": 24428,
+      "sha256": "fdc0ae8d4c341b6c493cd1559638246585517f38e171a5c9778fd23f926342e5"
     }
   ],
-  "revision": 8,
+  "revision": "r7-anchor-state-regional",
   "coordinate_map_entrypoint": "coordinate-map-110/submission.py",
   "invocation_adapter": "runner/invocation.py",
   "batch_entrypoint": "batch-portfolio-d76c/submission.py",
   "batch_guide": "batch-portfolio-d76c/README.md",
   "mapped_batch_entrypoint": "mapped-batch-d76c/submission.py",
-  "mapped_batch_guide": "mapped-batch-d76c/README.md"
+  "mapped_batch_guide": "mapped-batch-d76c/README.md",
+  "anchor_state_entrypoint": "anchor-state-regional/submission.py",
+  "anchor_state_guide": "anchor-state-regional/README.md"
 }

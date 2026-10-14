@@ -172,6 +172,20 @@
           "sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39"
         }
       ]
+    },
+    {
+      "id": "099-state-legacy-regional",
+      "sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "optimize_kwargs": {
+        "backtracking_state": "legacy"
+      }
+    },
+    {
+      "id": "099-state-anchor-regional",
+      "sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "optimize_kwargs": {
+        "backtracking_state": "anchor"
+      }
     }
   ],
   "common_objective": {
@@ -343,6 +357,51 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Twenty original GPU Objective cells comparing the same eight-lane public-corpus optimizer in identity versus ROOT110 property coordinates. Initial physical random/donor designs and archive distance are preserved; gradients come from original Objective mapping autodiff. Separate unmeasured additive phase; existing accepted phases stay at their original source revisions."
+    },
+    {
+      "id": "anchor-state-development",
+      "baseline": "099-state-legacy-regional",
+      "candidates": [
+        "099-state-legacy-regional",
+        "099-state-anchor-regional"
+      ],
+      "public_topology_seeds": [
+        10,
+        11,
+        12
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "container_cap_seconds": 16200,
+      "purpose": "Six source-bound real UIFO cells. Same candidate and explicit legacy versus anchor Optax-state policy, preserving original feasibility, budgets, source manifests and failures. Existing Kaggle v7 records remain separate; no synthetic result substitutes for these measurements."
+    },
+    {
+      "id": "anchor-state-broad-public",
+      "baseline": "099-state-legacy-regional",
+      "candidates": [
+        "099-state-legacy-regional",
+        "099-state-anchor-regional"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Optional twenty-cell same-source state-policy pair after actual native development findings. Whole topology partitions stay paired and hardware/runtime cohorts remain separate."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
@@ -364,6 +423,8 @@
     "coordinate_map_cells": 6,
     "batch_corpus_gpu_cells": 40,
     "batch_corpus_cpu_cells": 20,
-    "mapped_batch_gpu_cells": 20
+    "mapped_batch_gpu_cells": 20,
+    "anchor_state_development_cells": 6,
+    "anchor_state_broad_cells": 20
   }
 }
