@@ -1632,6 +1632,18 @@ ALLOWED = ALLOWED | frozenset({
     "source_tools/apply_workbench_links.py",
 })
 
+# Complete original receiving, native packaging and Mac dependency source.
+ALLOWED = ALLOWED | frozenset({
+    "operator/CLIENT_SOURCE_PORTABLE_RECEIVING.md",
+    "source_tools/native_runtime/prefix_pack.py",
+    "integration/component_fragments/receiving-process-portability.json",
+    "model/reach_chemistry/cli.py",
+    "source_tools/receiving_water_course.py",
+    "source_tools/gura_comparison.py",
+    "source_tools/MACOS_NATIVE_CLOSURE.md",
+    "integration/component_fragments/macos-runtime-closure.json",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
