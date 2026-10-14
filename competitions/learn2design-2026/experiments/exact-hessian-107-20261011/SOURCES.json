@@ -722,6 +722,92 @@
           }
         ]
       }
+    },
+    {
+      "id": "096-recoverable-off-7f24",
+      "class": "RecoverablePolish096",
+      "submission": "recoverable-polish-7f24/submission.py",
+      "submission_bytes": 24609,
+      "submission_sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+      "requirements": "recoverable-polish-7f24/requirements.txt",
+      "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+      "source_owner": "7F24 original096 continuation from complete current14 native trajectory diagnosis; unchanged original096 remains the separately selected control.",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "polish_enabled": false,
+          "polish_start_fraction": 0.8,
+          "polish_quantum": 4,
+          "resume_explore_calls": 4,
+          "memory": 8,
+          "curvature_eps": 1e-8,
+          "qn_radius": 0.08,
+          "qn_min_radius": 0.000001,
+          "qn_max_radius": 0.3,
+          "qn_grow": 2,
+          "qn_shrink": 0.5,
+          "armijo_c1": 0.0001,
+          "trace_limit": 4096
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "algorithm_str"
+            ],
+            "equals": "tjlabs_096_recoverable_polish_7f24"
+          },
+          {
+            "path": [
+              "configuration",
+              "polish_enabled"
+            ],
+            "equals": false
+          }
+        ]
+      }
+    },
+    {
+      "id": "096-recoverable-polish-7f24",
+      "class": "RecoverablePolish096",
+      "submission": "recoverable-polish-7f24/submission.py",
+      "submission_bytes": 24609,
+      "submission_sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+      "requirements": "recoverable-polish-7f24/requirements.txt",
+      "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+      "source_owner": "7F24 original096 continuation from complete current14 native trajectory diagnosis; unchanged original096 remains the separately selected control.",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "polish_enabled": true,
+          "polish_start_fraction": 0.8,
+          "polish_quantum": 4,
+          "resume_explore_calls": 4,
+          "memory": 8,
+          "curvature_eps": 1e-8,
+          "qn_radius": 0.08,
+          "qn_min_radius": 0.000001,
+          "qn_max_radius": 0.3,
+          "qn_grow": 2,
+          "qn_shrink": 0.5,
+          "armijo_c1": 0.0001,
+          "trace_limit": 4096
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "algorithm_str"
+            ],
+            "equals": "tjlabs_096_recoverable_polish_7f24"
+          },
+          {
+            "path": [
+              "configuration",
+              "polish_enabled"
+            ],
+            "equals": true
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -860,6 +946,24 @@
       "guide": "feasible-retention-comparison/README.md",
       "measured_source_binding": "Original source and native completed outputs are joined by candidate/runner/runtime/settings identities; provider labels and inherited filenames do not select an optimizer.",
       "original_native_modules_preserved": true
+    },
+    "recoverable_polish_experiment": {
+      "operation": "L2D-RECOVERABLE-POLISH-7F24-20261014",
+      "candidate": {
+        "bytes": 24609,
+        "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+      },
+      "guide": "recoverable-polish-7f24/README.md",
+      "source_map": "recoverable-polish-7f24/SOURCE_MAP.json",
+      "source_ids": [
+        "096",
+        "096-recoverable-off-7f24",
+        "096-recoverable-polish-7f24"
+      ],
+      "original096_preserved": true,
+      "original_native_modules_preserved": true,
+      "actual_motivation": "current14 FALQN T4/180s/S42 panel 16793aa3838c04aacaebecb55fb3f3187445851fe452be131111a6b0d7f5ac65; full original panel/source binding and diagnosis retained beside this candidate.",
+      "performance": "New candidate and schedule are unmeasured. Actual original Objective results determine comparison; off ablation is a revised implementation and does not replace original096."
     }
   }
 }

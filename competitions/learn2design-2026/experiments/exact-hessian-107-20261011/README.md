@@ -175,3 +175,12 @@ adds unchanged FFR130 and reviewed FALQN127 to the native selector alongside096,
 with all original source/review history, nine-cell development, thirty-cell
 broad comparison and three complete current-manifest selected ZIPs. Existing
 source declarations, admitted phases and original operator remain intact.
+
+## Recoverable polishing around096
+
+The [complete recoverable-polishing course](recoverable-polish-7f24/README.md)
+uses the full current14 native trajectories to preserve096's exploration state
+while interleaving late feasible polishing. Unchanged096 and explicit new off/on
+arms are paired in nine-cell development and thirty-cell broad phases, with the
+original selected four-hour continuation. The complete original panel, diagnosis,
+source and three selected archives are retained beside the maintained runner.
