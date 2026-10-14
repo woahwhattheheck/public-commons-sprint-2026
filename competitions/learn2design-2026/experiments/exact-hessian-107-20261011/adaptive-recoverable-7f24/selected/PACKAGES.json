@@ -1,0 +1,303 @@
+{
+  "schema": "tjlabs.l2d.complete-selected-packages/v1",
+  "operation": "L2D-ADAPTIVE-RECOVERABLE-7F24-20261014",
+  "packages": [
+    {
+      "source_id": "096",
+      "path": "adaptive-recoverable-7f24/selected/096-selected.zip",
+      "bytes": 4885,
+      "sha256": "c6917f57b46f4798be31a9e3765d99b3ca6764bd5a0bff20480945c9d4836e8f",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096",
+        "class": "StagedTrustPortfolio096",
+        "arm_sha256": "8f7e95f6fdc60327b0aca253328146c3ffe8bc7e77e059ad1cde81650745f6ce",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+          "requirements_sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+          "companions": [],
+          "optimize_kwargs": {},
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_staged_trust_portfolio_096"
+            }
+          ]
+        },
+        "source_manifest_sha256": "d863db53d24cd774d946e1bc6f58e212a7f357d55780d36759fe693c1b5b84ef",
+        "source_manifest_content_sha256": "72650509eecc56c8e9a48753bfd99dbe38a5c22dd462725ddabad6aa66100ae2",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "original/096/submission.py",
+            "bytes": 6722,
+            "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "original/096/requirements.txt",
+            "bytes": 42,
+            "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 6722,
+        "actual_original_submission": {
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": [
+        {
+          "path": "submission.py",
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 42,
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 1941,
+          "sha256": "ddb001099129970174bc6d5b1b122e0ea92bdc831772958cc19edde9346e7e7d"
+        }
+      ]
+    },
+    {
+      "source_id": "096-recoverable-polish-7f24",
+      "path": "adaptive-recoverable-7f24/selected/096-recoverable-polish-7f24-selected.zip",
+      "bytes": 9537,
+      "sha256": "d7b9dbba034f5615f957329181bb583df32783cf30385e6fdd66e0ccd8ba6d95",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096-recoverable-polish-7f24",
+        "class": "RecoverablePolish096",
+        "arm_sha256": "53b9ab2a47076999ae1f90425f141631e63a71f1e524925232862cdfe44c0cdf",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+          "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+          "companions": [],
+          "optimize_kwargs": {
+            "polish_enabled": true,
+            "polish_start_fraction": 0.8,
+            "polish_quantum": 4,
+            "resume_explore_calls": 4,
+            "memory": 8,
+            "curvature_eps": 1e-8,
+            "qn_radius": 0.08,
+            "qn_min_radius": 0.000001,
+            "qn_max_radius": 0.3,
+            "qn_grow": 2,
+            "qn_shrink": 0.5,
+            "armijo_c1": 0.0001,
+            "trace_limit": 4096
+          },
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_096_recoverable_polish_7f24"
+            },
+            {
+              "path": [
+                "configuration",
+                "polish_enabled"
+              ],
+              "equals": true
+            }
+          ]
+        },
+        "source_manifest_sha256": "d863db53d24cd774d946e1bc6f58e212a7f357d55780d36759fe693c1b5b84ef",
+        "source_manifest_content_sha256": "72650509eecc56c8e9a48753bfd99dbe38a5c22dd462725ddabad6aa66100ae2",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "recoverable-polish-7f24/submission.py",
+            "bytes": 24609,
+            "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "recoverable-polish-7f24/requirements.txt",
+            "bytes": 58,
+            "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1466,
+          "sha256": "d4e08240f1ec2243b5d6cc62f2fdf393387e2122f6eecaf40185a0c733365c2b"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 24609,
+        "actual_original_submission": {
+          "bytes": 24609,
+          "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": [
+        {
+          "path": "submission.py",
+          "bytes": 1466,
+          "sha256": "d4e08240f1ec2243b5d6cc62f2fdf393387e2122f6eecaf40185a0c733365c2b"
+        },
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 24609,
+          "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 58,
+          "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 2473,
+          "sha256": "9b8d839a9bc54a8e8771b6bf89920a204a2d5eaec735cbd349d0d7eef4efc6fa"
+        }
+      ]
+    },
+    {
+      "source_id": "096-adaptive-stagnation-7f24",
+      "path": "adaptive-recoverable-7f24/selected/096-adaptive-stagnation-7f24-selected.zip",
+      "bytes": 11025,
+      "sha256": "59fa142050d7acf3a91507ffc8323c2d2d7ef34f345afd7fb880ef00e0e689c2",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096-adaptive-stagnation-7f24",
+        "class": "AdaptiveRecoverablePolish096",
+        "arm_sha256": "2ef2d33d1e894042dc3bd0304d8c51e77e096c31e7c4abf2fc77f1e3cca33deb",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1",
+          "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+          "companions": [],
+          "optimize_kwargs": {
+            "polish_enabled": true,
+            "polish_start_fraction": 0.8,
+            "polish_quantum": 4,
+            "resume_explore_calls": 4,
+            "memory": 8,
+            "curvature_eps": 1e-8,
+            "qn_radius": 0.08,
+            "qn_min_radius": 0.000001,
+            "qn_max_radius": 0.3,
+            "qn_grow": 2,
+            "qn_shrink": 0.5,
+            "armijo_c1": 0.0001,
+            "trace_limit": 4096,
+            "polish_schedule": "stagnation",
+            "stagnation_fraction": 0.12,
+            "min_stagnant_explore_calls": 8,
+            "early_polish_time_fraction": 0.25,
+            "min_remaining_polish_calls": 2
+          },
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_096_adaptive_recoverable_polish_7f24"
+            },
+            {
+              "path": [
+                "configuration",
+                "polish_enabled"
+              ],
+              "equals": true
+            },
+            {
+              "path": [
+                "configuration",
+                "polish_schedule"
+              ],
+              "equals": "stagnation"
+            }
+          ]
+        },
+        "source_manifest_sha256": "d863db53d24cd774d946e1bc6f58e212a7f357d55780d36759fe693c1b5b84ef",
+        "source_manifest_content_sha256": "72650509eecc56c8e9a48753bfd99dbe38a5c22dd462725ddabad6aa66100ae2",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "adaptive-recoverable-7f24/submission.py",
+            "bytes": 30447,
+            "sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "adaptive-recoverable-7f24/requirements.txt",
+            "bytes": 58,
+            "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1663,
+          "sha256": "6d6e4d453db61df0e5f0a07f05bc25d8a123a17f6d49b21bcf68ed9c2fa483f6"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 30447,
+        "actual_original_submission": {
+          "bytes": 30447,
+          "sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": [
+        {
+          "path": "submission.py",
+          "bytes": 1663,
+          "sha256": "6d6e4d453db61df0e5f0a07f05bc25d8a123a17f6d49b21bcf68ed9c2fa483f6"
+        },
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 30447,
+          "sha256": "33018a017863d30c65c2e1fcb567319d7973b5ebcbdedba750813a0b7e6db5b1"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 58,
+          "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 2821,
+          "sha256": "ee426e10d8b36ed9bae37108ee9c3bfcb5fd03c7253a9532d58c45bb9c5ea104"
+        }
+      ]
+    }
+  ]
+}

@@ -734,6 +734,51 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Optional next whole matched native campaign: thirty cells comparing unchanged096, exact originalFFR130 and the episode-budget successor. Use after the original changed-only three cells and actual findings, not as an automatic re-run of accepted work. One fresh Objective per cell, all outcomes retained, same recorded runtime cohort required for paired interpretation."
+    },
+    {
+      "id": "adaptive-recoverable-changed-development",
+      "baseline": "096-adaptive-stagnation-7f24",
+      "candidates": [
+        "096-adaptive-stagnation-7f24"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "container_cap_seconds": 16200,
+      "max_time_seconds": 180,
+      "purpose": "Three changed-arm source-native cells after reconciliation with the existing simulation owner. Actual matched control returns retain their original source/runtime/requirements bindings; this sole-arm phase makes no paired gain claim."
+    },
+    {
+      "id": "adaptive-recoverable-broad-public",
+      "baseline": "096",
+      "candidates": [
+        "096",
+        "096-recoverable-polish-7f24",
+        "096-adaptive-stagnation-7f24"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "container_cap_seconds": 16200,
+      "max_time_seconds": 600,
+      "purpose": "Thirty matched native cells compare unchanged096, the unchanged original fixed-late recoverable source and the explicit new stagnation policy. Preserve fresh original Objective per cell, complete logged histories and all failed/no-feasible outcomes; reuse already returned exactly matched cells through retained manifests and the maintained comparator."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",

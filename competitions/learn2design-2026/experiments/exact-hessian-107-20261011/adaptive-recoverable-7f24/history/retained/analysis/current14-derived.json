@@ -1,0 +1,1176 @@
+{
+  "schema": "tjlabs.l2d.current14-derived/v1",
+  "rows": [
+    {
+      "topology_seed": 7,
+      "source_sha256": "e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b",
+      "runner_sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08",
+      "computed_from_full_arrays": {
+        "calls": 90,
+        "feasible_points": 25,
+        "first_feasible": {
+          "call": 4,
+          "time_s": 7.715690851211548,
+          "loss": 6.656031625301925,
+          "feasible": true,
+          "known": true
+        },
+        "best_feasible": {
+          "call": 89,
+          "time_s": 176.4803774356842,
+          "loss": 5.136891730445946,
+          "feasible": true,
+          "known": true
+        },
+        "best_raw": {
+          "call": 89,
+          "time_s": 176.4803774356842,
+          "loss": 5.136891730445946,
+          "feasible": true,
+          "known": true
+        },
+        "post_first_feasible_points": 24,
+        "post_first_calls": 86,
+        "longest_infeasible_run": {
+          "from": 21,
+          "to": 36,
+          "feasible": false,
+          "calls": 16,
+          "start_s": 40.705758810043335,
+          "end_s": 70.91882348060608
+        }
+      },
+      "budget": {
+        "budget_exceeded": false,
+        "objective_time_elapsed_s": 179.43329501152039,
+        "problem_build_s": 36.94503854599998,
+        "optimize_wall_s_incl_warmup": 256.949350341,
+        "returned_before_budget": true,
+        "container_cap_4h30_risk": false
+      },
+      "diagnostics": {
+        "algorithm_str": "tjlabs_falqn127",
+        "uses_aux": true,
+        "calls": 90,
+        "seek_calls": 52,
+        "qn_trials": 38,
+        "repeat_skips": 100,
+        "feasible_calls": 25,
+        "unknown_feasibility_calls": 0,
+        "nonfinite_calls": 0,
+        "first_feasible_call": 4,
+        "duplicates_perturbed": 0,
+        "pair_status": {
+          "infeasible_endpoint": 22,
+          "stored": 14,
+          "nonpositive": 2
+        },
+        "qn_outcomes": {
+          "not_feasible": 20,
+          "accepted": 11,
+          "reset": 16,
+          "repeat": 80,
+          "stationary": 8,
+          "nonimproving": 3
+        },
+        "descent_resets": 0,
+        "max_memory_used": 8,
+        "episodes": 8,
+        "episode_status": {
+          "anchor:stationary": 8
+        },
+        "stop_reason": "predicted_overrun",
+        "stopped_predictively": true,
+        "best_feasible_internal": 5.136891730445946,
+        "best_feasible_call_internal": 89,
+        "kwargs_ignored": [],
+        "note": "bookkeeping only; Objective history is authoritative"
+      },
+      "derived_diagnostic_counts": {
+        "qn_feasible_endpoint_trials": 16,
+        "qn_feasible_fraction": 0.42105263157894735,
+        "seek_share": 0.5777777777777777
+      },
+      "receipt_level_comparison": {
+        "baseline_096_best_feasible_rounded": 5.0587065114,
+        "falqn_minus_096_approx": 0.07818521904594622,
+        "relative_loss_increase_approx": 0.015455575228519924,
+        "ffr_saved12_best_feasible_rounded": 5.159158193,
+        "falqn_minus_ffr_approx": -0.022266462554053845,
+        "fara_best_feasible": 4.677038870230093,
+        "falqn_minus_fara": 0.4598528602158529
+      }
+    },
+    {
+      "topology_seed": 8,
+      "source_sha256": "e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b",
+      "runner_sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08",
+      "computed_from_full_arrays": {
+        "calls": 97,
+        "feasible_points": 6,
+        "first_feasible": {
+          "call": 20,
+          "time_s": 37.020437240600586,
+          "loss": 6.391626589018356,
+          "feasible": true,
+          "known": true
+        },
+        "best_feasible": {
+          "call": 96,
+          "time_s": 175.187837600708,
+          "loss": 5.654955433152016,
+          "feasible": true,
+          "known": true
+        },
+        "best_raw": {
+          "call": 96,
+          "time_s": 175.187837600708,
+          "loss": 5.654955433152016,
+          "feasible": true,
+          "known": true
+        },
+        "post_first_feasible_points": 5,
+        "post_first_calls": 77,
+        "longest_infeasible_run": {
+          "from": 26,
+          "to": 89,
+          "feasible": false,
+          "calls": 64,
+          "start_s": 48.064589738845825,
+          "end_s": 162.47688269615173
+        }
+      },
+      "budget": {
+        "budget_exceeded": false,
+        "objective_time_elapsed_s": 178.50965189933777,
+        "problem_build_s": 36.38786327499997,
+        "optimize_wall_s_incl_warmup": 253.09548918000007,
+        "returned_before_budget": true,
+        "container_cap_4h30_risk": false
+      },
+      "diagnostics": {
+        "algorithm_str": "tjlabs_falqn127",
+        "uses_aux": true,
+        "calls": 97,
+        "seek_calls": 85,
+        "qn_trials": 12,
+        "repeat_skips": 10,
+        "feasible_calls": 6,
+        "unknown_feasibility_calls": 0,
+        "nonfinite_calls": 0,
+        "first_feasible_call": 20,
+        "duplicates_perturbed": 0,
+        "pair_status": {
+          "infeasible_endpoint": 8,
+          "stored": 3,
+          "nonpositive": 1
+        },
+        "qn_outcomes": {
+          "not_feasible": 8,
+          "reset": 2,
+          "repeat": 8,
+          "stationary": 1,
+          "accepted": 3
+        },
+        "descent_resets": 0,
+        "max_memory_used": 2,
+        "episodes": 1,
+        "episode_status": {
+          "anchor:stationary": 1
+        },
+        "stop_reason": "predicted_overrun",
+        "stopped_predictively": true,
+        "best_feasible_internal": 5.654955433152016,
+        "best_feasible_call_internal": 96,
+        "kwargs_ignored": [],
+        "note": "bookkeeping only; Objective history is authoritative"
+      },
+      "derived_diagnostic_counts": {
+        "qn_feasible_endpoint_trials": 4,
+        "qn_feasible_fraction": 0.3333333333333333,
+        "seek_share": 0.8762886597938144
+      },
+      "receipt_level_comparison": {
+        "baseline_096_best_feasible_rounded": 4.977319537,
+        "falqn_minus_096_approx": 0.6776358961520161,
+        "relative_loss_increase_approx": 0.13614474439799595,
+        "ffr_saved12_best_feasible_rounded": 5.632005214,
+        "falqn_minus_ffr_approx": 0.02295021915201545,
+        "fara_best_feasible": 5.266266680743341,
+        "falqn_minus_fara": 0.38868875240867506
+      }
+    },
+    {
+      "topology_seed": 9,
+      "source_sha256": "e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b",
+      "runner_sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08",
+      "computed_from_full_arrays": {
+        "calls": 91,
+        "feasible_points": 2,
+        "first_feasible": {
+          "call": 28,
+          "time_s": 55.07443332672119,
+          "loss": 5.741802205549759,
+          "feasible": true,
+          "known": true
+        },
+        "best_feasible": {
+          "call": 28,
+          "time_s": 55.07443332672119,
+          "loss": 5.741802205549759,
+          "feasible": true,
+          "known": true
+        },
+        "best_raw": {
+          "call": 65,
+          "time_s": 127.06064987182617,
+          "loss": 5.671425931610564,
+          "feasible": false,
+          "known": true
+        },
+        "post_first_feasible_points": 1,
+        "post_first_calls": 63,
+        "longest_infeasible_run": {
+          "from": 29,
+          "to": 67,
+          "feasible": false,
+          "calls": 39,
+          "start_s": 56.99407148361206,
+          "end_s": 130.94022798538208
+        }
+      },
+      "budget": {
+        "budget_exceeded": false,
+        "objective_time_elapsed_s": 178.5892677307129,
+        "problem_build_s": 36.390983167999934,
+        "optimize_wall_s_incl_warmup": 250.73256208099997,
+        "returned_before_budget": true,
+        "container_cap_4h30_risk": false
+      },
+      "diagnostics": {
+        "algorithm_str": "tjlabs_falqn127",
+        "uses_aux": true,
+        "calls": 91,
+        "seek_calls": 86,
+        "qn_trials": 5,
+        "repeat_skips": 25,
+        "feasible_calls": 2,
+        "unknown_feasibility_calls": 0,
+        "nonfinite_calls": 0,
+        "first_feasible_call": 28,
+        "duplicates_perturbed": 0,
+        "pair_status": {
+          "infeasible_endpoint": 5
+        },
+        "qn_outcomes": {
+          "not_feasible": 4,
+          "reset": 4,
+          "repeat": 20,
+          "stationary": 2
+        },
+        "descent_resets": 0,
+        "max_memory_used": 0,
+        "episodes": 2,
+        "episode_status": {
+          "anchor:stationary": 2
+        },
+        "stop_reason": "predicted_overrun",
+        "stopped_predictively": true,
+        "best_feasible_internal": 5.741802205549759,
+        "best_feasible_call_internal": 28,
+        "kwargs_ignored": [],
+        "note": "bookkeeping only; Objective history is authoritative"
+      },
+      "derived_diagnostic_counts": {
+        "qn_feasible_endpoint_trials": 0,
+        "qn_feasible_fraction": 0,
+        "seek_share": 0.945054945054945
+      },
+      "receipt_level_comparison": {
+        "baseline_096_best_feasible_rounded": 4.9721517172,
+        "falqn_minus_096_approx": 0.7696504883497592,
+        "relative_loss_increase_approx": 0.15479223726969815,
+        "ffr_saved12_best_feasible_rounded": 5.082928788,
+        "falqn_minus_ffr_approx": 0.658873417549759,
+        "fara_best_feasible": 5.142631293378685,
+        "falqn_minus_fara": 0.5991709121710747
+      }
+    }
+  ],
+  "trajectories": [
+    {
+      "topology": 7,
+      "feasiblePoints": [
+        {
+          "call": 4,
+          "loss": 6.656031625301925,
+          "time": 7.715690851211548,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 8,
+          "loss": 6.513306515988601,
+          "time": 15.377623796463013,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 9,
+          "loss": 6.386633462117966,
+          "time": 17.304086208343506,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 10,
+          "loss": 6.242514425661045,
+          "time": 19.23407220840454,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 11,
+          "loss": 6.067290766037891,
+          "time": 21.16596746444702,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 14,
+          "loss": 6.195348920755762,
+          "time": 26.983492851257324,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 19,
+          "loss": 6.241963959370034,
+          "time": 36.75873851776123,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 20,
+          "loss": 6.04977032072946,
+          "time": 38.73170018196106,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 37,
+          "loss": 5.6605241986646,
+          "time": 72.95558500289917,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 52,
+          "loss": 6.310115905464265,
+          "time": 102.83814668655396,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 60,
+          "loss": 6.346214086350467,
+          "time": 118.61208820343018,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 66,
+          "loss": 6.744078275333469,
+          "time": 130.51385259628296,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 71,
+          "loss": 5.807093855051735,
+          "time": 140.5039463043213,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 73,
+          "loss": 6.263879818342616,
+          "time": 144.51948380470276,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 77,
+          "loss": 5.561606093963256,
+          "time": 152.55439734458923,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 79,
+          "loss": 5.85941043423674,
+          "time": 156.56238174438477,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 81,
+          "loss": 5.569151150785342,
+          "time": 160.56075429916382,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 82,
+          "loss": 5.460029146860943,
+          "time": 162.5570511817932,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 83,
+          "loss": 5.44587998776356,
+          "time": 164.55062222480774,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 84,
+          "loss": 5.350222861549287,
+          "time": 166.5418803691864,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 86,
+          "loss": 5.318868791017651,
+          "time": 170.51897740364075,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 87,
+          "loss": 5.266553270169595,
+          "time": 172.50540709495544,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 88,
+          "loss": 5.177204577574782,
+          "time": 174.4920780658722,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 89,
+          "loss": 5.136891730445946,
+          "time": 176.4803774356842,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 90,
+          "loss": 5.1877975536546135,
+          "time": 178.46794414520264,
+          "feasible": true,
+          "known": true
+        }
+      ],
+      "improvements": [
+        {
+          "call": 4,
+          "loss": 6.656031625301925,
+          "time": 7.715690851211548,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 8,
+          "loss": 6.513306515988601,
+          "time": 15.377623796463013,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 9,
+          "loss": 6.386633462117966,
+          "time": 17.304086208343506,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 10,
+          "loss": 6.242514425661045,
+          "time": 19.23407220840454,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 11,
+          "loss": 6.067290766037891,
+          "time": 21.16596746444702,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 20,
+          "loss": 6.04977032072946,
+          "time": 38.73170018196106,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 37,
+          "loss": 5.6605241986646,
+          "time": 72.95558500289917,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 77,
+          "loss": 5.561606093963256,
+          "time": 152.55439734458923,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 82,
+          "loss": 5.460029146860943,
+          "time": 162.5570511817932,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 83,
+          "loss": 5.44587998776356,
+          "time": 164.55062222480774,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 84,
+          "loss": 5.350222861549287,
+          "time": 166.5418803691864,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 86,
+          "loss": 5.318868791017651,
+          "time": 170.51897740364075,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 87,
+          "loss": 5.266553270169595,
+          "time": 172.50540709495544,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 88,
+          "loss": 5.177204577574782,
+          "time": 174.4920780658722,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 89,
+          "loss": 5.136891730445946,
+          "time": 176.4803774356842,
+          "feasible": true,
+          "known": true
+        }
+      ],
+      "longestInfeasible": {
+        "from": 21,
+        "to": 36,
+        "feasible": false,
+        "calls": 16,
+        "start_s": 40.705758810043335,
+        "end_s": 70.91882348060608
+      },
+      "runs": [
+        {
+          "from": 1,
+          "to": 3,
+          "feasible": false,
+          "calls": 3,
+          "start_s": 1.900055170059204,
+          "end_s": 5.8075127601623535
+        },
+        {
+          "from": 4,
+          "to": 4,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 7.715690851211548,
+          "end_s": 7.715690851211548
+        },
+        {
+          "from": 5,
+          "to": 7,
+          "feasible": false,
+          "calls": 3,
+          "start_s": 9.626704216003418,
+          "end_s": 13.456113576889038
+        },
+        {
+          "from": 8,
+          "to": 11,
+          "feasible": true,
+          "calls": 4,
+          "start_s": 15.377623796463013,
+          "end_s": 21.16596746444702
+        },
+        {
+          "from": 12,
+          "to": 13,
+          "feasible": false,
+          "calls": 2,
+          "start_s": 23.10074758529663,
+          "end_s": 25.04116725921631
+        },
+        {
+          "from": 14,
+          "to": 14,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 26.983492851257324,
+          "end_s": 26.983492851257324
+        },
+        {
+          "from": 15,
+          "to": 18,
+          "feasible": false,
+          "calls": 4,
+          "start_s": 28.932002544403076,
+          "end_s": 34.79347491264343
+        },
+        {
+          "from": 19,
+          "to": 20,
+          "feasible": true,
+          "calls": 2,
+          "start_s": 36.75873851776123,
+          "end_s": 38.73170018196106
+        },
+        {
+          "from": 21,
+          "to": 36,
+          "feasible": false,
+          "calls": 16,
+          "start_s": 40.705758810043335,
+          "end_s": 70.91882348060608
+        },
+        {
+          "from": 37,
+          "to": 37,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 72.95558500289917,
+          "end_s": 72.95558500289917
+        },
+        {
+          "from": 38,
+          "to": 51,
+          "feasible": false,
+          "calls": 14,
+          "start_s": 74.98127913475037,
+          "end_s": 100.8708701133728
+        },
+        {
+          "from": 52,
+          "to": 52,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 102.83814668655396,
+          "end_s": 102.83814668655396
+        },
+        {
+          "from": 53,
+          "to": 59,
+          "feasible": false,
+          "calls": 7,
+          "start_s": 104.80461049079895,
+          "end_s": 116.63528656959534
+        },
+        {
+          "from": 60,
+          "to": 60,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 118.61208820343018,
+          "end_s": 118.61208820343018
+        },
+        {
+          "from": 61,
+          "to": 65,
+          "feasible": false,
+          "calls": 5,
+          "start_s": 120.58916330337524,
+          "end_s": 128.52413606643677
+        },
+        {
+          "from": 66,
+          "to": 66,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 130.51385259628296,
+          "end_s": 130.51385259628296
+        },
+        {
+          "from": 67,
+          "to": 70,
+          "feasible": false,
+          "calls": 4,
+          "start_s": 132.5051555633545,
+          "end_s": 138.50117254257202
+        },
+        {
+          "from": 71,
+          "to": 71,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 140.5039463043213,
+          "end_s": 140.5039463043213
+        },
+        {
+          "from": 72,
+          "to": 72,
+          "feasible": false,
+          "calls": 1,
+          "start_s": 142.50950384140015,
+          "end_s": 142.50950384140015
+        },
+        {
+          "from": 73,
+          "to": 73,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 144.51948380470276,
+          "end_s": 144.51948380470276
+        },
+        {
+          "from": 74,
+          "to": 76,
+          "feasible": false,
+          "calls": 3,
+          "start_s": 146.52993607521057,
+          "end_s": 150.54665112495422
+        },
+        {
+          "from": 77,
+          "to": 77,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 152.55439734458923,
+          "end_s": 152.55439734458923
+        },
+        {
+          "from": 78,
+          "to": 78,
+          "feasible": false,
+          "calls": 1,
+          "start_s": 154.55776166915894,
+          "end_s": 154.55776166915894
+        },
+        {
+          "from": 79,
+          "to": 79,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 156.56238174438477,
+          "end_s": 156.56238174438477
+        },
+        {
+          "from": 80,
+          "to": 80,
+          "feasible": false,
+          "calls": 1,
+          "start_s": 158.56276607513428,
+          "end_s": 158.56276607513428
+        },
+        {
+          "from": 81,
+          "to": 84,
+          "feasible": true,
+          "calls": 4,
+          "start_s": 160.56075429916382,
+          "end_s": 166.5418803691864
+        },
+        {
+          "from": 85,
+          "to": 85,
+          "feasible": false,
+          "calls": 1,
+          "start_s": 168.53095626831055,
+          "end_s": 168.53095626831055
+        },
+        {
+          "from": 86,
+          "to": 90,
+          "feasible": true,
+          "calls": 5,
+          "start_s": 170.51897740364075,
+          "end_s": 178.46794414520264
+        }
+      ],
+      "diagnostics": {
+        "algorithm_str": "tjlabs_falqn127",
+        "uses_aux": true,
+        "calls": 90,
+        "seek_calls": 52,
+        "qn_trials": 38,
+        "repeat_skips": 100,
+        "feasible_calls": 25,
+        "unknown_feasibility_calls": 0,
+        "nonfinite_calls": 0,
+        "first_feasible_call": 4,
+        "duplicates_perturbed": 0,
+        "pair_status": {
+          "infeasible_endpoint": 22,
+          "stored": 14,
+          "nonpositive": 2
+        },
+        "qn_outcomes": {
+          "not_feasible": 20,
+          "accepted": 11,
+          "reset": 16,
+          "repeat": 80,
+          "stationary": 8,
+          "nonimproving": 3
+        },
+        "descent_resets": 0,
+        "max_memory_used": 8,
+        "episodes": 8,
+        "episode_status": {
+          "anchor:stationary": 8
+        },
+        "stop_reason": "predicted_overrun",
+        "stopped_predictively": true,
+        "best_feasible_internal": 5.136891730445946,
+        "best_feasible_call_internal": 89,
+        "kwargs_ignored": [],
+        "note": "bookkeeping only; Objective history is authoritative"
+      }
+    },
+    {
+      "topology": 8,
+      "feasiblePoints": [
+        {
+          "call": 20,
+          "loss": 6.391626589018356,
+          "time": 37.020437240600586,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 25,
+          "loss": 6.966105332932544,
+          "time": 46.23871421813965,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 90,
+          "loss": 6.038004560249395,
+          "time": 164.2850112915039,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 91,
+          "loss": 5.752624483394525,
+          "time": 166.0968155860901,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 92,
+          "loss": 5.730510757389448,
+          "time": 167.90878224372864,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 96,
+          "loss": 5.654955433152016,
+          "time": 175.187837600708,
+          "feasible": true,
+          "known": true
+        }
+      ],
+      "improvements": [
+        {
+          "call": 20,
+          "loss": 6.391626589018356,
+          "time": 37.020437240600586,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 90,
+          "loss": 6.038004560249395,
+          "time": 164.2850112915039,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 91,
+          "loss": 5.752624483394525,
+          "time": 166.0968155860901,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 92,
+          "loss": 5.730510757389448,
+          "time": 167.90878224372864,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 96,
+          "loss": 5.654955433152016,
+          "time": 175.187837600708,
+          "feasible": true,
+          "known": true
+        }
+      ],
+      "longestInfeasible": {
+        "from": 26,
+        "to": 89,
+        "feasible": false,
+        "calls": 64,
+        "start_s": 48.064589738845825,
+        "end_s": 162.47688269615173
+      },
+      "runs": [
+        {
+          "from": 1,
+          "to": 19,
+          "feasible": false,
+          "calls": 19,
+          "start_s": 1.786330223083496,
+          "end_s": 35.14802289009094
+        },
+        {
+          "from": 20,
+          "to": 20,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 37.020437240600586,
+          "end_s": 37.020437240600586
+        },
+        {
+          "from": 21,
+          "to": 24,
+          "feasible": false,
+          "calls": 4,
+          "start_s": 38.877943992614746,
+          "end_s": 44.40975761413574
+        },
+        {
+          "from": 25,
+          "to": 25,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 46.23871421813965,
+          "end_s": 46.23871421813965
+        },
+        {
+          "from": 26,
+          "to": 89,
+          "feasible": false,
+          "calls": 64,
+          "start_s": 48.064589738845825,
+          "end_s": 162.47688269615173
+        },
+        {
+          "from": 90,
+          "to": 92,
+          "feasible": true,
+          "calls": 3,
+          "start_s": 164.2850112915039,
+          "end_s": 167.90878224372864
+        },
+        {
+          "from": 93,
+          "to": 95,
+          "feasible": false,
+          "calls": 3,
+          "start_s": 169.72494554519653,
+          "end_s": 173.3635492324829
+        },
+        {
+          "from": 96,
+          "to": 96,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 175.187837600708,
+          "end_s": 175.187837600708
+        },
+        {
+          "from": 97,
+          "to": 97,
+          "feasible": false,
+          "calls": 1,
+          "start_s": 177.020090341568,
+          "end_s": 177.020090341568
+        }
+      ],
+      "diagnostics": {
+        "algorithm_str": "tjlabs_falqn127",
+        "uses_aux": true,
+        "calls": 97,
+        "seek_calls": 85,
+        "qn_trials": 12,
+        "repeat_skips": 10,
+        "feasible_calls": 6,
+        "unknown_feasibility_calls": 0,
+        "nonfinite_calls": 0,
+        "first_feasible_call": 20,
+        "duplicates_perturbed": 0,
+        "pair_status": {
+          "infeasible_endpoint": 8,
+          "stored": 3,
+          "nonpositive": 1
+        },
+        "qn_outcomes": {
+          "not_feasible": 8,
+          "reset": 2,
+          "repeat": 8,
+          "stationary": 1,
+          "accepted": 3
+        },
+        "descent_resets": 0,
+        "max_memory_used": 2,
+        "episodes": 1,
+        "episode_status": {
+          "anchor:stationary": 1
+        },
+        "stop_reason": "predicted_overrun",
+        "stopped_predictively": true,
+        "best_feasible_internal": 5.654955433152016,
+        "best_feasible_call_internal": 96,
+        "kwargs_ignored": [],
+        "note": "bookkeeping only; Objective history is authoritative"
+      }
+    },
+    {
+      "topology": 9,
+      "feasiblePoints": [
+        {
+          "call": 28,
+          "loss": 5.741802205549759,
+          "time": 55.07443332672119,
+          "feasible": true,
+          "known": true
+        },
+        {
+          "call": 68,
+          "loss": 5.934205582812812,
+          "time": 132.87861585617065,
+          "feasible": true,
+          "known": true
+        }
+      ],
+      "improvements": [
+        {
+          "call": 28,
+          "loss": 5.741802205549759,
+          "time": 55.07443332672119,
+          "feasible": true,
+          "known": true
+        }
+      ],
+      "longestInfeasible": {
+        "from": 29,
+        "to": 67,
+        "feasible": false,
+        "calls": 39,
+        "start_s": 56.99407148361206,
+        "end_s": 130.94022798538208
+      },
+      "runs": [
+        {
+          "from": 1,
+          "to": 27,
+          "feasible": false,
+          "calls": 27,
+          "start_s": 1.9235501289367676,
+          "end_s": 53.14284420013428
+        },
+        {
+          "from": 28,
+          "to": 28,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 55.07443332672119,
+          "end_s": 55.07443332672119
+        },
+        {
+          "from": 29,
+          "to": 67,
+          "feasible": false,
+          "calls": 39,
+          "start_s": 56.99407148361206,
+          "end_s": 130.94022798538208
+        },
+        {
+          "from": 68,
+          "to": 68,
+          "feasible": true,
+          "calls": 1,
+          "start_s": 132.87861585617065,
+          "end_s": 132.87861585617065
+        },
+        {
+          "from": 69,
+          "to": 91,
+          "feasible": false,
+          "calls": 23,
+          "start_s": 134.8173565864563,
+          "end_s": 177.59371042251587
+        }
+      ],
+      "diagnostics": {
+        "algorithm_str": "tjlabs_falqn127",
+        "uses_aux": true,
+        "calls": 91,
+        "seek_calls": 86,
+        "qn_trials": 5,
+        "repeat_skips": 25,
+        "feasible_calls": 2,
+        "unknown_feasibility_calls": 0,
+        "nonfinite_calls": 0,
+        "first_feasible_call": 28,
+        "duplicates_perturbed": 0,
+        "pair_status": {
+          "infeasible_endpoint": 5
+        },
+        "qn_outcomes": {
+          "not_feasible": 4,
+          "reset": 4,
+          "repeat": 20,
+          "stationary": 2
+        },
+        "descent_resets": 0,
+        "max_memory_used": 0,
+        "episodes": 2,
+        "episode_status": {
+          "anchor:stationary": 2
+        },
+        "stop_reason": "predicted_overrun",
+        "stopped_predictively": true,
+        "best_feasible_internal": 5.741802205549759,
+        "best_feasible_call_internal": 28,
+        "kwargs_ignored": [],
+        "note": "bookkeeping only; Objective history is authoritative"
+      }
+    }
+  ]
+}
