@@ -1,15 +1,15 @@
 {
   "schema": "principal.operator-source.v1",
-  "edition": "principal-market-1-accounting-3",
+  "edition": "principal-paired-exit-1-market-1-accounting-3",
   "api": {
-    "bytes": 60307,
-    "sha256": "201f8d9e720630a46e2338f775f5f126876c3ce93566393e7fe0a5c4cbc5399c"
+    "bytes": 64241,
+    "sha256": "7815561fd27bf14d2752ca2fa225a42ca28912a53d844fa53aa13b909a488017"
   },
   "files": [
     {
       "path": "CONTRACT_API.json",
-      "bytes": 60307,
-      "sha256": "201f8d9e720630a46e2338f775f5f126876c3ce93566393e7fe0a5c4cbc5399c"
+      "bytes": 64241,
+      "sha256": "7815561fd27bf14d2752ca2fa225a42ca28912a53d844fa53aa13b909a488017"
     },
     {
       "path": "package.json",
@@ -108,8 +108,8 @@
     },
     {
       "path": "web/app.mjs",
-      "bytes": 72892,
-      "sha256": "5d41a3c653dc625a0713620456f2c6927479d3180bf3e349a47520d366df4a91"
+      "bytes": 79079,
+      "sha256": "3de9800e4ecc783c76ee6aedda545e7ed1e5dd41a047878ecf6ce557cebd2f32"
     },
     {
       "path": "AGENTS.md",
@@ -118,13 +118,13 @@
     },
     {
       "path": "OPERATOR.md",
-      "bytes": 21103,
-      "sha256": "41b3089188829df01485a5f80dd85512ecf20b16a923b5512b5199376f7b455a"
+      "bytes": 21391,
+      "sha256": "14f47505c5907cc7824ee5ae2192d5b5bfaa46475fd9d1671277134eae1fc682"
     },
     {
       "path": "web/market.mjs",
-      "bytes": 16107,
-      "sha256": "8312ba8ecb801ca4337c7886674653bf9faad5111a21829900ff7e950a6a493f"
+      "bytes": 16121,
+      "sha256": "f202b8beb5ce648cc23fec9f78254b050443605c5db4cb73eeb1e1b761385948"
     },
     {
       "path": "lib/rpc-events.mjs",
@@ -138,8 +138,8 @@
     },
     {
       "path": "native/principal-build.py",
-      "bytes": 27747,
-      "sha256": "dd338230feec48be19359c9646575b9e50b8ab3df9b63d55ae7eede963a425d2"
+      "bytes": 29179,
+      "sha256": "4d4dbf634db4f0f45bf38202fe2f2d1e2c8d7e43abdb25ee37051918e31a9f1f"
     },
     {
       "path": "native/PRINCIPAL_BUILD.md",
@@ -153,8 +153,8 @@
     },
     {
       "path": "receiving/prepare-local-course.mjs",
-      "bytes": 3778,
-      "sha256": "ba8b14efdc3bd5cb367d6fbff477f5524f9821f51d6f844173c6cdbd914ea204"
+      "bytes": 3864,
+      "sha256": "b34ad40f93941bfc9ca1a495d13d3a9da1dd94bdcad86fcf3c4292e298b3ec56"
     },
     {
       "path": "contracts-source/.gitignore",
@@ -413,8 +413,8 @@
     },
     {
       "path": "contracts-source/contracts/principal_manager/src/lib.rs",
-      "bytes": 57077,
-      "sha256": "cefbd5e7f1d5171ddf8f5c817372be43c8a6c24b562ed5dc9b3ad38e9f2d44cf"
+      "bytes": 63771,
+      "sha256": "ec19e7391b92382d78b5e739293932ca2f5da5d8ab31c0ab1f3872915ba4c950"
     },
     {
       "path": "contracts-source/contracts/principal_manager/test_snapshots/test/admin_transfer.1.json",
@@ -1058,8 +1058,8 @@
     },
     {
       "path": "contracts-source/contracts/yt_token/src/lib.rs",
-      "bytes": 62099,
-      "sha256": "0c869970e9fdeb1a26a153b2bfa0c31b102bf4fef5cd2d4b7e5cb15dfa1cc347"
+      "bytes": 62114,
+      "sha256": "fb7c19283a578dea1eb1fba78c233cec1c2c32c764f0841638e2cd00ca0cb497"
     },
     {
       "path": "contracts-source/contracts/yt_token/test_snapshots/test/approve_and_transfer_from.1.json",
@@ -1493,8 +1493,8 @@
     },
     {
       "path": "SOURCE_BINDINGS.json",
-      "bytes": 4647,
-      "sha256": "a35a8e816895ee3f69093e05afa00bf201b926acfc1bbf15235fe3b5a76aaf58"
+      "bytes": 5068,
+      "sha256": "9c91e0aa3eccc0f45527ce080f29dee3eaefc40f045f5ee222af366d9bdb4470"
     },
     {
       "path": "contracts-source/docs/ACCOUNTING_EDITION_3.md",
@@ -1518,8 +1518,8 @@
     },
     {
       "path": "contracts-source/contracts/router/src/lib.rs",
-      "bytes": 7298,
-      "sha256": "1c7386ab33010d1b9f70ec855642e930e83aa1c5c3e5585cb01ca9c3db52eba4"
+      "bytes": 9356,
+      "sha256": "bade157e3a80ee3d489f92cdb3f5ca403e243b43004ff6b16a114a34cd1e7f19"
     },
     {
       "path": "contracts-source/contracts/market_pool/Cargo.toml",
@@ -1565,6 +1565,41 @@
       "path": "source/editions/accounting-3/CONTRACT_API.json",
       "bytes": 44023,
       "sha256": "7ae8ac40c64213586ee41bf1f022e7461cf6c947487f9acd82995cf0e037f0d2"
+    },
+    {
+      "path": "contracts-source/contracts/integration_tests/tests/paired_exit_lifecycle.rs",
+      "bytes": 8452,
+      "sha256": "a2e65a3bc97fc67dbf69e9b4669379be093741c2d74283e58ed9f4892080f875"
+    },
+    {
+      "path": "contracts-source/CURRENT_PAIRED_EXIT_API.json",
+      "bytes": 64241,
+      "sha256": "7815561fd27bf14d2752ca2fa225a42ca28912a53d844fa53aa13b909a488017"
+    },
+    {
+      "path": "contracts-source/docs/PAIRED_EXIT_EDITION_1.md",
+      "bytes": 11587,
+      "sha256": "3ac06e5b7c08422b2c18f27f107d0e00b0838520cf250fae81b90eb74fbe6baf"
+    },
+    {
+      "path": "contracts-source/CURRENT_PAIRED_EXIT_SOURCE.json",
+      "bytes": 50679,
+      "sha256": "a411e46766398d2beb051d89cd42c223c52cf602a7ad69ee8419488b6b0d0190"
+    },
+    {
+      "path": "source/current-paired-exit-packet.json",
+      "bytes": 7832685,
+      "sha256": "2ae37235ada234bb17f3ebe5e8240c2ba556d5363e03c55f53592db5c98deb31"
+    },
+    {
+      "path": "native/PAIRED_EXIT_BUILD.md",
+      "bytes": 5500,
+      "sha256": "fa77c648cacc9a03ce622be439af3cd930184f038095bd95fdf88735a81a4a98"
+    },
+    {
+      "path": "source/editions/market-1/CONTRACT_API.json",
+      "bytes": 60307,
+      "sha256": "201f8d9e720630a46e2338f775f5f126876c3ce93566393e7fe0a5c4cbc5399c"
     }
   ]
 }

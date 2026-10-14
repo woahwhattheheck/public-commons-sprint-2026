@@ -33,11 +33,24 @@ pub struct RoutedLiquidity{pub deposited_sy:i128,pub minted:MintResult,pub liqui
 #[contracttype]
 #[derive(Clone,Debug,Eq,PartialEq)]
 pub struct RoutedSwap{pub underlying:i128,pub trade:TradeQuote}
+#[contracttype]
+#[derive(Clone,Debug,Eq,PartialEq)]
+pub struct RecombineQuote{
+ pub amount:i128,pub sy_shares:i128,pub underlying_allowance:i128,pub underlying_value:i128,
+ pub retained_rounding:i128,pub oracle_rate:i128,pub sy_rate:i128,pub inverse_index:i128,
+ pub pending_yield:i128,pub reward_remainder:i128,pub sampled_at:u64,pub maturity:u64,
+}
+#[contracttype]
+#[derive(Clone,Debug,Eq,PartialEq)]
+pub struct RoutedRecombine{pub exit:RecombineQuote,pub underlying:i128}
 #[contractclient(name="SyClient")]
 pub trait Sy{fn deposit(e:Env,from:Address,amount:i128)->i128;fn withdraw(e:Env,from:Address,shares:i128,to:Address)->i128;}
 #[contractclient(name="ManagerClient")]
 pub trait Manager{
  fn mint(e:Env,from:Address,sy_shares:i128)->MintResult;
+ fn recombination_edition(e:Env)->u32;
+ fn preview_recombine(e:Env,from:Address,amount:i128)->RecombineQuote;
+ fn recombine(e:Env,from:Address,amount:i128,min_sy:i128)->RecombineQuote;
  fn claim_yield(e:Env,from:Address)->i128;
  fn redeem(e:Env,from:Address,pt_amount:i128,yt_amount:i128)->RedeemResult;
 }
@@ -67,7 +80,7 @@ impl RouterContract{
  }
  pub fn market_address(e:Env)->Address{market(&e)}
  pub fn configuration(e:Env)->MarketConfig{configuration(&e)}
- pub fn router_edition(_e:Env)->u32{1}
+ pub fn router_edition(_e:Env)->u32{2}
  pub fn quote_swap(e:Env,sy_in:bool,amount_in:i128)->TradeQuote{MarketPoolContractClient::new(&e,&market(&e)).quote_swap(&sy_in,&amount_in)}
  pub fn tokenize(e:Env,from:Address,underlying:i128,min_pt:i128,min_yt:i128,expires:u64)->MintResult{
   authorized(&e,&from,expires);let c=configuration(&e);let shares=SyClient::new(&e,&c.sy).deposit(&from,&underlying);
@@ -103,6 +116,28 @@ impl RouterContract{
  }
  pub fn remove_liquidity(e:Env,from:Address,shares:i128,min_pt:i128,min_sy:i128,expires:u64)->LiquidityQuote{
   authorized(&e,&from,expires);MarketPoolContractClient::new(&e,&market(&e)).remove_liquidity(&from,&shares,&min_pt,&min_sy,&expires)
+ }
+ /// Paired exit acts on the user's real balances; earned yield stays in original YT accounting.
+ pub fn preview_recombine(e:Env,from:Address,amount:i128)->RecombineQuote{
+  let m=ManagerClient::new(&e,&configuration(&e).manager);
+  if m.recombination_edition()!=1{panic_with_error!(&e,Error::Invalid)}
+  m.preview_recombine(&from,&amount)
+ }
+ pub fn recombine(e:Env,from:Address,amount:i128,min_sy:i128,expires:u64)->RecombineQuote{
+  authorized(&e,&from,expires);let m=ManagerClient::new(&e,&configuration(&e).manager);
+  if m.recombination_edition()!=1{panic_with_error!(&e,Error::Invalid)}
+  let out=m.recombine(&from,&amount,&min_sy);minimum(&e,out.sy_shares,min_sy);out
+ }
+ pub fn recombine_underlying(e:Env,from:Address,amount:i128,min_underlying:i128,expires:u64)->RoutedRecombine{
+  authorized(&e,&from,expires);let c=configuration(&e);let m=ManagerClient::new(&e,&c.manager);
+  if m.recombination_edition()!=1{panic_with_error!(&e,Error::Invalid)}
+  let exit=m.recombine(&from,&amount,&0);
+  let before=token::Client::new(&e,&c.underlying).balance(&from);
+  let underlying=SyClient::new(&e,&c.sy).withdraw(&from,&exit.sy_shares,&from);
+  if underlying!=exit.underlying_value||token::Client::new(&e,&c.underlying).balance(&from)!=accounting::add(&e,before,underlying){
+   panic_with_error!(&e,Error::Invalid)
+  }
+  minimum(&e,underlying,min_underlying);RoutedRecombine{exit,underlying}
  }
  pub fn claim_yield(e:Env,from:Address,min_underlying:i128,expires:u64)->i128{
   authorized(&e,&from,expires);let out=ManagerClient::new(&e,&configuration(&e).manager).claim_yield(&from);minimum(&e,out,min_underlying);out

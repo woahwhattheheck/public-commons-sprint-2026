@@ -379,7 +379,7 @@ impl YTTokenContract {
         Self::update_yield_index(env.clone());
         Self::settle(&env, &from);
         // Burn never destroys already earned fractional or whole rewards.
-        // The minter permits burns only at the same frozen maturity index.
+        // The minter permits paired pre-maturity exits or the same frozen maturity index.
         Self::set_balance(&env, &from, sub(&env,bal,amount));
         let total: i128 = env
             .storage()

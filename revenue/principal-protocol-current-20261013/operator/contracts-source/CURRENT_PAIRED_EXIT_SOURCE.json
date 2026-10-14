@@ -1,0 +1,1228 @@
+{
+  "schema": "principal.paired-exit-source.v1",
+  "edition": 1,
+  "accountingEdition": 3,
+  "marketEdition": 1,
+  "routerEdition": 2,
+  "previousMarketPacket": {
+    "bytes": 7677275,
+    "sha256": "bf8edadbbd4d1d114c6c372fbdcf44485abd737504250f84e4e5e8e7a57de472"
+  },
+  "files": [
+    {
+      "path": ".gitignore",
+      "bytes": 436,
+      "sha256": "2fe5e4b1ac76d3152f93555d88c20d2ed7225060bae7e8cfc4e4427f36802e43"
+    },
+    {
+      "path": "CURRENT_ACCOUNTING_API.json",
+      "bytes": 9313,
+      "sha256": "5de0f33b6ab8cc6b919c11fadcb479b384af611f705f2e6c6f87f52ffdd46212"
+    },
+    {
+      "path": "CURRENT_ACCOUNTING_SOURCE.json",
+      "bytes": 48420,
+      "sha256": "7141680ba493cbe29d4931616bf06f683a6c668d5dd3c3690b660c4b69dc03aa"
+    },
+    {
+      "path": "CURRENT_MARKET_API.json",
+      "bytes": 60307,
+      "sha256": "201f8d9e720630a46e2338f775f5f126876c3ce93566393e7fe0a5c4cbc5399c"
+    },
+    {
+      "path": "CURRENT_MARKET_SOURCE.json",
+      "bytes": 49950,
+      "sha256": "06661c416fd4a2c2080d55602564204fc3a12642479bec6cbd808f25eaba4c57"
+    },
+    {
+      "path": "CURRENT_PAIRED_EXIT_API.json",
+      "bytes": 64241,
+      "sha256": "7815561fd27bf14d2752ca2fa225a42ca28912a53d844fa53aa13b909a488017"
+    },
+    {
+      "path": "Cargo.lock",
+      "bytes": 48616,
+      "sha256": "a9901e5ced152f856fa7e25b6c2c00b9ce50e5098a24afdb3478b1359590700d"
+    },
+    {
+      "path": "Cargo.toml",
+      "bytes": 530,
+      "sha256": "f59f6b0d4331148711bcb81d243b66596e2cb5dd2537b648d56212db7c4d856f"
+    },
+    {
+      "path": "README.md",
+      "bytes": 15856,
+      "sha256": "a5c707cdb9111a8d3658ab2c100e8d817fa2e980d396ca2aaca4df1cc36ad08f"
+    },
+    {
+      "path": "contracts/accounting_math.rs",
+      "bytes": 3159,
+      "sha256": "446d3cb1564633f50837ff6a14a7c182c6d764e981a10a672178259d6f015fc1"
+    },
+    {
+      "path": "contracts/integration_tests/Cargo.toml",
+      "bytes": 999,
+      "sha256": "4e1c60c102201e5fbed752fae704391ed1b3d655d9840c03615a42075f1812a4"
+    },
+    {
+      "path": "contracts/integration_tests/src/lib.rs",
+      "bytes": 792,
+      "sha256": "b2d87b72b0fec422b88dc587cdd48e7ca737ea04233882d1e77b730f09453dac"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/admin_rotation_across_every_contract_and_market_still_functions.1.json",
+      "bytes": 85592,
+      "sha256": "1e295019ad1611bb48251619f2ff8140d14ad35dc23d4f4244d2ece2a6ffcbf6"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/circuit_breaker_blocks_deposit_over_limit.1.json",
+      "bytes": 58408,
+      "sha256": "21cefc61eab6f57938360aff48b38ad85e99c6724e698c13e9a0de0f32d5d214"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/full_split_transfer_claim_and_redeem.1.json",
+      "bytes": 93669,
+      "sha256": "85bc05e2e9591edc98cc26835d0bd10b3ff9186cf0d28806eef0e21666b02985"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/multi_user_late_mint_does_not_dilute_early_holder_yield.1.json",
+      "bytes": 98865,
+      "sha256": "3ab86e8b2ec60b6dcb8b3a4244b4ad5d94076fbde85367b940dfbebf175524bf"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/old_admin_cannot_act_after_rotation.1.json",
+      "bytes": 56734,
+      "sha256": "232525d00e43341938e1129c3b3ab77bb4e04d154fa60155de1aebcad160402c"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/paused_market_blocks_mint.1.json",
+      "bytes": 70773,
+      "sha256": "bd70b9dca9936c646dda16659cab6b6696be59b668e40cca16cf9748d35106eb"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/pauser_lifecycle_and_admin_only_unpause.1.json",
+      "bytes": 61289,
+      "sha256": "b7a3e917bdb44ffaa6aae95caaec94a8ec216b44295d905dcd2f1503b305c3cf"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/registered_consumer_check_deposit_trips_and_resets_circuit_breaker.1.json",
+      "bytes": 61915,
+      "sha256": "7c0823d956e751831e4b0086fc7daddc843bfed0f78db24c6f2765d7fe91b61d"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/removed_pauser_cannot_pause_again.1.json",
+      "bytes": 58446,
+      "sha256": "8b53962520c371657fa038bf996a5b16ee9e35ddc7af9702dd03ade12d2a17ae"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/seize_and_finalize_pt_and_yt_after_maturity.1.json",
+      "bytes": 84580,
+      "sha256": "19fd0bf1d93b02a5e855954015b1f8233180230059f84cacf091776c8433aff0"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/seize_requires_real_issuer_admin.1.json",
+      "bytes": 70780,
+      "sha256": "10d8ca3feede5d96d64024c5c772cfce7e5473199e90bc8f675bf17650ffa032"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/seize_requires_target_already_deauthorized.1.json",
+      "bytes": 69629,
+      "sha256": "a0e32abda5469bb522ac18ea6e5a07eccf379efc318b29240bf35bbd7b4feb82"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/seize_sy_unwraps_immediately_for_a_flagged_depositor.1.json",
+      "bytes": 72780,
+      "sha256": "b4b3370258336f0146db2a0873206a5f50e4e266fff9509dfc5529febbeb0788"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/unpausing_restores_mint.1.json",
+      "bytes": 79507,
+      "sha256": "976bbf0ca36ab61e1e0461236b089d8695fad2a4c7b9eb20e30554df71b1ccc1"
+    },
+    {
+      "path": "contracts/integration_tests/test_snapshots/unregistered_consumer_cannot_check_deposit.1.json",
+      "bytes": 55528,
+      "sha256": "7995fba08499a12558934f45a5fd7331e9a9f54fbbf2e92678388a9ac89df3c0"
+    },
+    {
+      "path": "contracts/integration_tests/tests/accounting_lifecycle.rs",
+      "bytes": 11125,
+      "sha256": "e31d2d61e77c7b4a7829763c6d4294ffa3571e90f69771d5679d8ca3d232a390"
+    },
+    {
+      "path": "contracts/integration_tests/tests/admin_and_risk_control.rs",
+      "bytes": 4402,
+      "sha256": "eb716a3c83a3217bd7d6bd25e4ad87c684387e99cc1c2d8d581600edaa6b633e"
+    },
+    {
+      "path": "contracts/integration_tests/tests/common/mod.rs",
+      "bytes": 7825,
+      "sha256": "a824c1911b2eb666caea6b8143d38c691c97e18eabbe4c6fcf346e4f540fa374"
+    },
+    {
+      "path": "contracts/integration_tests/tests/compliance_recovery.rs",
+      "bytes": 4090,
+      "sha256": "afa4ca442c49c0dc5559b80f29d22291bd59614cab5428e8245189a32597dfdf"
+    },
+    {
+      "path": "contracts/integration_tests/tests/full_lifecycle.rs",
+      "bytes": 5157,
+      "sha256": "db1bb8aa3ead61c5b8b2a6ee8afb5da12f388715b9000d7862c894f7eb4b4b35"
+    },
+    {
+      "path": "contracts/integration_tests/tests/market_lifecycle.rs",
+      "bytes": 5738,
+      "sha256": "a0c2f0f146f79b2a2478877b0eb1e4bb67d189b02b692f3d34124e023c48419f"
+    },
+    {
+      "path": "contracts/integration_tests/tests/paired_exit_lifecycle.rs",
+      "bytes": 8452,
+      "sha256": "a2e65a3bc97fc67dbf69e9b4669379be093741c2d74283e58ed9f4892080f875"
+    },
+    {
+      "path": "contracts/market_pool/Cargo.toml",
+      "bytes": 218,
+      "sha256": "7369e2ad2dd08977fc9c255b1693163dc2ed1a289b9368d4b611db7f48f52ee6"
+    },
+    {
+      "path": "contracts/market_pool/src/lib.rs",
+      "bytes": 15905,
+      "sha256": "e31066bf224ab16d58d32d0d2ab2774ecdbefd748abb4fe5a34253b4856a75b8"
+    },
+    {
+      "path": "contracts/market_pool/src/math.rs",
+      "bytes": 5530,
+      "sha256": "260b4b5ef8d4ca4eb84382ec2bf323c1c455489d49b73e9dd93315bd77f8b8b5"
+    },
+    {
+      "path": "contracts/oracle_adapter/Cargo.toml",
+      "bytes": 304,
+      "sha256": "bb995b357f5239d30be3dbe264048a72338d9c548f15423370bb8685dff2ebad"
+    },
+    {
+      "path": "contracts/oracle_adapter/src/lib.rs",
+      "bytes": 12382,
+      "sha256": "7c595b21ef5d4cf45173468a5ed95a47b392f2bca8a0f71359de4758be2553cc"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/admin_transfer.1.json",
+      "bytes": 3152,
+      "sha256": "849dec952b069bb58f59c2b72122f5609af9ff3251fc053fef0fe22492d3544c"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 1947,
+      "sha256": "dd016ec0bdf8a85b8ba2d7c76986cf15febd489159d08b9f6d3204795f1c8d6d"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/initialize_and_set_price.1.json",
+      "bytes": 3920,
+      "sha256": "5cb41eba07fe1a88a687708bc2942722ae5adc3fc0719e447bae69432e6000ec"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/invalid_price_rejected.1.json",
+      "bytes": 1947,
+      "sha256": "dd016ec0bdf8a85b8ba2d7c76986cf15febd489159d08b9f6d3204795f1c8d6d"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/is_fresh_at_exact_boundary.1.json",
+      "bytes": 3903,
+      "sha256": "e1624502686a82f223a69c5e37687cadc703a98561938b11143cc5cea6323949"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/is_fresh_false_before_any_price_set.1.json",
+      "bytes": 1950,
+      "sha256": "1982531ec08fd2bbef1b2b6efc0286363b9230ed4d7e4d1e5aa06293425da108"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/is_fresh_false_when_stale.1.json",
+      "bytes": 3891,
+      "sha256": "47be0771b75bb730c496e799a92da969c7137aa0d41bb28dfcd18f9766a96ab3"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/is_fresh_false_when_stored_timestamp_is_ahead_of_ledger_clock.1.json",
+      "bytes": 3897,
+      "sha256": "de2b3ab61c792472678c478eb30628d1cac9220c067ef4568fe846bcc044e43f"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/is_fresh_within_staleness_window.1.json",
+      "bytes": 3895,
+      "sha256": "2fec140f0524eb6af21e9f5880964f513b40153c4ecd446ca969cb8055954053"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/stale_timestamp_rejected.1.json",
+      "bytes": 3912,
+      "sha256": "cc3a414758b072d8db712102bb5a450977065b8a49405102609cf4440df77c99"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/unauthorized_price_update_panics.1.json",
+      "bytes": 3912,
+      "sha256": "5c9b0124f976d8cb1da1d4248f083aac9c3173e5736f670449db9d1955012cd8"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/unauthorized_transfer_admin_panics.1.json",
+      "bytes": 1947,
+      "sha256": "489ae312f00f825cf88f24fb9b8387f1c7b6e449bd05c570b922b6b8132afcc3"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/value_decrease_rejected.1.json",
+      "bytes": 3906,
+      "sha256": "8bf047bff74bc04d31713dfa4f4e55817fcb4e99c00477eb1cdd2c578cbc8155"
+    },
+    {
+      "path": "contracts/oracle_adapter/test_snapshots/test/value_may_stay_equal.1.json",
+      "bytes": 5141,
+      "sha256": "7784e4b45531c9a8fea7cb7d4201e7a60b817d0b8dedb340681a50e561a79c87"
+    },
+    {
+      "path": "contracts/permissioning/Cargo.toml",
+      "bytes": 303,
+      "sha256": "dac042fcb77d6f12a8b5899dd5af6081897a6cb92f7ffd91fe94ddc57cfbf7a2"
+    },
+    {
+      "path": "contracts/permissioning/src/lib.rs",
+      "bytes": 7655,
+      "sha256": "07372c20f970cfd7eec84cfd56bd32a04b36b4b5616bb98ac07fcc43fc3563c6"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/admin_transfer.1.json",
+      "bytes": 3152,
+      "sha256": "849dec952b069bb58f59c2b72122f5609af9ff3251fc053fef0fe22492d3544c"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/batch_grant_accounts.1.json",
+      "bytes": 5760,
+      "sha256": "6aff90bc28d0ad1b3e9a31e49f6b6181e2247c933cd17866c8a564f46ea7a40e"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 1947,
+      "sha256": "dd016ec0bdf8a85b8ba2d7c76986cf15febd489159d08b9f6d3204795f1c8d6d"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/grant_and_check_account.1.json",
+      "bytes": 3900,
+      "sha256": "4aaf98c670f6a1223c154eb7beb0590e7a1074af8ad956b231089c1e03a55273"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/grant_and_revoke_asset.1.json",
+      "bytes": 5482,
+      "sha256": "f252f6c6d9665c168770413b25c97e235b42079759738dae9777232b68ce869d"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/revoke_account.1.json",
+      "bytes": 5099,
+      "sha256": "1fbdd0aff2141da292a4785d2ba587149183abccd013e11a221518755ca5f741"
+    },
+    {
+      "path": "contracts/permissioning/test_snapshots/test/unauthorized_grant_panics.1.json",
+      "bytes": 1947,
+      "sha256": "489ae312f00f825cf88f24fb9b8387f1c7b6e449bd05c570b922b6b8132afcc3"
+    },
+    {
+      "path": "contracts/principal_manager/Cargo.toml",
+      "bytes": 683,
+      "sha256": "b66279534987ad00292b5f51e683c2aadae9f13956f24bc99cb84270ef6c80d8"
+    },
+    {
+      "path": "contracts/principal_manager/src/lib.rs",
+      "bytes": 63771,
+      "sha256": "ec19e7391b92382d78b5e739293932ca2f5da5d8ab31c0ab1f3872915ba4c950"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/admin_transfer.1.json",
+      "bytes": 41943,
+      "sha256": "37aefd11ed8bd4936c603a8cebac5f716cbf436a54d6c0bb9626abe8613f5ec9"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/claim_yield_cannot_be_called_directly_on_yt_token.1.json",
+      "bytes": 60841,
+      "sha256": "1580c0a964549822a290f74f2cbfb8f99ecdab20dd48ffd4fdb1df064e1d3a5c"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/deauthorized_on_sac_cannot_mint.1.json",
+      "bytes": 45247,
+      "sha256": "d25316c0ceec0417b53cc44b08564f2ba8690946d96423e59d49986443444bfb"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/deauthorized_on_sac_cannot_redeem.1.json",
+      "bytes": 60743,
+      "sha256": "c88c94ac1d0106528f669d847052942f3fb64004beac3bf6ebcf2c27c3f6951d"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 40738,
+      "sha256": "3f5d35ade672affbf3ffc325dae02433e65a41f6b7a0e7f062c0540e5301256c"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/initialize_rejects_admin_not_matching_sac_admin.1.json",
+      "bytes": 10938,
+      "sha256": "7a64f4a9200cd0c1731f5a4cac340d167da55d5182b6c38637ba9da77c08dd7b"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/initialize_rejects_mismatched_maturity.1.json",
+      "bytes": 27380,
+      "sha256": "fe6d49c551f0ab62d54d8042a57d930f0b354edad691b564f45e7c372e4965cf"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/initialize_rejects_mismatched_oracle.1.json",
+      "bytes": 30538,
+      "sha256": "ece2549f0f5df654623c0727fe67c2eb7886de6314d746e14f17063d13a2f875"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/initialize_rejects_mismatched_permissioning.1.json",
+      "bytes": 28590,
+      "sha256": "e5dadca90fcba06410ee1351a6499aa0671d411516ff3725b3c0a6156483dca3"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/initialize_rejects_mismatched_underlying.1.json",
+      "bytes": 32627,
+      "sha256": "263e9b21007ad11cd0ce398d93b957eeafddf2379f80a17d29c7474cdeef0678"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/late_minter_does_not_receive_prior_yield.1.json",
+      "bytes": 80739,
+      "sha256": "331fa0b5672ce96e62b2ed782bc79cb6102ad4f2268adf8dcb1e08f4569dbe67"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/mint_after_maturity_panics.1.json",
+      "bytes": 54749,
+      "sha256": "2543c6f450913ef2bddaa885e362682cd0f7c421c11dcb9774f55d8ee156797c"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/mint_before_maturity.1.json",
+      "bytes": 59725,
+      "sha256": "f490ec1238769bf16a3c9366b831a8d206cbaff726f41002a92094410624ca90"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/mint_zero_shares_panics.1.json",
+      "bytes": 49641,
+      "sha256": "3b0f1dccfa081f339634649d472b0fbd402aa38fdc6358efbcd062fc85993b9d"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/non_admin_cannot_transfer_admin.1.json",
+      "bytes": 40738,
+      "sha256": "e94220a2a0d7b67d3d8d2335186affa4d53fa892bd77bd077a2a47bc5bedb2bd"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/oracle_stale_blocks_mint.1.json",
+      "bytes": 54838,
+      "sha256": "43ac8aa3ee5a233151692027f70fe309752dc6458ad3bf4776148998ff855d83"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/oracle_stale_blocks_redeem.1.json",
+      "bytes": 59592,
+      "sha256": "c5aead9009eb2ceb8f7be8b1b0d6cc9d43e5743b741ac996953d81ba9b671cab"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/redeem_before_maturity_panics.1.json",
+      "bytes": 59688,
+      "sha256": "d87452534137dc01627fd08cfa666d5b90cc3f441fd884e63c80f474e392e098"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/redeem_pt_correct_formula.1.json",
+      "bytes": 62032,
+      "sha256": "ba91a1ddf2e7fd7216754171b26fb413de194dd7baf6d818833c3feddc129c8f"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/redeem_yt_correct_formula_with_yield.1.json",
+      "bytes": 66972,
+      "sha256": "51032c3a6928a209d897497c6d3802cab9dc2af4c23c831503b37a9d8e5ec880"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/redeem_yt_does_not_double_pay_yield_already_claimed_via_claim_yield.1.json",
+      "bytes": 65954,
+      "sha256": "0a4cd2b65edb0e72d1642f0d00956366d5f6fc790bcc33c21d4af710c39a54f6"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/redeem_yt_zero_when_no_yield.1.json",
+      "bytes": 63636,
+      "sha256": "f30c12f9e9989242960bc9bbb6616e03eec39e5043e2586bbc39379180f8b6ff"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/redeem_zero_amounts_panics.1.json",
+      "bytes": 59592,
+      "sha256": "c129202b9aaa3cb4e431aa600e66df4cb117d6c2938e8a8c343a78009c590151"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/revoked_user_cannot_redeem.1.json",
+      "bytes": 60799,
+      "sha256": "78f82f62da291d56552f96198f30b1861c73fb41f75e92036d6747ec1f720dd3"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/total_supply_decrements_after_redeem.1.json",
+      "bytes": 62742,
+      "sha256": "c6c964cb65f0bd305200a3eb178e96d0346d3f3c55ec31c5183bd9aa76d55342"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/total_supply_tracks_mints.1.json",
+      "bytes": 76459,
+      "sha256": "53f59f2d3f79c61f90168acc1d569bd61b22d7e88e6cd1b31e6f95df381469b5"
+    },
+    {
+      "path": "contracts/principal_manager/test_snapshots/test/unpermissioned_user_cannot_mint.1.json",
+      "bytes": 40738,
+      "sha256": "8b5b26eb8e3d7e2c20fe781c6aa98bc9eb45026e3b03e0230eafd3e8ed7a0d52"
+    },
+    {
+      "path": "contracts/pt_token/Cargo.toml",
+      "bytes": 380,
+      "sha256": "f478ab4ad874791d96184c4b13bfb130ea342540f1bace8af6327c31821377f7"
+    },
+    {
+      "path": "contracts/pt_token/src/lib.rs",
+      "bytes": 34759,
+      "sha256": "8bcf0b00644d1d4c8cd258464c76ea2b015b725b6fd90c2f81ba86d83c81b92e"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/approve_and_transfer_from.1.json",
+      "bytes": 34278,
+      "sha256": "8f4c1d3bcc617a77a15a9bc2f2bc2b0795b3beca7e5337f3606322cef37f2480"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/approve_negative_amount_panics.1.json",
+      "bytes": 19268,
+      "sha256": "cace1de054baa47593cf2eb6645e789370a84bc3a58c46dd1de967c4e207ae79"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/burn_insufficient_balance_panics.1.json",
+      "bytes": 22759,
+      "sha256": "80453230c295129a73b81404886c12caaaf49931ede4df618b8f226d1f9a931d"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/burn_reduces_supply.1.json",
+      "bytes": 23908,
+      "sha256": "380f7ab674296605d046d7d95dacf9c849b13ddb96e313f8e50d8b28e3a57961"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/burn_zero_amount_panics.1.json",
+      "bytes": 22759,
+      "sha256": "80453230c295129a73b81404886c12caaaf49931ede4df618b8f226d1f9a931d"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/deauthorized_on_sac_cannot_dump_pt_before_seizure.1.json",
+      "bytes": 30615,
+      "sha256": "154a5a58d3a78d658a33c1d48cdf6e456ad47024365c7a68d3732ce12a79be92"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 12562,
+      "sha256": "66984c4d8ae9c13b20ac4a0f1f33693c5ef2b56795c71ebb35e92be4aca65dff"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/initialize_rejects_admin_not_matching_sac_admin.1.json",
+      "bytes": 7840,
+      "sha256": "a1e5d2c4e960a25a5bca4919a4f486a0835c3bfb9d19d2112409ae9f23c24ff1"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/mint_and_balance.1.json",
+      "bytes": 22770,
+      "sha256": "102c2db2a50b1cd3ec3846137d2d96c00be87f2cf277061000908774f20af0bb"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/mint_requires_minter_set.1.json",
+      "bytes": 19268,
+      "sha256": "aa3761e370e4adc9c0a8d3a37353e442089d1e750212d9e345a1d8836c540815"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/mint_without_sac_authorization_panics.1.json",
+      "bytes": 20884,
+      "sha256": "77120bd416fc343f7626431835cc2c33c9f8906597158267382841762a29b566"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/mint_zero_amount_panics.1.json",
+      "bytes": 20882,
+      "sha256": "b9a7f45e79c5b199d2e79fff873cb669741b053e234df3e907cf0d8a7c0ea7c1"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/revoked_holder_cannot_dump_pt_before_seizure.1.json",
+      "bytes": 30671,
+      "sha256": "b445d34385f6e3fb034976c506ee24764e4166b15b72510430b15e8accdce092"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/seize_cannot_exceed_target_balance.1.json",
+      "bytes": 24390,
+      "sha256": "85f05aab4bcad894d07708789919c382e0838e3f772f63efdeced6e20da5410b"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/seize_moves_balance_to_escrow_without_holder_auth.1.json",
+      "bytes": 26397,
+      "sha256": "61117bbfac6d592b536d211e6c22893dc02956880c01b396a1262dd02cc5cfca"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/seize_rejects_zero_amount.1.json",
+      "bytes": 24390,
+      "sha256": "85f05aab4bcad894d07708789919c382e0838e3f772f63efdeced6e20da5410b"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/seize_requires_configured_escrow_caller.1.json",
+      "bytes": 24390,
+      "sha256": "17930a7aaa950ea7b9282572cf35da319b2d6a2192249459d93aba7793e13f8e"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/set_minter_by_non_admin_panics.1.json",
+      "bytes": 12562,
+      "sha256": "4a58f6a7eb955c988befe6863881d5b105a73c23af494b570c220c749c4773cd"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/set_minter_twice_panics.1.json",
+      "bytes": 14176,
+      "sha256": "be47242ac4bb5fa53a54486128f5f17f5c3d64fcacb292218c6ecd4c8337f6e6"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/set_recovery_escrow_twice_panics.1.json",
+      "bytes": 14193,
+      "sha256": "4ae5ce03378bffd07bc77c3553395d41989e5c649b71d896b720c7e131bee201"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_between_eligible_accounts.1.json",
+      "bytes": 31476,
+      "sha256": "b54a5906c4a5aefa3512162d42e737b821dc453c2a1c0f202ff3bf53422af9a2"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_from_exceeding_allowance_panics.1.json",
+      "bytes": 32128,
+      "sha256": "31802ab7867ffe885e4d50efa0819ef3e9ab8de62c30a122bdbe3ef4ad427ab4"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_from_expired_allowance_panics.1.json",
+      "bytes": 32124,
+      "sha256": "c1f052cd0eb1fb1846b096a371bea3da4befaf8242774f9e564fa12174f0a947"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_from_insufficient_balance_panics.1.json",
+      "bytes": 32128,
+      "sha256": "42c3e110fa856d135e31b5b4112e11983532d3cbcdd373288be8b4f3795df4f7"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_from_zero_amount_panics.1.json",
+      "bytes": 32128,
+      "sha256": "60c5b2bae23cd436856a4661ce6af1d4eec7bda2d7e1cb1b55c224c91f5c07de"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_insufficient_balance_panics.1.json",
+      "bytes": 29465,
+      "sha256": "ba2fc9f9fe786d18d8a3b78c2f6e26a1355e303ca8867e7a2f6b5b3ae0076878"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_to_account_without_asset_grant_panics.1.json",
+      "bytes": 27267,
+      "sha256": "2bce80356eecf056e2f623b4abcbbdf906b5781c99276723e84dd030eb0bad6f"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/transfer_zero_amount_panics.1.json",
+      "bytes": 29465,
+      "sha256": "ba2fc9f9fe786d18d8a3b78c2f6e26a1355e303ca8867e7a2f6b5b3ae0076878"
+    },
+    {
+      "path": "contracts/pt_token/test_snapshots/test/views_and_getters.1.json",
+      "bytes": 15879,
+      "sha256": "e0b59a8eb57b2a2be158dc529b1035314f3b7b95dc8c95b708098152ab4fdfdb"
+    },
+    {
+      "path": "contracts/recovery_escrow/Cargo.toml",
+      "bytes": 771,
+      "sha256": "e91f31b5dc78d8d32c95477cb9f32a00e55f2c57f085a3ba9714fb7c830d83e0"
+    },
+    {
+      "path": "contracts/recovery_escrow/src/lib.rs",
+      "bytes": 36024,
+      "sha256": "fbfe6634c8458d74ae0204782b7ca1586fc81a8b7cf575cc7df68a6b31ab70da"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 57348,
+      "sha256": "3c4e25695fd8b78d69624c990464ec15003d4cb73a7505026f702ae5cf9d8627"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/finalize_pt_redeems_seized_position_after_maturity.1.json",
+      "bytes": 80493,
+      "sha256": "01124a15e63995c1f7f035024f35a5fe3fe538cbbe5000a9fdfa44fbc39345a6"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/finalize_pt_rejects_zero_amount.1.json",
+      "bytes": 57252,
+      "sha256": "ce7277868abe55cf55b7a6cfe140204facb324e54692643f041040844da9ef10"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/finalize_pt_requires_real_issuer_admin.1.json",
+      "bytes": 79362,
+      "sha256": "eae7259721ac0a29fdcf1a98237a459a1c825d1a5d5dd1ec639daf0919bb7ccd"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/finalize_yt_redeems_seized_position_after_maturity.1.json",
+      "bytes": 83237,
+      "sha256": "3ff8479fe74c8c86693b91fa27d458a159adeb651d431a2638c90fce258e1a38"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/finalize_yt_rejects_zero_amount.1.json",
+      "bytes": 57252,
+      "sha256": "ce7277868abe55cf55b7a6cfe140204facb324e54692643f041040844da9ef10"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/initialize_rejects_position_with_different_underlying.1.json",
+      "bytes": 68679,
+      "sha256": "9baeb3ff7cf941dd97b17269076f960b1d9a78c27df203f34b8d8f2f2bed82fc"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/initialize_rejects_principal_manager_with_different_underlying.1.json",
+      "bytes": 64388,
+      "sha256": "d22d70528575f095576be68fa911f9488fdbc534b0b13d63c064472c4a22b83d"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_pt_moves_balance_to_escrow.1.json",
+      "bytes": 79466,
+      "sha256": "1e7b974338595efd2ff9bf936532675741bf679fc1a9a50bc343eec648532315"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_pt_rejects_zero_amount.1.json",
+      "bytes": 77450,
+      "sha256": "77f73cbe6807c216507fa6e9936520b0e03d76efd41fd725e9dd58783f2fdfc8"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_sy_rejects_zero_shares.1.json",
+      "bytes": 72600,
+      "sha256": "f8188b919d692f5350183cfa0e8a909f98356a73f809d33e2c6c67dc0940dca4"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_sy_requires_real_issuer_admin.1.json",
+      "bytes": 68204,
+      "sha256": "ce66d3ee9826107f8ce5de0c9826cf54eff295a0c5f48156d8a0eb4d71feae39"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_sy_requires_target_already_deauthorized.1.json",
+      "bytes": 67053,
+      "sha256": "103f1806ef680f4421f602ad60c162aab5af340669f4d5c7f9eee3d79e8f2f46"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_sy_unwraps_immediately_for_native_clawback.1.json",
+      "bytes": 70201,
+      "sha256": "287c212faa9d104f72e88a42cee5ddc9dfcea610a9e7086c3994aee4613ea613"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_yt_moves_balance_to_escrow.1.json",
+      "bytes": 80215,
+      "sha256": "cfbb63bef4d6cec824d9a4de84ea45e6c90ea91195169fcdcfecb74e08108338"
+    },
+    {
+      "path": "contracts/recovery_escrow/test_snapshots/test/seize_yt_rejects_zero_amount.1.json",
+      "bytes": 77450,
+      "sha256": "77f73cbe6807c216507fa6e9936520b0e03d76efd41fd725e9dd58783f2fdfc8"
+    },
+    {
+      "path": "contracts/risk_control/Cargo.toml",
+      "bytes": 302,
+      "sha256": "6cbd422165d554d23a94bb87e52128cee4f292802d4f16f08c39a89b3e52c6de"
+    },
+    {
+      "path": "contracts/risk_control/src/lib.rs",
+      "bytes": 16925,
+      "sha256": "03e70d74782c65fa93e295518bfd2f4df8a292ee35e61442fe58927199ae5768"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/add_duplicate_consumer_panics.1.json",
+      "bytes": 6805,
+      "sha256": "984b0007b5defb76ea9384865de63d02abf78824207a27731ba94b2ce427c163"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/add_duplicate_pauser_panics.1.json",
+      "bytes": 6801,
+      "sha256": "91ed6058de95cd948a88e10b3c6b12c0938239bfe8fa27c5a7e277ff3fdbcbe4"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/admin_transfer.1.json",
+      "bytes": 6295,
+      "sha256": "84727f217b79ff91dcd8fe263de9b9065e485aa705d5766b34123d2caae16fa7"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/check_deposit_fails_when_paused.1.json",
+      "bytes": 6160,
+      "sha256": "fb2cadc374de4e4b11b78cfc491d5798e2997a2a2c51bf029f1bbf0b0f545de7"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/check_deposit_rejects_negative_amount.1.json",
+      "bytes": 5095,
+      "sha256": "558f237ac89c6e828eeaf5e611b1797f806bb8da6d775fa4758fa69e22ac5ba3"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/check_deposit_rejects_zero_amount.1.json",
+      "bytes": 5095,
+      "sha256": "558f237ac89c6e828eeaf5e611b1797f806bb8da6d775fa4758fa69e22ac5ba3"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/check_deposit_requires_registered_consumer.1.json",
+      "bytes": 5095,
+      "sha256": "bace482ef7f6bd05cecd084a171ccfd529e096a4627a53e6ca4ab91ffbf3c93d"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/circuit_breaker_blocks_over_limit.1.json",
+      "bytes": 7396,
+      "sha256": "7692dfb7de26eb7ecc6fe3644ea6854b0b318aa55ddef43b788305ada85b61c2"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/circuit_breaker_disabled_when_limit_zero.1.json",
+      "bytes": 6265,
+      "sha256": "808c467dece059f15503d284d43233794621454f8847589e6233229d9b460117"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/circuit_breaker_trips_on_excess.1.json",
+      "bytes": 6252,
+      "sha256": "3310ef357ec61f6834800905683136289f9da05e3e4eb6469f82803a890e7026"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/circuit_breaker_window_resets_after_24h.1.json",
+      "bytes": 7420,
+      "sha256": "47f1b540bd3184c91d8a6aa76aeb24f166d492d71d8b87c469b83d8225f467ae"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 5089,
+      "sha256": "aea67bf52c52094f6891e775fbbcf8bb689382f10d285eda496704441cc5ce16"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/non_admin_cannot_unpause.1.json",
+      "bytes": 6160,
+      "sha256": "b39ca0ce457fb8dcceb42698f99469ee7404af33f050e5bec0e0b9f8c6aa86f9"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/non_pauser_cannot_pause.1.json",
+      "bytes": 5089,
+      "sha256": "77002b86d3e9054b563e32942246553fdfb5d9402c636203a810eb13707b06cb"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/pause_and_unpause.1.json",
+      "bytes": 7251,
+      "sha256": "fb3c5bc9fd3562ef645b5dd8b70a82010485d0ce26542e9ec2879df8e9f5d3c9"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/pauser_can_pause_but_not_unpause.1.json",
+      "bytes": 7872,
+      "sha256": "152687a4c79487ea3ac7115b2cecc386230b3b726500911da407dd9686c327c6"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/remove_pauser_revokes_pause_permission.1.json",
+      "bytes": 8007,
+      "sha256": "2e9df8151e531e979455ba7298039373728b8dcadfef2a0092c2a19c7a22f7b4"
+    },
+    {
+      "path": "contracts/risk_control/test_snapshots/test/removed_consumer_loses_check_deposit_access.1.json",
+      "bytes": 6303,
+      "sha256": "75af01e419c2bd3dbe382299eec6ac8e329c507e8913e4a368b00fc8944a4904"
+    },
+    {
+      "path": "contracts/router/Cargo.toml",
+      "bytes": 213,
+      "sha256": "0ca425c68d78cf4d8c5d3b66ade34101db7c0aa8d6871826e2f27e2524beac62"
+    },
+    {
+      "path": "contracts/router/src/lib.rs",
+      "bytes": 9356,
+      "sha256": "bade157e3a80ee3d489f92cdb3f5ca403e243b43004ff6b16a114a34cd1e7f19"
+    },
+    {
+      "path": "contracts/sy_wrapper/Cargo.toml",
+      "bytes": 382,
+      "sha256": "e645d4ea471f213733abaac33fc37817bce59d92aac3acab6196475edc1cf240"
+    },
+    {
+      "path": "contracts/sy_wrapper/src/lib.rs",
+      "bytes": 36454,
+      "sha256": "24e3dde8d7baf63012b2309688b1204c646b31b5724c3449b54bc7c881b1af0d"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/admin_transfer.1.json",
+      "bytes": 12713,
+      "sha256": "663770b054b327e79be4e2434a09b962dfb9c27d0b190976d6557bd3e74a45ef"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/admin_transfer_and_getters.1.json",
+      "bytes": 14376,
+      "sha256": "e835bda45843df0b26f1c38b7203b1b359412f5fec5d40c61691d69d29c58364"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/balance_of_returns_correct_shares.1.json",
+      "bytes": 21212,
+      "sha256": "139892d9e95585c6014760740776cee3f3198b9f6c849c8f240639c39dbba4b3"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/deauthorized_on_sac_cannot_front_run_seizure_by_self_withdrawing.1.json",
+      "bytes": 22363,
+      "sha256": "1b272811f0a348f7ec931be6e024660b0540d8be7f31f29b458bbfaca6f52899"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/deposit_and_exchange_rate.1.json",
+      "bytes": 21227,
+      "sha256": "5750e61b8913a5127fcf3ea5412fa0ee0b9465479756cefe20007ffcb65e27fa"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/deposit_while_paused_panics.1.json",
+      "bytes": 18313,
+      "sha256": "81cfef97fad945c07144963bb266e5a35779dee0cce5794e7691cd24f608e764"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/deposit_without_permissioning_grant_panics.1.json",
+      "bytes": 15225,
+      "sha256": "9deacc271e7239223a4c8fae613f4c3a1c9c8cdc8651cbcc034c44924194a2b6"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/deposit_without_sac_authorization_panics.1.json",
+      "bytes": 16017,
+      "sha256": "47505fdaa23737b310dc3abcc09b00b70d79da861319fc5c907f0360ad278eee"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 11507,
+      "sha256": "cc992cb6c11bfbd86de32471f5be506d7d4e3f78a60d7cb188f5c3d730612916"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/escrow_can_unwrap_seized_sy_via_normal_withdraw.1.json",
+      "bytes": 30606,
+      "sha256": "c8358384398841ddf30991eaed5a8ed5db190a92b693b0d17f5c7ac62f905048"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/exchange_rate_before_any_deposit_is_rate_scale.1.json",
+      "bytes": 11523,
+      "sha256": "6435e8cbe6f6b90f30de4518b93e3a7287f3d3eed117bc32c89d0d262636a842"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/exchange_rate_stays_at_inception_rate.1.json",
+      "bytes": 29511,
+      "sha256": "9a9ccbba8c97a88aa0f010390462a303744fc1a492ac66376ef997dd00559ee7"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/initialize_rejects_admin_not_matching_sac_admin.1.json",
+      "bytes": 7840,
+      "sha256": "b9f26f91fdc5053617566861f7bd3da113e9bfb94950f2fcf3f13e60b691247c"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/non_admin_cannot_set_paused.1.json",
+      "bytes": 11507,
+      "sha256": "d7e3c01df7f523ee4f599560c676556c1f9f6fc5cd1330816783785aea805b6c"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/seize_cannot_exceed_target_balance.1.json",
+      "bytes": 22843,
+      "sha256": "24c71a0b51f90814bb38e7bddcb6420b3aecd9d59ec4bdfb4645433dba0da604"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/seize_moves_balance_to_escrow_without_holder_auth.1.json",
+      "bytes": 33151,
+      "sha256": "0062d446459e3411b4b54e3d2cf0741bf669e5783571c3b4017b5772d30bf2ce"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/seize_rejects_zero_shares.1.json",
+      "bytes": 17646,
+      "sha256": "198782d35d87c5d57f69b42b5648267c590493480739ca9a95ce8e75523e8008"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/seize_requires_configured_escrow_caller.1.json",
+      "bytes": 22843,
+      "sha256": "75dcdf4dd53d3c77e22b1b59fe32af209e3f761c758439ccf714d943bf803824"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/seize_works_while_paused.1.json",
+      "bytes": 26747,
+      "sha256": "9129f98ddd7299bb137a559e48cc1c67921a77b03ac799e5e828293883193838"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/set_recovery_escrow_once.1.json",
+      "bytes": 13138,
+      "sha256": "262e4664096974111965255b0593583f02811766982b513297b65d9fcb3e75ad"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/set_recovery_escrow_twice_panics.1.json",
+      "bytes": 13138,
+      "sha256": "0fe5662c32884623d6638f9d75fd28a5f8f167f1c3380d99088717ea95c72db1"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/transfer_more_than_balance_panics.1.json",
+      "bytes": 25720,
+      "sha256": "6c01f3aac536c361688f9f0156181ea4c55919e87cc139be18eb1d6304574f5e"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/transfer_moves_shares_between_eligible_accounts.1.json",
+      "bytes": 27744,
+      "sha256": "abd2ec4cef96f1f8ccc7c07bcbee049b1dc86cb1f6a26f1ba67d4abdda7e649a"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/transfer_to_unpermitted_recipient_panics.1.json",
+      "bytes": 21212,
+      "sha256": "77e94f414fc203f2c94f81c0c544f55c860fab03197cc46dd94965253143ae9a"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/unpause_re_enables_deposits.1.json",
+      "bytes": 25005,
+      "sha256": "4e7034638df5b5d4f5163c1e8098281e599c95dd35d1e40dd10905883a0b9809"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/withdraw_more_than_balance_panics.1.json",
+      "bytes": 21212,
+      "sha256": "b359603ef0ed18eb574c5aad5bf5ae01b3584558e2d52f85d95a6627e32fa572"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/withdraw_returns_underlying.1.json",
+      "bytes": 22463,
+      "sha256": "926a42649773bcbaa9edcaea5ea2db1401ed1d3a01d47e7c9ba31b1be2ab8a92"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/withdraw_to_unpermitted_recipient_panics.1.json",
+      "bytes": 21212,
+      "sha256": "77e94f414fc203f2c94f81c0c544f55c860fab03197cc46dd94965253143ae9a"
+    },
+    {
+      "path": "contracts/sy_wrapper/test_snapshots/test/zero_deposit_panics.1.json",
+      "bytes": 16015,
+      "sha256": "7e824d307024520138d7208a01ba8f61a4392bbdab67370108e01b451b793588"
+    },
+    {
+      "path": "contracts/yt_token/Cargo.toml",
+      "bytes": 464,
+      "sha256": "680ae283983f36174cc5149c640e3adb4d692a53a415e1140508d035dd55e465"
+    },
+    {
+      "path": "contracts/yt_token/src/lib.rs",
+      "bytes": 62114,
+      "sha256": "fb7c19283a578dea1eb1fba78c233cec1c2c32c764f0841638e2cd00ca0cb497"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/approve_and_transfer_from.1.json",
+      "bytes": 40194,
+      "sha256": "be333f2c6ffd7864b17e5d37058834c5ac290606cef91f58c82f5b31ae640b9a"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/approve_negative_amount_panics.1.json",
+      "bytes": 23628,
+      "sha256": "483d84e900a9907806e9201406b53ca7892cbace9472b543fe81f43dc9a37337"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/burn_insufficient_balance_panics.1.json",
+      "bytes": 27886,
+      "sha256": "ca0b46cafd0bb8bb2f894fc2165bb20ee0952c74168ade3cd42c2ec500a9b552"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/burn_zero_amount_panics.1.json",
+      "bytes": 27886,
+      "sha256": "ca0b46cafd0bb8bb2f894fc2165bb20ee0952c74168ade3cd42c2ec500a9b552"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/claim_yield_rejects_non_minter_caller.1.json",
+      "bytes": 27893,
+      "sha256": "c6221944691fb09f01997544a3203ead4329b78370aca61fb835b613d435038c"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/deauthorized_on_sac_cannot_dump_yt_before_seizure.1.json",
+      "bytes": 35746,
+      "sha256": "cb8e994bbdaaff42eed76e850f751cba4459b1756ecc68a8508052546415e966"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/double_initialize_panics.1.json",
+      "bytes": 16922,
+      "sha256": "2a36ee2be5960cb5a6d276144cbb366fdb34bc307ea5dd1e1083ab62576a8ad0"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/genesis_above_scale_does_not_overpay_first_mint.1.json",
+      "bytes": 31672,
+      "sha256": "00a96afb176921f7930de78d7425dba09b0f05da7607be801eefe689e65d0973"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/initialize_rejects_admin_not_matching_sac_admin.1.json",
+      "bytes": 8989,
+      "sha256": "6ea0a525e4d6f614464ecbeca2d1a35e0ddba6c862b8d48011473ecca0393d94"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/initialize_rejects_stale_oracle.1.json",
+      "bytes": 10937,
+      "sha256": "49cbe7cdb013f96f7489a59d1ca5a493f11b4a2051183bb40f7fefc265eb8484"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/late_buyer_does_not_receive_prior_yield.1.json",
+      "bytes": 42988,
+      "sha256": "2b8142be096cdde09e534fae1617719ec2ebb0646410a5b4317e6dad67c049c0"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/mint_and_balance.1.json",
+      "bytes": 27871,
+      "sha256": "e5e5e4bc52b3bcfac753acdac5ce937a04b93e77ee93500ec470598060a0c068"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/mint_to_account_granted_but_not_per_asset_panics.1.json",
+      "bytes": 23044,
+      "sha256": "a533af158a9c3041cbd82af73d03de67c2174f755c44878669381e737be989db"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/mint_without_sac_authorization_panics.1.json",
+      "bytes": 25244,
+      "sha256": "310265665366306fcae036e796ebe85e8dba61a1003b1297c2b3ed49377cf74f"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/mint_zero_amount_panics.1.json",
+      "bytes": 25242,
+      "sha256": "042cc63eb5440d7d79a63ef30e358c2d5575dfc11f823b61b3dfe98112461a7a"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/no_yield_without_rate_increase.1.json",
+      "bytes": 30469,
+      "sha256": "36f7ae33665f8af2583b1f531ca3930cf4f4332a58e6d7bb3bfc367ecceb10a5"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/revoked_holder_cannot_dump_yt_before_seizure.1.json",
+      "bytes": 35802,
+      "sha256": "f137cfae0c67bd188ae524d8ea3edaa8f9a601cdcf0bd1f3730e408b5073072d"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/seize_cannot_exceed_target_balance.1.json",
+      "bytes": 29518,
+      "sha256": "fd5ea77b7b51185a879212aaf0a96e5511123fa64773f28c25d9048d3fdcf853"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/seize_moves_balance_and_settles_both_sides.1.json",
+      "bytes": 38031,
+      "sha256": "038b11bfcad314d5e60c0ebde887101e23a1501d31eb5cd156e5a6a37412f378"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/seize_rejects_zero_amount.1.json",
+      "bytes": 29518,
+      "sha256": "fd5ea77b7b51185a879212aaf0a96e5511123fa64773f28c25d9048d3fdcf853"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/seize_requires_configured_escrow_caller.1.json",
+      "bytes": 29521,
+      "sha256": "4d0847605af73f1d0110824a8d9983775ff3d3002ee826b6c9bde683e4681151"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/set_minter_by_non_admin_panics.1.json",
+      "bytes": 16922,
+      "sha256": "6969b10edc8f89d42c76f0ac38422b7302771c298aa9e1b6ca22a994238092d9"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/set_minter_twice_panics.1.json",
+      "bytes": 18536,
+      "sha256": "b35a437a020f944159d87a3c6c0d966ae3d7533fdbc5c11a4f53101f220d9087"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/set_recovery_escrow_twice_panics.1.json",
+      "bytes": 18553,
+      "sha256": "6ea7fbd866b693e0bff2c1ac8d7a75599c4be4fe431a6016075a57403be70065"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_from_exceeding_allowance_panics.1.json",
+      "bytes": 37273,
+      "sha256": "4a5079e34d3beafa52196260732b1b767a550897af619826b20a2b1803eb0429"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_from_expired_allowance_panics.1.json",
+      "bytes": 37269,
+      "sha256": "fae968a13dd3be2556711da2c2fef25b89ebec43689658e3bf3660aaf3960a47"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_from_insufficient_balance_panics.1.json",
+      "bytes": 37270,
+      "sha256": "c260bd63e6a8a4c69eca82130f5b71e84bec95b2a66267642cbd0ae46ed570d8"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_from_zero_amount_panics.1.json",
+      "bytes": 37273,
+      "sha256": "d4ad7d53b421f9bb99dbec1ab5adb83c738b7964f0b36fa9bb63af4987b78aec"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_insufficient_balance_panics.1.json",
+      "bytes": 34595,
+      "sha256": "d56904dfb97755a23c396865454efbad7016f48ad1adc9a73b2913710c11cc75"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_settles_both_sides.1.json",
+      "bytes": 43093,
+      "sha256": "a5626f436523c2ac1fef0fcdb7dde2725ca3318d881643feb62166a9354d0307"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/transfer_zero_amount_panics.1.json",
+      "bytes": 34595,
+      "sha256": "d56904dfb97755a23c396865454efbad7016f48ad1adc9a73b2913710c11cc75"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/update_yield_index_blocked_by_stale_oracle.1.json",
+      "bytes": 16922,
+      "sha256": "5052c9444c7c56d3616a4f2676bdf283eaefe945569e9de00d4e90a544fc6e6f"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/views_and_getters.1.json",
+      "bytes": 29614,
+      "sha256": "c1efc0bcf09d155d2d9a3ca6bffee10f205b27d55c855f903df4f14760efc14f"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/yield_accrues_after_rate_increase.1.json",
+      "bytes": 32900,
+      "sha256": "0383a18c0a881223a3b89124a4f46f59cdb24807749031a69ec3b404a21ebf94"
+    },
+    {
+      "path": "contracts/yt_token/test_snapshots/test/yield_is_path_independent_across_many_intermediate_updates.1.json",
+      "bytes": 67569,
+      "sha256": "5a7a845604ec40f70a4e94d4d77d4d76091e596928a20e5d590b4906261013a5"
+    },
+    {
+      "path": "docs/ACCOUNTING_EDITION_2.md",
+      "bytes": 10762,
+      "sha256": "8df4e0bf05dd7564c95ea2e2ec32ac9e70a5274b133661fb722307207e29c552"
+    },
+    {
+      "path": "docs/ACCOUNTING_EDITION_3.md",
+      "bytes": 13049,
+      "sha256": "ec4d6be26e98b972b0ad56de45025c326ce63d99c511ba43ab3707e6a5af39f0"
+    },
+    {
+      "path": "docs/ARCHITECTURE.md",
+      "bytes": 72404,
+      "sha256": "16b992f8c08b889dabccb166cdf65b2e6ef1c15ec7322f8b769c414835c3b745"
+    },
+    {
+      "path": "docs/COMPLIANT_SETTLEMENT_DESIGN.md",
+      "bytes": 31074,
+      "sha256": "e9a21c3b50371ba75fc23c5601bbe21908f4e6eecd88b169a18fdd704a5370b5"
+    },
+    {
+      "path": "docs/CONTRIBUTING.md",
+      "bytes": 3010,
+      "sha256": "0939c95673cc288cbae340de7655a11ed8b3edbda115170d2e3c3f44ae5a5c7c"
+    },
+    {
+      "path": "docs/DEPLOYMENT.md",
+      "bytes": 13970,
+      "sha256": "57f9dd7ecbd49ac2d8900111d0cf48a5f047aadd8b2e5d2bb4bf8eda5bd5cfc9"
+    },
+    {
+      "path": "docs/MARKET_EDITION_1.md",
+      "bytes": 12051,
+      "sha256": "f19d060f05a54ea318b831d020a48acc2e267e73f704a3a229acbcb2f33650f9"
+    },
+    {
+      "path": "docs/PAIRED_EXIT_EDITION_1.md",
+      "bytes": 11587,
+      "sha256": "3ac06e5b7c08422b2c18f27f107d0e00b0838520cf250fae81b90eb74fbe6baf"
+    },
+    {
+      "path": "docs/PROOF_OF_CONCEPT.md",
+      "bytes": 77252,
+      "sha256": "53abe612a07bab0d9de4a03a1ae86adb4188cce1244c44362867fc536d2fa13c"
+    },
+    {
+      "path": "docs/SECURITY.md",
+      "bytes": 36275,
+      "sha256": "ac44a73ec5e71fc4d41663b2ac415b367b61d93dede62244ca1e8c61c12648db"
+    },
+    {
+      "path": "docs/TECHNICAL_SPECIFICATION.md",
+      "bytes": 80275,
+      "sha256": "03c0af457d5f207a5a859fbc0c5761c4b4c1b223743a3ac6d77993d76248347b"
+    },
+    {
+      "path": "docs/TESTNET_DEPLOYMENT_EVIDENCE.md",
+      "bytes": 20261,
+      "sha256": "e580055c0f3420965dc1f6cea6c8464a07803646e333615bbeff152b29521aec"
+    },
+    {
+      "path": "docs/TESTNET_STRESS_TEST_EVIDENCE.md",
+      "bytes": 13909,
+      "sha256": "548dccc14ff4593212d3d3bf4823ba12831723090985d5c3090bd6d20171a763"
+    }
+  ]
+}
