@@ -48,17 +48,19 @@ class StagedUncertain(StagedPending):
         self.recovery = recovery or {"id": request_id}
 
 
-def _uncertain_response(response, request_id):
+def _uncertain_response(response, request_id, on_uncertain=None):
     returned = response.getheader("X-Eco-Request-ID")
     if returned is not None and returned != request_id:
         raise ValueError("The uncertain reply belongs to another original request.")
-    value = {}
+    retained = on_uncertain() if returned == request_id and on_uncertain is not None else None
+    value = dict(retained["recovery"]) if (isinstance(retained, dict)
+            and isinstance(retained.get("recovery"), dict)) else {}
     try:
         raw = response.read(CONTROL_LIMIT + 1)
         if len(raw) <= CONTROL_LIMIT:
             decoded = json.loads(raw)
             if isinstance(decoded, dict):
-                value = decoded
+                value.update(decoded)
     except (OSError, http.client.HTTPException, ValueError, UnicodeError):
         pass
     detail = value.get("error")
@@ -145,14 +147,19 @@ def _connection(transport, method, path, body=None, headers=None, timeout=60):
 
 
 def _control(transport, method, path, request_id, *, value=None, body=None,
-             headers=None, timeout=60):
+             headers=None, timeout=60, on_uncertain=None, on_accepted=None):
     if value is not None:
         body = canonical(value)
         headers = {**(headers or {}), "Content-Type": "application/json"}
     connection, response = _connection(transport, method, path, body, headers, timeout)
     try:
         if response.getheader("X-Eco-Uncertain") == "1":
-            raise _uncertain_response(response, request_id)
+            raise _uncertain_response(response, request_id, on_uncertain)
+        returned = response.getheader("X-Eco-Request-ID")
+        if returned is not None and returned != request_id:
+            raise ValueError("The control returned another original request identity.")
+        if 200 <= response.status < 300 and returned == request_id and on_accepted:
+            on_accepted()
         raw = response.read(CONTROL_LIMIT + 1)
         if len(raw) > CONTROL_LIMIT:
             raise ValueError("The staged control response exceeds its original bound.")
@@ -329,8 +336,16 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
             # A sealed/uncertain request may be observed again, never restaged.
             # The connector may later publish its reconciled original result.
         def checkpoint(state, **extra):
-            atomic_json(state_path, {"id": request_id, "state": state, **extra})
-            if progress: progress({"id": request_id, "state": state, **extra})
+            value = {"id": request_id, "state": state, **extra}
+            if state == "uncertain" and state_path.exists():
+                previous = read_json(state_path)
+                if previous.get("id") != request_id:
+                    raise ValueError("The uncertainty checkpoint belongs to another request.")
+                if isinstance(previous.get("recovery"), dict):
+                    value["recovery"] = {**previous["recovery"], **value.get("recovery", {})}
+            atomic_json(state_path, value)
+            if progress: progress(value)
+            return value
         try:
             if state.get("state") not in {"sealed", "uncertain", "complete"}:
                 with _open(source_path, os.O_RDONLY, "rb") as original:
@@ -339,7 +354,8 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                         raise ValueError("The selected source changed before transfer.")
                     original.seek(0)
                     created = _control(transport, "POST", "/_eco/v1/requests", request_id,
-                                       value={"id": request_id, **metadata}, timeout=timeout)
+                                       value={"id": request_id, **metadata}, timeout=timeout,
+                                       on_uncertain=lambda: checkpoint("uncertain"))
                     if created.get("id") != request_id:
                         raise ValueError("The relay returned another retained request ID.")
                     checkpoint("staging", confirmed_bytes=0)
@@ -353,7 +369,8 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                                        "/_eco/v1/requests/" + request_id + "/input?offset=" + str(offset),
                                        request_id, body=block,
                                        headers={"Content-Type": "application/octet-stream",
-                                                "X-Chunk-SHA256": sha256}, timeout=timeout)
+                                                "X-Chunk-SHA256": sha256}, timeout=timeout,
+                                       on_uncertain=lambda: checkpoint("uncertain"))
                         if (ack.get("id") != request_id or ack.get("input_offset") != offset + len(block)
                                 or ack.get("bytes") != len(block) or ack.get("sha256") != sha256):
                             raise ValueError("The relay did not acknowledge the exact original chunk.")
@@ -366,7 +383,9 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                     if "body_sha256" in metadata:
                         seal["body_sha256"] = metadata["body_sha256"]
                     sealed = _control(transport, "POST", "/_eco/v1/requests/" + request_id + "/seal",
-                                      request_id, value=seal, timeout=timeout)
+                                      request_id, value=seal, timeout=timeout,
+                                      on_uncertain=lambda: checkpoint("uncertain"),
+                                      on_accepted=lambda: checkpoint("sealed", confirmed_bytes=identity["bytes"]))
                     if sealed.get("id") != request_id or sealed.get("sealed") is not True:
                         raise ValueError("The relay did not acknowledge the complete original input.")
                     checkpoint("sealed", confirmed_bytes=identity["bytes"])
@@ -379,7 +398,8 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                     if returned is not None and returned != request_id:
                         raise ValueError("The result returned another original request identity.")
                     if response.getheader("X-Eco-Uncertain") == "1":
-                        raise _uncertain_response(response, request_id)
+                        raise _uncertain_response(response, request_id,
+                                                  lambda: checkpoint("uncertain"))
                     if response.getheader("X-Eco-Pending") == "1":
                         if time.monotonic() >= deadline:
                             raise StagedPending(request_id, "The original native request remains pending.")

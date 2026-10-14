@@ -66,13 +66,15 @@ async function fileIdentity(blob,metadata,signal){
  }
  return hex(digest);
 }
-async function uncertainResponse(response,id){
+async function uncertainResponse(response,id,onUncertain){
  const returned=response.headers.get('X-Eco-Request-ID');
  if(returned&&returned!==id){try{await response.body?.cancel();}catch{}throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id,response.status);}
+ const retained=returned===id?onUncertain?.():null;
  let value={};
  try{value=await response.json();}catch{}
  if(!value||typeof value!=='object'||Array.isArray(value))value={};
- const detail=value.error&&typeof value.error==='object'?{...value,...value.error}:value;
+ const current=value.error&&typeof value.error==='object'?{...value,...value.error}:value;
+ const detail={...(retained?.recovery?.id===id?retained.recovery:{}),...current};
  if(detail.id!==undefined&&detail.id!==id)throw problem('The uncertain reply belongs to another original request.','REMOTE_IDENTITY',id,response.status);
  const recovery={id};
  if(typeof detail.code==='string'&&/^[A-Z][A-Z0-9_]{0,95}$/.test(detail.code))recovery.code=detail.code;
@@ -92,17 +94,21 @@ function rememberPhase(known,state,recovery){
  known.state=state;
  const previous=journalRead(known.key)||{};
  const value={id:known.id,created_at:previous.created_at||new Date().toISOString(),state};
- if(recovery)value.recovery=recovery;
+ if(recovery)value.recovery={...(previous.recovery||{}),...recovery};
  else if(previous.recovery)value.recovery=previous.recovery;
  journalWrite(known.key,value);
+ return value;
 }
-async function control(path,options,id,signal){
+async function control(path,options,id,signal,onUncertain,onAccepted){
  for(let attempt=0;;attempt++){
   abort(signal);let response,error;
   try{response=await fetch(path,{...options,credentials:'same-origin',redirect:'error',signal});}
   catch(cause){abort(signal);error=cause;}
-  if(response?.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
+  if(response?.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id,onUncertain);
   if(response&&!retryCodes.has(response.status)){
+   const returned=response.headers.get('X-Eco-Request-ID');
+   if(returned&&returned!==id)throw problem('The transfer returned a different request identity.','REMOTE_IDENTITY',id,response.status);
+   if(response.ok&&returned===id)onAccepted?.();
    let value;try{value=await response.json();}catch(cause){abort(signal);throw problem('The transfer returned an unreadable response. Reopen the same selected file to resume.','REMOTE_RESPONSE',id,response.status);}
    if(response.ok)return value;
    const code=value?.error?.code||value?.code;
@@ -115,7 +121,7 @@ async function control(path,options,id,signal){
   await pause(retryDelay(response,attempt),signal);
  }
 }
-async function outcome(id,signal){
+async function outcome(id,signal,onUncertain){
  for(let attempt=0;;){
   abort(signal);let response;
   try{response=await fetch('/_eco/v1/requests/'+id+'/result',{credentials:'same-origin',redirect:'error',signal});}
@@ -123,7 +129,7 @@ async function outcome(id,signal){
    abort(signal);if(attempt++>=7)throw problem('The connection was interrupted. The original request is retained; check Operations before submitting it again.','REMOTE_INTERRUPTED',id);
    await pause(Math.min(4000,250*2**attempt),signal);continue;
   }
-  if(response.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
+  if(response.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id,onUncertain);
   if(response.headers.get('X-Eco-Pending')==='1'){
    try{await response.body?.cancel();}catch{}attempt=0;await pause(retryDelay(response,0,500),signal);continue;
   }
@@ -139,7 +145,7 @@ async function outcome(id,signal){
   return response;
  }
 }
-async function completeApiResponse(response,id,signal){
+async function completeApiResponse(response,id,signal,onUncertain){
  // app.api already consumes the complete JSON body. Finish that read here so
  // interrupted action/upload acknowledgements recover through the SAME result.
  // Original file links and download streams use their unchanged native routes.
@@ -164,7 +170,7 @@ async function completeApiResponse(response,id,signal){
    abort(signal);try{await response.body?.cancel(cause);}catch{}
    if(attempt>=7)throw problem('The original request is retained but its complete reply could not be read. Keep its reference when reconnecting.','REMOTE_RESPONSE_INTERRUPTED',id,response.status);
    await pause(retryDelay(response,attempt),signal);
-   response=await outcome(id,signal);
+   response=await outcome(id,signal,onUncertain);
   }
  }
 }
@@ -199,21 +205,22 @@ async function upload(path,options){
   // Once sealing was acknowledged or any phase became uncertain, only observe
   // this original outcome. Re-entry must not stage a completed native write again.
   if(known.state!=='sealed'&&known.state!=='uncertain'){
-   const created=await control('/_eco/v1/requests',{method:'POST',headers:json,body:JSON.stringify({id,...metadata})},id,signal);
+   const created=await control('/_eco/v1/requests',{method:'POST',headers:json,body:JSON.stringify({id,...metadata})},id,signal,()=>rememberPhase(known,'uncertain'));
    if(created.id!==id)throw problem('The transfer returned a different request identity.','REMOTE_IDENTITY',id);
    // Replay exact chunks from zero when resuming. Durable duplicate acknowledgements
    // verify the content and never execute the native upload a second time.
    for(let offset=0;offset<blob.size;offset+=CHUNK_BYTES){
     abort(signal);
     const bytes=await blob.slice(offset,offset+CHUNK_BYTES).arrayBuffer(),sha256=hex(await hash(bytes,signal));
-    const ack=await control('/_eco/v1/requests/'+id+'/input?offset='+offset,{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Chunk-SHA256':sha256},body:bytes},id,signal);
+    const ack=await control('/_eco/v1/requests/'+id+'/input?offset='+offset,{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Chunk-SHA256':sha256},body:bytes},id,signal,()=>rememberPhase(known,'uncertain'));
     if(ack.id!==id||ack.input_offset!==offset+bytes.byteLength||ack.bytes!==bytes.byteLength||ack.sha256!==sha256)throw problem('The transfer did not confirm the selected file bytes.','REMOTE_CHUNK_MISMATCH',id);
    }
-   const sealed=await control('/_eco/v1/requests/'+id+'/seal',{method:'POST',headers:json,body:JSON.stringify({body_bytes:blob.size})},id,signal);
+   const sealed=await control('/_eco/v1/requests/'+id+'/seal',{method:'POST',headers:json,body:JSON.stringify({body_bytes:blob.size})},id,signal,()=>rememberPhase(known,'uncertain'),()=>rememberPhase(known,'sealed'));
    if(sealed.id!==id||sealed.sealed!==true)throw problem('The transfer has not confirmed the complete file.','REMOTE_SEAL',id);
    rememberPhase(known,'sealed');
   }
-  const response=await completeApiResponse(await outcome(id,signal),id,signal);
+  const onUncertain=()=>rememberPhase(known,'uncertain');
+  const response=await completeApiResponse(await outcome(id,signal,onUncertain),id,signal,onUncertain);
   return finishWhenRead(response,()=>{journalRemove(key,id);heldFiles.get(blob)?.delete(signature);},signal);
  }catch(error){
   if(error?.code==='UPSTREAM_UNCERTAIN')rememberPhase(known,'uncertain',error.recovery);
