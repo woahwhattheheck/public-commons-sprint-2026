@@ -49,9 +49,10 @@ STOP = threading.Event()
 
 
 class ConnectorError(Exception):
-    def __init__(self, code, status=None, retry_after=None):
+    def __init__(self, code, status=None, retry_after=None, transport_code=None):
         super().__init__(code)
         self.code, self.status, self.retry_after = code, status, retry_after
+        self.transport_code = transport_code
 
 
 def retry_after_seconds(value):
@@ -299,7 +300,8 @@ class Edge:
         supplied = {"Authorization": "Bearer " + self.config.connector_token,
                     "X-Eco-Connector-Instance": self.config.instance,
                     "X-Eco-Operator-ID": self.config.operator_id,
-                    "Accept-Encoding": "identity"}
+                    "Accept-Encoding": "identity",
+                    "User-Agent": "TJLabs-Workbench-Native-Connector/1.0"}
         if value is not None:
             supplied["Content-Type"] = "application/json"
         if body is not None:
@@ -316,8 +318,12 @@ class Edge:
             if 300 <= reply.status < 400:
                 raise ConnectorError("EDGE_REDIRECT_REFUSED", reply.status)
             if not 200 <= reply.status < 300:
+                transport_code = reply.getheader("X-Eco-Transport-Error")
+                if not isinstance(transport_code, str) or not re.fullmatch(r"[A-Z][A-Z0-9_]{0,63}", transport_code):
+                    transport_code = None
                 raise ConnectorError("EDGE_HTTP_" + str(reply.status), reply.status,
-                                     retry_after_seconds(reply.getheader("Retry-After")))
+                                     retry_after_seconds(reply.getheader("Retry-After")),
+                                     transport_code=transport_code)
             return reply.status, {k.lower(): v for k, v in reply.getheaders()}, data
         finally:
             connection.close()
@@ -434,6 +440,9 @@ class Connector:
         self.routes = set()
         self.locks, self.locks_guard = {}, threading.Lock()
         self.capacity_lock = threading.Lock()
+        self.registration_lock = threading.Lock()
+        self.registration_generation = 0
+        self.registration_error = None
         self.journal.recover()
 
     def local_call(self, method, target, headers=None, body=None):
@@ -539,7 +548,28 @@ class Connector:
                        "native_workspace_key": native_workspace,
                        "protocol": "upstate.eco-transport/v1",
                        "routes": [{"method": m, "path": p} for m, p in sorted(routes)]})
+        self.registration_generation += 1
         event("connected", routes=len(routes), protocol="upstate.eco-transport/v1")
+
+    def poll(self, target):
+        generation = self.registration_generation
+        try:
+            return self.edge.json("GET", target, timeout=30)
+        except ConnectorError as error:
+            if error.status != 409 or error.transport_code != "REGISTRATION_REQUIRED":
+                raise
+        # A reset discards only edge routes. Re-register the SAME native identity.
+        with self.registration_lock:
+            if STOP.is_set():
+                return None
+            if generation == self.registration_generation:
+                try:
+                    self.register_until_connected()
+                except (OSError, http.client.HTTPException, ValueError, ConnectorError) as error:
+                    # Permanent auth/configuration failure is handled by the original owner.
+                    self.registration_error = error
+                    STOP.set()
+        return None
 
     def validate(self, record):
         request_id = record.get("id")
@@ -745,6 +775,57 @@ class Connector:
                 raise
         event("native_response_retained", request_id, status=response["status"], bytes=size)
 
+    def original_task_identity(self, request):
+        result = {}
+        if (request["method"] == "POST" and request["path"].split("?", 1)[0] == "/api/actions"
+                and request["body_bytes"] <= 2 * CHUNK):
+            try:
+                payload = json.loads(self.journal.body_path(request["id"], "input").read_bytes())
+                operation = payload.get("operation_id")
+                workspace = payload.get("workspace") or request["headers"].get("x-workspace")
+                if (isinstance(operation, str) and OPERATION_ID.fullmatch(operation)
+                        and isinstance(workspace, str)
+                        and re.fullmatch(r"[A-Za-z0-9_-]{1,200}", workspace)):
+                    task_id = digest(canonical({"workspace": workspace, "operation_id": operation}))
+                    result.update(operation_id=operation, workspace=workspace, task_id=task_id,
+                                  lookup_path="/api/task?id=" + task_id)
+            except (OSError, ValueError, AttributeError):
+                pass
+        return result
+
+    def retained_edge_ready(self, request, row):
+        # Pending journal rows contain no edge metadata. Always inspect current status.
+        status = self.edge.status(request["id"])
+        if not isinstance(status, dict) or status.get("id") != request["id"]:
+            raise ConnectorError("EDGE_STATUS_INVALID")
+        if self.validate(status) != request:
+            raise ConnectorError("REQUEST_ID_REUSED")
+        offset = integer(status.get("input_offset"), "input_offset")
+        if type(status.get("sealed")) is not bool:
+            raise ConnectorError("EDGE_SEALED_INVALID")
+        owner = status.get("connector_instance")
+        if owner is not None and owner != self.config.instance:
+            raise ConnectorError("EXECUTION_OWNER", 409)
+        if offset > row["input_offset"]:
+            raise ConnectorError("EDGE_ACK_EXCEEDS_DURABLE_INPUT")
+        if row["state"] == "ready":
+            lost = offset < request["body_bytes"]
+            if not lost and not status["sealed"]:
+                # All bytes are ACKed; the original browser may still be sealing them.
+                return False
+        else:
+            lost = (offset != request["body_bytes"] or not status["sealed"]
+                    or owner != self.config.instance)
+        if not lost:
+            return True
+        result = {"code": "PREVIEW_STATE_LOST",
+                  "message": "Edge transfer state was reset. Inspect the retained original native operation and result before another write."}
+        result.update(self.original_task_identity(request))
+        self.edge.json("POST", "/requests/" + request["id"] + "/uncertain", result)
+        event("edge_state_lost", request["id"], native_state=row["state"])
+        # Preserve ready/uncertain/response/delivered and every original native byte.
+        return False
+
     def uncertain(self, request):
         # Preserve the original operation identity so the original native task can be read.
         result = {"code": "NATIVE_OUTCOME_UNCERTAIN",
@@ -842,6 +923,8 @@ class Connector:
                 if not self.receive(request):
                     return
                 row = self.journal.get(request_id)
+            if row["state"] != "receiving" and not self.retained_edge_ready(request, row):
+                return False
             if row["state"] == "ready":
                 self.execute(request)
                 row = self.journal.get(request_id)
@@ -864,7 +947,7 @@ class Connector:
                 with self.locks_guard:
                     active = sorted(key for key, lock in self.locks.items() if lock.locked())
                 target = "/poll" + ("?exclude=" + urllib.parse.quote(",".join(active), safe="") if active else "")
-                record = self.edge.json("GET", target, timeout=30)
+                record = self.poll(target)
                 if record is not None and self.handle(record) is False:
                     STOP.wait(0.25)
                 delay = 1
@@ -912,6 +995,8 @@ class Connector:
                 raise ConnectorError("RELAY_WORKERS_STOPPED")
         for thread in threads:
             thread.join(timeout=2)
+        if self.registration_error is not None:
+            raise self.registration_error
 
 
 @contextlib.contextmanager
