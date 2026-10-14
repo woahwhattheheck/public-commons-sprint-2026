@@ -303,8 +303,12 @@ programs as separate `source-editions/` members.
 
 The repaired GET upload lookup returns **404 only when neither a valid upload
 body nor its receipt exists**. This lets the browser perform its first complete
-PUT under the retained upload ID. Malformed IDs, symbolic links, partial retained
-pairs and changed bytes remain explicit errors. GET and PUT use the same locks,
+PUT under the retained upload ID. Malformed IDs, symbolic links and changed complete pairs remain explicit
+errors. A single retained regular body or valid receipt returns409 with exact
+code `UPLOAD_INCOMPLETE`. Only that typed response permits the browser to
+reselect and PUT its same complete original under the retained ID. An existing
+body must match its full hash, and an existing receipt is checked against the
+full incoming hash before a missing body is linked. GET and PUT use the same locks,
 so GET cannot observe the short body/receipt publication interval. A completed
 same-ID upload returns its original descriptor and retains its exact bytes.
 

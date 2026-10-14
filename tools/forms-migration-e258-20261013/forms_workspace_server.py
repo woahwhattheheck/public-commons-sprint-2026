@@ -30,6 +30,21 @@ SERVER_SCHEMA = "tjlabs.forms-workspace.server.v1"
 def new_json(path,value):
     immutable(Path(path),json_bytes(value))
 
+class UploadIncomplete(DiscoveryError):
+    """One retained upload member needs its original same-byte PUT."""
+
+def upload_receipt(value,workspace_id,upload_id,name,identity=None):
+    require(isinstance(value,dict) and value.get("schema")=="tjlabs.forms-workspace.upload.v1" and
+            value.get("workspace_id")==workspace_id and value.get("upload_id")==upload_id and
+            value.get("archive_name")==name,"Original upload receipt identity differs")
+    file=value.get("file")
+    require(isinstance(file,dict) and set(file)=={"bytes","sha256"} and type(file.get("bytes")) is int and
+            0<file["bytes"]<=MAX_UPLOAD and isinstance(file.get("sha256"),str) and
+            re.fullmatch(r"[0-9a-f]{64}",file["sha256"]),"Original upload receipt file identity differs")
+    if identity is not None:
+        require(file==identity,"Upload identity is bound to different original bytes")
+    return value
+
 class Service:
     def __init__(self,workspace):
         self.workspace=workspace
@@ -79,14 +94,16 @@ class Service:
             require(not body.is_symlink() and not receipt.is_symlink(),"Upload members cannot be symbolic links")
             if not body.exists() and not receipt.exists():
                 raise FileNotFoundError(name)
-            require(body.is_file() and receipt.is_file(),"Original upload is incomplete; retain its same identity")
-            path=regular_under(incoming,name)
-            value=read_json(regular_under(incoming,name+".json"))
-            require(value.get("schema")=="tjlabs.forms-workspace.upload.v1" and
-                    value.get("workspace_id")==self.workspace.meta["workspace_id"] and
-                    value.get("upload_id")==upload_id and value.get("archive_name")==name and
-                    value.get("file")==measured(path),"Original completed upload differs")
-            return value
+            require(not body.exists() or body.is_file(),"Original upload body is not a regular file")
+            require(not receipt.exists() or receipt.is_file(),"Original upload receipt is not a regular file")
+            value=None
+            if receipt.exists():
+                value=upload_receipt(read_json(regular_under(incoming,name+".json")),
+                                     self.workspace.meta["workspace_id"],upload_id,name)
+            if not body.exists() or value is None:
+                raise UploadIncomplete("Reselect the same complete original ZIP to restore this retained upload")
+            return upload_receipt(value,self.workspace.meta["workspace_id"],upload_id,name,
+                                  measured(regular_under(incoming,name)))
 
 
     def process_identity(self,pid):
@@ -357,6 +374,7 @@ class Handler(BaseHTTPRequestHandler):
                 value=self.state.export(self.one(q,"export_id"))
                 self.file(Path(value["archive"]["path"]),"Forms_Workspace.zip","application/zip")
             else:self.error("NOT_FOUND","Unknown workspace route",404)
+        except UploadIncomplete as exc:self.error("UPLOAD_INCOMPLETE",str(exc),409)
         except (DiscoveryError,ValueError,KeyError,TypeError) as exc:self.error("INVALID_REQUEST",str(exc))
         except FileNotFoundError:self.error("NOT_FOUND","Original retained file or receipt is absent",404)
         except (BrokenPipeError,ConnectionResetError):pass
@@ -380,11 +398,20 @@ class Handler(BaseHTTPRequestHandler):
                 out.flush();os.fsync(out.fileno())
             identity={"bytes":count,"sha256":digest.hexdigest()}
             with self.state.lock, self.state.workspace.mutex:
+                require(directory.is_dir() and not directory.is_symlink(),"Original incoming directory differs")
+                receipt=directory/(name+".json")
+                require(not target.is_symlink() and not receipt.is_symlink(),"Upload members cannot be symbolic links")
+                # Validate an existing receipt BEFORE linking a missing body.
+                # A receipt-only interrupted upload cannot acquire other bytes.
+                retained=None
+                if receipt.exists():
+                    retained=upload_receipt(read_json(regular_under(directory,name+".json")),
+                                            self.state.workspace.meta["workspace_id"],uid,name,identity)
                 if target.exists():require(measured(target)==identity,"Upload identity is bound to different original bytes")
                 else:os.link(temp,target)
-                result={"schema":"tjlabs.forms-workspace.upload.v1","workspace_id":self.state.workspace.meta["workspace_id"],
-                        "upload_id":uid,"archive_name":name,"file":identity}
-                new_json(directory/(name+".json"),result)
+                result=retained or {"schema":"tjlabs.forms-workspace.upload.v1","workspace_id":self.state.workspace.meta["workspace_id"],
+                                   "upload_id":uid,"archive_name":name,"file":identity}
+                if retained is None:new_json(receipt,result)
             self.answer(result)
         except (DiscoveryError,ValueError,KeyError,TypeError) as exc:self.error("UPLOAD_REJECTED",str(exc))
         except (BrokenPipeError,ConnectionResetError):pass
