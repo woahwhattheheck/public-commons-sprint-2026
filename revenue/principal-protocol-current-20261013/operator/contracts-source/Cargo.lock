@@ -1062,6 +1062,8 @@ name = "principal_integration_tests"
 version = "0.1.0"
 dependencies = [
  "principal_manager",
+ "principal_market_pool",
+ "principal_router",
  "principal_oracle_adapter",
  "principal_permissioning",
  "principal_pt_token",
@@ -1081,6 +1083,13 @@ dependencies = [
  "principal_pt_token",
  "principal_sy_wrapper",
  "principal_yt_token",
+ "soroban-sdk",
+]
+
+[[package]]
+name = "principal_market_pool"
+version = "0.1.0"
+dependencies = [
  "soroban-sdk",
 ]
 
@@ -1121,6 +1130,13 @@ dependencies = [
 
 [[package]]
 name = "principal_risk_control"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk",
+]
+
+[[package]]
+name = "principal_router"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk",

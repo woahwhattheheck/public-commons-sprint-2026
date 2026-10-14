@@ -9,6 +9,8 @@ members = [
     "contracts/pt_token",
     "contracts/yt_token",
     "contracts/recovery_escrow",
+    "contracts/market_pool",
+    "contracts/router",
     "contracts/integration_tests",
 ]
 

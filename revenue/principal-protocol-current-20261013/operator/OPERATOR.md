@@ -1,6 +1,12 @@
 # Principal current operations
 
-This application operates the complete eight-contract accounting edition 3 derived from principal-Protocol-org/principal at base commit f35b914cbf4896255a3711d81795b810b0a47f1c. The installed catalogue includes every retained original public method and the accounting, oracle-history and recovery methods in the shipped corrected source. Its per-method access mode is explicit. Original upstream source and its original 118-method ABI are retained separately. An existing workspace remains attached to its exact API edition; use a separate workspace for a different deployment/source edition. The installed CONTRACT_API.json and every configured deployed WASM digest identify the selected source edition.
+This application operates market edition 1 with ten contracts: the original eight-contract accounting edition 3 plus MarketPool and Router, derived from principal-Protocol-org/principal at base commit f35b914cbf4896255a3711d81795b810b0a47f1c. The installed catalogue includes every retained original public method and the accounting, oracle-history and recovery methods in the shipped corrected source. Its per-method access mode is explicit. Original upstream source and its original 118-method ABI are retained separately. An existing workspace remains attached to its exact API edition; use a separate workspace for a different deployment/source edition. The installed CONTRACT_API.json and every configured deployed WASM digest identify the selected source edition.
+
+## PT / SY market and original routing
+
+The Market screen now reads actual pool reserves, fee claims and complete native quotes, then prepares an explicit minimum/expiry using the same immutable requests and original wallet authorization. Configure the pool and router alongside the original eight contracts. Read [Market edition 1](contracts-source/docs/MARKET_EDITION_1.md) for exact equations, rounding, compliance, recovery, real versus virtual reserve semantics and supported routes. The installed ABI contains196 methods.
+
+Use a fresh workspace for principal-market-1-accounting-3. The complete accounting-3 source packet and ABI remain retained, including its original native build profile. The accepted accounting-2 result is not replaced or replayed. Pre-maturity recombination and YT selling are unavailable; the original manager provides neither operation. The new source does not claim native compilation or rendered product acceptance until the maintained course returns those actual results.
 
 ## Open the actual application
 

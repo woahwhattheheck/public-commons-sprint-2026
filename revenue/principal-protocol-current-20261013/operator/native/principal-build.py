@@ -20,6 +20,10 @@ import time
 
 SCHEMA = "principal.reference-build-input.v1"
 CURRENT_SCHEMA = "principal.current-build-input.v3"
+MARKET_SCHEMA = "principal.market-build-input.v1"
+MARKET_PACKET_BYTES = 7677275
+MARKET_PACKET_SHA = "bf8edadbbd4d1d114c6c372fbdcf44485abd737504250f84e4e5e8e7a57de472"
+MARKET_MEMBERS = 240
 CURRENT_PACKET_BYTES = 7509894
 CURRENT_PACKET_SHA = "71d7d5b9b1adaf6fb4c9a2bb6b49f614cd9c5c101a0454c75985e54f9de9eb04"
 OWNER_SHA = "506634371a87cbdc005b65d4e9c75a480bef18e0f0a762c3de463c859018903c"
@@ -156,8 +160,8 @@ def validate_input(spec):
     common = {"schema","operationId","directory","sourceSha256","cargo","rustc",
               "cargoHome","searchPath","timeoutSeconds"}
     need(isinstance(spec,dict),"Complete original build input required")
-    current=spec.get("schema")==CURRENT_SCHEMA
-    need(spec.get("schema") in (SCHEMA,CURRENT_SCHEMA) and
+    current=spec.get("schema") in (CURRENT_SCHEMA,MARKET_SCHEMA)
+    need(spec.get("schema") in (SCHEMA,CURRENT_SCHEMA,MARKET_SCHEMA) and
          set(spec)==common|({"sourcePacket"} if current else {"sourceRoot"}),
          "Complete original build input required")
     need(isinstance(spec["operationId"],str) and 0<len(spec["operationId"])<=200, "Original programme identity required")
@@ -181,15 +185,16 @@ def validate_input(spec):
     return spec
 
 def selected_source(spec):
-    current=spec["schema"]==CURRENT_SCHEMA
+    current=spec["schema"] in (CURRENT_SCHEMA,MARKET_SCHEMA)
+    market=spec["schema"]==MARKET_SCHEMA
     selected=[]
     if current:
         original=read(spec["sourcePacket"],32*1024*1024)
-        need(len(original)==CURRENT_PACKET_BYTES and sha(original)==CURRENT_PACKET_SHA,
+        need(len(original)==(MARKET_PACKET_BYTES if market else CURRENT_PACKET_BYTES) and sha(original)==(MARKET_PACKET_SHA if market else CURRENT_PACKET_SHA),
              "Select the exact complete current231 original packet")
         packet=strict_json(original)
-        need(packet["schema"]=="principal.current-accounting-complete.v3" and
-             packet["accountingEdition"]==3 and len(packet["files"])==231,
+        need(packet["schema"]==("principal.market-complete.v1" if market else "principal.current-accounting-complete.v3") and
+             packet["accountingEdition"]==3 and (not market or packet.get("marketEdition")==1) and len(packet["files"])==(MARKET_MEMBERS if market else 231),
              "Complete current accounting source edition required")
         names=set()
         for member in packet["files"]:
@@ -201,14 +206,15 @@ def selected_source(spec):
             need(len(data)==member["bytes"] and sha(data)==member["sha256"],"Current original member differs")
             selected.append({"path":name,"bytes":len(data),"sha256":sha(data),
                              "contentBase64":base64.b64encode(data).decode("ascii")})
-        manifest=strict_json(next(m["content"] for m in packet["files"] if m["path"]=="CURRENT_ACCOUNTING_SOURCE.json"))
+        manifest_name="CURRENT_MARKET_SOURCE.json" if market else "CURRENT_ACCOUNTING_SOURCE.json"
+        manifest=strict_json(next(m["content"] for m in packet["files"] if m["path"]==manifest_name))
         actual={m["path"]:{key:m[key] for key in ("path","bytes","sha256")} for m in selected}
-        need(len(manifest["files"])==230 and len({m["path"] for m in manifest["files"]})==230 and
-             {m["path"] for m in manifest["files"]}==names-{"CURRENT_ACCOUNTING_SOURCE.json"},
+        need(len(manifest["files"])==len(selected)-1 and len({m["path"] for m in manifest["files"]})==len(selected)-1 and
+             {m["path"] for m in manifest["files"]}==names-{manifest_name},
              "Complete current source roster required")
         for member in manifest["files"]:
             need(actual[member["path"]]==member,"Current roster member differs")
-        return {"schema":"principal.current-accounting-build-source.v3","files":selected}, original
+        return {"schema":"principal.market-build-source.v1" if market else "principal.current-accounting-build-source.v3","files":selected}, original
     for member in MEMBERS:
         data=read(Path(spec["sourceRoot"])/member["path"])
         need(len(data)==member["bytes"] and sha(data)==member["sha256"], "Original complete reference source differs: "+member["path"])
@@ -242,9 +248,16 @@ def main(argv=None):
     spec=validate_input(strict_json(read(Path(args.input).absolute(),4*1024*1024)))
     root=mkdir(Path(spec["directory"]))
     binding=sha(encode(spec))
-    current=spec["schema"]==CURRENT_SCHEMA
-    profile="current-accounting-v3" if current else "reference"
+    current=spec["schema"] in (CURRENT_SCHEMA,MARKET_SCHEMA)
+    market=spec["schema"]==MARKET_SCHEMA
+    profile="market-v1-accounting-v3" if market else ("current-accounting-v3" if current else "reference")
     wasm=REFERENCE_WASM+["principal_pt_token","principal_yt_token","principal_recovery_escrow"] if current else REFERENCE_WASM
+    if market:
+        wasm=wasm+["principal_market_pool","principal_router"]
+    market_snapshots=["market-01-original-ten-contracts","market-02-trades-fees-authentication",
+                      "market-03-original-escrow-recovery","market-04-mature-withdrawal","market-05-cold-source-reopen"]
+    def snapshot_names(kind):
+        return market_snapshots if kind=="market" else snapshots
     snapshots=["current-01-live-repeated-claims","current-02-frozen-final",
                "current-03-explicit-pending-recovery","current-04-recovered-final",
                "current-05-complete-maturity-proof","current-06-three-atom-conservation",
@@ -288,6 +301,9 @@ def main(argv=None):
                         "principal_integration_tests" if current else "principal_manager",
                         "--test","accounting_lifecycle" if current else "lifecycle",
                         "--","--nocapture","--test-threads=1"],"lifecycle")]
+        if market:
+            definitions.append(("05-market-lifecycle",[spec["cargo"]["path"],"test","--locked","-p",
+                 "principal_integration_tests","--test","market_lifecycle","--","--nocapture","--test-threads=1"],"market"))
         def signature_for(label,argv):
             return {"operationId":spec["operationId"],"inputSha256":binding,"name":label,"profile":profile,
                     "argv":argv,"sourceSha256":spec["sourceSha256"],"runtimeSha256":sha(encode(runtime))}
@@ -307,7 +323,7 @@ def main(argv=None):
             need(attempt.parent==Path("phases")/label/"attempts" and
                  re.fullmatch("[0-9]{6}",attempt.name),"Original phase attempt path differs")
             output_names=[name+".wasm" for name in wasm] if kind=="build" else (
-                         [name+".json" for name in snapshots] if kind=="lifecycle" else [])
+                         [name+".json" for name in snapshot_names(kind)] if kind in ("lifecycle","market") else [])
             required={str(attempt/name) for name in ("request.json","process.json","stdout","stderr","result.json")}
             required.update(str(attempt/"outputs"/name) for name in output_names)
             need(set(bodies)==required,"Complete selected phase artifact set required")
@@ -340,7 +356,7 @@ def main(argv=None):
                 validate_phase(accepted,label,argv,kind)
                 sync_dir(phase_root)
                 return accepted
-            if kind=="lifecycle":
+            if kind in ("lifecycle","market"):
                 build=strict_json(read(root/"phases"/PHASES[2]/"accepted.json"))
                 validate_phase(build,*definitions[2])
                 for name in wasm:
@@ -387,10 +403,10 @@ def main(argv=None):
                         data=read(source_root/"target"/"wasm32v1-none"/"release"/(name+".wasm"))
                         need(data[:4]==bytes([0])+b"asm","Complete actual Wasm required")
                         put(outputs/(name+".wasm"),data)
-                elif kind=="lifecycle":
-                    need(sorted(p.name for p in outputs.iterdir())==sorted(n+".json" for n in snapshots),
+                elif kind in ("lifecycle","market"):
+                    need(sorted(p.name for p in outputs.iterdir())==sorted(n+".json" for n in snapshot_names(kind)),
                          "The complete selected lifecycle snapshot set did not finish")
-                    for name in snapshots:
+                    for name in snapshot_names(kind):
                         value=strict_json(read(outputs/(name+".json")))
                         need(isinstance(value,dict) and "ledger" in value,"Complete Soroban snapshot required")
                 # Locked Cargo must preserve every selected original source body.
@@ -427,7 +443,7 @@ def main(argv=None):
                 source_files.append(describe(root,root/"original-current-packet.json"))
             return {"schema":"principal.contract-build-result.v1","state":"COMPLETE","lifetimes":"CLOSED","profile":profile,
                     "operationId":spec["operationId"],"inputSha256":binding,"sourceSha256":spec["sourceSha256"],
-                    "phaseNames":PHASES,"phases":phases,"files":source_files}
+                    "phaseNames":[item[0] for item in definitions],"phases":phases,"files":source_files}
         complete=root/"complete.json"
         if complete.exists():
             selected_complete=strict_json(read(complete))

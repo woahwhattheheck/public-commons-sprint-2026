@@ -1,6 +1,6 @@
 # Principal native operator
 
-This is the complete local Node 22.16 or later operator for the version-selected current eight-contract Principal application. It keeps one SQLite workspace, full original files, typed plans, native observations and immutable request history. The current implementation uses Linux for the Node workspace. Its dedicated Python child reuses the complete reviewed Linux subreaper/namespace/pidfd process owner. The included owner also retains its Windows implementation, but the complete Node workspace does not claim Windows commissioning.
+This is the complete local Node 22.16 or later operator for the version-selected current ten-contract Principal market edition 1 / accounting edition 3 application. It keeps one SQLite workspace, full original files, typed plans, native observations and immutable request history. The current implementation uses Linux for the Node workspace. Its dedicated Python child reuses the complete reviewed Linux subreaper/namespace/pidfd process owner. The included owner also retains its Windows implementation, but the complete Node workspace does not claim Windows commissioning.
 
 ## Start and inspect
 
