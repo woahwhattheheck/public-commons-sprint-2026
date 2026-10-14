@@ -84,3 +84,102 @@ Cloudflare Streams API: https://developers.cloudflare.com/workers/runtime-apis/s
 Cloudflare fixed-length streams: https://developers.cloudflare.com/workers/runtime-apis/streams/transformstream/
 
 These references establish the request-size/memory constraints, SQLite Durable Object API and streaming lifecycle used by this implementation.
+
+
+## Existing deployment operating with native durable authority
+
+The provider rejected the original SQLite writes. The existing deployment was
+adapted in place to the `ECO_PREVIEW_MEMORY="true"` mode, with the additive
+`preview_storage.mjs` module beside `worker.mjs`. Preserve the same
+WorkbenchRelay/RELAY namespace, migration, public origin, alias, private secret
+bindings and native Workspace mapping when uploading BOTH complete modules.
+Keep the existing deployment settings; do not add a namespace or change accounts.
+
+The actual operated predecessor served health, private login, migration inspection
+and logout successfully. This maintained successor composes directly from those
+full bodies. Its health identifies
+`transport_persistence: "memory-preview-native-journal-authoritative"` and a
+per-instance `transport_epoch`. SQL/KV writes are never sent in this selected
+mode. Original stored history remains unchanged; original native-workspace
+binding and migration history are read from the existing namespace. An existing
+environment `NATIVE_WORKSPACE_KEY` remains authoritative.
+
+Request execution, original TaskRequests and full input/response bytes remain
+durable in the original native connector's private journal and fsynced spool.
+The edge's connection metadata is transient. It uses the actual deployed metadata bounds of 40 MiB estimated metadata,
+4,096 request records and 65,536 chunk identities, plus the existing 24 binary
+chunk slots. Complete files remain on native disk and move in 1 MiB chunks.
+Completed and failed connection records and their chunk metadata can be retired. Active and uncertain request metadata remains admitted
+until completion and receives ordinary backpressure if physical capacity fills.
+A cache or epoch loss never establishes that an upstream action did not execute.
+
+### Authentication and native registration
+
+The private login signs an HMAC cookie bound to the exact credential epoch and
+transport epoch. The parser requires exactly two canonical components.
+The same-instance logout digest therefore cannot be bypassed by appending a
+third cookie component. Instance replacement invalidates previous cookies and
+uses the ordinary private login again.
+
+Preview storage serializes its asynchronous transactions. First registration
+reads the original stored native pin (or its exact configured environment pin),
+checks the authenticated incoming original native workspace key, then remembers
+it within that transaction. Concurrent first registrations cannot select two
+different native workspaces. Where the original persistent pin is absent, the
+first selected connection pin is transient; the native private configuration
+and its original principal remain authoritative. Set the existing `NATIVE_WORKSPACE_KEY`
+binding to the actual final host's original `native_session.workspace_key` once
+that host reports it; this preserves the selected pin across preview resets
+without a storage write. Failed reads are returned as
+errors, never treated as an empty old pin.
+
+After instance replacement, connector poll returns HTTP409 with
+`X-Eco-Transport-Error: REGISTRATION_REQUIRED` until the same native instance
+registers its actual route manifest. The paired current connector preserves this
+validated error code, serializes re-registration with its existing registration
+generation, and resumes its original polling workers. It preserves its private
+instance ID, native pin and journal; no scientific action is issued by renewal.
+
+### Original outcome recovery
+
+Missing or released preview request state returns HTTP409
+`PREVIEW_STATE_LOST`, `X-Eco-Uncertain: 1` and the original
+`X-Eco-Request-ID`. An input chunk waiting for an original request that becomes
+uncertain also exits with409 and the same uncertain-outcome header. It does not
+repeat503 INPUT_PENDING indefinitely. Marking a request uncertain also releases
+its staged edge input slot, and delayed input ACK or seal calls preserve that
+terminal outcome rather than returning it to the native dispatch queue.
+
+The native connector recognizes a retained ready/response/delivered journal
+entry paired with regressed edge offsets or a missing execution owner. It uses
+the existing uncertain-state endpoint and keeps its native journal outcome,
+complete response files and original IDs. The edge preserves only bounded
+validated recovery fields: original64hex `task_id`, original16–100-character
+`operation_id`, original Workspace identifier and an exact
+`/api/task?id=<task_id>` lookup. Native workspace identifiers may be project
+UUIDs; they are distinct from the private opening's64hex workspace pin.
+
+The browser/client retains the original uncertain/sealed File checkpoint and
+reads the same result on reentry. It must not silently restage, substitute a new
+ID or repeat an unknown native mutation. Recover scientific work through its
+original native task, operation, project or retained response file.
+
+After metadata retirement or a complete instance loss, edge memory alone cannot
+distinguish an old manifest from a new one; manifest acceptance is therefore not
+execution authority. Status/result reads of missing records report state loss. The original
+native journal validates immutable request identity and governs recovery. No
+seal or execution marker is inferred from a locally ready native input file.
+
+### Same-endpoint receiving
+
+Upload both current modules together while preserving the actual
+`ECO_PREVIEW_MEMORY` binding and all current deployment settings. Read health,
+then use the original connector/private configuration and one actual complete
+application registration. Follow the real private session, selected native
+projects, large upload/download and normal close/reopen course. Carry literal
+provider/runtime errors back to the original source owners.
+
+Provider operation limits are documented at
+https://developers.cloudflare.com/durable-objects/platform/pricing/ .
+This mode uses permitted compute and retains existing stored data; it does not
+represent renewed write quota or durable edge connection state.
