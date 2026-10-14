@@ -823,7 +823,10 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
                 if original is not None:
                     # Keep every original path while avoiding a second disk copy.
                     target.parent.mkdir(parents=True, exist_ok=True)
-                    _fs.publish_file(original, target)
+                    try:
+                        _fs.publish_file(original, target)
+                    except OSError:
+                        _copy_file(path, target, item)
                 else:
                     _copy_file(path, target, item)
                     captured[(item["sha256"], item["bytes"])] = target
@@ -964,24 +967,23 @@ def archive_packet(directory, destination):
     if destination.resolve().is_relative_to(directory) or destination.exists() or destination.is_symlink():
         raise ValueError("Choose a new review archive path outside its exported directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    pending = destination.parent / (".review-archive-" + destination.name + ".pending")
-    created = False
+    descriptor, name = tempfile.mkstemp(prefix=".review-archive-", suffix=".zip", dir=destination.parent)
+    pending = _fs.native_path(name)
     try:
-        with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=3,
-                             allowZip64=True) as archive:
-            created = True
-            for name in sorted(set(inspected["manifest"]["members"]) | {"review-manifest.json"}):
-                archive.write(_regular(directory, name), name)
+        with os.fdopen(descriptor, "w+b") as output:
+            with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3,
+                                 allowZip64=True) as archive:
+                for member in sorted(set(inspected["manifest"]["members"]) | {"review-manifest.json"}):
+                    archive.write(_regular(directory, member), member)
+            output.flush()
+            os.fsync(output.fileno())
         inspect_packet(pending)
-        with pending.open("rb") as stream:
-            os.fsync(stream.fileno())
         _fs.publish_file(pending, destination)
         _fs.sync_directory(destination.parent)
         return {"path": str(destination), "bytes": destination.stat().st_size,
                 "sha256": file_digest(destination), "package_sha256": inspected["manifest"]["package_sha256"]}
     finally:
-        if created:
-            pending.unlink(missing_ok=True)
+        pending.unlink(missing_ok=True)
 
 
 def receive_packet(path, destination, *, workspace=None):
