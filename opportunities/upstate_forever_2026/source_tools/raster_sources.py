@@ -163,8 +163,8 @@ def plan_dem(reference, domain, metadata_path, directory, *, vintage, layer=None
         metadata_bytes = Path(metadata_path).read_bytes()
         metadata_encoding = "gzip" if metadata_bytes.startswith(bytes((0x1F, 0x8B))) else "identity"
         decoded_metadata = gzip.decompress(metadata_bytes) if metadata_encoding == "gzip" else metadata_bytes
-        metadata = json.loads(decoded_metadata)
         metadata_filename = "original/service.json" + (".gz" if metadata_encoding == "gzip" else "")
+        metadata = json.loads(decoded_metadata)
         available = [int(metadata.get("maxImageWidth", 0)), int(metadata.get("maxImageHeight", 0))]
         if (metadata.get("bandCount") != 1 or metadata.get("pixelType") != "F32"
                 or "Image" not in metadata.get("capabilities", "")):
@@ -193,12 +193,11 @@ def plan_dem(reference, domain, metadata_path, directory, *, vintage, layer=None
         from model.common import atomic_bytes
         original_metadata = directory / metadata_filename
         atomic_bytes(original_metadata, metadata_bytes, immutable=True)
-        requests = list(_tile_requests(grid, tile_size))
         atomic_json(directory / "requests.json",
-                    {"plan_sha256": digest(plan), "tiles": requests}, immutable=True)
+                    {"plan_sha256": digest(plan), "tiles": list(_tile_requests(grid, tile_size))}, immutable=True)
         return {"schema": "upstate.3dep-plan-result/v1",
                 "directory": str(directory.resolve()), "plan_sha256": digest(plan),
-                "tile_count": len(requests), "grid": grid,
+                "tile_count": len(list(_tile_requests(grid, tile_size))), "grid": grid,
                 "uncompressed_mosaic_bytes": grid["width"] * grid["height"] * 4,
                 "metadata_file": metadata_filename,
                 "plan_file": "plan.json", "requests_file": "requests.json"}
@@ -541,7 +540,7 @@ def assemble_dem(directory, *, progress=None):
                                 rendering_rule="None", assembly="Original aligned Float32 tile values, no further resampling")
             if not valid:
                 raise ValueError("The original elevation exports contain no finite numeric cells")
-            with pending.open("rb") as handle:
+            with pending.open("r+b" if os.name == "nt" else "rb") as handle:
                 os.fsync(handle.fileno())
             _fs.replace(pending, destination)
             _fsync_directory(directory)
