@@ -297,16 +297,48 @@ def record_process_interruption(workspace, run_id, failure, *, pid):
     return True
 
 
+def _windows_storage_status(directory):
+    """Keep caller-available space distinct from whole-volume free bytes."""
+    import ctypes
+    from ctypes import wintypes
+    from .windows_fs import native_path
+
+    query = ctypes.WinDLL("kernel32", use_last_error=True).GetDiskFreeSpaceExW
+    pointer = ctypes.POINTER(ctypes.c_ulonglong)
+    query.argtypes = [wintypes.LPCWSTR, pointer, pointer, pointer]
+    query.restype = wintypes.BOOL
+    available, caller_total, free = (ctypes.c_ulonglong() for _ in range(3))
+    # This is a directory-only observation. The native path retains Unicode
+    # and extended drive/UNC spelling; UNC directory queries need the slash.
+    name = str(native_path(directory)).rstrip("\\") + "\\"
+    if not query(name, ctypes.byref(available), ctypes.byref(caller_total),
+                 ctypes.byref(free)):
+        raise ctypes.WinError(ctypes.get_last_error())
+    return {"available_bytes": available.value, "free_bytes": free.value,
+            "total_bytes": caller_total.value, "total_bytes_scope": "caller_quota",
+            "available_inodes": None, "total_inodes": None,
+            "observation": "GetDiskFreeSpaceExW"}
+
+
 def storage_status(directory):
-    """Report space available to this process on the actual run filesystem."""
+    """Observe run storage without replacing an original execution failure."""
     try:
+        if os.name == "nt":
+            return _windows_storage_status(directory)
         value = os.statvfs(directory)
         return {"available_bytes": value.f_bavail * value.f_frsize,
                 "free_bytes": value.f_bfree * value.f_frsize,
                 "total_bytes": value.f_blocks * value.f_frsize,
                 "available_inodes": value.f_favail, "total_inodes": value.f_files}
-    except OSError as exc:
-        return {"error": {"type": type(exc).__name__, "message": str(exc)}}
+    except Exception as exc:
+        # Storage is advisory, just like resource_status. An unavailable
+        # platform observer must not mask a model error in NativeExecution.fail.
+        error = {"type": type(exc).__name__, "message": str(exc)}
+        for name in ("errno", "winerror"):
+            value = getattr(exc, name, None)
+            if value is not None:
+                error[name] = value
+        return {"error": error}
 
 
 def storage_exhausted(error):
@@ -317,8 +349,9 @@ def storage_exhausted(error):
         failure = getattr(error, "native_failure", None)
         if isinstance(failure, dict) and failure.get("kind") == "storage_exhausted":
             return True
-        if isinstance(error, OSError) and error.errno in (
-                errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC)):
+        if isinstance(error, OSError) and (
+                error.errno in (errno.ENOSPC, getattr(errno, "EDQUOT", errno.ENOSPC))
+                or getattr(error, "winerror", None) in (39, 112)):
             return True
         message = str(error).lower()
         if "no space left on device" in message or "disk quota exceeded" in message:
