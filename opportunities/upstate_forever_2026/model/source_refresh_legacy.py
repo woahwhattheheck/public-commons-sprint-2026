@@ -17,6 +17,9 @@ import html
 import io
 import json
 import sqlite3
+
+from . import portable_databases as _db
+from . import portable_fs as _fs
 from pathlib import Path
 from typing import Any, Callable, Mapping
 
@@ -285,12 +288,16 @@ class SourceRefresh:
 
     def state(self, plan_id):
         plan = self.get(plan_id)
-        path = self._state_path(plan_id)
+        path = _fs.native_path(self._state_path(plan_id))
         empty = {"schema": STATE_SCHEMA, "plan_id": plan["id"], "status": "planned",
                  "steps": {}, "created_at": now(), "updated_at": now()}
         if not path.exists():
             return empty
-        with closing(sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)) as db:
+        # Reopen the same original checkpoint using the native SQLite VFS.
+        # A URI derived from WindowsPath.as_uri() loses the extended-length
+        # path contract used by the rest of this received workbench.
+        with closing(sqlite3.connect(_db._database_uri(path, "ro"),
+                                     uri=True, timeout=30)) as db:
             db.execute("BEGIN")
             row = db.execute("SELECT body FROM header WHERE singleton=1").fetchone()
             if row is None:
@@ -304,8 +311,12 @@ class SourceRefresh:
 
     @staticmethod
     def _open_state(path):
+        path = _fs.native_path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
-        db = sqlite3.connect(path, timeout=30)
+        # Match the exact native SQLite VFS used by the workspace backup and
+        # receiving engine. This preserves deep, Unicode and spaced Windows
+        # checkpoint directories without rewriting an existing database.
+        db = sqlite3.connect(_db._database_uri(path, "rwc"), uri=True, timeout=30)
         # Rollback-journal mode gives the native backup one closed, ordinary file.
         # Header + active step commit together; no growing whole-state rewrites.
         db.execute("PRAGMA journal_mode=DELETE")
