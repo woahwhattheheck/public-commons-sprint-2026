@@ -1563,6 +1563,32 @@ ALLOWED = ALLOWED | frozenset({
     "operator/web/profile_workbench.mjs",
 })
 
+# Approved native platform and complete original-table source cohorts.
+# Optional admission only; REQUIRED and all source/preimage checks remain unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "integration/component_fragments/native-helpers.json",
+    "integration/component_fragments/original-table-explorer.json",
+    "model/client_source_rows.py",
+    "model/macos_process.py",
+    "model/native_supervision.py",
+    "model/portable_fs.py",
+    "model/windows_process.py",
+    "operator/web/client_source_rows.mjs",
+    "source_tools/NATIVE_HELPERS.md",
+    "source_tools/build_bootstrap_payloads.py",
+    "source_tools/matched_control_exact.py",
+    "source_tools/native_helpers.py",
+    "source_tools/native_runtime/macos_bundle.py",
+    "source_tools/native_runtime/platform_runtime.py",
+    "source_tools/receiving_process.py",
+    "source_tools/runtime_platform.py",
+    "integration/component_fragments/native-payload-completion.json",
+    "model/portable_reopening.py",
+    "source_tools/NATIVE_PAYLOAD_COMPLETION.md",
+    "source_tools/native_runtime/binary_dependencies.py",
+    "source_tools/native_runtime/payload_closure.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
