@@ -1,4 +1,5 @@
 /* Ecosystem HTTPS transport v1. Edge metadata only; original native operator remains authoritative. */
+import {previewStorage,signPreviewSession,readPreviewSession,PreviewStateError} from "./preview_storage.mjs";
 const VERSION = "upstate.eco-relay/v1";
 const CHUNK_BYTES = 1048576;
 const META_BYTES = 65536;
@@ -122,7 +123,7 @@ function pending(record) {
 function metadata(record) {
   const {id,method,path,headers,body_bytes,body_sha256,input_offset,sealed,state,
     response_offset,response,connector_instance,error,created,updated}=record;
-  return {schema:VERSION,id,method,path,headers,body_bytes,body_sha256,input_offset,sealed,
+  return {schema:VERSION,transport_epoch:record.transport_epoch||null,id,method,path,headers,body_bytes,body_sha256,input_offset,sealed,
     state,response_offset,response,connector_instance,error,created,updated,chunk_bytes:CHUNK_BYTES};
 }
 function nonceHTML(body,script="") {
@@ -148,165 +149,11 @@ function deploymentEnv(env) {
   };
 }
 
-
-function writeQuota(error) {
-  return /Exceeded allowed rows written in Durable Objects free tier/i.test(String(error?.message||error));
-}
-
-// Native files and execution journals remain durable. This overlay retains only
-// connection metadata when the provider refuses writes to the existing namespace.
-class RelayMetadata {
-  constructor(storage) {
-    this.storage=storage;this.sql=storage.sql;this.ephemeral=false;this.inTransaction=false;
-    this.requests=new Map();this.chunks=new Map();this.sessions=new Map();this.lost=new Set();
-    this.routes=null;this.polled=new Map();this.bytes=0;this.sizes=new Map();
-    try {
-      this.sql.exec("CREATE TABLE IF NOT EXISTS relay_requests (id TEXT PRIMARY KEY,state TEXT NOT NULL,updated INTEGER NOT NULL,last_polled INTEGER NOT NULL DEFAULT 0,record TEXT NOT NULL)");
-      this.sql.exec("CREATE TABLE IF NOT EXISTS relay_chunks (id TEXT NOT NULL,side TEXT NOT NULL,offset INTEGER NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,PRIMARY KEY(id,side,offset))");
-      this.sql.exec("CREATE TABLE IF NOT EXISTS relay_sessions (digest TEXT PRIMARY KEY,epoch TEXT NOT NULL,expires INTEGER NOT NULL)");
-      this.sql.exec("CREATE TABLE IF NOT EXISTS relay_routes (method TEXT NOT NULL,path TEXT NOT NULL,PRIMARY KEY(method,path))");
-    } catch(error) {if(!writeQuota(error))throw error;this.ephemeral=true;}
-  }
-  read(query,...values) {
-    try {return this.sql.exec(query,...values).toArray();}
-    catch(error) {
-      // The very first CREATE can fail before any of these new tables exists.
-      if(this.ephemeral&&/no such table:\s*relay_(requests|chunks|sessions|routes)\b/i.test(String(error?.message||error)))return [];
-      throw error;
-    }
-  }
-  write(run,remember) {
-    if(!this.ephemeral) {
-      try {return run();}
-      catch(error) {
-        if(!writeQuota(error))throw error;
-        if(this.inTransaction)throw error;
-        this.ephemeral=true;
-      }
-    }
-    return remember();
-  }
-  transaction(run) {
-    if(this.ephemeral)return run();
-    try {this.inTransaction=true;return this.storage.transactionSync(run);}
-    catch(error) {if(!writeQuota(error))throw error;this.ephemeral=true;}
-    finally {this.inTransaction=false;}
-    // SQL rolled back atomically; the same metadata operation is safe in memory.
-    return run();
-  }
-  reserve(key,value) {
-    const size=value===null?64:JSON.stringify(value).length*2+256;
-    let after=this.bytes-(this.sizes.get(key)||0)+size;
-    // Release old terminal connection metadata; original outcomes remain native.
-    // Active bodies/requests are never evicted to admit another connection.
-    if(after>24*1024*1024) {
-      for(const [id,text] of this.requests) {
-        if(key==="request:"+id||!TERMINAL.has(JSON.parse(text).state))continue;
-        this.requests.delete(id);this.polled.delete(id);this.forget("request:"+id);
-        if(!this.lost.has(id)){this.lost.add(id);this.sizes.set("lost:"+id,256);this.bytes+=256;}
-        for(const chunkKey of this.chunks.keys())if(JSON.parse(chunkKey)[0]===id) {
-          this.chunks.delete(chunkKey);this.forget("chunk:"+chunkKey);
-        }
-        after=this.bytes-(this.sizes.get(key)||0)+size;
-        if(after<=24*1024*1024)break;
-      }
-    }
-    // Physical cache backpressure; no whole-body spool or file-size ceiling.
-    if(after>24*1024*1024)problem(503,"TRANSPORT_BACKPRESSURE","The connection metadata cache is full; retain the original request and native journal.");
-    this.bytes=after;this.sizes.set(key,size);
-  }
-  forget(key) {this.bytes-=this.sizes.get(key)||0;this.sizes.delete(key);}
-  request(id) {
-    if(this.lost.has(id))return null;
-    const saved=this.requests.get(id);
-    if(saved!==undefined)return JSON.parse(saved);
-    const row=this.read("SELECT record FROM relay_requests WHERE id=?",id)[0];
-    return row?JSON.parse(row.record):null;
-  }
-  save(record) {
-    const value=JSON.stringify(record);
-    return this.write(()=>this.sql.exec("INSERT INTO relay_requests(id,state,updated,record) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,updated=excluded.updated,record=excluded.record",
-      record.id,record.state,record.updated,value),()=>{
-      this.reserve("request:"+record.id,value);this.requests.set(record.id,value);
-    });
-  }
-  chunk(id,side,offset) {
-    const key=JSON.stringify([id,side,offset]);
-    return this.chunks.get(key)||this.read("SELECT bytes,sha256 FROM relay_chunks WHERE id=? AND side=? AND offset=?",id,side,offset)[0]||null;
-  }
-  saveChunk(id,side,offset,bytes,sha256) {
-    const key=JSON.stringify([id,side,offset]),value={bytes,sha256};
-    const existing=this.chunk(id,side,offset);
-    if(existing) {
-      if(existing.bytes!==bytes||existing.sha256!==sha256)problem(409,"CHUNK_CONFLICT","The original chunk metadata differs.");
-      return;
-    }
-    return this.write(()=>this.sql.exec("INSERT INTO relay_chunks(id,side,offset,bytes,sha256) VALUES(?,?,?,?,?) ON CONFLICT(id,side,offset) DO NOTHING",id,side,offset,bytes,sha256),
-      ()=>{this.reserve("chunk:"+key,value);this.chunks.set(key,value);});
-  }
-  session(digest) {
-    if(this.sessions.has(digest))return this.sessions.get(digest);
-    return this.read("SELECT epoch,expires FROM relay_sessions WHERE digest=?",digest)[0]||null;
-  }
-  addSession(digest,epoch,expires) {
-    return this.write(()=>this.sql.exec("INSERT INTO relay_sessions(digest,epoch,expires) VALUES(?,?,?)",digest,epoch,expires),
-      ()=>{const value={epoch,expires};this.reserve("session:"+digest,value);this.sessions.set(digest,value);});
-  }
-  deleteSession(digest) {
-    return this.write(()=>this.sql.exec("DELETE FROM relay_sessions WHERE digest=?",digest),
-      ()=>{this.reserve("session:"+digest,null);this.sessions.set(digest,null);});
-  }
-  pruneSessions(now) {
-    if(!this.ephemeral)this.write(()=>this.sql.exec("DELETE FROM relay_sessions WHERE expires<?",now),()=>{});
-    for(const [digest,value] of this.sessions)if(value&&value.expires<=now) {
-      this.sessions.delete(digest);this.forget("session:"+digest);
-    }
-  }
-  hasRoute(method,path) {
-    return this.routes?this.routes.has(JSON.stringify([method,path])):
-      this.read("SELECT path FROM relay_routes WHERE method=? AND path=?",method,path).length>0;
-  }
-  replaceRoutes(rows) {
-    const value=new Set(rows.map(row=>JSON.stringify(row)));
-    this.transaction(()=>this.write(()=>{
-      this.sql.exec("DELETE FROM relay_routes");
-      for(const row of rows)this.sql.exec("INSERT OR IGNORE INTO relay_routes(method,path) VALUES(?,?)",...row);
-    },()=>{this.reserve("routes",[...value]);this.routes=value;}));
-  }
-  candidates(liveInputs,excluded) {
-    const excludeClause=excluded.length?" AND id NOT IN ("+excluded.map(()=>"?").join(",")+")":"";
-    const inputClause=liveInputs.length?" OR id IN ("+liveInputs.map(()=>"?").join(",")+")":"";
-    const merged=new Map();let offset=0;
-    for(;;) {
-      const rows=this.read("SELECT record,last_polled FROM relay_requests WHERE (state IN ('queued','executing','responding')"+inputClause+")"+excludeClause+" ORDER BY last_polled ASC LIMIT 64 OFFSET ?",...liveInputs,...excluded,offset);
-      for(const row of rows) {
-        const record=JSON.parse(row.record);
-        if(!this.requests.has(record.id)&&!this.lost.has(record.id))merged.set(record.id,{record,last_polled:row.last_polled});
-      }
-      if(rows.length<64||merged.size>=64)break;
-      offset+=64;
-    }
-    const live=new Set(liveInputs),skip=new Set(excluded);
-    for(const [id,value] of this.requests) {
-      const record=JSON.parse(value);
-      if(!skip.has(id)&&(["queued","executing","responding"].includes(record.state)||live.has(id)))
-        merged.set(id,{record,last_polled:this.polled.get(id)||0});
-      else merged.delete(id);
-    }
-    return [...merged.values()].sort((a,b)=>(this.polled.get(a.record.id)||a.last_polled)-(this.polled.get(b.record.id)||b.last_polled)).slice(0,64).map(row=>row.record);
-  }
-  touched(id) {
-    const now=timestamp();
-    return this.write(()=>this.sql.exec("UPDATE relay_requests SET last_polled=? WHERE id=?",now,id),
-      ()=>this.polled.set(id,now));
-  }
-  mode() {return this.ephemeral?"ephemeral-native-journal":"sqlite";}
-}
-
 export class EcoRelay {
   constructor(ctx,env) {
-    this.ctx=ctx; this.env=deploymentEnv(env); this.store=new RelayMetadata(ctx.storage);this.nativePin=null;
-    this.nativePinReady=ctx.storage.get("native-workspace-binding").then(value=>{this.nativePin=value||null;});
+    this.preview=env.ECO_PREVIEW_MEMORY==="true";this.transportEpoch=randomToken();this.previewRevoked=new Set();this.previewRegistered=false;
+    const storage=this.preview?previewStorage(ctx.storage):ctx.storage;
+    this.ctx=this.preview?{storage}:ctx; this.env=deploymentEnv(env); this.sql=storage.sql;
     // Existing deployment secret names remain authoritative; derive digests privately.
     this.credentialsReady=(async()=>{
       if(typeof env.RECIPIENT_TOKEN==="string"&&env.RECIPIENT_TOKEN)
@@ -315,22 +162,21 @@ export class EcoRelay {
         this.env.ECO_CONNECTOR_TOKEN_SHA256=await sha256(env.CONNECTOR_TOKEN);
     })();
     this.inputs=new Map(); this.outputs=new Map(); this.readers=new Map(); this.waiters=new Map();
+    this.sql.exec("CREATE TABLE IF NOT EXISTS relay_requests (id TEXT PRIMARY KEY,state TEXT NOT NULL,updated INTEGER NOT NULL,last_polled INTEGER NOT NULL DEFAULT 0,record TEXT NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS relay_chunks (id TEXT NOT NULL,side TEXT NOT NULL,offset INTEGER NOT NULL,bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,PRIMARY KEY(id,side,offset))");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS relay_sessions (digest TEXT PRIMARY KEY,epoch TEXT NOT NULL,expires INTEGER NOT NULL)");
+    this.sql.exec("CREATE TABLE IF NOT EXISTS relay_routes (method TEXT NOT NULL,path TEXT NOT NULL,PRIMARY KEY(method,path))");
   }
   load(id) {
     if(!ID_RE.test(id)) problem(400,"REQUEST_ID","Use the original valid request identifier.");
-    return this.store.request(id);
+    const row=this.sql.exec("SELECT record FROM relay_requests WHERE id=?",id).toArray()[0];
+    return row?JSON.parse(row.record):null;
   }
-  require(id) {
-    const record=this.load(id);
-    if(!record) {
-      if(this.store.ephemeral)problem(409,"EDGE_STATE_LOST","This connection no longer has the original request state. Reconcile the same native journal/task; do not replay an unknown write.");
-      problem(404,"REQUEST_MISSING","This original request is not retained.");
-    }
-    return record;
-  }
+  require(id) { const record=this.load(id); if(!record) problem(this.preview?409:404,this.preview?"PREVIEW_STATE_LOST":"REQUEST_MISSING",this.preview?"Preview connection state is unavailable. Reconcile this SAME original operation/task against the native durable journal; never repeat an unknown mutation.":"This original request is not retained."); return record; }
   save(record) {
     record.updated=timestamp();
-    this.store.save(record);
+    this.sql.exec("INSERT INTO relay_requests(id,state,updated,record) VALUES(?,?,?,?) ON CONFLICT(id) DO UPDATE SET state=excluded.state,updated=excluded.updated,record=excluded.record",
+      record.id,record.state,record.updated,JSON.stringify(record));
     this.wake(record.id); this.wake("poll");
     return record;
   }
@@ -345,10 +191,10 @@ export class EcoRelay {
     });
   }
   chunk(id,side,offset) {
-    return this.store.chunk(id,side,offset);
+    return this.sql.exec("SELECT bytes,sha256 FROM relay_chunks WHERE id=? AND side=? AND offset=?",id,side,offset).toArray()[0]||null;
   }
   saveChunk(id,side,offset,bytes,digest) {
-    this.store.saveChunk(id,side,offset,bytes,digest);
+    this.sql.exec("INSERT INTO relay_chunks(id,side,offset,bytes,sha256) VALUES(?,?,?,?,?) ON CONFLICT(id,side,offset) DO NOTHING",id,side,offset,bytes,digest);
   }
   origin(request,required=false) {
     const expected=canonicalOrigin(this.env.ECO_PUBLIC_ORIGIN||"");
@@ -375,9 +221,10 @@ export class EcoRelay {
     const cookie=(request.headers.get("cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(SESSION_COOKIE+"="));
     if(!cookie) return null;
     const value=cookie.slice(SESSION_COOKIE.length+1);
+    if(this.preview){if(this.previewRevoked.has(await sha256(value)))return null;return await readPreviewSession(value,this.env.RECIPIENT_TOKEN,this.env.ECO_RECIPIENT_TOKEN_SHA256,this.transportEpoch)?"recipient":null;}
     if(!TOKEN_RE.test(value)) return null;
     const digest=await sha256(value);
-    const row=this.store.session(digest);
+    const row=this.sql.exec("SELECT epoch,expires FROM relay_sessions WHERE digest=?",digest).toArray()[0];
     return row&&row.expires>timestamp()&&same(row.epoch,this.env.ECO_RECIPIENT_TOKEN_SHA256)?"recipient":null;
   }
   async connector(request) {
@@ -394,13 +241,12 @@ export class EcoRelay {
     if(method==="GET"&&(pathname==="/"||pathname==="/health"||pathname==="/favicon.ico"||
       /^\/web\/[A-Za-z0-9_./-]+$/.test(pathname)||validFilePathname(pathname))) return true;
     if(CORE_ROUTES.some(row=>row[0]===method&&row[1]===pathname)) return true;
-    return this.store.hasRoute(method,pathname);
+    return this.sql.exec("SELECT path FROM relay_routes WHERE method=? AND path=?",method,pathname).toArray().length>0;
   }
   create(spec) {
     if(!spec||typeof spec!=="object"||Array.isArray(spec)) problem(400,"REQUEST_METADATA","Use complete request metadata.");
     const id=spec.id||crypto.randomUUID();
     if(!ID_RE.test(id))problem(400,"REQUEST_ID","Use an 8–128 character request identifier.");
-    if(this.store.lost.has(id))problem(409,"EDGE_STATE_LOST","This original connection state was released. Reconcile its native journal/task before another write.");
     const method=String(spec.method||"").toUpperCase(),path=cleanPath(spec.path);
     if(!this.allowed(method,path))problem(403,"ROUTE_REJECTED","This method and path are not in the original operator route manifest.");
     const headers=selectedHeaders(spec.headers,REQUEST_HEADERS);
@@ -415,14 +261,21 @@ export class EcoRelay {
     }
     const record={id,...immutable,request_identity:JSON.stringify(immutable),input_offset:0,
       sealed:body_bytes===0,state:body_bytes===0?"queued":"receiving",response_offset:0,
-      created:timestamp(),updated:timestamp(),principal:"recipient",response_demand:false};
+      created:timestamp(),updated:timestamp(),principal:"recipient",response_demand:false,transport_epoch:this.transportEpoch};
     return {record:this.save(record),reused:false};
+  }
+  assertInputOutcome(record) {
+    if(record.state==="uncertain") {
+      const error=new RelayError(409,"UPSTREAM_UNCERTAIN","Reconcile this same original native operation/task before another write.");
+      error.id=record.id;error.recovery=record.error;throw error;
+    }
+    if(record.state==="failed")problem(502,"RELAY_FAILED","The original native request failed; inspect its retained outcome.");
   }
   async input(id,offset,bytes,digest) {
     let record;
     if(bytes.byteLength===0||bytes.byteLength>CHUNK_BYTES)problem(400,"CHUNK_SIZE","Send a nonempty binary chunk of at most 1 MiB.");
     if(!TOKEN_RE.test(digest||"")||!same(await sha256(bytes),digest))problem(422,"CHUNK_HASH","The binary chunk SHA-256 does not match.");
-    record=this.require(id);
+    record=this.require(id);this.assertInputOutcome(record);
     if(offset<record.input_offset) {
       const old=this.chunk(id,"input",offset);
       if(!old||old.bytes!==bytes.byteLength||!same(old.sha256,digest))problem(409,"CHUNK_CONFLICT","Previously received bytes differ.");
@@ -444,7 +297,7 @@ export class EcoRelay {
     }
     const deadline=timestamp()+25000;
     while(timestamp()<deadline) {
-      record=this.require(id);
+      record=this.require(id);this.assertInputOutcome(record);
       if(record.input_offset>=offset+bytes.byteLength)
         return {id,input_offset:offset+bytes.byteLength,bytes:bytes.byteLength,sha256:digest};
       await this.wait(id,Math.max(1,deadline-timestamp()));
@@ -462,7 +315,7 @@ export class EcoRelay {
     const staged=this.chunk(id,"staged_input",offset);
     if(!staged||offset!==record.input_offset||staged.bytes!==count||staged.sha256!==value.sha256)
       problem(409,"ACK_CONFLICT","Acknowledge exactly the retained original input chunk.");
-    this.store.transaction(()=>{
+    this.ctx.storage.transactionSync(()=>{
       this.saveChunk(id,"input",offset,count,value.sha256);
       record.input_offset=offset+count;
       if(record.direct_auto_seal&&record.input_offset===record.body_bytes){record.sealed=true;record.state="queued";}
@@ -548,9 +401,9 @@ export class EcoRelay {
           current=self.require(id);
           if(slot.offset!==current.response_offset)throw new Error("Original response offset changed");
           controller.enqueue(slot.bytes);
-          self.store.transaction(()=>{
+          self.ctx.storage.transactionSync(()=>{
             self.saveChunk(id,"response",slot.offset,slot.bytes.byteLength,slot.sha256);
-            current.response_offset=slot.offset+slot.bytes.byteLength;self.save(current);
+            current.response_offset+=slot.bytes.byteLength;self.save(current);
           });
           self.outputs.delete(id);self.wake(id);
         } catch(error) {
@@ -583,7 +436,7 @@ export class EcoRelay {
       }
       const bound=!!(this.env.NATIVE_WORKSPACE_KEY||await storage.get("native-workspace-binding"));
       return json({schema:VERSION,operator_id:this.env.ECO_OPERATOR_ID,legacy_states:counts,
-        native_workspace_bound:bound,legacy_storage_preserved:true});
+        native_workspace_bound:bound,legacy_storage_preserved:true,transport_epoch:this.transportEpoch,transport_persistence:this.preview?"memory-preview-native-journal-authoritative":"durable-edge-metadata"});
     }
     if(path==="/_eco/v1/connector/register"&&method==="POST") {
       const value=await readJSON(request);
@@ -598,36 +451,32 @@ export class EcoRelay {
           problem(400,"ROUTE_MANIFEST","Register only exact installed application methods/routes and GET pages/assets.");
         return [method,path];
       });
-      await this.nativePinReady;
-      const expected=this.env.NATIVE_WORKSPACE_KEY||this.nativePin;
-      if(expected&&expected!==value.native_workspace_key)
-        problem(409,"NATIVE_WORKSPACE","The transport is bound to a different original native workspace.");
-      // Pin before await so simultaneous registrations cannot select two natives.
-      this.nativePin=value.native_workspace_key;
-      if(!this.store.ephemeral) {
-        try {
-          await this.ctx.storage.transaction(async transaction=>{
-            const stored=await transaction.get("native-workspace-binding");
-            const pinned=this.env.NATIVE_WORKSPACE_KEY||stored;
-            if(pinned&&pinned!==value.native_workspace_key)
-              problem(409,"NATIVE_WORKSPACE","The transport is bound to a different original native workspace.");
-            if(!stored)await transaction.put("native-workspace-binding",value.native_workspace_key);
-          });
-        } catch(error) {if(!writeQuota(error))throw error;this.store.ephemeral=true;}
-      }
-      this.store.replaceRoutes(rows);
+      await this.ctx.storage.transaction(async transaction=>{
+        const stored=await transaction.get("native-workspace-binding");
+        const expected=this.env.NATIVE_WORKSPACE_KEY||stored;
+        if(expected&&expected!==value.native_workspace_key)
+          problem(409,"NATIVE_WORKSPACE","The transport is bound to a different original native workspace.");
+        if(!stored)await transaction.put("native-workspace-binding",value.native_workspace_key);
+      });
+      this.ctx.storage.transactionSync(()=>{this.sql.exec("DELETE FROM relay_routes");for(const row of rows)this.sql.exec("INSERT OR IGNORE INTO relay_routes(method,path) VALUES(?,?)",...row);});
+      this.previewRegistered=true;
       return json({schema:VERSION,registered:rows.length,chunk_bytes:CHUNK_BYTES,operator_id:this.env.ECO_OPERATOR_ID,
-        transport_state:this.store.mode(),native_journal_authoritative:true});
+        transport_epoch:this.transportEpoch,transport_persistence:this.preview?"memory-preview-native-journal-authoritative":"durable-edge-metadata"});
     }
     if(path==="/_eco/v1/connector/poll"&&method==="GET") {
+      if(this.preview&&!this.previewRegistered)
+        problem(409,"REGISTRATION_REQUIRED","Register this same native instance, workspace pin and installed route manifest after the connection reset.");
       const requested=Number(url.searchParams.get("wait")||20),wait=Math.min(20,Math.max(0,Number.isFinite(requested)?requested:20));
       const excluded=[...new Set((url.searchParams.get("exclude")||"").split(",").filter(Boolean))];
       if(excluded.length>64||excluded.some(id=>!ID_RE.test(id)))problem(400,"POLL_EXCLUDE","Exclude at most 64 original active request IDs.");
+      const excludeClause=excluded.length?" AND id NOT IN ("+excluded.map(()=>"?").join(",")+")":"";
       const deadline=timestamp()+wait*1000;
       do {
         const liveInputs=[...this.inputs.keys()];
-        const rows=this.store.candidates(liveInputs,excluded);
-        for(const record of rows) {
+        const inputClause=liveInputs.length?" OR id IN ("+liveInputs.map(()=>"?").join(",")+")":"";
+        const rows=this.sql.exec("SELECT record FROM relay_requests WHERE (state IN ('queued','executing','responding')"+inputClause+")"+excludeClause+" ORDER BY last_polled ASC LIMIT 64",...liveInputs,...excluded).toArray();
+        for(const row of rows) {
+          const record=JSON.parse(row.record);
           if(!record.response&&!record.sealed&&!this.inputs.has(record.id))continue;
           if(record.response) {
             if(record.response_demand&&!this.readers.has(record.id)) {
@@ -635,7 +484,7 @@ export class EcoRelay {
             }
             if(!record.response_demand)continue;
           }
-          this.store.touched(record.id);
+          this.sql.exec("UPDATE relay_requests SET last_polled=? WHERE id=?",timestamp(),record.id);
           return json(metadata(record));
         }
         if(timestamp()>=deadline)break;
@@ -679,7 +528,10 @@ export class EcoRelay {
       record.state="uncertain";record.error={
         code:String(value.code||"UPSTREAM_UNCERTAIN").slice(0,100),
         message:String(value.message||"The original upstream outcome requires reconciliation.").slice(0,800),
-        ...(typeof value.task_id==="string"?{task_id:value.task_id.slice(0,200)}:{})};
+        ...(TOKEN_RE.test(value.task_id||"")?{task_id:value.task_id}:{}),
+        ...(/^[A-Za-z0-9_-]{16,100}$/.test(value.operation_id||"")?{operation_id:value.operation_id}:{}),
+        ...(/^[A-Za-z0-9_-]{1,200}$/.test(value.workspace||"")?{workspace:value.workspace}:{}),
+        ...(TOKEN_RE.test(value.task_id||"")&&value.lookup_path==="/api/task?id="+value.task_id?{lookup_path:value.lookup_path}:{})};
       this.save(record);return json(metadata(record));
     }
     if(action==="response"&&method==="POST") {
@@ -762,12 +614,10 @@ export class EcoRelay {
   async fetch(request) {
     try {
       await this.credentialsReady;
-      await this.nativePinReady;
       this.origin(request,false);
       const url=new URL(request.url),path=url.pathname;
       if(path==="/_eco/health"&&request.method==="GET")
-        return json({service:"Ecosystem private transport",schema:VERSION,chunk_bytes:CHUNK_BYTES,
-          transport_state:this.store.mode(),native_journal_authoritative:true});
+        return json({service:"Ecosystem private transport",schema:VERSION,chunk_bytes:CHUNK_BYTES,transport_epoch:this.transportEpoch,transport_persistence:this.preview?"memory-preview-native-journal-authoritative":"durable-edge-metadata"});
       if(path==="/_eco/login"&&request.method==="GET")
         return nonceHTML("<h1>Ecosystem workbench</h1><p>Enter the private workbench access token.</p>"+
           "<form method=\"post\" action=\"/_eco/login\"><label for=\"access\">Access token</label>"+
@@ -778,9 +628,9 @@ export class EcoRelay {
         const value=new URLSearchParams(new TextDecoder().decode(await readLimited(request,8192))).get("token")||"";
         if(!TOKEN_RE.test(this.env.ECO_RECIPIENT_TOKEN_SHA256||"")||!same(await sha256(value),this.env.ECO_RECIPIENT_TOKEN_SHA256))
           problem(401,"RECIPIENT_AUTH","The private workbench access token was not accepted.");
-        const token=randomToken(),digest=await sha256(token),expiry=timestamp()+28800000;
-        this.store.pruneSessions(timestamp());
-        this.store.addSession(digest,this.env.ECO_RECIPIENT_TOKEN_SHA256,expiry);
+        const expiry=timestamp()+28800000;
+        const token=this.preview?await signPreviewSession({expires:expiry,epoch:this.env.ECO_RECIPIENT_TOKEN_SHA256,transport_epoch:this.transportEpoch,nonce:randomToken()},this.env.RECIPIENT_TOKEN):randomToken();
+        if(!this.preview){const digest=await sha256(token);this.sql.exec("DELETE FROM relay_sessions WHERE expires<?",timestamp());this.sql.exec("INSERT INTO relay_sessions(digest,epoch,expires) VALUES(?,?,?)",digest,this.env.ECO_RECIPIENT_TOKEN_SHA256,expiry);}
         const response=nonceHTML("<h1>Opening workbench</h1><p>Your private session is connected.</p>",
           "sessionStorage.setItem('upstate-operator-capability','eco-edge-session');location.replace('/');");
         response.headers.set("Set-Cookie",SESSION_COOKIE+"="+token+"; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=28800");
@@ -795,15 +645,17 @@ export class EcoRelay {
       }
       if((path==="/_eco/logout"||path==="/api/logout")&&request.method==="POST") {
         const cookie=(request.headers.get("cookie")||"").split(";").map(x=>x.trim()).find(x=>x.startsWith(SESSION_COOKIE+"="));
-        if(cookie)this.store.deleteSession(await sha256(cookie.slice(SESSION_COOKIE.length+1)));
+        if(cookie){const digest=await sha256(cookie.slice(SESSION_COOKIE.length+1));if(this.preview)this.previewRevoked.add(digest);else this.sql.exec("DELETE FROM relay_sessions WHERE digest=?",digest);}
         return json({connected:false},200,{"Set-Cookie":SESSION_COOKIE+"=; Path=/; Secure; HttpOnly; SameSite=Strict; Max-Age=0"});
       }
       return await this.publicRoute(request,url);
     } catch(error) {
-      if(error instanceof RelayError) {
-        const lost=error.code==="EDGE_STATE_LOST",id=new URL(request.url).pathname.match(/\/requests\/([A-Za-z0-9_-]{8,128})(?:\/|$)/)?.[1]||request.headers.get("X-Eco-Request-ID");
-        return json({schema:VERSION,code:error.code,message:error.message,...(id?{id}:{})},error.status,
-          {"X-Eco-Transport-Error":error.code,...(lost?{"X-Eco-Uncertain":"1",...(id?{"X-Eco-Request-ID":id}:{})}:{})});
+      if(error instanceof RelayError||error instanceof PreviewStateError) {
+        const uncertain=["PREVIEW_STATE_LOST","EDGE_STATE_LOST","UPSTREAM_UNCERTAIN"].includes(error.code);
+        const candidate=error.id||new URL(request.url).pathname.match(/\/requests\/([A-Za-z0-9_-]{8,128})(?:\/|$)/)?.[1]||request.headers.get("X-Eco-Request-ID");
+        const id=ID_RE.test(candidate||"")?candidate:null;
+        return json({schema:VERSION,code:error.code,message:error.message,...(id?{id}:{}),...(error.recovery?{error:error.recovery}:{})},error.status,
+          {"X-Eco-Transport-Error":error.code,...(id?{"X-Eco-Request-ID":id}:{}),...(uncertain?{"X-Eco-Uncertain":"1"}:{})});
       }
       return json({schema:VERSION,code:"RELAY_INTERNAL",message:"The retained request can be reconciled through its original identifier."},500,{"X-Eco-Transport-Error":"RELAY_INTERNAL"});
     }

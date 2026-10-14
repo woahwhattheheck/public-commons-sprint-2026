@@ -5,7 +5,8 @@
   "workers_dev": true,
   "vars": {
     "PUBLIC_ORIGIN": "https://eco-workbench.tjlabs-publisher.workers.dev",
-    "WORKSPACE_KEY": "tim-workbench"
+    "WORKSPACE_KEY": "tim-workbench",
+    "ECO_PREVIEW_MEMORY": "true"
   },
   "durable_objects": {
     "bindings": [
