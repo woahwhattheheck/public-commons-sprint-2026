@@ -59,7 +59,13 @@ The writer creates new files or reuses identical files and refuses to replace a 
 
 ## State and recovery
 
-The browser retains a complete working copy under the configured storage key when browser storage is available. A storage failure leaves the in-memory work selected and visibly asks the operator to download it. The downloadable working file is the portable source of continuity. Opening another complete desk first stages it; adoption archives the current full editor. Original requests in the core are idempotent and bound to expected revision plus complete mutation input.
+Each open page retains its own complete draft journal before publishing the shared browser copy. When another page has saved a different copy, the current editor stays selected and its full draft remains separate. The recovery panel shows the shared copy, other page journals and retained predecessors. Choose **Continue as independent draft** to keep editing without replacing the shared copy; choose **Open current browser copy** to retain the displaced full draft and select the latest shared copy. **Use this draft as current browser copy** deliberately publishes the selected draft while preserving the complete displaced predecessor.
+
+Browser localStorage has no atomic compare-and-swap. The independent journals preserve each page even if two writes overlap; a later page can stage and reopen either complete journal. The desk observes actual storage events and checks the shared head immediately before and after publication. A storage or quota failure leaves work open, displays a warning and offers the complete working-file download. Download before closing when the browser cannot retain the latest draft.
+
+Browser-generated predecessors use a flat content-addressed recovery archive. Their complete editor, workspace, source history, comparison pair and unfinished notes remain in snapshots; older recovery entries are referenced by SHA rather than recursively embedded. A saved or downloaded working file carries the whole archive. Opening a retained snapshot resolves its complete earlier recovery records. External imported files remain verbatim originals, with the exact UTF-8 body and hash retained.
+
+Opening another complete desk first stages it; adoption archives the current full editor. Draft source mappings, unit-editor text, comparison reviews and unfinished narrative stay in their original editor. Inputs and textareas are disabled during an awaited file operation so an in-flight import cannot discard newly typed text. Original requests in the core remain idempotent and bound to expected revision plus complete mutation input.
 
 The source checker reports data readiness only. Physical stock, engineering revisions and effectivity, reservations, serial/lot policy, scrap, valuation, target ERP import rules and production cutover remain decisions of the implementation lead. No ERP write, purchasing or inventory mutation is performed by this desk.
 
