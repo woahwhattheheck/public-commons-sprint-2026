@@ -90,6 +90,131 @@ def source_files():
         rows.append({"path":name,**measured(path)})
     return rows
 
+
+# Source updates retain the complete original program alongside each explicitly
+# adopted runtime. Calculation/import engines remain byte-identical in this
+# update family; HTTP, presentation and workspace continuation can evolve.
+SOURCE_UPDATE = "tjlabs.forms-workspace.source-update.v1"
+UPDATABLE = frozenset(WORKSPACE_FILES) | {"forms_server.py","forms_report.py"}
+
+def check_source(directory,selection):
+    directory=Path(directory)
+    require(directory.is_dir() and not directory.is_symlink(),"Complete selected source directory required")
+    require(isinstance(selection,list) and len(selection)==len(SOFTWARE) and
+            [x.get("path") for x in selection]==list(SOFTWARE),"Complete ordered source selection required")
+    for row in selection:
+        require(type(row.get("bytes")) is int and row["bytes"]>=0 and
+                isinstance(row.get("sha256"),str) and re.fullmatch(r"[0-9a-f]{64}",row["sha256"]),
+                "Invalid selected source identity")
+        require(measured(regular_under(directory,row["path"]))==
+                {k:row[k] for k in ("bytes","sha256")},"Selected source changed: "+row["path"])
+    return directory
+
+def compatible_source(original,selected):
+    require([x["path"] for x in original]==[x["path"] for x in selected]==list(SOFTWARE),
+            "A source update must retain the whole original program")
+    for before,after in zip(original,selected):
+        require(before==after or before["path"] in UPDATABLE,
+                "This update changes a calculation/import engine; retain its original runtime: "+before["path"])
+
+def source_edition(root,meta,directory):
+    directory=Path(directory)
+    require(not directory.is_symlink(),"Source edition cannot be a symbolic link")
+    record=read_json(regular_under(directory,"selection.json"))
+    require(record.get("schema")==SOURCE_UPDATE and record.get("workspace_id")==meta["workspace_id"] and
+            record.get("original_source_files")==meta["source_files"],"Source edition belongs to another original workspace")
+    selected=record.get("source_files")
+    require(isinstance(selected,list),"Complete adopted source selection required")
+    compatible_source(meta["source_files"],selected)
+    expected="original" if selected==meta["source_files"] else hashlib.sha256(json_bytes(selected)).hexdigest()
+    require(directory.name==expected,"Source edition directory differs from its complete selection")
+    return selected,check_source(directory/"software",selected)
+
+def source_roots(root,meta):
+    root=Path(root);sources=[]
+    if source_files()==meta["source_files"]:
+        sources.append((meta["source_files"],HERE))
+    if (root/"software").exists() or (root/"software").is_symlink():
+        sources.append((meta["source_files"],check_source(root/"software",meta["source_files"])))
+    editions=root/"source-editions"
+    if editions.exists() or editions.is_symlink():
+        require(editions.is_dir() and not editions.is_symlink(),"Original source editions directory differs")
+        for directory in sorted(editions.iterdir()):
+            require(directory.is_dir() and not directory.is_symlink(),"Incomplete retained source edition")
+            sources.append(source_edition(root,meta,directory))
+    require(any(rows==meta["source_files"] for rows,_ in sources),"Complete original workspace software is missing")
+    return sources
+
+def selected_program(sources,selection):
+    for rows,directory in sources:
+        if [x for x in rows if x["path"] in APPLICATION]==selection:
+            return check_source(directory,rows)
+    raise DiscoveryError("Restore the complete program selected by this original calculated edition")
+
+def retain_source_edition(root,meta,selection,directory):
+    check_source(directory,selection)
+    compatible_source(meta["source_files"],selection)
+    key="original" if selection==meta["source_files"] else hashlib.sha256(json_bytes(selection)).hexdigest()
+    parent=Path(root)/"source-editions"
+    require(not parent.is_symlink(),"Source edition directory cannot be a symbolic link")
+    parent.mkdir(exist_ok=True,mode=0o700)
+    destination=parent/key
+    if destination.exists() or destination.is_symlink():
+        rows,_=source_edition(root,meta,destination)
+        require(rows==selection,"Retained source edition differs")
+        return destination
+    # An incomplete copy never becomes an adopted edition. Keep staging outside
+    # the workspace so an interrupted copy cannot corrupt a later full export.
+    stage=Path(tempfile.mkdtemp(prefix=".forms-source-update-",dir=Path(root).parent))
+    try:
+        for row in selection:
+            raw=regular_under(directory,row["path"]).read_bytes()
+            require(len(raw)==row["bytes"] and hashlib.sha256(raw).hexdigest()==row["sha256"],
+                    "Selected source changed during adoption")
+            immutable(stage/"software"/row["path"],raw)
+        record={"schema":SOURCE_UPDATE,"workspace_id":meta["workspace_id"],
+                "original_source_files":meta["source_files"],"source_files":selection}
+        immutable(stage/"selection.json",json_bytes(record))
+        check_source(stage/"software",selection)
+        os.rename(stage,destination)
+        fd=os.open(parent,os.O_RDONLY)
+        try:os.fsync(fd)
+        finally:os.close(fd)
+    finally:
+        shutil.rmtree(stage,ignore_errors=True)
+    return destination
+
+def adopt_source(directory,original_software):
+    root=Path(directory).resolve()
+    require(root.is_dir() and not Path(directory).is_symlink() and not root.is_relative_to(HERE),
+            "Existing separate ordinary workspace required")
+    with (root/".workspace.lock").open("a+b") as lock:
+        fcntl.flock(lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
+        meta=read_json(regular_under(root,"workspace.json"))
+        require(meta.get("schema")==SCHEMA,"Original Forms workspace required")
+        original=check_source(Path(original_software).resolve(),meta["source_files"])
+        current=source_files();compatible_source(meta["source_files"],current)
+        require((root/"workspace.sqlite").is_file() and not (root/"workspace.sqlite").is_symlink(),
+                "Original workspace database required")
+        with closing(sqlite3.connect((root/"workspace.sqlite").as_uri()+"?mode=ro",uri=True)) as db:
+            require(db.execute("SELECT value FROM state WHERE key='workspace_id'").fetchone()[0]==meta["workspace_id"],
+                    "Database belongs to another workspace")
+            require(db.execute("SELECT count(*) FROM requests WHERE status='RUNNING'").fetchone()[0]==0,
+                    "Finish the original RUNNING native request with its selected program before source adoption")
+            # Prior adopted runs use their actual retained program, while a first
+            # adoption can read the still-external complete original selection.
+            sources=[(meta["source_files"],original)]
+            if (root/"source-editions").exists():
+                sources.extend(source_roots(root,meta))
+            verify_contents(root,db,meta,sources=sources)
+        retain_source_edition(root,meta,meta["source_files"],original)
+        edition=retain_source_edition(root,meta,current,HERE)
+        return {"schema":SOURCE_UPDATE,"workspace_id":meta["workspace_id"],
+                "original_source_files":meta["source_files"],"runtime_source_files":current,
+                "runtime_directory":str(edition/"software"),"workspace":str(root),
+                "original_metadata":measured(root/"workspace.json")}
+
+
 def stream_rows(path):
     with Path(path).open(encoding="utf-8") as stream:
         for line in stream:
@@ -128,12 +253,12 @@ class Workspace:
                       "label":nonempty(label,"workspace label"),"created_at":now(),"source_files":selected}
                 immutable(self.root/"workspace.json",json_bytes(meta))
             self.meta=read_json(self.root/"workspace.json")
-            require(self.meta.get("schema")==SCHEMA and self.meta["source_files"]==selected,
-                    "Open this workspace with its complete original selected software")
-            if (self.root/"software").exists():
-                for entry in selected:
-                    require(measured(regular_under(self.root/"software",entry["path"]))==
-                            {"bytes":entry["bytes"],"sha256":entry["sha256"]},"Received selected software differs")
+            require(self.meta.get("schema")==SCHEMA,"Original Forms workspace required")
+            self.sources=source_roots(self.root,self.meta)
+            require(any(rows==selected for rows,_ in self.sources),
+                    "Explicitly adopt this complete maintained source before opening the original workspace")
+            self.runtime_source_files=selected
+            self.original_software=next(path for rows,path in self.sources if rows==self.meta["source_files"])
             for name in ("captures","runs","operations","incoming","cache"):
                 (self.root/name).mkdir(exist_ok=True,mode=0o700)
             dbfile=self.root/"workspace.sqlite"
@@ -450,7 +575,7 @@ CREATE TABLE requests(id TEXT PRIMARY KEY,digest TEXT NOT NULL,method TEXT NOT N
 
     def _read(self,method,params):
         if method=="workspace.describe":
-            return dict(self.meta,revision=self._revision(),
+            return dict(self.meta,revision=self._revision(),runtime_source_files=self.runtime_source_files,
                         counts={t:self.db.execute("SELECT count(*) FROM "+t).fetchone()[0] for t in ("captures","drafts","runs","requests")},
                         raw_draft_limit_bytes=RAW_LIMIT,source_read_only=True)
         if method=="capture.list":return self._list("captures",params)
@@ -471,7 +596,8 @@ CREATE TABLE requests(id TEXT PRIMARY KEY,digest TEXT NOT NULL,method TEXT NOT N
         if method=="draft.validate":return self._validate(self._draft(params,params.get("expected_revision") is not None))
         if method=="run.show":
             run=self._item("runs",params.get("run_id"))
-            _,result=verify_project(self.root/relative(run["project"]),check_application=True)
+            _,result=verify_project(self.root/relative(run["project"]),check_application=False)
+            selected_program(self.sources,result["source_files"])
             require(result["project_identity"]==run["project_identity"],"Original run changed")
             require(measured(self.root/relative(run["archive"]["path"]))=={k:run["archive"][k] for k in ("bytes","sha256")},"Original project archive changed")
             return run
@@ -575,9 +701,25 @@ CREATE TABLE requests(id TEXT PRIMARY KEY,digest TEXT NOT NULL,method TEXT NOT N
                 for folder in ("captures","runs","operations","incoming"):
                     for row in inventory_files(self.root/folder):
                         name=folder+"/"+row["path"];entries[name]=regular_under(self.root,name)
-                for row in self.meta["source_files"]:entries["software/"+row["path"]]=regular_under(HERE,row["path"])
+                for row in self.meta["source_files"]:
+                    entries["software/"+row["path"]]=regular_under(self.original_software,row["path"])
+                if (self.root/"source-editions").exists():
+                    for row in inventory_files(self.root/"source-editions"):
+                        name="source-editions/"+row["path"];entries[name]=regular_under(self.root,name)
+                runtime="software"
+                if self.runtime_source_files!=self.meta["source_files"]:
+                    runtime="source-editions/"+hashlib.sha256(json_bytes(self.runtime_source_files)).hexdigest()+"/software"
+                launcher=("# Continue this complete workspace with its selected maintained runtime.\n"
+                          "import sys\nfrom pathlib import Path\n"
+                          "root=Path(__file__).resolve().parent\n"
+                          "sys.path.insert(0,str(root/"+repr(runtime)+"))\n"
+                          "from forms_workspace_server import main\n"
+                          "raise SystemExit(main(['--workspace',str(root),*sys.argv[1:]]))\n")
+                (stage/"continue_workspace.py").write_text(launcher,encoding="utf-8")
+                entries["continue_workspace.py"]=stage/"continue_workspace.py"
                 manifest={"schema":ARCHIVE,"workspace_id":self.meta["workspace_id"],
                           "workspace_revision":self._revision(),"source_files":self.meta["source_files"],
+                          "runtime_path":runtime,"runtime_source_files":self.runtime_source_files,
                           "files":[{"path":name,**measured(path)} for name,path in sorted(entries.items())]}
                 destination.parent.mkdir(parents=True,exist_ok=True)
                 pending=destination.with_name("."+destination.name+"-"+uuid.uuid4().hex)
@@ -601,11 +743,13 @@ CREATE TABLE requests(id TEXT PRIMARY KEY,digest TEXT NOT NULL,method TEXT NOT N
                     if pending.exists():pending.unlink()
             return {"schema":"tjlabs.forms-workspace.export.v1","workspace_id":self.meta["workspace_id"],
                     "workspace_revision":self._revision(),"archive":{"path":str(destination),**measured(destination)},
-                    "members":len(manifest["files"])+1,"source_files":self.meta["source_files"]}
+                    "members":len(manifest["files"])+1,"source_files":self.meta["source_files"],
+                    "runtime_path":manifest["runtime_path"],"runtime_source_files":self.runtime_source_files}
 
-def verify_contents(root,db,meta):
+def verify_contents(root,db,meta,sources=None):
     root=Path(root)
     require(read_json(root/"workspace.json")==meta,"Original workspace metadata changed")
+    sources=source_roots(root,meta) if sources is None else sources
     require(db.execute("PRAGMA integrity_check").fetchone()[0]=="ok","Original workspace database integrity differs")
     for row in db.execute("SELECT payload FROM captures"):
         capture=json.loads(row[0]);result=capture_engine.verify(root/relative(capture["directory"])/"capture")
@@ -614,12 +758,14 @@ def verify_contents(root,db,meta):
                 "Original capture archive differs")
     for row in db.execute("SELECT payload FROM runs"):
         run=json.loads(row[0]);project=root/relative(run["project"])
-        _,result=verify_project(project,check_application=True)
+        _,result=verify_project(project,check_application=False)
+        selected_program(sources,result["source_files"])
         require(result["project_identity"]==run["project_identity"],"Original computed project differs")
         archive=regular_under(root,run["archive"]["path"])
         require(measured(archive)=={k:run["archive"][k] for k in ("bytes","sha256")},"Original selected project archive differs")
         complete_archive(archive,project,result)
-        _,received=verify_project(root/relative(run["received"]),check_application=True)
+        _,received=verify_project(root/relative(run["received"]),check_application=False)
+        selected_program(sources,received["source_files"])
         require(received["project_identity"]==run["project_identity"],"Original independently received project differs")
     return True
 
@@ -668,16 +814,24 @@ def receive_workspace(archive,destination,max_bytes=20*1024**3):
                         "Received workspace database identity differs")
                 require(int(db.execute("SELECT value FROM state WHERE key='revision'").fetchone()[0])==manifest["workspace_revision"],
                         "Received workspace revision differs")
-                verify_contents(stage,db,meta)
+                sources=source_roots(stage,meta)
+                runtime=manifest.get("runtime_source_files",meta["source_files"])
+                runtime_path=stage/relative(manifest.get("runtime_path","software"))
+                require(any(rows==runtime and path==runtime_path for rows,path in sources),
+                        "Complete selected continuation runtime differs")
+                verify_contents(stage,db,meta,sources=sources)
             os.rename(stage,destination)
         return {"schema":"tjlabs.forms-workspace.receiving.v1","workspace_id":manifest["workspace_id"],
                 "workspace_revision":manifest["workspace_revision"],"directory":str(destination),
-                "archive":{"path":str(archive),**measured(archive)},"source_files":manifest["source_files"]}
+                "archive":{"path":str(archive),**measured(archive)},"source_files":manifest["source_files"],
+                "runtime_path":manifest.get("runtime_path","software"),
+                "runtime_source_files":manifest.get("runtime_source_files",manifest["source_files"])}
     finally:
         shutil.rmtree(stage,ignore_errors=True)
 
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__);sub=parser.add_subparsers(dest="command",required=True)
+    p=sub.add_parser("adopt-source");p.add_argument("--workspace",required=True);p.add_argument("--original-software",required=True)
     p=sub.add_parser("init");p.add_argument("--workspace",required=True);p.add_argument("--label",required=True)
     p=sub.add_parser("call");p.add_argument("--workspace",required=True);p.add_argument("--method",required=True)
     p.add_argument("--params",required=True);p.add_argument("--request-id")
@@ -686,7 +840,8 @@ def main(argv=None):
     p=sub.add_parser("receive");p.add_argument("--archive",required=True);p.add_argument("--output",required=True)
     p.add_argument("--max-bytes",type=int,default=20*1024**3)
     args=parser.parse_args(argv)
-    if args.command=="receive":result=receive_workspace(args.archive,args.output,args.max_bytes)
+    if args.command=="adopt-source":result=adopt_source(args.workspace,args.original_software)
+    elif args.command=="receive":result=receive_workspace(args.archive,args.output,args.max_bytes)
     else:
         with Workspace(args.workspace,create=args.command=="init",label=getattr(args,"label",None)) as workspace:
             if args.command=="init":result=workspace.dispatch("workspace.describe")
