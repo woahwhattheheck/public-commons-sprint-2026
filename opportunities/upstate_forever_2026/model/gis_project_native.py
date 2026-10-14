@@ -1,8 +1,20 @@
-"""Open, render, save and independently reopen a complete package in actual QGIS.
+r"""Open, render, save and reopen a complete package using the installed QGIS.
 
-Run with QGIS Python: QT_QPA_PLATFORM=offscreen /usr/bin/python3
-    tools/model/gis_project_native.py ORIGINAL_DIRECTORY NEW_RECEIVING_DIRECTORY
-The sender stays unchanged. This command carries every dataset with the project.
+Windows (PowerShell):
+  python tools/model/gis_project_native.py "Original GIS" "Received GIS" --qgis-python "C:\Program Files\QGIS\bin\python-qgis.bat"
+macOS: use the QGIS application's Python, or let this helper find QGIS*.app.
+Linux: use QGIS-enabled Python, or let this helper try system Python.
+  python3 tools/model/gis_project_native.py "Original GIS" "Received GIS"
+
+Use --runtime to inspect the selected executable/version. ECO_QGIS_PYTHON is
+an optional single-executable override. --qgis-prefix supplies a nonstandard
+resource prefix. Existing Qt configuration is preserved; offscreen is the
+headless default, set only in the receiving child. --open ORIGINAL_DIRECTORY
+opens project.qgz in QGIS Desktop via the normal file association instead.
+
+Keep the entire extracted folder together when moving, editing or sharing it.
+The sender stays unchanged. Native saves retain relative project paths, original
+layer identities, CRS, units, styles and the complete accompanying datasets.
 """
 from __future__ import annotations
 import argparse
@@ -10,14 +22,10 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 import time
 
-if __package__:
-    from . import gis_project as gis
-else:
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    import gis_project as gis
 
 
 
@@ -67,6 +75,7 @@ def inspect_atlas_styles(layer, expected, *, require_original):
 
 
 def run(directory, output):
+    gis = _gis_module()
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
     from qgis.core import (QgsApplication, QgsProject, QgsMapSettings,
                            QgsMapRendererParallelJob, QgsRectangle, Qgis)
@@ -78,6 +87,8 @@ def run(directory, output):
         raise FileExistsError("Choose a new receiving directory outside the sender")
     output.parent.mkdir(parents=True, exist_ok=True)
     shutil.copytree(directory, output, copy_function=shutil.copyfile)
+    if os.environ.get("QGIS_PREFIX_PATH"):
+        QgsApplication.setPrefixPath(os.environ["QGIS_PREFIX_PATH"], True)
     app = QgsApplication([], False)
     app.initQgis()
     started = time.monotonic()
@@ -159,13 +170,271 @@ def run(directory, output):
         app.exitQgis()
 
 
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("directory")
-    parser.add_argument("output")
-    args = parser.parse_args()
-    print(json.dumps(run(args.directory, args.output), indent=2))
+
+# QGIS installation bootstrap stays in this shipped helper, not the workbench runtime.
+# QGIS application setup: docs.qgis.org/3.44/en/docs/pyqgis_developer_cookbook/intro.html
+_RUNTIME_MARKER = "ECO_QGIS_RUNTIME="
+_RESULT_MARKER = "ECO_QGIS_RESULT="
+_ENV_KEYS = ("PATH", "PYTHONHOME", "PYTHONPATH", "QGIS_PREFIX_PATH", "OSGEO4W_ROOT",
+             "QT_PLUGIN_PATH", "QT_QPA_PLATFORM_PLUGIN_PATH", "QT_QPA_PLATFORM",
+             "GDAL_DATA", "GDAL_DRIVER_PATH", "PROJ_LIB", "PROJ_DATA",
+             "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH")
+_PROBE_CODE = (
+    "import json,os,sys;from qgis.core import Qgis;"
+    "print('ECO_QGIS_RUNTIME='+json.dumps({'executable':sys.executable,"
+    "'version':Qgis.QGIS_VERSION,'environment':{k:os.environ[k] for k in "
+    + repr(_ENV_KEYS) + " if k in os.environ}}))"
+)
+
+
+def _gis_module():
+    if __package__:
+        from . import gis_project
+    else:
+        import importlib
+        parent = str(Path(__file__).resolve().parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+        gis_project = importlib.import_module("gis_project")
+    return gis_project
+
+
+def _executable(value):
+    """One executable or installer wrapper, never a shell command string."""
+    value = os.fspath(value)
+    found = shutil.which(value)
+    path = Path(found or value).expanduser()
+    if not path.is_file():
+        raise FileNotFoundError("QGIS Python executable or installer wrapper not found: " + value)
+    return path.absolute()
+
+
+def _prepend(environment, key, paths):
+    values = [str(path) for path in paths if path.is_dir()]
+    if environment.get(key):
+        values.append(environment[key])
+    if values:
+        environment[key] = os.pathsep.join(values)
+
+
+def _candidates(python=None, prefix=None):
+    environment = os.environ.copy()
+    environment["PYTHONIOENCODING"] = "utf-8"
+    environment["PYTHONUTF8"] = "1"
+    environment.setdefault("QT_QPA_PLATFORM", "offscreen")
+    if prefix:
+        path = Path(prefix).expanduser().resolve(strict=True)
+        if not path.is_dir():
+            raise NotADirectoryError("Select the installed QGIS resource directory")
+        environment["QGIS_PREFIX_PATH"] = str(path)
+    explicit = python or environment.get("ECO_QGIS_PYTHON")
+    if explicit:
+        yield _executable(explicit), environment
+        return
+    # The current interpreter wins only after its actual PyQGIS binding imports.
+    if sys.executable:
+        yield Path(sys.executable).absolute(), environment.copy()
+    if sys.platform == "win32":
+        roots = []
+        if environment.get("OSGEO4W_ROOT"):
+            roots.append(Path(environment["OSGEO4W_ROOT"]))
+        drive = Path(environment.get("SystemDrive", "C:") + "\\")
+        roots.extend((drive / "OSGeo4W", drive / "OSGeo4W64"))
+        for key in ("ProgramFiles", "ProgramW6432"):
+            if environment.get(key):
+                roots.extend(sorted(Path(environment[key]).glob("QGIS*"), reverse=True))
+        for root in roots:
+            for name in ("python-qgis-ltr.bat", "python-qgis.bat"):
+                launcher = root / "bin" / name
+                if launcher.is_file():
+                    yield launcher.absolute(), environment.copy()
+    elif sys.platform == "darwin":
+        for parent in (Path("/Applications"), Path.home() / "Applications"):
+            for bundle in sorted(parent.glob("QGIS*.app"), reverse=True):
+                contents = bundle / "Contents"
+                child = environment.copy()
+                child.pop("PYTHONHOME", None)
+                child["QGIS_PREFIX_PATH"] = environment["QGIS_PREFIX_PATH"] if prefix else str(contents / "MacOS")
+                _prepend(child, "PYTHONPATH", [contents / "Resources" / "python",
+                                              contents / "Resources" / "python" / "plugins"])
+                _prepend(child, "DYLD_LIBRARY_PATH", [contents / "MacOS" / "lib"])
+                _prepend(child, "DYLD_FRAMEWORK_PATH", [contents / "Frameworks"])
+                for relative in ("MacOS/bin/python3", "MacOS/bin/python"):
+                    executable = contents / relative
+                    if executable.is_file():
+                        yield executable.absolute(), child.copy()
+    else:
+        # Distribution QGIS commonly belongs to system Python, not a venv.
+        for value in (shutil.which("python3"), "/usr/bin/python3"):
+            if value and Path(value).is_file():
+                child = environment.copy()
+                if Path(value).absolute() != Path(sys.executable).absolute():
+                    child.pop("PYTHONHOME", None)
+                yield Path(value).absolute(), child
+
+
+def _probe_command(executable, environment):
+    child = environment.copy()
+    if executable.suffix.lower() in {".bat", ".cmd"}:
+        if sys.platform != "win32":
+            raise ValueError("A QGIS Windows installer wrapper requires Windows")
+        # Only fixed code reaches cmd parsing. Project paths are never shell text.
+        child["ECO_QGIS_WRAPPER"] = str(executable)
+        child["ECO_QGIS_PROBE_CODE"] = _PROBE_CODE
+        command = [child.get("COMSPEC", "cmd.exe"), "/d", "/v:off", "/s", "/c",
+                   '""%ECO_QGIS_WRAPPER%" -c "%ECO_QGIS_PROBE_CODE%""']
+    else:
+        command = [str(executable), "-c", _PROBE_CODE]
+    return command, child
+
+
+def select_runtime(python=None, prefix=None):
+    """Resolve real bindings without importing an incompatible Qt into the host."""
+    import subprocess
+    seen, failures = set(), []
+    for executable, environment in _candidates(python, prefix):
+        key = (os.path.normcase(str(executable)), environment.get("QGIS_PREFIX_PATH"))
+        if key in seen:
+            continue
+        seen.add(key)
+        command, child = _probe_command(executable, environment)
+        try:
+            completed = subprocess.run(command, env=child, stdin=subprocess.DEVNULL,
+                                       stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                       text=True, encoding="utf-8", errors="replace", timeout=12)
+            records = [line[len(_RUNTIME_MARKER):] for line in completed.stdout.splitlines()
+                       if line.startswith(_RUNTIME_MARKER)]
+            if completed.returncode or len(records) != 1:
+                detail = completed.stderr.strip().splitlines()
+                failures.append(str(executable) + ": " + (detail[-1][:240] if detail else
+                                                         "PyQGIS did not return its runtime"))
+                continue
+            runtime = json.loads(records[0])
+            actual = _executable(runtime["executable"])
+            if actual.suffix.lower() in {".bat", ".cmd"} or not isinstance(runtime["version"], str):
+                raise ValueError("QGIS must identify its actual Python executable and version")
+            configured = runtime["environment"]
+            if not isinstance(configured, dict) or any(
+                    key not in _ENV_KEYS or not isinstance(value, str)
+                    for key, value in configured.items()):
+                raise ValueError("Unexpected QGIS runtime environment")
+            # Reuse the installer's environment, but launch Python directly for
+            # the real operation so cancellation owns the actual worker process.
+            child = environment.copy()
+            for key in _ENV_KEYS:
+                child.pop(key, None)
+            child.update(configured)
+            if prefix:
+                child["QGIS_PREFIX_PATH"] = str(Path(prefix).expanduser().resolve(strict=True))
+            return {"executable": str(actual), "version": runtime["version"], "environment": child}
+        except (OSError, ValueError, KeyError, TypeError, subprocess.TimeoutExpired) as error:
+            failures.append(str(executable) + ": " + str(error)[:240])
+    detail = "\n".join(failures)
+    raise RuntimeError("No usable QGIS Python was found. Use --qgis-python with the installed "
+                       "QGIS Python executable or Windows bin/python-qgis*.bat wrapper. "
+                       "The workbench's scientific Python is separate from PyQGIS.\n" + detail)
+
+
+def receive(directory, output, *, python=None, prefix=None):
+    """Run the unchanged native receiving workflow in its compatible QGIS Python."""
+    import subprocess
+    directory = Path(directory).expanduser().resolve(strict=True)
+    output = Path(output).expanduser().resolve()
+    if not directory.is_dir():
+        raise NotADirectoryError("Select the complete extracted GIS directory")
+    if output.exists() or output.is_relative_to(directory):
+        raise FileExistsError("Choose a new receiving directory outside the sender")
+    runtime = select_runtime(python, prefix)
+    request = json.dumps({"directory": str(directory), "output": str(output)}, ensure_ascii=False)
+    command = [runtime["executable"], str(Path(__file__).resolve()), "--_worker"]
+    process = subprocess.Popen(command, env=runtime["environment"], cwd=directory,
+                               stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                               text=True, encoding="utf-8", errors="replace")
+    try:
+        stdout, stderr = process.communicate(request)
+    except BaseException:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.communicate(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.communicate()
+        raise
+    if stderr:
+        print(stderr, file=sys.stderr, end="" if stderr.endswith("\n") else "\n")
+    records = [line[len(_RESULT_MARKER):] for line in stdout.splitlines()
+               if line.startswith(_RESULT_MARKER)]
+    if process.returncode or len(records) != 1:
+        raise RuntimeError("QGIS receiving exited " + str(process.returncode) +
+                           "; review the native error above and the retained receiving folder.")
+    result = json.loads(records[0])
+    if result.get("schema") != "upstate.gis-native-receiving/v1":
+        raise ValueError("Unexpected native QGIS receiving result")
+    return result
+
+
+def open_project(directory):
+    """Ask the desktop to open the complete relative-path project, without waiting for it to close."""
+    import subprocess
+    root = Path(directory).expanduser().resolve(strict=True)
+    _gis_module().verify(root, native=False)
+    project = root / "project.qgz"
+    child = os.environ.copy()
+    if child.get("QT_QPA_PLATFORM", "").split(":", 1)[0] in {"offscreen", "minimal"}:
+        child.pop("QT_QPA_PLATFORM", None)
+    if sys.platform == "win32":
+        child["ECO_QGIS_PROJECT"] = str(project)
+        command = [child.get("COMSPEC", "cmd.exe"), "/d", "/v:off", "/s", "/c",
+                   'start "" "%ECO_QGIS_PROJECT%"']
+        subprocess.run(command, cwd=root, env=child, stdin=subprocess.DEVNULL, check=True, timeout=15)
+    elif sys.platform == "darwin":
+        subprocess.run(["/usr/bin/open", str(project)], cwd=root, env=child,
+                       stdin=subprocess.DEVNULL, check=True, timeout=15)
+    else:
+        executable = shutil.which("qgis") or shutil.which("xdg-open")
+        if not executable:
+            raise FileNotFoundError("Install QGIS Desktop, then open project.qgz from the extracted GIS folder")
+        subprocess.Popen([executable, str(project)], cwd=root, env=child, stdin=subprocess.DEVNULL,
+                         stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+    return {"state": "desktop_open_requested", "project": str(project),
+            "instruction": "Keep the extracted folder together. Edit and save the relative-path project in QGIS."}
+
+
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("directory", nargs="?")
+    parser.add_argument("output", nargs="?")
+    parser.add_argument("--qgis-python", help="Actual QGIS Python executable, or Windows python-qgis*.bat wrapper")
+    parser.add_argument("--qgis-prefix", help="Installed QGIS resource prefix; kept only in the receiving process")
+    parser.add_argument("--runtime", action="store_true", help="Show the selected actual QGIS Python and version")
+    parser.add_argument("--open", action="store_true", help="Open project.qgz in the desktop file association")
+    parser.add_argument("--_worker", action="store_true", help=argparse.SUPPRESS)
+    args = parser.parse_args(argv)
+    try:
+        if args._worker:
+            request = json.load(sys.stdin)
+            result = run(request["directory"], request["output"])
+            print(_RESULT_MARKER + json.dumps(result, ensure_ascii=False, allow_nan=False))
+            return 0
+        if args.runtime:
+            runtime = select_runtime(args.qgis_python, args.qgis_prefix)
+            result = {key: runtime[key] for key in ("executable", "version")}
+        elif args.open:
+            if not args.directory or args.output:
+                parser.error("--open needs the extracted GIS directory and no output directory")
+            result = open_project(args.directory)
+        else:
+            if not args.directory or not args.output:
+                parser.error("native receiving needs ORIGINAL_DIRECTORY NEW_RECEIVING_DIRECTORY")
+            result = receive(args.directory, args.output, python=args.qgis_python, prefix=args.qgis_prefix)
+        print(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False))
+        return 0
+    except (OSError, RuntimeError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as error:
+        print(json.dumps({"error": {"type": type(error).__name__, "message": str(error)}},
+                         ensure_ascii=False), file=sys.stderr)
+        return 2
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

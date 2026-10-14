@@ -2,6 +2,7 @@
 from __future__ import annotations
 import argparse
 import json
+import subprocess
 from pathlib import Path
 import sys
 
@@ -31,11 +32,26 @@ def main(argv=None):
     wa.add_argument("workspace");wa.add_argument("selection")
     gr=sub.add_parser("workspace-review",help="Compare a received GIS edition with its retained original export")
     gr.add_argument("workspace");gr.add_argument("selection")
+    nr=sub.add_parser("native-receive",help="Open/render/save/reopen using the installed QGIS Python")
+    nr.add_argument("directory");nr.add_argument("output")
+    nr.add_argument("--qgis-python",help="QGIS Python executable or Windows python-qgis*.bat")
+    nr.add_argument("--qgis-prefix",help="Optional QGIS resource prefix")
+    op=sub.add_parser("open",help="Open the complete editable project in QGIS Desktop")
+    op.add_argument("directory")
     args=parser.parse_args(argv)
     def progress(value):
         print(json.dumps(value,ensure_ascii=False,allow_nan=False),file=sys.stderr,flush=True)
     try:
-        if args.command=="build":
+        if args.command in {"native-receive", "open"}:
+            if __package__:
+                from . import gis_project_native as native
+            else:
+                import gis_project_native as native
+            if args.command=="open":
+                result=native.open_project(args.directory)
+            else:
+                result=native.receive(args.directory,args.output,python=args.qgis_python,prefix=args.qgis_prefix)
+        elif args.command=="build":
             path=Path(args.request).resolve(strict=True)
             result=gis.build(gis.load(path),args.source_root or path.parent,args.destination,progress=progress)
         elif args.command=="pack":
@@ -60,7 +76,7 @@ def main(argv=None):
             else:result=catalogue(ws)
         print(json.dumps(result,ensure_ascii=False,indent=2,allow_nan=False))
         return 0
-    except (ValueError,OSError,KeyError,TypeError) as exc:
+    except (ValueError,OSError,RuntimeError,KeyError,TypeError,subprocess.SubprocessError) as exc:
         print(json.dumps({"error":{"type":type(exc).__name__,"message":str(exc)}},ensure_ascii=False),file=sys.stderr)
         return 2
 
