@@ -5,6 +5,8 @@ validates TIFF grids and numerical cells after transport.
 """
 from __future__ import annotations
 
+from model import portable_fs as _fs
+
 import argparse
 from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
 import gzip
@@ -407,12 +409,8 @@ def bundle(directory, archive):
                 out.writestr("transfer-bundle.json", canonical(manifest) + b"\n")
             with pending.open("rb") as stream:
                 os.fsync(stream.fileno())
-            os.replace(pending, archive)
-            fd = os.open(archive.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            _fs.replace(pending, archive)
+            _fs.sync_directory(archive.parent)
         finally:
             if pending.exists():
                 pending.unlink()
