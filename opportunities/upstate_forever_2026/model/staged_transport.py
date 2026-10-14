@@ -297,7 +297,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
     complete_path = Path(str(journal_path) + ".complete.json")
     state_path = Path(str(journal_path) + ".state.json")
     lock_path = Path(str(journal_path) + ".lock")
-    if len({p.resolve() for p in (source_path, journal_path, destination, complete_path, state_path, lock_path)}) != 6:
+    if len({_fs.native_path(p).resolve() for p in (source_path, journal_path, destination, complete_path, state_path, lock_path)}) != 6:
         raise ValueError("Original input, transfer records and result must be distinct files.")
     _fs.native_path(journal_path.parent).mkdir(parents=True, exist_ok=True)
     with held(lock_path, blocking=False):
@@ -312,7 +312,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
         selected = {"origin": transport.origin, "workspace": workspace,
                     "metadata": metadata, "body_sha256": identity["sha256"],
                     "result_path": str(destination)}
-        if journal_path.exists():
+        if _fs.native_path(journal_path).exists():
             binding = read_json(journal_path)
             # Published earlier journals bound the full source SHA locally but
             # omitted it from wire metadata. Keep their immutable wire identity.
@@ -328,10 +328,10 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
             binding = {"schema": SCHEMA, "id": str(uuid.uuid4()), "selection": selected}
             atomic_json(journal_path, binding, immutable=True)
         request_id = binding["id"]
-        if complete_path.exists():
+        if _fs.native_path(complete_path).exists():
             return _verify_result(read_json(complete_path), destination, binding)
         state = {}
-        if state_path.exists():
+        if _fs.native_path(state_path).exists():
             state = read_json(state_path)
             if state.get("id") != request_id:
                 raise ValueError("The staged transfer checkpoint belongs to another request.")
@@ -339,7 +339,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
             # The connector may later publish its reconciled original result.
         def checkpoint(state, **extra):
             value = {"id": request_id, "state": state, **extra}
-            if state == "uncertain" and state_path.exists():
+            if state == "uncertain" and _fs.native_path(state_path).exists():
                 previous = read_json(state_path)
                 if previous.get("id") != request_id:
                     raise ValueError("The uncertainty checkpoint belongs to another request.")
