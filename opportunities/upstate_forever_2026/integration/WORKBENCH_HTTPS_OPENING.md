@@ -1,6 +1,6 @@
 # Open the existing workbench with its configured HTTPS connection
 
-The original OPEN_WORKBENCH entry now owns an optional outbound native connector alongside its original operator. The qualified Linux receiving runtime runs both. There is one native operator, one original scientific queue, and one persistent connector instance.
+The original maintained workbench launcher now owns an optional outbound native connector alongside its original operator. The qualified Linux receiving runtime runs both. There is one native operator, one original scientific queue, and one persistent connector instance.
 
 ## Configure the existing receiving machine once
 
@@ -40,7 +40,16 @@ Configuration is read BEFORE the launcher verifies or opens its native session. 
 
 ## Normal opening and persistence
 
-Use the SAME normal OPEN_WORKBENCH command, original profile and runtime arguments. The native server opens as before. After its authenticated original session is written, the original launcher starts the connector with the selected Python. Bv1.7 retries transient registration failures inside its existing transport; readiness is reported only after its actual connected event.
+Open a portable collection through its actual bundle-root `OPEN.sh`, which calls `open_collection.py` and then the maintained application launcher. For a direct application opening, use the existing `source_tools/open_received_study.py` with the actual retained application, Workspace, qualified runtime and private state:
+
+```sh
+"$QUALIFIED_PYTHON" -B "$APP/source_tools/open_received_study.py" \
+  --application "$APP" --workspace "$ACTUAL_WORKSPACE" \
+  --python "$QUALIFIED_PYTHON" --operator-state "$ORIGINAL_PRIVATE_STATE" \
+  --native --connector-config "$EXISTING_PRIVATE_CONFIG" --no-browser
+```
+
+These variables identify the receiving host's existing selected files and directories. The collection wrapper forwards the same optional `--connector-config` argument and runs the same private preflight before checking an existing session. Later openings can omit the flag because the original private state retains its config pointer. The native server opens as before. After its authenticated original session is written, the original launcher starts the connector with the selected Python. Bv1.7 retries transient registration failures inside its existing transport; readiness is reported only after its actual connected event.
 
 The original launcher prints concise workbench_https states and safe error codes. The private workbench-transport-status.json contains process IDs, state and original project/Workspace identities. It contains no credential, token, request body or private URL. Source/runtime/config/authentication failures remain concrete codes for the existing owner to correct. A changed private configuration, credential file or received connector source restarts a failed child against the SAME persistent journal. Unexpected child-process termination retries with a delay; protocol-level retries remain in the original connector.
 
@@ -60,4 +69,4 @@ Private config, connector/native credentials, operator-state JSON, logs and the 
 
 On the currently accepted whole-application Linux host, receive the current cumulative source and use its existing private opening/configuration. Read the connector's actual connected result, open the same canonical HTTPS origin and original project chooser, and operate the original saved source/download through that native app. Open a second independent browser tab, which now restores its non-secret session marker through the existing health endpoint before normal API authentication.
 
-Close the original maintained launcher normally. Reopen through the same OPEN_WORKBENCH entry and same private state. Confirm the original connector instance and journal remain, the native loopback port is read from the new private session, and the original project/download still opens. Export the actual whole application/selected Study through its maintained per-project controls and verify that this complete generic source is included while receiving-machine secrets remain in the original private state.
+Close the original maintained launcher normally. Reopen through the same collection-root `OPEN.sh` or direct `source_tools/open_received_study.py` command and the same private state. Confirm the original connector instance and journal remain, the native loopback port is read from the new private session, and the original project/download still opens. Export the actual whole application/selected Study through its maintained per-project controls and verify that this complete generic source is included while receiving-machine secrets remain in the original private state.
