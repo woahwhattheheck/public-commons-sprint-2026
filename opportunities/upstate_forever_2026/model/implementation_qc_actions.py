@@ -310,7 +310,7 @@ def validate_selection(workspace, supplied):
     inspected = qc.inspect(workspace, plan["id"], supplied.get("report_id"))
     selected = _selection(plan, inspected, supplied)
     result = _compose(plan, inspected, _batches(store, plan), selected)[2]
-    result["current_revision"] = store.get(plan["id"]) ["revision"]
+    result["current_revision"] = store.get(plan["id"])["revision"]
     result["validation_basis"] = "original_saved_revision"
     return result
 
