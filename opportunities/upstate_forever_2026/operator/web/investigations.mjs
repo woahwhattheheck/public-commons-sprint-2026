@@ -734,7 +734,7 @@ export function attachInvestigations(host) {
   for(const e of s?.events||[]){
    if(['question','answer','request_error'].includes(e.kind)){
     const article=el('article',null,'intelligence-message');article.append(el('h3',e.kind==='question'?'Question':e.kind==='answer'?'Answer':'Provider result'));
-    article.append(el('p',e.body?.text||e.body?.error||'', 'intelligence-prose'));nodes.conversation.append(article);
+    article.append(retainedProse(e.body?.text||e.body?.error||''));nodes.conversation.append(article);
    }
    const item=el('li');item.append(el('strong',e.kind.replaceAll('_',' ')),el('span',displayTime(e.created)),details('Original event',e.body));nodes.historyList.append(item);
   }
