@@ -1,7 +1,7 @@
 // MIT. Metadata only; the original merchant host lazily opens the native workspace.
 const alias = { type: 'string', pattern: '^[a-z0-9][a-z0-9_-]{0,63}$' }, hash = { type: 'string', pattern: '^[a-f0-9]{64}$' };
 const object = { type: 'object' }, workspace = { workspace: alias }, revision = { type: 'integer', minimum: 0 }, requestId = { type: 'string', pattern: '^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$' };
-export const READ_ACTIONS = ['status', 'binding', 'feeds', 'entities', 'entity', 'groups', 'group', 'rules', 'refresh', 'deliveries', 'delivery', 'history', 'operation'];
+export const READ_ACTIONS = ['status', 'binding', 'feeds', 'entities', 'entity', 'groups', 'group', 'rules', 'refresh', 'deliveries', 'delivery', 'delivery.compare', 'history', 'operation'];
 export const WRITE_ACTIONS = ['feed.create', 'source.activate', 'rules.save', 'match.dismiss', 'entity.merge', 'entity.split', 'field.choose', 'entity.annotate', 'record.exclude', 'delivery.create'];
 export function recordMasteringTools(tool) {
     const read = { readOnly: true, idempotent: true }, change = { idempotent: true };

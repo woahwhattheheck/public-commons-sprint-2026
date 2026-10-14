@@ -62,6 +62,10 @@ The package includes field provenance. Select the intended recipient and deliver
 
 CSV is exact machine data. Import its columns as text in spreadsheet software so leading zeros and decimal strings survive and formula-like source text is not evaluated. The existing dataset seller still owns its pricing, payment preparation and paid delivery; mastering does not replace those operations.
 
+## Compare retained deliveries
+
+In **Deliveries → Compare saved deliveries**, choose the exact before and after editions. Review added/removed master identifiers, changed fields, exact text, resolution and source provenance with both selection modes and omitted counts visible. Save complete comparison JSON, standalone HTML or all-field CSV; reopen the JSON against the same original or independently received workspace. The CLI and typed/Merchant read use the same immutable pair. See [Compare saved customer deliveries](DELIVERY_COMPARISON.md) for the complete procedure and interpretation.
+
 ## Receive and continue editing
 
 Use **Download private workspace** for the complete editable state, including original source bytes, retained editions, master membership, choices, exclusions, saved operations and deliveries. It is different from a customer delivery package.

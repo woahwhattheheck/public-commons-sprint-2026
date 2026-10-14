@@ -5,6 +5,7 @@ import { join, resolve } from 'node:path';
 import { randomUUID, createHash } from 'node:crypto';
 import { parseCSV, writeCSV } from './csv.mjs';
 import { MasteringProjection } from './projection.mjs';
+import { deliveryComparisonResult } from './delivery-comparison.mjs';
 export const SCHEMA = 'stellar-forge.record-mastering.v1';
 export const sha256 = value => createHash('sha256').update(value).digest('hex');
 const now = () => new Date().toISOString(), id = () => randomUUID(), json = JSON.stringify;
@@ -384,10 +385,17 @@ export class MasteringWorkspace {
     }
     deliveries() { return this.db.prepare('SELECT id,title,created,source_revision,mode,row_count,conflict_count FROM deliveries ORDER BY created DESC,id DESC').all(); }
     delivery(deliveryId) { const d = this.db.prepare('SELECT * FROM deliveries WHERE id=?').get(deliveryId); ensure(d, 'DELIVERY_NOT_FOUND', 'Delivery edition not found.', 404); return { ...d, files: JSON.parse(d.files_json), files_json: undefined }; }
+    compareDeliveries(input) {
+        const meta=this.meta();
+        if(input.workspaceId!==undefined) ensure(input.workspaceId===meta.id,'WORKSPACE_CHANGED','Open the original or independently received workspace for this comparison.',409);
+        const result=deliveryComparisonResult(meta,this.delivery(input.beforeId),this.delivery(input.afterId));
+        if(input.expectedSha256!==undefined) ensure(input.expectedSha256===result.comparison.sha256,'DELIVERY_COMPARISON_CHANGED','The selected comparison differs from its retained original editions.',409);
+        return result;
+    }
     sourceBytes(editionId) { const e = this.db.prepare('SELECT original,sha256 FROM source_editions WHERE id=?').get(editionId); ensure(e, 'EDITION_NOT_FOUND', 'Source edition not found.', 404); return { bytes: Buffer.from(e.original), sha256: e.sha256 }; }
     history(input = {}) { const { offset, limit } = paging(input), total = this.db.prepare('SELECT count(*) n FROM operations').get().n; return { items: this.db.prepare('SELECT id,kind,created,revision,result FROM operations ORDER BY revision DESC LIMIT ? OFFSET ?').all(limit, offset).map(r => ({ ...r, result: JSON.parse(r.result) })), total, offset, limit, nextOffset: offset + limit < total ? offset + limit : null }; }
     invoke(action, input = {}) {
-        const reads = { status: () => this.status(), binding: () => this.binding(), feeds: () => this.feeds(), entities: () => this.entities(input), entity: () => this.entity(input.entityId), groups: () => this.groups(input), group: () => this.group(input.groupId, input), rules: () => this.rules(), refresh: () => this.refreshPlan(input.editionId, input), deliveries: () => this.deliveries(), delivery: () => this.delivery(input.deliveryId), history: () => this.history(input), operation: () => { const row = this.db.prepare('SELECT id,kind,revision,result FROM operations WHERE id=?').get(input.requestId); return row ? { found: true, id: row.id, kind: row.kind, revision: row.revision, result: JSON.parse(row.result) } : { found: false }; } };
+        const reads = { status: () => this.status(), binding: () => this.binding(), feeds: () => this.feeds(), entities: () => this.entities(input), entity: () => this.entity(input.entityId), groups: () => this.groups(input), group: () => this.group(input.groupId, input), rules: () => this.rules(), refresh: () => this.refreshPlan(input.editionId, input), deliveries: () => this.deliveries(), delivery: () => this.delivery(input.deliveryId), 'delivery.compare': () => this.compareDeliveries(input), history: () => this.history(input), operation: () => { const row = this.db.prepare('SELECT id,kind,revision,result FROM operations WHERE id=?').get(input.requestId); return row ? { found: true, id: row.id, kind: row.kind, revision: row.revision, result: JSON.parse(row.result) } : { found: false }; } };
         const writes = { 'feed.create': 'createFeed', 'source.import': 'importSource', 'source.activate': 'activate', 'rules.save': 'saveRules', 'match.dismiss': 'dismiss', 'entity.merge': 'merge', 'entity.split': 'split', 'field.choose': 'choose', 'entity.annotate': 'annotate', 'record.exclude': 'exclude', 'delivery.create': 'createDelivery' };
         if (own(reads, action)) {
             this.db.exec('BEGIN');

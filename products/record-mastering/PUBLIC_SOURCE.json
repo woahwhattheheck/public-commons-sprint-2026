@@ -308,16 +308,19 @@
     "files": [
       {
         "path": "products/record-mastering/PACKAGE_README.md",
-        "bytes": 10266,
-        "sha256": "5a921c2314cea5953cd8a1cef2811b86bf5899fb61d28acf77fa2fe1ba3757b9"
+        "encoding": "utf-8",
+        "bytes": 10795,
+        "sha256": "ffdbe3c96aaa79440f2efab1a575a475e9d47092dfa586a532561cd00d8419e5"
       },
       {
         "path": "products/record-mastering/AGENTS.md",
+        "encoding": "utf-8",
         "bytes": 4994,
         "sha256": "dd6c11227fed17fd81b18a456a41e36abe30e7103ab190733444120d5837d527"
       },
       {
         "path": "stellar/scf-starforge-20261009/distribution/selections/record-mastering-workspace.json",
+        "encoding": "utf-8",
         "bytes": 11185,
         "sha256": "6840a9b28310bf54357743564ec3da3ebc43ca7a9b28f32f48063cb269600de2"
       }
@@ -506,5 +509,288 @@
         "sha256": "8d1446a3deee42c5e1297bdfd299fa2f6c91fc35a438ea4e1e9db0512e51dc36"
       }
     ]
+  },
+  "deliveryComparison": {
+    "source_base": "d2407a4b7c6776e91246bb2d8ccb04d152f899bd",
+    "complete_files": 47,
+    "current_files": [
+      {
+        "path": "products/record-mastering/AGENTS.md",
+        "encoding": "utf-8",
+        "bytes": 4994,
+        "sha256": "dd6c11227fed17fd81b18a456a41e36abe30e7103ab190733444120d5837d527"
+      },
+      {
+        "path": "products/record-mastering/cli.mjs",
+        "encoding": "utf-8",
+        "bytes": 4874,
+        "sha256": "0afb7cbe6bfa11b0463aa1bf38d1b2ecb31508981c48f53b3652134aa4a8feb4"
+      },
+      {
+        "path": "products/record-mastering/OPERATING.md",
+        "encoding": "utf-8",
+        "bytes": 18505,
+        "sha256": "c178a05ed099a27c5d79b1ea8f6650612df3135004daf47ec9f56012408dcb41"
+      },
+      {
+        "path": "products/record-mastering/PACKAGE_README.md",
+        "encoding": "utf-8",
+        "bytes": 10795,
+        "sha256": "ffdbe3c96aaa79440f2efab1a575a475e9d47092dfa586a532561cd00d8419e5"
+      },
+      {
+        "path": "products/record-mastering/receiving/application-lifetime.mjs",
+        "encoding": "utf-8",
+        "bytes": 9445,
+        "sha256": "8d1446a3deee42c5e1297bdfd299fa2f6c91fc35a438ea4e1e9db0512e51dc36"
+      },
+      {
+        "path": "products/record-mastering/receiving/installed-receiving.mjs",
+        "encoding": "utf-8",
+        "bytes": 30990,
+        "sha256": "17f40b105fbb13285131598fb1f970d0cdb18f1f63dc295ddab7e9bcdcfcfd77"
+      },
+      {
+        "path": "products/record-mastering/receiving/preparation.example.json",
+        "encoding": "utf-8",
+        "bytes": 641,
+        "sha256": "e0831b8368bbffe2562b7b39041389f50c3fba3c997149210d614461396ae42c"
+      },
+      {
+        "path": "products/record-mastering/receiving/prepare-installed.mjs",
+        "encoding": "utf-8",
+        "bytes": 9394,
+        "sha256": "44b985fb34528a80acf0f8e427f87a60f6c8435a74974c95b7391d372c4551da"
+      },
+      {
+        "path": "products/record-mastering/receiving/README.md",
+        "encoding": "utf-8",
+        "bytes": 7715,
+        "sha256": "7f56e612018fe94e25be03813240a501b91dc98dd50464eac16c5a50180beade"
+      },
+      {
+        "path": "products/record-mastering/workspace.mjs",
+        "encoding": "utf-8",
+        "bytes": 19277,
+        "sha256": "e576b733affc859059981062c511b7a667c1e5690f8ded762333b5de7910fcb7"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/record-mastering-workspace.json",
+        "encoding": "utf-8",
+        "bytes": 643,
+        "sha256": "fef33995cc29f019a7c2653c2ca6bb15b80ef82ebdb2d259e97435f2ac001398"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/contributions/record-mastering.json",
+        "encoding": "utf-8",
+        "bytes": 1276,
+        "sha256": "d0bcd9aa71db599643e39ede0c745d62ed6fcda7899fa74fdda4c2a4d5f5bf38"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/distribution/selections/record-mastering-workspace.json",
+        "encoding": "utf-8",
+        "bytes": 11185,
+        "sha256": "6840a9b28310bf54357743564ec3da3ebc43ca7a9b28f32f48063cb269600de2"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/application-provider.mjs",
+        "encoding": "utf-8",
+        "bytes": 948,
+        "sha256": "6e1f4f7454556740f7bab9e0a395e5d49bf3aa3d5b8768ce9a10dbcf8fc7f2bb"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/application.mjs",
+        "encoding": "utf-8",
+        "bytes": 5740,
+        "sha256": "9b3f762d4b1584e9187f6914b10553d79485abd770d445d924eb68fe9741e64c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/browser-assets.json",
+        "encoding": "utf-8",
+        "bytes": 470,
+        "sha256": "60cadf944fdc2fd49a50725c6c8dd620a8b1fe5d47d0c247a1228ecf15f8bc62"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/cli.mjs",
+        "encoding": "utf-8",
+        "bytes": 8155,
+        "sha256": "ed031a3e9713b553e63d7b5a057c178436d8c7f509dddb1765d8e82511264858"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/client.d.mts",
+        "encoding": "utf-8",
+        "bytes": 12787,
+        "sha256": "ed70bca6ea2560caeeae1cab0f98b023fe698cee0b0467a21bfffa9336b9d175"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/client.mjs",
+        "encoding": "utf-8",
+        "bytes": 1580,
+        "sha256": "32948b04742823211ae555fd9a3d4a4ffb3e58474000382e62cc3862d9874e73"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/core.mjs",
+        "encoding": "utf-8",
+        "bytes": 34506,
+        "sha256": "35fb1310d4a3c79394e9a2bdf5418fa419ab6273f27da6b3306788f1aa8368da"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/csv.mjs",
+        "encoding": "utf-8",
+        "bytes": 2434,
+        "sha256": "e0152ec7bfaa1c9a49d7e49e65586cc26f8c481cab731cd2051c322eeec9d5a5"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/DELIVERY_COMPARISON.md",
+        "encoding": "utf-8",
+        "bytes": 7260,
+        "sha256": "2825061d29d81aaaca023d3351861ccb702336ca4ea22812817b89aeaa74ff3e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/delivery-comparison.mjs",
+        "encoding": "utf-8",
+        "bytes": 12024,
+        "sha256": "6389e5527b08e941ab7687c929dfe5641ebfed696eecd150f21b6447f6dd60df"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example-workspace.mjs",
+        "encoding": "utf-8",
+        "bytes": 3377,
+        "sha256": "117f7d12cf5bca514175eee12c5c94470fc7363ebdc168f302b8063013589ea0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/billing-corrections.csv",
+        "encoding": "utf-8",
+        "bytes": 380,
+        "sha256": "ec00515866754f2e34eba6bc348808c380a8135176785cb235305a38e9f686a8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/billing.csv",
+        "encoding": "utf-8",
+        "bytes": 386,
+        "sha256": "81697fc3d6eae5a30e181f731c6a84281180f8adfd73e4937f646d14feed8046"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/crm.csv",
+        "encoding": "utf-8",
+        "bytes": 607,
+        "sha256": "3d24537bbe7c49d1b1623437498a1919b6a4c29071074dbbae40db5c1b25c5be"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/customer-delivery.gz",
+        "encoding": "base64",
+        "bytes": 7205,
+        "sha256": "16b23c27e19e556d786c63a809cbcd49593cd567aacadf90b43eeb1ffb94e2e8"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/example/EXAMPLE.md",
+        "encoding": "utf-8",
+        "bytes": 980,
+        "sha256": "a5013658f8399a3501fcad156436e37d264c9fe11f4b37b767c4fb3a98c17ed6"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/EXERCISE.mjs",
+        "encoding": "utf-8",
+        "bytes": 10126,
+        "sha256": "46500963b99b124f383c23ecff03a74e78a0929dede88e2de202b4220d7b431f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/launch-example.mjs",
+        "encoding": "utf-8",
+        "bytes": 1649,
+        "sha256": "745bb63f20ec7353da9d490a26f1827750369d9e6e376e8ff3fc50f363cb4e10"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/LICENSE",
+        "encoding": "utf-8",
+        "bytes": 1074,
+        "sha256": "a013def64d46550c0c51c20e2280341720fe6fc1847021d8bf5f2e97b1a99d77"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/mcp-tools.mjs",
+        "encoding": "utf-8",
+        "bytes": 3836,
+        "sha256": "8c36ea67831f12617900f22ffc2d9cef02a04c97c426fe8fd90047480122a0ea"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/mcp.mjs",
+        "encoding": "utf-8",
+        "bytes": 19029,
+        "sha256": "d1d8d451e30d44cfd502cc2eed6baec305554b64110d49cde03ce56ec2defb40"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/merchant-provider.mjs",
+        "encoding": "utf-8",
+        "bytes": 1999,
+        "sha256": "5ebce0024021f12b3873e8b7e6e09445f8946022fee966a22422e2ab55448402"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/package.json",
+        "encoding": "utf-8",
+        "bytes": 599,
+        "sha256": "ecd7deedc9fc3cd6cf13d4ba132d7d3f890e2d8c40da03f08975ba58886e6571"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/packet-reader.mjs",
+        "encoding": "utf-8",
+        "bytes": 5077,
+        "sha256": "eda6b964d713ec435862e58fc11266331470f0e31aa0d367ace34cee0d5abbcf"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/portable.mjs",
+        "encoding": "utf-8",
+        "bytes": 14281,
+        "sha256": "d62f8e9cc924e61a67db600b12e9c5c0e1e72eef3f587b2172daebbdfaecf84c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/projection.mjs",
+        "encoding": "utf-8",
+        "bytes": 9604,
+        "sha256": "71e0ad212699e3da74af342179c65d30d1efaabb1947f8256956487474e17835"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/README.md",
+        "encoding": "utf-8",
+        "bytes": 14680,
+        "sha256": "77afa6b8dc28463b7b499c9c4309215c551cbeca0cc920a129c6f4913974af3f"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/schema.sql",
+        "encoding": "utf-8",
+        "bytes": 2421,
+        "sha256": "ebda8fef06489e74c197c10364846e76ed9277033933418413902027802fc43e"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/server.mjs",
+        "encoding": "utf-8",
+        "bytes": 6867,
+        "sha256": "2f3af612c689cf71ff029b5c8e33fe4b7affb2a64cd39b348afaae2cb1e6a96c"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/app.js",
+        "encoding": "utf-8",
+        "bytes": 26849,
+        "sha256": "53353df6a4368f6c4e2163c20ed3fcb1886de776f6f633abcfbe44309e57f7f0"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/delivery-comparison.js",
+        "encoding": "utf-8",
+        "bytes": 9886,
+        "sha256": "8bcf82126f34a3e5179cdd7f81ff02a8ede7e774346252a653a0e89986cb58f1"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/index.html",
+        "encoding": "utf-8",
+        "bytes": 1291,
+        "sha256": "2910942800627176672df813ca9526e48890e8ced4f080e3f4b178a1d3d7c695"
+      },
+      {
+        "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/ui/style.css",
+        "encoding": "utf-8",
+        "bytes": 7278,
+        "sha256": "c45c9e4a021515158272695f1e3465693af5d55c6c7b7e0f69c49bdeca83fcd4"
+      }
+    ],
+    "scope": "Read-only immutable delivery comparison, complete original file custody, browser/CLI/typed/Merchant read integration and verified reopen. Existing full workspace and original installed receiving remain unchanged."
   }
 }
