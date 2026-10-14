@@ -2,18 +2,13 @@
 from __future__ import annotations
 import contextlib
 import datetime as dt
-try:
-    import fcntl
-except ImportError:
-    from model import windows_fs as fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import re
 import tempfile
-if os.name == "nt":
-    from ..common import _open_original, _replace_original, _sync_directory
+from .. import portable_fs as _fs
 
 
 def canonical(value):
@@ -38,11 +33,13 @@ def identifier(value):
 def read(path):
     def invalid(value):
         raise ValueError('Nonfinite JSON value: ' + value)
-    return json.loads(Path(path).read_text(encoding='utf-8'), parse_constant=invalid)
+    with os.fdopen(_fs.open_file(_fs.native_path(path), os.O_RDONLY),
+                   'r', encoding='utf-8') as stream:
+        return json.load(stream, parse_constant=invalid)
 
 
 def atomic(path, value, *, immutable=False):
-    path = Path(path)
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     body = canonical(value) + b'\n'
     pending = None
@@ -54,23 +51,14 @@ def atomic(path, value, *, immutable=False):
             os.fsync(f.fileno())
         if immutable:
             try:
-                os.link(pending, path)
+                _fs.publish_file(pending, path)
             except FileExistsError:
-                if path.read_bytes() != body:
-                    raise ValueError('Immutable experiment item changed: ' + path.name)
+                with os.fdopen(_fs.open_file(path, os.O_RDONLY), 'rb') as current:
+                    if current.read() != body:
+                        raise ValueError('Immutable experiment item changed: ' + path.name)
         else:
-            if os.name == "nt":
-                _replace_original(pending, path)
-            else:
-                os.replace(pending, path)
-        if os.name == "nt":
-            _sync_directory(path.parent)
-        else:
-            fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+            _fs.replace(pending, path)
+        _fs.sync_directory(path.parent)
     finally:
         if pending:
             pending.unlink(missing_ok=True)
@@ -78,27 +66,18 @@ def atomic(path, value, *, immutable=False):
 
 @contextlib.contextmanager
 def held(path, *, blocking=False):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if os.name == "nt":
-        fd = _open_original(path, os.O_RDWR | os.O_CREAT, 0o600)
-    else:
-        fd = os.open(path, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+    with _fs.locked(path, blocking=blocking):
         yield
-    finally:
-        os.close(fd)
 
 
 def fingerprint(path):
-    path = Path(path)
+    path = _fs.native_path(path)
     h = hashlib.sha256()
-    with path.open('rb') as f:
-        before = os.fstat(f.fileno())
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), 'rb') as f:
+        before = _fs.fd_stat(f.fileno())
         for b in iter(lambda: f.read(1024*1024), b''):
             h.update(b)
-        after = os.fstat(f.fileno())
+        after = _fs.fd_stat(f.fileno())
     fields = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
     if fields(before) != fields(after):
         raise ValueError('Source changed while reading: ' + path.name)
@@ -106,13 +85,9 @@ def fingerprint(path):
 
 
 def member(root, name):
-    root = Path(root).resolve()
-    if not isinstance(name, str) or '\\' in name or '\0' in name:
-        raise ValueError('Invalid project member')
-    p = Path(name)
-    if p.is_absolute() or not p.parts or '..' in p.parts or p.as_posix() != name:
-        raise ValueError('Use a canonical relative project member')
-    path = (root / p).resolve(strict=True)
+    root = _fs.native_path(root).resolve()
+    _fs.relative_name(name)
+    path = (root / name).resolve(strict=True)
     if not path.is_relative_to(root) or not path.is_file():
         raise ValueError('Project member is outside its workspace')
     return path
