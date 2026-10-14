@@ -51,6 +51,7 @@ from team_access import TeamAccess, CONTEXT
 from study_catalogues import StudyCatalogues
 from programme_activity import ProgrammeActivity
 from origin_policy import OriginPolicy, OriginError, advertised_origin as validate_advertised_origin
+from workbench_links import serve as serve_workbench_links, navigation_failure as workbench_link_failure
 
 JSON_GZIP_MIN_BYTES = 32 * 1024
 JSON_ENCODING_QUALITY = re.compile(r"(?:0(?:\.[0-9]{0,3})?|1(?:\.0{0,3})?)\Z")
@@ -1296,6 +1297,8 @@ class Handler(BaseHTTPRequestHandler):
             one = lambda name, default=None: query.get(name, [default])[0]
             if url.path == "/health":
                 return self.send_json(200, {"ready": not self.app.closing})
+            if serve_workbench_links(self, self.path):
+                return
             if url.path.startswith("/api/file/review-desk/"):
                 self.authorized(file=True)
                 selected = url.path.removeprefix("/api/file/review-desk/").split("/", 1)
@@ -1424,7 +1427,8 @@ class Handler(BaseHTTPRequestHandler):
         except (BrokenPipeError, ConnectionResetError):
             pass
         except BaseException as error:
-            self.fail(error)
+            if not workbench_link_failure(self, error):
+                self.fail(error)
 
     def do_POST(self):
         try:
