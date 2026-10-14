@@ -8,9 +8,11 @@ import errno
 import hashlib
 import json
 import os
-from pathlib import Path, PurePosixPath, PureWindowsPath
+from pathlib import Path, PurePosixPath
 import stat
 import sys
+
+from model import portable_fs as _fs
 
 # Explicit source budgets, independent of scenario count. Callers can select
 # larger actual jobs through the same API/CLI; package metadata never relaxes
@@ -63,14 +65,7 @@ def fingerprint(index: dict) -> str:
 
 
 def relative_path(value: str) -> str:
-    require(isinstance(value, str) and value and '\x00' not in value and '\\' not in value,
-            'Declared file paths must be nonempty relative paths using forward slashes')
-    path = PurePosixPath(value)
-    require(not path.is_absolute() and not PureWindowsPath(value).drive,
-            'Absolute or drive-relative file paths are not portable')
-    require(all(part not in ('', '.', '..') for part in value.split('/')) and str(path) == value,
-            'Declared paths cannot contain empty, dot or traversal components')
-    return value
+    return _fs.relative_name(value, windows=True)
 
 
 def _signature(info):
@@ -79,16 +74,20 @@ def _signature(info):
 
 
 def _file_state(root: Path, relative: str):
-    """Reject symlinks and special files anywhere below the selected root."""
-    current = root
+    """Reject symlinks, junctions and special files below the selected root."""
+    current = _fs.native_path(root)
     parts = PurePosixPath(relative).parts
     for position, part in enumerate(parts):
         current = current / part
         try:
-            info = current.lstat()
+            # Windows path_stat and fd_stat use the same native ChangeTime.
+            # Intermediate directories use lstat because path_stat is file-only.
+            info = current.lstat() if position < len(parts) - 1 else _fs.path_stat(current)
         except FileNotFoundError:
             return None
-        require(not stat.S_ISLNK(info.st_mode), f'Symlink is not a delivery file: {relative}')
+        require(not stat.S_ISLNK(info.st_mode)
+                and not getattr(info, 'st_file_attributes', 0) & 0x400,
+                f'Symlink or reparse point is not a delivery file: {relative}')
         if position < len(parts) - 1:
             require(stat.S_ISDIR(info.st_mode), f'Non-directory component in declared path: {relative}')
         else:
@@ -100,10 +99,10 @@ def _open_regular(root: Path, relative: str, expected):
     current = _file_state(root, relative)
     require(current is not None and _signature(current) == _signature(expected),
             f'Source changed before capture: {relative}')
-    flags = os.O_RDONLY | getattr(os, 'O_NOFOLLOW', 0) | getattr(os, 'O_NONBLOCK', 0)
-    descriptor = os.open(root / relative, flags)
+    with _fs.parent_directory(root, relative) as (parent, leaf):
+        descriptor = parent.open(leaf, os.O_RDONLY)
     try:
-        opened = os.fstat(descriptor)
+        opened = _fs.fd_stat(descriptor)
         require(stat.S_ISREG(opened.st_mode) and _signature(opened) == _signature(expected),
                 f'Source changed while opening: {relative}')
         return descriptor
@@ -127,14 +126,14 @@ def _read_manifest(root: Path, name: str, expected_state, limits):
         raw = stream.read(maximum + 1)
         require(len(raw) <= maximum,
                 f'Manifest exceeds max_manifest_bytes={maximum}')
-        require(_signature(os.fstat(stream.fileno())) == _signature(expected_state),
+        require(_signature(_fs.fd_stat(stream.fileno())) == _signature(expected_state),
                 'Manifest changed during capture')
     _unchanged(root, name, expected_state)
     return raw
 
 
 def _private_file(path: Path):
-    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    descriptor = _fs.open_file(_fs.native_path(path), os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     return os.fdopen(descriptor, 'wb')
 
 
@@ -169,7 +168,7 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
     On IO failure a partial directory remains for diagnosis, without a seal.
     """
     limits = capture_limits(limits)
-    manifest_path = Path(manifest_path).absolute()
+    manifest_path = _fs.native_path(manifest_path).absolute()
     require(not manifest_path.is_symlink(), 'Manifest cannot be a symlink')
     root = manifest_path.parent.resolve(strict=True)
     manifest_name = relative_path(manifest_path.name)
@@ -196,17 +195,9 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
         relative = relative_path(value)
         roles_by_path.setdefault(relative, set()).add(role)
 
-    # Reject ambiguous names on case-insensitive recipients, even on Linux.
-    portable_names = {}
-    for relative in roles_by_path:
-        key = relative.casefold()
-        require(key not in portable_names or portable_names[key] == relative,
-                'Declared delivery paths collide on case-insensitive filesystems')
-        portable_names[key] = relative
-    for key in portable_names:
-        parts = key.split('/')
-        require(not any('/'.join(parts[:position]) in portable_names for position in range(1, len(parts))),
-                'Declared file paths collide with a directory on case-insensitive filesystems')
+    # Keep original names; reject file/directory, case and Unicode aliases before
+    # creating a recipient tree, including aliases in intermediate directories.
+    _fs.validate_members(roles_by_path, portable=True)
     source_states = {}
     total = 0
     for relative, roles in roles_by_path.items():
@@ -222,7 +213,7 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
         require(limits['max_total_bytes'] is None or total <= limits['max_total_bytes'],
                 'Declared delivery exceeds max_total_bytes=' + str(limits['max_total_bytes']))
 
-    output_path = Path(out_dir).absolute()
+    output_path = _fs.native_path(out_dir).absolute()
     require(not output_path.is_symlink(), 'Output directory cannot be a symlink')
     destination = output_path.resolve()
     # Only declared inputs are read; an owned child output is safe when it
@@ -234,6 +225,7 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
     destination.mkdir(mode=0o700, parents=False, exist_ok=False)
     delivery = destination / 'delivery'
     delivery.mkdir(mode=0o700)
+    directories = {destination, delivery}
     artifacts = []
     storage = {'declared_bytes': total, 'reflink_bytes': 0, 'streamed_bytes': 0,
                'reflink_files': 0, 'streamed_files': 0}
@@ -243,6 +235,12 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
             continue
         target = delivery / relative
         target.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+        parent = target.parent
+        while parent.is_relative_to(destination):
+            directories.add(parent)
+            if parent == destination:
+                break
+            parent = parent.parent
         digest = hashlib.sha256()
         copied = 0
         descriptor = _open_regular(root, relative, info)
@@ -257,8 +255,10 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
                 if not cloned:
                     sink.write(chunk)
                 digest.update(chunk)
-            require(copied == info.st_size and _signature(os.fstat(source.fileno())) == _signature(info),
+            require(copied == info.st_size and _signature(_fs.fd_stat(source.fileno())) == _signature(info),
                     f'Source changed during capture: {relative}')
+            sink.flush()
+            os.fsync(sink.fileno())
         _unchanged(root, relative, info)
         method = 'reflink' if cloned else 'streamed'
         storage[method + '_bytes'] += copied
@@ -274,6 +274,9 @@ def capture_delivery(manifest_path: Path, out_dir: Path,
             _unchanged(root, relative, info)
     require(_read_manifest(root, manifest_name, state, limits) == raw_manifest,
             'Manifest changed during capture')
+    for parent in sorted(directories, key=lambda path: len(path.parts), reverse=True):
+        _fs.sync_directory(parent)
+    _fs.sync_directory(destination.parent)
     manifest_schema = json.loads(raw_manifest.decode('utf-8-sig')).get('schema')
     study = manifest_schema == 'commons.native-study-delivery/v1'
     index = {'schema': ('commons.native-study-package/v1' if study
@@ -305,11 +308,15 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
                 (limits['max_references'] is None or count <= limits['max_references']),
                 'Declared reference count exceeds the selected reference budget')
     manifest = relative_path(index.get('manifestPath'))
-    root = Path(out_dir).resolve(strict=True)
+    root = _fs.native_path(out_dir).resolve(strict=True)
+    names = []
+    for artifact in artifacts:
+        require(isinstance(artifact, dict), 'Invalid artifact entry')
+        names.append(relative_path(artifact.get('path')))
+    _fs.validate_members(names, portable=True)
     seen = set()
     total = 0
     for artifact in artifacts:
-        require(isinstance(artifact, dict), 'Invalid artifact entry')
         relative = relative_path(artifact.get('path'))
         require(relative.casefold() not in seen, 'Duplicate artifact path in package index')
         seen.add(relative.casefold())
@@ -338,7 +345,7 @@ def verify_capture(out_dir: Path, index: dict, *, limits=None) -> None:
                 read_bytes += len(chunk)
                 require(read_bytes <= size, f'Captured file grew while reading: {relative}')
                 actual.update(chunk)
-            require(_signature(os.fstat(stream.fileno())) == _signature(info),
+            require(_signature(_fs.fd_stat(stream.fileno())) == _signature(info),
                     f'Captured file changed while reading: {relative}')
         _unchanged(root, relative, info)
         require(read_bytes == size and actual.hexdigest() == digest, f'Captured bytes differ: {relative}')
