@@ -219,6 +219,8 @@ class NativeJobs:
         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
                         "model/native.py", "model/workspace.py", "model/common.py",
                         "model/verified_files.py")
+        if os.name == "nt":
+            source_paths += ("model/windows_process.py", "model/windows_fs.py")
         if "reuse_source_run_ids" in task["payload"]:
             source_paths += ("model/stage_cache.py", "model/native_equivalence.py",
                              "model/native_arguments.py", "model/reuse.py",
@@ -264,13 +266,19 @@ class NativeJobs:
         process = None
         resources_before = resource_status()
         with (directory / "process.log").open("ab", buffering=0) as output:
-            process = subprocess.Popen(
-                [sys.executable, "-B", "-m", "model.native_worker",
-                 "--request", str(directory / "request.json")],
-                cwd=APPLICATION, env=environment, stdin=subprocess.DEVNULL,
-                stdout=output, stderr=subprocess.STDOUT, close_fds=True, start_new_session=True,
-                pass_fds=tuple(task.get("_native_custody_fds", ())))
-        identity = process_identity(process.pid)
+            command = [sys.executable, "-B", "-m", "model.native_worker",
+                       "--request", str(directory / "request.json")]
+            if os.name == "nt":
+                from model.windows_process import spawn
+                process = spawn(command, cwd=APPLICATION, env=environment,
+                                stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
+                                custody_fds=tuple(task.get("_native_custody_fds", ())),
+                                execution_id=request["execution_id"], request_sha256=request["request_sha256"])
+            else:
+                process = subprocess.Popen(command, cwd=APPLICATION, env=environment, stdin=subprocess.DEVNULL,
+                                           stdout=output, stderr=subprocess.STDOUT, close_fds=True, start_new_session=True,
+                                           pass_fds=tuple(task.get("_native_custody_fds", ())))
+        identity = process.identity() if os.name == "nt" else process_identity(process.pid)
         launch = {"schema": "upstate.native-launch/v1", "execution_id": request["execution_id"],
                   "request_sha256": request["request_sha256"], "started_at": now(),
                   "identity": identity, "pid": process.pid, "resources": resources_before}
@@ -514,7 +522,7 @@ class NativeJobs:
                 if stop_started is None:
                     stop_started = time.monotonic()
                 elapsed = time.monotonic() - stop_started
-                sig = signal.SIGKILL if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
+                sig = getattr(signal, "SIGKILL", 9) if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
                 if sig not in signals_sent and self._alive(execution):
                     signals_sent.add(sig)
                     # Identity and session membership are checked before every signal.

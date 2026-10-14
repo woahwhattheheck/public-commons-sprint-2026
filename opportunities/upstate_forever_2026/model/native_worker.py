@@ -13,12 +13,16 @@ import traceback
 
 from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
 from .native_execution import resource_status
+if os.name == "nt":
+    from . import windows_process as _windows_process
 
 SCHEMA = "upstate.native-worker-request/v1"
 
 
 def process_identity(pid=None):
     """Identity survives reconnect and rejects a recycled PID or namespace."""
+    if os.name == "nt":
+        return _windows_process.process_identity(pid)
     pid = os.getpid() if pid is None else int(pid)
     row = Path("/proc") / str(pid)
     try:
@@ -34,6 +38,8 @@ def process_identity(pid=None):
 
 
 def identity_matches(expected):
+    if os.name == "nt":
+        return _windows_process.identity_matches(expected)
     current = process_identity(expected.get("pid", -1))
     return bool(current and all(current.get(k) == expected.get(k)
                                 for k in ("pid", "start_ticks", "boot_id", "process_group", "command_sha256"))
@@ -51,6 +57,8 @@ def signal_owned(directory, identity, execution_id, request_sha256, signum):
                              "request_sha256": request_sha256,
                              "signal_requested": int(signum), "at": now(),
                              "identity": identity}, immutable=True)
+        if os.name == "nt":
+            return _windows_process.signal_owned(identity, signum)
         os.killpg(identity["process_group"], signum)
         return True
 
@@ -140,9 +148,11 @@ def run_request(request_path):
             raise ValueError("The native worker differs from its original structural case")
 
     stopped = threading.Event()
+    if os.name == "nt":
+        _windows_process.adopt_worker(execution_id, request["request_sha256"])
     identity = process_identity()
     if not identity or identity["process_group"] != os.getpid():
-        raise ValueError("The native worker needs its own Linux process group")
+        raise ValueError("The native worker needs its own platform process group")
     started = time.monotonic()
     worker = {"schema": "upstate.native-worker/v1", "execution_id": execution_id,
               "run_id": run_id, "task_id": request["task_id"],
@@ -155,6 +165,8 @@ def run_request(request_path):
 
     signal.signal(signal.SIGINT, interrupt)
     signal.signal(signal.SIGTERM, interrupt)
+    if os.name == "nt":
+        _windows_process.start_stop_bridge()
 
     def heartbeat():
         first_stop = None
@@ -181,7 +193,7 @@ def run_request(request_path):
                                 "execution_id": execution_id, "at": now(),
                                 "request_sha256": request["request_sha256"]})
                     elapsed = time.monotonic() - first_stop
-                    stage = signal.SIGKILL if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
+                    stage = getattr(signal, "SIGKILL", 9) if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
                     if stage not in sent:
                         sent.add(stage)
                         # This process owns the fresh session and every signaled child.
