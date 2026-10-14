@@ -37,6 +37,10 @@ If only a filename is known, inspect the decoded raw message with `inspectMimeAt
 
 Duplicate filenames are rejected unless the caller explicitly selects the exact original `part_path`, for example `[1, 0]`. An optional `media_type` checks the expected MIME type.
 
+## Compressed complete-source carriers
+
+When the original source is too large for the raw connector response, use the same receiver's complete-source carrier workflow in [CONNECTED_SOURCE_CARRIER.md](CONNECTED_SOURCE_CARRIER.md). The native command now includes `pack` and `unpack`; an explicit `source_carrier` descriptor in the original MIME selection restores an already-retained compressed attachment directly. Every original byte and both carrier/source identities are preserved. Ordinary raw attachment calls retain their original API and behavior.
+
 ## Native receiver
 
 Save the original raw tool response as JSON, either its normalized `structuredContent` value or the untouched envelope containing that value. Save the selection above as a second JSON file. Both are internal files: the raw message can contain private headers and other attachments.
@@ -47,9 +51,9 @@ Run from the existing repository:
 node host/connected_mime_attachment_native.cjs raw-response.json selection.json received-source.json
 ```
 
-Choose the output path explicitly. The command never uses an email-supplied filename as a filesystem destination. It creates a new file with exclusive creation and private mode where supported, reads it back, and prints a compact JSON result with the complete attachment identity and output path. Repeating the command accepts an already-existing regular file only when its bytes are identical; a different file or symlink is rejected. The destination's parent directory must already exist.
+Choose the output path explicitly. The command never uses an email-supplied filename as a filesystem destination. It creates a new file with exclusive creation and private mode where supported, reads it back, flushes and closes it, and prints a compact JSON result with the complete attachment identity and output path. Repeating the command accepts an already-existing regular file only when its bytes are identical; a different file or symlink is rejected. The destination's parent directory must already exist.
 
-The command uses Node's built-in filesystem and path modules plus the same three repository modules. It installs no dependencies and calls no external service. Retain the returned file in the existing receiving workspace and continue the original installer/consumer. A write failure may leave an incomplete file; choose a fresh destination rather than overwriting it.
+The command uses Node's built-in filesystem and path modules plus the maintained MIME, complete-source carrier, gzip, byte codec and SHA modules. It installs no dependencies and calls no external service. Retain the returned file in the existing receiving workspace and continue the original installer/consumer. A write failure may leave an incomplete file; choose a fresh destination rather than overwriting it.
 
 ## Data and failure behavior
 
