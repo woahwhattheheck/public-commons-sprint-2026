@@ -1,0 +1,16 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "receiving-process-portability",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "source_tools/receiving_process.py",
+        "model/native_worker.py",
+        "model/windows_process.py",
+        "model/windows_fs.py",
+        "integration/component_fragments/receiving-process-portability.json"
+      ]
+    }
+  },
+  "required_components": []
+}
