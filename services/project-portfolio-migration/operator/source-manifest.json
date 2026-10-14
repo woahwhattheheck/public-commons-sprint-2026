@@ -7,6 +7,11 @@
   },
   "files": [
     {
+      "path": "cli.py",
+      "bytes": 309,
+      "sha256": "9715ba42c02c6198f44b0077bcacf7ed1566aacae90a29ae8c3a8b68497db747"
+    },
+    {
       "path": "COMMISSIONING_CLIENT.md",
       "bytes": 13526,
       "sha256": "1a99ae8aa996ed895440117aa8a4e1c491cf1845997f28de50a444b30194eda0"
@@ -20,26 +25,6 @@
       "path": "COMMISSIONING_INTEGRATION.json",
       "bytes": 7715,
       "sha256": "b4c910a288ad410a35d9405779902ba8b6a2c54e980c9b376adf2b1ed9795f48"
-    },
-    {
-      "path": "IMPORTED_PLAN_COMMISSIONING.md",
-      "bytes": 15663,
-      "sha256": "84ee545dc34b624c1c9798d9a8c7a1d848264c9deb692a71a15783aa60d8e287"
-    },
-    {
-      "path": "README.md",
-      "bytes": 22139,
-      "sha256": "b584bb9c17aebd9cc7e9148c54128729830d4fda0b9af7c61ae7c664268c4542"
-    },
-    {
-      "path": "SOURCE_REFERENCES.json",
-      "bytes": 3286,
-      "sha256": "a778934a16cde7650ba30583def3c4d420272408fef6003ee0167e42b4a1d7c4"
-    },
-    {
-      "path": "cli.py",
-      "bytes": 309,
-      "sha256": "9715ba42c02c6198f44b0077bcacf7ed1566aacae90a29ae8c3a8b68497db747"
     },
     {
       "path": "commissioning-client.d.mts",
@@ -67,9 +52,9 @@
       "sha256": "a02bf050f42e36f1dab8ec02a0fc54af9d1a0c18e7790b8b78a71f3dfba10db0"
     },
     {
-      "path": "native/README.md",
-      "bytes": 5954,
-      "sha256": "9ac1a9c2e7deb1e3c32b9acdf7369df49bd9a2480263b467495b9dd62842184e"
+      "path": "IMPORTED_PLAN_COMMISSIONING.md",
+      "bytes": 15663,
+      "sha256": "84ee545dc34b624c1c9798d9a8c7a1d848264c9deb692a71a15783aa60d8e287"
     },
     {
       "path": "native/browser.mjs",
@@ -80,6 +65,11 @@
       "path": "native/commissioning-browser.mjs",
       "bytes": 14625,
       "sha256": "f7b39522b70ea5f77fd0bc5a3402aa7898860e91a059496f83b286ecdf907297"
+    },
+    {
+      "path": "native/README.md",
+      "bytes": 5954,
+      "sha256": "9ac1a9c2e7deb1e3c32b9acdf7369df49bd9a2480263b467495b9dd62842184e"
     },
     {
       "path": "native/receive.py",
@@ -107,11 +97,6 @@
       "sha256": "e6bbb61f0489f4b8729a4fcb816b5475b0316eaa1deaa1aaf214c862fa459118"
     },
     {
-      "path": "portfolio_target/commissioning.py",
-      "bytes": 46752,
-      "sha256": "2718d35c8293ae190375721be65bb12ad218d315ba78e46a216d3fe21e95f54f"
-    },
-    {
       "path": "portfolio_target/commissioning_cli.py",
       "bytes": 17088,
       "sha256": "1f0e7a9c8b238caed20c2ef9c3dc6b8cb33a37eb0516b79e74947f32c1a86336"
@@ -127,14 +112,19 @@
       "sha256": "c3eddd613861297ad3ad9a7b15c4ff3b85e99a10ad2ba526f93e82d9112ee57f"
     },
     {
+      "path": "portfolio_target/commissioning.py",
+      "bytes": 46752,
+      "sha256": "2718d35c8293ae190375721be65bb12ad218d315ba78e46a216d3fe21e95f54f"
+    },
+    {
       "path": "portfolio_target/planner.py",
       "bytes": 26652,
       "sha256": "bb8702cbc388f9c0dddb51d96c3f2d852fe9772d11d9ed4bf073ccb286df0253"
     },
     {
       "path": "portfolio_target/server.py",
-      "bytes": 24864,
-      "sha256": "de65af0d195d15ec556969532853554ed8cf40b0bb607763fde598d56b31cfaa"
+      "bytes": 25326,
+      "sha256": "1f183a26c8de6f82297349d1ee316577eec5d2d8f4fabd45cb602c1a024e431b"
     },
     {
       "path": "portfolio_target/storage.py",
@@ -148,8 +138,8 @@
     },
     {
       "path": "portfolio_target/web/app.js",
-      "bytes": 44300,
-      "sha256": "201f33fc8a48cd15a7463613de81b72d593463491aecd5ac6ef139c8e7f73176"
+      "bytes": 44328,
+      "sha256": "6d1af956276cb44b1be7bbef5afe2c93d884714282df73bfcf80a9e9b569c164"
     },
     {
       "path": "portfolio_target/web/commissioning.css",
@@ -177,9 +167,19 @@
       "sha256": "aafc49f1ab9bbd86e06099c747a7588c5734765b6304eb69e903f3e9e52f1f8a"
     },
     {
+      "path": "README.md",
+      "bytes": 22139,
+      "sha256": "b584bb9c17aebd9cc7e9148c54128729830d4fda0b9af7c61ae7c664268c4542"
+    },
+    {
       "path": "serve.py",
       "bytes": 284,
       "sha256": "77e61a4dce8b92a80cd4351c23b9a15430293f38215b31966806bb4bea0ae018"
+    },
+    {
+      "path": "SOURCE_REFERENCES.json",
+      "bytes": 3286,
+      "sha256": "a778934a16cde7650ba30583def3c4d420272408fef6003ee0167e42b4a1d7c4"
     }
   ]
 }
