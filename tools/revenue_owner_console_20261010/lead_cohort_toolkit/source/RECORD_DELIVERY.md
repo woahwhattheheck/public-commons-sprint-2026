@@ -84,3 +84,9 @@ Preparation, recording and generic reopening use source/source-publication.cjs. 
 Keep the same original source/input/output and sibling state after interruption. Do not rewrite recorded_at to the retry time. For a deliberately different input or tool edition use a new named output. The Python opener separately preserves its OUTPUT.source-open-state; see source/MATERIALIZE_SOURCE.md. State and output must share a filesystem supporting create-only hard links; platform failures retain the original unfinished operation.
 
 The recorder works on an already-sent message and performs no mailbox mutation. Use the original company case and sender for current relationship work. Favorable human contact follows the current account's designated relationship owner while the team continues the internal work.
+
+## Buyer contact corrections
+
+When a published contact route changes, preserve the original operations and buyer revisions. Historical receipt verification replays the complete original history and uses the buyer revision immediately before each original `delivery-record` operation. Each retained actual destination must match that historical route. The complete replay must still reproduce the current working record, and existing provider identity, MIME, body, attachment and operation checks continue to apply.
+
+New `recordDelivery` calls still compare the actual new recipient with the current buyer route. Record the corrected buyer through the maintained pack-save operation before recording a new send. Keep both actual sends and the original permanent-failure evidence in the original private company source.

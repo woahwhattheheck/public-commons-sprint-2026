@@ -20,7 +20,7 @@ const hash=body=>{const bytes=Buffer.from(body);return {bytes:bytes.length,sha25
 const files=Object.fromEntries(message.files(prepared).map(f=>['prepared/'+f.path,f.content]));
 files['input/original-message-recipe.json']=recipeText;
 for(const name of [
- 'source/source-archive.cjs','source/SOURCE_ARCHIVES.md','native/pack-source.mjs','source/VALUE_FIRST_CUSTOMER_PRESENTATION.md','source/MARKDOWN_MIME_RECEIVING.md','source/PACK_SCOPED_LEAD_RECORDS.md',
+ 'source/source-archive.cjs','source/SOURCE_ARCHIVES.md','native/pack-source.mjs','source/VALUE_FIRST_CUSTOMER_PRESENTATION.md','source/MARKDOWN_MIME_RECEIVING.md','source/PACK_SCOPED_LEAD_RECORDS.md','ROUTE_RECOVERY.md','course/route-recovery.cjs',
  'runtime/host/connected_sha256.cjs',
  'runtime/tools/revenue_owner_console_20261010/lead_value_message_core.cjs',
  'source/value-message.cjs','source/source-publication.cjs','source/VALUE_IN_MESSAGE.md',

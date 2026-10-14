@@ -2,7 +2,7 @@
   "schema": "commons.lead-cohort-toolkit-source.v1",
   "operation_id": "LEAD-TOOLKIT-PUBLIC-COMPLETE-20261014",
   "license": "Apache-2.0",
-  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity.",
+  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation.",
   "files": [
     {
       "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
@@ -161,8 +161,8 @@
     },
     {
       "path": "native/prepare-cohort.mjs",
-      "bytes": 7407,
-      "sha256": "aacb0adf7f3272a674afcbd91f31c95fd6ba24d94ae310e2c626e13e7744b31f"
+      "bytes": 7455,
+      "sha256": "d65398cb49b7d6acc00a6f6d0ac59bf4cda5fd661c3ce5f3529fd52b533d999a"
     },
     {
       "path": "native/reopen-cohort.mjs",
@@ -181,13 +181,13 @@
     },
     {
       "path": "source/delivery-recorder.cjs",
-      "bytes": 14814,
-      "sha256": "b298efa8e588552bbf8e1921c06b8b3c925170515549897601f6e4d9794de097"
+      "bytes": 15580,
+      "sha256": "3b79bfa663f9d899d73407b631628ff89825b3c05c4c0170aeee6b2b2922af10"
     },
     {
       "path": "native/record-delivery.mjs",
-      "bytes": 10188,
-      "sha256": "ec75c71134dd5cd08dffef8c94e6194e5a6e0b5e2d9b498ed834b5018241b5a1"
+      "bytes": 10236,
+      "sha256": "3625a78bcf2bbd951b414ddb3a2f94f15f5abc5fc97117941ae48ce6426d8c80"
     },
     {
       "path": "native/materialize-source.py",
@@ -196,8 +196,8 @@
     },
     {
       "path": "source/RECORD_DELIVERY.md",
-      "bytes": 9279,
-      "sha256": "41bed947101e507d30a33f6b8d386af3d16804bc1cb88c808764311729adedb4"
+      "bytes": 10098,
+      "sha256": "e1babb66986586ea286aeac2dadd9842773097d40eae69902ce00346cb09b046"
     },
     {
       "path": "source/MATERIALIZE_SOURCE.md",
@@ -246,13 +246,13 @@
     },
     {
       "path": "native/compose-message.mjs",
-      "bytes": 4281,
-      "sha256": "725a676a8ba1e80ffc78de42d2ee4922e8711df1c80da9a5f11e5d67b18e6727"
+      "bytes": 4329,
+      "sha256": "cef8b0691bcd3e8dcc5c97f35f0cf6398696e22e31143ac5c7733fc73b1d4762"
     },
     {
       "path": "README.md",
-      "bytes": 9083,
-      "sha256": "2a3b8529512451fc8b625dc34bb06d97a64adaf3dda9e521089b705b546b1a13"
+      "bytes": 9352,
+      "sha256": "35f4ef833037558230d39b3a306639dce6c5e002bab3945a15ff9faef729e266"
     },
     {
       "path": "source/VALUE_FIRST_CUSTOMER_PRESENTATION.md",
@@ -293,6 +293,16 @@
       "path": "NOTICE",
       "bytes": 301,
       "sha256": "21cf446bc8cf3e6dc9ee401251ffa1dc4ac60f6a94c022370ef06c74d128f390"
+    },
+    {
+      "path": "course/route-recovery.cjs",
+      "bytes": 1787,
+      "sha256": "27c9bd6857c94d8ed82dd81408ca83f3224a530ba1fa58a5b00b2bcef0ba8bca"
+    },
+    {
+      "path": "ROUTE_RECOVERY.md",
+      "bytes": 1463,
+      "sha256": "b7b90f64c71f0cb284d043ee62f0a703a8a029bf12b647a191b2ffe45f77cdf3"
     }
   ]
 }

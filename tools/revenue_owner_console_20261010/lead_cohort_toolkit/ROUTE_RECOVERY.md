@@ -1,0 +1,7 @@
+# Historical buyer routes in original delivery receipts
+
+A current published buyer-address correction previously made every original receipt fail because verifyReceipts compared each past destination with the current pack customer. The updated receipt receiver replays the original maintained history and binds each delivery operation to the buyer revision immediately preceding that operation. It verifies the whole history against the current record and retains all existing actual MIME/body/attachment and provider checks. New recordDelivery still compares the actual new recipient with the current buyer route.
+
+The actual route-recovery course: original current direct inbox send, permanent 550 5.1.1, explicit pack-save to independently confirmed general inbox, same customer edition sent to the corrected route. Seven original operations, two receipts, eight reproducible customer files. The predecessor fails receipt verification after the route change; successor accepts both original sends. Trying the recovered send against the earlier buyer document still rejects. Re-recording the same recovered send changes no files.
+
+course/route-recovery.cjs exports checkRouteRecovery for the complete retained before/after files and actual native inputs. All customer fixtures remain in the private original case. The contribution changes only historical receipt validation; source/delivery-recorder.cjs's recordDelivery current-target guard remains unchanged.

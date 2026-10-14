@@ -91,14 +91,28 @@ function verifyReceipts(files,deps){
   }
   const actual=identity(JSON.parse(messageBody),body,expected,deps.hash,{files,binaries:deps.binaries});
   if(JSON.stringify(actual.message_content)!==JSON.stringify(row.message_content))throw Error('Complete original MIME receipt differs');
-  verifyBuyer(record,actual.destination);
   for(const key of ['provider_id','thread_id','account_email','destination','subject','delivered_at','body_sha256'])if(actual[key]!==row[key])throw Error('Recorded message identity differs: '+key);
   const channel=deliveryChannel(row.channel),matches=record.deliveries.filter(d=>['gmail','email'].includes(d.channel)&&d.provider_id===row.provider_id);
   if(matches.length!==1)throw Error('Original provider event missing or duplicated');
   const d=matches[0];if(d.channel!==channel||d.id!==row.delivery_id||d.edition_id!==row.edition_id||d.destination.toLowerCase()!==row.destination||Date.parse(d.delivered_at)!==Date.parse(row.delivered_at))throw Error('Native receipt differs from original delivery event');
   const selectedHistory=historyPath(files,row.history_path);
-  if(!checkedHistories.has(selectedHistory))checkedHistories.set(selectedHistory,replay(files,deps.core,selectedHistory,deps.coreOptions).operations);
-  const operations=checkedHistories.get(selectedHistory),matchingOperations=operations.filter(o=>o.body.operation_id===row.operation_id),op=matchingOperations[0];
+  if(!checkedHistories.has(selectedHistory)){
+   const history=replay(files,deps.core,selectedHistory,deps.coreOptions),buyers=new Map();
+   let ledger={};
+   for(const operation of history.operations){
+    // A receipt belongs to the buyer route that was current when its original
+    // delivery operation was recorded. Later published route corrections must
+    // not rewrite or invalidate the recipient of an earlier actual send.
+    if(operation.body.kind==='delivery-record'){
+     const state=deps.core.leadFulfillmentState(ledger,{packId:record.pack.id,asOf:operation.at});
+     buyers.set(operation.body.operation_id,{pack:state.selected?.pack});
+    }
+    ledger=deps.core.applyLeadFulfillment(ledger,operation.body,operation.at,deps.coreOptions).ledger;
+   }
+   checkedHistories.set(selectedHistory,{operations:history.operations,buyers});
+  }
+  const history=checkedHistories.get(selectedHistory),operations=history.operations,matchingOperations=operations.filter(o=>o.body.operation_id===row.operation_id),op=matchingOperations[0];
+  verifyBuyer(history.buyers.get(row.operation_id)||{},actual.destination);
   if(matchingOperations.length!==1||!op||op.body.kind!=='delivery-record'||op.body.input.id!==row.delivery_id||op.body.input.provider_id!==row.provider_id||op.body.input.edition_id!==row.edition_id||op.body.input.channel!==channel||address(op.body.input.destination,'Original operation destination')!==row.destination||Date.parse(op.body.input.delivered_at)!==Date.parse(row.delivered_at))throw Error('Original delivery operation differs from retained receipt');
  }
  return {receipts:index.entries.length};
