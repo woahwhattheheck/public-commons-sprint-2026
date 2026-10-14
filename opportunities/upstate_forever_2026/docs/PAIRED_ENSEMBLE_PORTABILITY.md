@@ -14,6 +14,8 @@ Keep these application-relative files together:
 - `model/paired_ensemble/ensemble_store.py`
 - `model/paired_ensemble/ensemble_portable.py`
 - `model/paired_ensemble/ensemble_report_source.py`
+- `model/paired_ensemble/ensemble_report.py`
+- `model/paired_ensemble/ensemble_rasters.py`
 - `model/portable_fs.py`
 - `model/windows_fs.py`
 
@@ -51,6 +53,18 @@ publishes the completed directory create-only. Interrupting receiving leaves the
 prior published result unchanged; repeat into a new destination with the original
 archive. Temporary receiving directories are removed on normal exception cleanup.
 
+The existing report writer publishes its original text and grayscale PNG overviews
+through the same native path, replacement and directory-sync layer. PNGs are
+flushed through their writable temporary handle. The paired-analysis producer also
+uses native source/output paths and shared tile/result replacement. It closes GDAL
+writers first, then opens the completed TIFF with write access on Windows for the
+required flush before publication. POSIX keeps its original read-only flush handle.
+The numerical member loops, support masks, quantiles, units, aggregation and raster
+encoding are unchanged. The existing source fingerprint identifies a new producer
+edition for future analyses; previously completed analyses keep their original IDs,
+source fingerprints and retained result bytes. Transfer or report regeneration does
+not rerun the original scientific models.
+
 ## Operate an original completed result
 
 Use the installed application Python and an already complete paired product. Keep
@@ -72,6 +86,16 @@ Compare the original and received `analysis.json`, its selection ID and every
 member declared in `ensemble-project.json`; all quantitative and report member
 bytes should remain identical. A second receive into that existing directory must
 preserve it and report that a new destination is required.
+
+After preserving that byte-identical transfer, exercise the normal report writer
+on the independent received copy, not the original retained product:
+
+```sh
+python -B -m model.paired_ensemble.ensemble_cli report --project NEW_RECEIVED_PRODUCT
+```
+
+Open the regenerated report and its original quantitative downloads. Its analysis
+selection and scientific summaries remain those of the received original product.
 
 ## Capture the original scientific report source
 
@@ -119,6 +143,12 @@ capture and source export, and ordinary repeat/reuse behavior. Compare the origi
 stored identities, summaries and member hashes. On a suitable development volume,
 also exercise the shared verified-copy path when hard-link creation is unavailable.
 The existing report controls and original download links should be clicked once.
+
+For the native TIFF publication path, use an independent working copy of retained
+original tile records and the same original selection/bands with the existing
+materializer, then compare the result arrays and metadata. Keep the original
+completed product untouched. This exercises the repaired writer without dispatching
+InVEST or inventing replacement scientific inputs.
 
 This document specifies the operating course; execution outcomes belong with the
 exact tested application revision and product in the release coordination thread.
