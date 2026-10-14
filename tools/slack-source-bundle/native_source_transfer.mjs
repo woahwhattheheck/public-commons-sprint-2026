@@ -7,6 +7,8 @@
 export function createNativeSourceTransfer({codec, call, journal, now = () => new Date().toISOString(), readOriginal = null}) {
   const SCHEMA = "commons.native-source-transfer/v1";
   const MAX = 16 * 1024 * 1024;
+  const INLINE = "inline-manifest-v1", ATTACHED = "attachment-manifest-v2";
+  const MANIFEST_FILE = "SOURCE_TRANSFER_MANIFEST.json";
   const TYPES = {json:"application/json",txt:"text/plain",md:"text/markdown",html:"text/html",csv:"text/csv",tsv:"text/tab-separated-values",xml:"application/xml",css:"text/css",svg:"image/svg+xml",yaml:"application/yaml",yml:"application/yaml"};
   function fail(code, detail) { const e = new Error(code); e.code = code; if(detail!==undefined)e.detail=detail; throw e; }
   function assert(ok, code, detail) { if(!ok)fail(code,detail); }
@@ -43,10 +45,13 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     assert(/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(operation_id),"INVALID_OPERATION");
     const link_id=text(input.link_id,"LINK_ID"), account_email=email(input.account_email);
     assert(Array.isArray(input.files)&&input.files.length>0&&input.files.length<=32,"INVALID_FILES");
+    const transport=input.transport??ATTACHED;
+    assert([INLINE,ATTACHED].includes(transport),"UNKNOWN_TRANSFER_TRANSPORT");
     const names=new Set();let total=0;
     const files=input.files.map(f=>{
       const filename=text(f.filename,"FILENAME",160);
       assert(/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(filename)&&!filename.includes(".."),"UNSAFE_FILENAME");
+      assert(transport!==ATTACHED||filename.toLowerCase()!==MANIFEST_FILE.toLowerCase(),"RESERVED_MANIFEST_FILENAME");
       assert(!names.has(filename.toLowerCase()),"DUPLICATE_FILENAME");names.add(filename.toLowerCase());
       const ext=filename.split(".").at(-1).toLowerCase(),mime_type=TYPES[ext];
       assert(mime_type&&(!f.mime_type||f.mime_type===mime_type),"UNSUPPORTED_TEXT_FORMAT");
@@ -55,19 +60,25 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
       assert(Number.isSafeInteger(f.bytes)&&f.bytes===b.length&&f.sha256===sha256,"SOURCE_IDENTITY_MISMATCH",filename);
       return {filename,mime_type,bytes:b.length,sha256,content_base64:codec.base64Encode(b)};
     });
-    const manifest={schema:SCHEMA,operation_id,link_id,account_email,files:files.map(identity)};
+    const edition=transport===ATTACHED?{transport}:{};
+    const manifest={schema:SCHEMA,...edition,operation_id,link_id,account_email,files:files.map(identity)};
     const fingerprint=digest(canonical(manifest));
-    return {schema:SCHEMA,operation_id,link_id,account_email,files,manifest,fingerprint,key:"native-source-transfer:"+digest(link_id+"\n"+operation_id),subject:"INTERNAL SOURCE TRANSFER - DO NOT SEND - "+operation_id+" - "+fingerprint.slice(0,16)};
+    return {schema:SCHEMA,...edition,operation_id,link_id,account_email,files,manifest,fingerprint,key:"native-source-transfer:"+digest(link_id+"\n"+operation_id),subject:"INTERNAL SOURCE TRANSFER - DO NOT SEND - "+operation_id+" - "+fingerprint.slice(0,16)};
   }
   function validatePlan(plan){
     assert(plan?.schema===SCHEMA,"INVALID_PLAN");
-    const rebuilt=prepare({operation_id:plan.operation_id,link_id:plan.link_id,account_email:plan.account_email,files:plan.files.map((f,i)=>({...f,content:fileContent(plan,i)}))});
+    const rebuilt=prepare({transport:plan.transport??INLINE,operation_id:plan.operation_id,link_id:plan.link_id,account_email:plan.account_email,files:plan.files.map((f,i)=>({...f,content:fileContent(plan,i)}))});
     assert(canonical(rebuilt)===canonical(plan),"PLAN_IDENTITY_MISMATCH");return plan;
   }
   async function start(plan){
     validatePlan(plan);
     let record=await journal.load(plan.key);
-    if(record){assert(record.plan.fingerprint===plan.fingerprint,"OPERATION_PAYLOAD_CONFLICT");return record;}
+    if(record){
+      assert(record.schema===SCHEMA&&record.key===plan.key,"INVALID_OPERATION_RECORD");validatePlan(record.plan);
+      // A newer caller resumes the original transport, identity, pending action and receipts.
+      const source=p=>({operation_id:p.operation_id,link_id:p.link_id,account_email:p.account_email,files:p.files.map(identity)});
+      assert(canonical(source(record.plan))===canonical(source(plan)),"OPERATION_PAYLOAD_CONFLICT");return record;
+    }
     record={schema:SCHEMA,key:plan.key,revision:1,plan:clone(plan),phase:"prepared",created_at:now(),updated_at:now(),draft:null,files:plan.files.map(f=>({identity:identity(f),original:null,verified:null,notion:null})),receipts:[],errors:[]};
     if(!await journal.compareAndSwap(plan.key,null,record))fail("JOURNAL_CONFLICT");
     return clone(record);
@@ -89,7 +100,19 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     const r=await invoke("gmail_get_profile",{link_id:plan.link_id});
     assert(email(r.value.email||r.value.email_address||r.value.emailAddress)===plan.account_email,"ACCOUNT_IDENTITY_MISMATCH");return r;
   }
+  function manifestFile(plan){
+    const content=canonical(plan.manifest)+"\n",bytes=bytesOf(content);
+    return {filename:MANIFEST_FILE,mime_type:"application/json",bytes:bytes.length,sha256:codec.sha256(bytes),content_base64:codec.base64Encode(bytes)};
+  }
   function draftArgs(plan){
+    validatePlan(plan);
+    if(plan.transport===ATTACHED){
+      const parts=[manifestFile(plan),...plan.files].map(f=>({
+        mime_type:f.mime_type,filename:f.filename,content_disposition:"attachment",
+        body:{base64_url_content:f.content_base64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}
+      }));
+      return {link_id:plan.link_id,subject:plan.subject,payload:{mime_type:"multipart/mixed",parts},response_fields:["id","message"]};
+    }
     const content='<p>Internal source transfer. Do not send.</p><pre id="source-transfer-manifest">'+escaped(canonical(plan.manifest))+"</pre>";
     return {link_id:plan.link_id,from_address:plan.account_email,subject:plan.subject,payload:{mime_type:"multipart/mixed",parts:[{mime_type:"text/html",charset:"UTF-8",body:{content}},...plan.files.map(f=>({mime_type:f.mime_type,filename:f.filename,content_disposition:"attachment",body:{base64_url_content:f.content_base64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}}))]},response_fields:["id","message"]};
   }
@@ -102,11 +125,14 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     assert(values("subject").length===1&&values("subject")[0]===plan.subject,"DRAFT_SUBJECT_MISMATCH");
     assert(values("from").length===1&&mailbox(values("from")[0])===plan.account_email,"DRAFT_ACCOUNT_MISMATCH");
     const parts=mimeParts(message.payload);
-    const marker=parts.filter(p=>p.mime_type==="text/html"&&typeof p.body?.content==="string").map(p=>p.body.content.match(/<pre id="source-transfer-manifest">([\s\S]*?)<\/pre>/)?.[1]).filter(Boolean);
-    assert(marker.length===1&&unescaped(marker[0])===canonical(plan.manifest),"DRAFT_MANIFEST_MISMATCH");
+    if(plan.transport!==ATTACHED){
+      const marker=parts.filter(p=>p.mime_type==="text/html"&&typeof p.body?.content==="string").map(p=>p.body.content.match(/<pre id="source-transfer-manifest">([\s\S]*?)<\/pre>/)?.[1]).filter(Boolean);
+      assert(marker.length===1&&unescaped(marker[0])===canonical(plan.manifest),"DRAFT_MANIFEST_MISMATCH");
+    }
+    const expected=plan.transport===ATTACHED?[...plan.files,manifestFile(plan)]:plan.files;
     const attached=parts.filter(p=>p.filename);
-    assert(attached.length===plan.files.length,"DRAFT_FILE_COUNT_MISMATCH");
-    return plan.files.map(f=>{
+    assert(attached.length===expected.length,"DRAFT_FILE_COUNT_MISMATCH");
+    const found=expected.map(f=>{
       const hits=attached.filter(p=>p.filename===f.filename);
       assert(hits.length===1,"DRAFT_FILE_IDENTITY_AMBIGUOUS",f.filename);
       const p=hits[0];
@@ -116,18 +142,45 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
       const complete=typeof aid==="string"&&aid&&!/truncat|\.\.\.|…/i.test(aid);
       return {filename:f.filename,part_id:p.part_id,attachment_id:complete?aid:null};
     });
+    return found.slice(0,plan.files.length);
   }
-  async function attachment(s,index,part){
+  async function readAttachment(s,f,part){
     const args={link_id:s.plan.link_id,message_id:s.draft.message_id};
     if(part.attachment_id)args.attachment_id=part.attachment_id;else args.filename=part.filename;
-    const r=await invoke("gmail_read_attachment",args),v=r.value,f=s.plan.files[index];
+    const r=await invoke("gmail_read_attachment",args),v=r.value;
     assert(v.filename===f.filename&&v.size_bytes===f.bytes&&v.mime_type===f.mime_type,"ORIGINAL_FILE_METADATA_MISMATCH");
     assert(v.file_uri&&typeof v.file_uri==="object"&&v.file_uri.file_id&&v.file_uri.download_url,"ORIGINAL_FILE_REFERENCE_MISSING");
     // file_uri is the original. content/extraction_file_uri may be a preview or a different JSON file.
     const original={message_id:s.draft.message_id,attachment_id:part.attachment_id,filename:f.filename,file_uri:clone(v.file_uri),provider_bytes:v.size_bytes,observed_at:now(),content_truncated:v.content_truncated===true};
     let verified=null;
     if(readOriginal){const bytes=bytesOf(await readOriginal(clone(v.file_uri)));assert(bytes.length===f.bytes&&codec.sha256(bytes)===f.sha256,"ORIGINAL_BYTES_MISMATCH");verified={bytes:bytes.length,sha256:f.sha256,at:now(),via:"complete_original_read",file_id:v.file_uri.file_id,attachment_id:part.attachment_id};}
-    return {original,verified,receipt:r.raw};
+    return {original,verified,receipt:r.raw,value:v};
+  }
+  async function attachment(s,index,part){
+    const {value,...got}=await readAttachment(s,s.plan.files[index],part);return got;
+  }
+  async function readManifest(s,message){
+    if(s.plan.transport!==ATTACHED)return null;
+    const expected=manifestFile(s.plan),part=mimeParts(message.payload).find(p=>p.filename===MANIFEST_FILE);
+    assert(part,"DRAFT_MANIFEST_MISSING");
+    const aid=part.body?.attachment_id;
+    const got=await readAttachment(s,expected,{filename:MANIFEST_FILE,attachment_id:typeof aid==="string"&&aid&&!/truncat|\.\.\.|…/i.test(aid)?aid:null});
+    let via="complete_original_read";
+    if(!got.verified){
+      // Extraction may reformat JSON. It proves complete metadata, never original file bytes.
+      const v=got.value,blocks=v.content;
+      const content=typeof blocks==="string"?blocks:Array.isArray(blocks)&&blocks.every(b=>b.type==="text"&&typeof b.text==="string")?blocks.map(b=>b.text).join("\n"):null;
+      assert(v.content_truncated===false&&content!==null,"COMPLETE_MANIFEST_READER_REQUIRED");
+      let parsed;try{parsed=JSON.parse(content);}catch{fail("DRAFT_MANIFEST_CONTENT_INVALID");}
+      assert(canonical(parsed)===canonical(s.plan.manifest),"DRAFT_MANIFEST_MISMATCH");
+      via="complete_extracted_json";
+    }
+    return {identity:identity(expected),original:got.original,verified:got.verified,content_verified:{via,at:now()},receipt:got.receipt};
+  }
+  async function acceptManifest(s,message){
+    const got=await readManifest(s,message);if(!got)return s;
+    const {receipt,...manifest}=got;
+    return save(s,{manifest,receipts:[...s.receipts,{kind:"original_manifest",at:now(),provider:receipt}]});
   }
   async function advance(key){
     let s=await current(key);
@@ -145,8 +198,9 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     const mail=await invoke("gmail_read_email",{link_id:s.plan.link_id,message_id:s.draft.message_id,format:"full"});
     assert(mail.value.id===s.draft.message_id,"MESSAGE_ID_MISMATCH");
     const parts=inspectMessage(s.plan,mail.value);
+    s=await acceptManifest(s,mail.value);
     for(let i=0;i<parts.length;i++){
-      if(s.files[i].original&&s.files[i].original.attachment_id===parts[i].attachment_id)continue;
+      if(s.files[i].original&&s.files[i].original.attachment_id===parts[i].attachment_id&&(!readOriginal||s.files[i].verified))continue;
       try{
         const got=await attachment(s,i,parts[i]),files=clone(s.files);
         files[i]={...files[i],original:got.original,verified:got.verified};
@@ -177,14 +231,19 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     assert(found,"DRAFT_ID_NOT_OBSERVED");
     const selected={...s,draft:{id:draft_id,message_id,thread_id:r.value.thread_id||null}};
     const parts=inspectMessage(s.plan,r.value),files=clone(s.files),receipts=[...s.receipts,{kind:"reconciled_draft",at:now(),provider:r.raw}];
+    const manifestRead=await readManifest(selected,r.value);
+    let manifest;
+    if(manifestRead){const {receipt,...retained}=manifestRead;manifest=retained;receipts.push({kind:"original_manifest",at:now(),provider:receipt});}
     for(let i=0;i<parts.length;i++){const got=await attachment(selected,i,parts[i]);files[i]={...files[i],original:got.original,verified:got.verified};receipts.push({kind:"original_file",index:i,at:now(),provider:got.receipt});}
-    s=await save(s,{phase:"files_available",draft:selected.draft,files,receipts});
+    s=await save(s,{phase:"files_available",draft:selected.draft,files,receipts,...(manifest?{manifest}:{})});
     return {state:"original_files_available",record:s,bytes_verified:true,recipient_materialization:"pending"};
   }
   async function refreshOriginal(key,index){
     let s=await current(key);await account(s.plan);assert(s.draft,"DRAFT_NOT_AVAILABLE");
     const mail=await invoke("gmail_read_email",{link_id:s.plan.link_id,message_id:s.draft.message_id,format:"full"});
+    assert(mail.value.id===s.draft.message_id,"MESSAGE_ID_MISMATCH");
     const parts=inspectMessage(s.plan,mail.value);assert(parts[index],"UNKNOWN_FILE");
+    s=await acceptManifest(s,mail.value);
     const got=await attachment(s,index,parts[index]),files=clone(s.files);
     files[index]={...files[index],original:got.original,verified:got.verified};
     return save(s,{files,receipts:[...s.receipts,{kind:"original_file_refreshed",index,at:now(),provider:got.receipt}]});
@@ -310,7 +369,7 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     assert(labels.includes("DRAFT")&&!labels.includes("SENT"),"MESSAGE_IS_NOT_UNSENT_DRAFT");
     const headers=mail.value.payload?.headers||[],from=headers.filter(h=>h.name.toLowerCase()==="from");
     assert(from.length===1&&mailbox(from[0].value)===account_email,"DRAFT_ACCOUNT_MISMATCH");
-    assert(!headers.some(h=>["to","cc","bcc","in-reply-to","references"].includes(h.name.toLowerCase())),"DRAFT_HAS_RECIPIENT_OR_REPLY_HEADERS");
+    assert(!headers.some(h=>["to","cc","bcc","reply-to","in-reply-to","references"].includes(h.name.toLowerCase())),"DRAFT_HAS_RECIPIENT_OR_REPLY_HEADERS");
     const parts=mimeParts(mail.value.payload),out=[];
     for(let i=0;i<files.length;i++){
       const f=files[i],hits=parts.filter(p=>p.filename===f.filename);
