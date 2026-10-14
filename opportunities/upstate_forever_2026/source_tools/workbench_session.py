@@ -520,16 +520,27 @@ def main(application, argv=None):
     parser.add_argument("--port", type=int)
     parser.add_argument("--advertised-origin", help="Exact canonical HTTPS origin; saved without credentials in the launch profile")
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--connector-config", type=Path, help="Existing private native HTTPS configuration; retained only in this machine\'s operator state")
     parser.add_argument("--adopt-session", type=Path, help="Private original server startup JSON; reuse that running operator without claiming its runtime configuration")
     parser.add_argument("--status", action="store_true", help="Check existing local session; never starts a process or prints its credential")
     args = parser.parse_args(argv)
     process = None
     session_file = None
     record = None
+    transport = None
+    transport_module = None
+    transport_prepared = None
     try:
         if args.configure_only and not args.save_profile:
             raise ValueError("--configure-only requires a new --save-profile destination")
         selection, state, project = resolve_selection(args, application)
+        transport_source = Path(selection["application"]) / "source_tools/workbench_transport.py"
+        if transport_source.is_file():
+            transport_module = runpy.run_path(str(transport_source))
+            transport_prepared = transport_module["prepare"](selection, state, args.connector_config)
+        elif (args.connector_config is not None or (state / "eco-transport.json").exists()
+                or (state / "workbench-transport.json").exists()):
+            raise ValueError("Receive the complete workbench HTTPS opening source for this private selection")
         if args.save_profile:
             path = save_profile(args.save_profile, selection)
             print("Saved launch selection: " + str(path), flush=True)
@@ -560,12 +571,26 @@ def main(application, argv=None):
             print(json.dumps(public_status(record, selection, state)), flush=True)
         if args.status:
             return 0
+        if transport_prepared is not None:
+            transport = transport_module["Controller"](transport_prepared, record,
+                lambda: existing_session(session_file, selection))
+            transport.start()
         _open(record, args.no_browser)
-        if process is None:
+        if process is None and (transport is None or transport.reused):
             print("Reopened the existing original operator. Its owning terminal and tasks remain unchanged.", flush=True)
             return 0
-        print("Keep this owning terminal open; Ctrl+C closes this operator after its normal shutdown.", flush=True)
-        while process.poll() is None:
+        if process is None:
+            print("This terminal owns the configured HTTPS connection to the existing original operator.", flush=True)
+        else:
+            print("Keep this owning terminal open; Ctrl+C closes this operator after its normal shutdown.", flush=True)
+        while process is None or process.poll() is None:
+            if transport is not None:
+                transport.poll()
+            if process is None:
+                if not transport.native_present():
+                    break
+                time.sleep(.5)
+                continue
             try:
                 line = lines.get(timeout=.5)
                 if line is None:
@@ -574,7 +599,7 @@ def main(application, argv=None):
                     print(line.rstrip(), flush=True)
             except queue.Empty:
                 pass
-        return int(process.wait())
+        return int(process.wait()) if process is not None else 0
     except KeyboardInterrupt:
         print("\nClosing this launcher-owned local session.", flush=True)
         return 0
@@ -582,6 +607,11 @@ def main(application, argv=None):
         print(str(error), file=sys.stderr)
         return 1
     finally:
+        if transport is not None:
+            try:
+                transport.close()
+            except OSError as error:
+                print("The configured HTTPS child could not close: " + type(error).__name__, file=sys.stderr)
         if process is not None:
             if process.poll() is None:
                 print("Waiting for the original operator to finish its active task and close.", flush=True)
