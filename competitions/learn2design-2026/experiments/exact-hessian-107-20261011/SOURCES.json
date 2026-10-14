@@ -495,6 +495,56 @@
           }
         ]
       }
+    },
+    {
+      "id": "099-state-legacy-regional",
+      "class": "AnchorStatePortfolioRegional",
+      "submission": "anchor-state-regional/submission.py",
+      "submission_bytes": 17487,
+      "submission_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "requirements": "anchor-state-regional/requirements.txt",
+      "requirements_sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+      "source_owner": "REGIONAL state-policy experiment derived from unchanged original099 SHA144216f2; no measured improvement or submitted entry.",
+      "based_on_submission_sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "backtracking_state": "legacy"
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "backtracking_state"
+            ],
+            "equals": "legacy"
+          }
+        ]
+      }
+    },
+    {
+      "id": "099-state-anchor-regional",
+      "class": "AnchorStatePortfolioRegional",
+      "submission": "anchor-state-regional/submission.py",
+      "submission_bytes": 17487,
+      "submission_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "requirements": "anchor-state-regional/requirements.txt",
+      "requirements_sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+      "source_owner": "REGIONAL state-policy experiment derived from unchanged original099 SHA144216f2; no measured improvement or submitted entry.",
+      "based_on_submission_sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "backtracking_state": "anchor"
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "backtracking_state"
+            ],
+            "equals": "anchor"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -580,6 +630,13 @@
       "candidate_sha256": "ed2b99f854f09af59fa62f0f777a438bd7cc8b765bf5d8cab87294cc69be2278",
       "helper_sha256": "e603d6192c73741dbbf5f54ad8fa379ec06936fb6aabd21cd12cdec8bc86e204",
       "semantics": "Capture bounded public bounds, problem specification and parameter context through the documented pre-run space setter before prepare selects unbounded search. Reuse original donor mapping after the original random draws."
+    },
+    "anchor_state_experiment": {
+      "operation": "L2D-ANCHOR-STATE-REGIONAL-20261014",
+      "original_source_unchanged": true,
+      "source_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "treatment": "Restore immutable accepted-anchor Optax state on rejected/nonfinite rollback; legacy control carries the original rolling state. All other algorithm settings retained.",
+      "performance": "Unmeasured; existing v7 summary motivates inspection and does not measure this candidate."
     }
   }
 }
