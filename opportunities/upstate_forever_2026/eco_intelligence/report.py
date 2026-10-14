@@ -70,7 +70,7 @@ def _table(headers, rows) -> str:
             + '</tbody></table></div>')
 
 
-def _evidence_summary(evidence: dict) -> str:
+def _evidence_summary(evidence: dict, original_headers=None) -> str:
     result = evidence.get('result', {})
     operation = evidence.get('operation', {}).get('operation', 'Retained analysis')
     sources = evidence.get('sources', [])
@@ -82,7 +82,7 @@ def _evidence_summary(evidence: dict) -> str:
         pieces.append(_table(['Original source', 'Bytes'], [[s.get('name') or s.get('id') or s.get('registry'), s.get('bytes')] for s in sources]))
     if operation == 'inventory' and isinstance(result, dict):
         counts = result.get('counts', {})
-        pieces.append('<p>'+html.escape(' Â· '.join(str(v)+' '+str(k).replace('_', ' ') for k, v in counts.items()))+'</p>')
+        pieces.append('<p>'+html.escape(' - '.join(str(v)+' '+str(k).replace('_', ' ') for k, v in counts.items()))+'</p>')
         rows = []
         for key in ['datasets', 'jobs', 'ensembles', 'aois']:
             for item in result.get(key, []):
@@ -96,7 +96,10 @@ def _evidence_summary(evidence: dict) -> str:
             pieces.append(_table(['Original item', 'Kind', 'Reviewed role', 'Bytes', 'Units'], rows))
     elif operation == 'table_rows' and isinstance(result, dict):
         rows = result.get('rows', [])
-        headers = list(dict.fromkeys(key for row in rows if isinstance(row, dict) for key in row))
+        retained_headers = list(dict.fromkeys(key for row in rows if isinstance(row, dict) for key in row))
+        declared=result.get('headers') or original_headers or []
+        headers=[key for key in declared if key in retained_headers]
+        headers.extend(key for key in retained_headers if key not in headers)
         if headers:
             pieces.append(_table(headers, [[row.get(key) for key in headers] for row in rows]))
         pieces.append('<p>Original record page starts at row '+html.escape(str(result.get('offset', 0)+1))
@@ -105,8 +108,8 @@ def _evidence_summary(evidence: dict) -> str:
         if 'Qualifier' in headers:
             pieces.append('<p>Qualifier cells are retained exactly as provided. Their definitions require the source code dictionary.</p>')
     elif operation == 'profile' and isinstance(result, dict):
-        pieces.append('<p>'+html.escape(str(result.get('format', 'Source')))+' Â· '
-                      +html.escape(str(result.get('rows', 'Unknown')))+' original rows Â· '
+        pieces.append('<p>'+html.escape(str(result.get('format', 'Source')))+' - '
+                      +html.escape(str(result.get('rows', 'Unknown')))+' original rows - '
                       +html.escape(str(result.get('population', 'Retained source')))+' </p>')
         columns = result.get('columns', {})
         if isinstance(columns, dict):
@@ -120,7 +123,7 @@ def _evidence_summary(evidence: dict) -> str:
         scalars = {k: v for k, v in result.items() if isinstance(v, (str, int, float, bool)) or v is None} if isinstance(result, dict) else {}
         if scalars:
             pieces.append(_table(['Retained quantity', 'Value'], [[k.replace('_', ' '), v] for k, v in scalars.items()]))
-    pieces.append('<details><summary>Complete technical evidence Â· '+html.escape(str(evidence.get('id', '')))
+    pieces.append('<details><summary>Complete technical evidence - '+html.escape(str(evidence.get('id', '')))
                   +'</summary><pre>'+html.escape(dumps(evidence))+'</pre></details>')
     return ''.join(pieces)
 
@@ -140,17 +143,29 @@ def report(session: dict) -> str:
             sections.append('<section><h2>'+('Answer' if current['kind'] == 'answer' else 'Provider result')+'</h2>'
                             +_prose(body.get('text', body.get('error', '')))+'<details><summary>Original retained text</summary><pre>'
                             +html.escape(body.get('text', body.get('error', '')))+'</pre></details></section>')
+    original_orders={}
+    for evidence in session['evidence']:
+        for source in evidence.get('sources',[]):
+            metadata=source.get('metadata',{});record=metadata.get('source',{})
+            fields=record.get('original_fields',[])
+            if fields and all(isinstance(field.get('index'),int) and isinstance(field.get('label'),str) for field in fields):
+                labels=[field['label'] for field in sorted(fields,key=lambda field:field['index'])]
+                if len(set(labels))==len(labels):
+                    original_orders[(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))]=labels
     order = {'table_rows': 0, 'profile': 1, 'inventory': 2}
     for evidence in sorted(session['evidence'], key=lambda e: order.get(e.get('operation', {}).get('operation'), 3)):
-        sections.append('<section id="'+html.escape(evidence['id'], quote=True)+'">'+_evidence_summary(evidence)+'</section>')
+        source=next(iter(evidence.get('sources',[])),{})
+        metadata=source.get('metadata',{});record=metadata.get('source',{})
+        key=(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))
+        sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key))+'</section>')
     for plan in session['plans']:
-        sections.append('<section><h2>Guided action · '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')
+        sections.append('<section><h2>Guided action - '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')
     history = []
     for event in events:
         body = event['body']
         history.append('<h3>'+html.escape(event['kind'].replace('_', ' ').title())+'</h3>'
                        +_prose(body.get('text', body.get('error', ''))))
-    sections.append('<section><details><summary>Complete retained conversation · '+str(len(events))+' entries</summary>'
+    sections.append('<section><details><summary>Complete retained conversation - '+str(len(events))+' entries</summary>'
                     +''.join(history)+'</details></section>')
     style = 'body{font:15px/1.5 system-ui;max-width:1100px;margin:40px auto;padding:0 20px;color:#191919;background:#fff}h1{font-size:28px}h2{font-size:19px}h3{font-size:17px}section{border-top:1px solid #bbb;padding:18px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 monospace}.prose{overflow-wrap:anywhere}.table-scroll{overflow-x:auto;max-width:100%}table{border-collapse:collapse;text-align:left;font-size:14px;min-width:100%;width:max-content}th,td{padding:8px 12px;border-bottom:1px solid #bbb;vertical-align:top;white-space:nowrap}td{overflow-wrap:anywhere}details{margin:14px 0}summary{cursor:pointer;font-size:13px;color:#445}code{font-family:monospace}small{color:#555}@media print{section{break-inside:avoid}}'
     created = str(session['created']).replace('T', ' ').replace('+00:00', ' UTC')
