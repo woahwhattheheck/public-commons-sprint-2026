@@ -22,7 +22,8 @@ JOBS_BLOB = "fb2548b1f9b6b50b6e8566d2a762bd3e3bf41cd7"
 C47F_INSTALLER = "d87812c83e3abd959e8ddd69114d9a5780c48b99"
 PR5021_INSTALLER = "fee31b1fa3ee5a202efbb95b727fd35bc9cbd3cd"
 PR5034_INSTALLER = "50ac07131c2ecb74e33c31b2e2ef09ed1a6dc209"
-JOINED_INSTALLER = "404f167cb6fef47ae82638588fdd8f2bdc4efe52"
+PR5040_INSTALLER = "404f167cb6fef47ae82638588fdd8f2bdc4efe52"
+JOINED_INSTALLER = "6607d25f7a2bd5987bdbd8eb75fb7718a03b794f"
 ORIGINALS = {
     JOBS: "357b637d098f808cb8fc821a74b7cccc3b5deab60e6cc0221fcd47c5ea92f981",
     INSTALLER: "192a48f1e693519d9ee917ffc4c58053d74ff9c5a172e74d8518f7514ba4311d",
@@ -82,6 +83,16 @@ ALLOWED = ALLOWED | frozenset({
     "model/gis_project_portable.py",
     "docs/GIS_OPENING_WINDOWS_MAC.md",
     "integration/component_fragments/gis-portable-receiving.json",
+})
+'''
+LAB_BLOCK = '''
+
+# Complete original Implementation lab and quality-control source cohort.
+ALLOWED = ALLOWED | frozenset({
+    "model/implementation_lab_dispatch.py",
+    "model/implementation_qc.py",
+    "model/implementation_qc_actions.py",
+    "model/implementation_qc_comparison.py",
 })
 '''
 
@@ -150,7 +161,7 @@ def joined_installer(data: bytes) -> bytes:
     identity = git_blob(data)
     if identity == JOINED_INSTALLER:
         return data
-    if identity not in (C47F_INSTALLER, PR5021_INSTALLER, PR5034_INSTALLER):
+    if identity not in (C47F_INSTALLER, PR5021_INSTALLER, PR5034_INSTALLER, PR5040_INSTALLER):
         raise ValueError("Retain and compose the different installer edition: " + identity)
     text = data.decode("utf-8")
     if not text.endswith(ENTRYPOINT):
@@ -158,9 +169,11 @@ def joined_installer(data: bytes) -> bytes:
     prefix = text[:-len(ENTRYPOINT)]
     if identity == C47F_INSTALLER:
         prefix += PAIRED_BLOCK
-    if identity != PR5034_INSTALLER:
+    if identity in (C47F_INSTALLER, PR5021_INSTALLER):
         prefix += PAYLOAD_BLOCK
-    result = (prefix + OPENING_BLOCK + ENTRYPOINT).encode("utf-8")
+    if identity != PR5040_INSTALLER:
+        prefix += OPENING_BLOCK
+    result = (prefix + LAB_BLOCK + ENTRYPOINT).encode("utf-8")
     if git_blob(result) != JOINED_INSTALLER:
         raise ValueError("Composed installer differs from the complete published source")
     return result
@@ -191,7 +204,7 @@ def compose(document: dict) -> dict:
                       "git_blob": git_blob(data), "before_sha256": sorted(previous),
                       "content": data.decode("utf-8")})
     return {"schema": "commons.source-map/1",
-            "source_reference": "ECO-CURRENT195-PORTABILITY-J76/3",
+            "source_reference": "ECO-CURRENT195-PORTABILITY-J76/4",
             "description": "Final explicit source layer after the original full portability cohorts.",
             "files": files}
 

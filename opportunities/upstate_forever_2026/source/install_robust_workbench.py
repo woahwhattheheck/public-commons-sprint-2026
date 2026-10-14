@@ -3735,5 +3735,14 @@ ALLOWED = ALLOWED | frozenset({
 })
 
 
+# Complete original Implementation lab and quality-control source cohort.
+ALLOWED = ALLOWED | frozenset({
+    "model/implementation_lab_dispatch.py",
+    "model/implementation_qc.py",
+    "model/implementation_qc_actions.py",
+    "model/implementation_qc_comparison.py",
+})
+
+
 if __name__ == "__main__":
     main()
