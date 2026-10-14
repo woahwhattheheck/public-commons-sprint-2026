@@ -487,3 +487,17 @@ The native application, worker, request and history algorithms remain unchanged.
 The complete [provider installation and receiving course](adaptations/airtable-netsuite/INSTALLED.md) extends this same Workbench. The existing `migration-acceptance` selection now carries the full source, editable browser review, ordinary-file offline builder, read-only provider capture, exact preparation and original native receiving command. Use `starforge migration-provider-capture`, `migration-provider-prepare`, `migration-provider-review` and `migration-provider-receive` with the actual inputs documented there.
 
 Provider modules and original Workspace/native history remain unchanged. Attributed mapping approval, measured comparison/acceptance and explicit local consumer selection are separate. Preserve complete provider originals, independent expected rows, invalid draft text and original request identity across retries and customer handover. The authored reference project retains its deliberate discrepancy. This reusable installation contains no tenant capture or private customer proposal.
+
+
+## Twenty source and destination comparison
+
+The complete [Twenty adapter](adaptations/twenty/README.md) adds read-only selected-object capture, independently retained destination pages, composite field and relationship mapping, full population review and attributed mapping history. Its [capture guide](adaptations/twenty/CAPTURE_OPERATING.md) and [operating guide](adaptations/twenty/OPERATING.md) connect that source to the existing local dlt/DuckDB comparison, business acceptance and complete receiving operation.
+
+Open the self-contained `adaptations/twenty/dist/twenty-review.html` or serve the full product root and open `adaptations/twenty/`. Saved working files retain unfinished forms and raw mappings; reviewed projects retain the original capture and mapping editions. The adapter's native receiving command uses this product's original Workspace and request journals. Keep the full adapter source manifest and original Workbench dependencies together when copying or receiving the application.
+
+
+## OTOBO configuration handover
+
+The complete [OTOBO adaptation](adaptations/otobo/README.md) retains native YAML captures, a separately captured target baseline, explicit object and relationship decisions, checked native emission and an independently returned configuration comparison. The [operating guide](adaptations/otobo/OPERATING.md) and [native receiving guide](adaptations/otobo/NATIVE_RECEIVING.md) continue through this product’s original attributed project, source custody, local comparison and independent handover.
+
+Open `adaptations/otobo/dist/otobo-review.html` for the complete offline review or serve the product root and open `adaptations/otobo/`. Working copies preserve original YAML bytes, unfinished forms and prior complete projects. The ten native configuration families retain their actual dependency, permission and shared-object behavior. Use the checked native emitter before the authorized operator’s existing OTOBO import; measure its independently captured return with the original Migration Acceptance runtime. Keep the adapter manifest, original Workbench manifest and full licensed native source together.

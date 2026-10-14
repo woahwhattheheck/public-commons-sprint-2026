@@ -1,0 +1,401 @@
+{
+  "schema": "tjlabs.source-manifest.v1",
+  "description": "Complete OTOBO native configuration capture, editable plan, checked emission and independent returned comparison",
+  "files": [
+    {
+      "path": "NATIVE_CONTRACT.md",
+      "bytes": 10085,
+      "sha256": "ca2e1e8000dcb95a6cc83e8c175f785d3a3ea4cc4b892e8fb9057dbe8a9c492a"
+    },
+    {
+      "path": "NATIVE_RECEIVING.md",
+      "bytes": 16103,
+      "sha256": "92fa9e65ae586d04bcb117ccda66064077203b490cdb6a4dd741cd7c216e296a"
+    },
+    {
+      "path": "OPERATING.md",
+      "bytes": 9625,
+      "sha256": "f5f523f97eae5a26714ef3fdf6ed565da92132878d29c4d4a3014e69c8e0c862"
+    },
+    {
+      "path": "README.md",
+      "bytes": 1030,
+      "sha256": "39feadf2919c9eee16230d291b62d469435447859b738dacf86a98e84bb975a5"
+    },
+    {
+      "path": "SOURCE_REUSE.json",
+      "bytes": 3807,
+      "sha256": "7a11122ea1b97ce4e078deaf24cf253458552d184ab4aecdb4e0073ebf928d0b"
+    },
+    {
+      "path": "UPSTREAM_SOURCES.json",
+      "bytes": 2382,
+      "sha256": "4b2fae1701ede8c019276fa60d310f4a7145912a401d73d3bf70af8ce31f8bbf"
+    },
+    {
+      "path": "acceptance.mjs",
+      "bytes": 1754,
+      "sha256": "905eb6f78fa82f1b2c67c0edad83b81a841146a1c67488847a1f1646b90a05f3"
+    },
+    {
+      "path": "app.mjs",
+      "bytes": 30565,
+      "sha256": "5f8b51f16fb622aac3dbfb5f9e2c6e86a9e5c808b6de50cb0687d2957c20cc8d"
+    },
+    {
+      "path": "browser-receive.mjs",
+      "bytes": 11714,
+      "sha256": "9de07e61a6ff2c1c5784bb38a2669dfebb1399d158f7160adc4642012ece1de6"
+    },
+    {
+      "path": "build-review.mjs",
+      "bytes": 9367,
+      "sha256": "f599f1c40d07de437512b685881817661fc1d2a894c93c554b2c92f430db1112"
+    },
+    {
+      "path": "core.mjs",
+      "bytes": 31703,
+      "sha256": "508ceff670ad5874431df25f222e2322ad3e4dc854d95ec2e53a9c478c729bcd"
+    },
+    {
+      "path": "examples/after.json",
+      "bytes": 22181,
+      "sha256": "11c0aa18cb2166e7920c158bb085c66b26e6258573b435a6c1643f12d4d1f513"
+    },
+    {
+      "path": "examples/before.json",
+      "bytes": 18368,
+      "sha256": "dbe0c40b19f91888182bbc31510ec34c016b4a8225ee245a06478660ce27819a"
+    },
+    {
+      "path": "examples/build-reference.mjs",
+      "bytes": 6004,
+      "sha256": "dffac76a3210e3b0302b27e7ba15494f895664401d46af4ed3553ab23f2a05ef"
+    },
+    {
+      "path": "examples/comparison.json",
+      "bytes": 20487,
+      "sha256": "65eabd42557a7e59d9051a631d21fc794ebff5422269465e427f66a6d4cd7753"
+    },
+    {
+      "path": "examples/matchingAfter.json",
+      "bytes": 21934,
+      "sha256": "c73bc6b7acbd78905949e9e52f20846256a79f6130d8d2651bc1da4bdd6a3f38"
+    },
+    {
+      "path": "examples/native-interface-course.mjs",
+      "bytes": 9251,
+      "sha256": "b7ec36ef4bee0f9430548fdbb5a7f29b02221ed30ee54f281574307115d80954"
+    },
+    {
+      "path": "examples/plan-review.json",
+      "bytes": 33332,
+      "sha256": "0ba05bfd20e4138b48a5b380b0dea54e28b66f5ac1a698d23b9054da5deb8db7"
+    },
+    {
+      "path": "examples/plan.json",
+      "bytes": 3733,
+      "sha256": "cc7e6564d57cf25bd626eea3de5c0438ca794134ba1194891866112a5a4df4a4"
+    },
+    {
+      "path": "examples/reviewed-project.json",
+      "bytes": 89460,
+      "sha256": "1401352783cec7d50177498241ebace1b1a476c0c83873c8a4661ae63fb64fa4"
+    },
+    {
+      "path": "examples/run-native-interface.mjs",
+      "bytes": 3362,
+      "sha256": "05d35bd03cda51b0f857012b4b65a327c5f0b1fdcc195bfe45b98ef7cf56aab7"
+    },
+    {
+      "path": "examples/source.json",
+      "bytes": 21929,
+      "sha256": "6fcab847b58746be05f1d127c1b4d8344c9402b353a21c10bb26a402b4f6c3ce"
+    },
+    {
+      "path": "index.html",
+      "bytes": 8035,
+      "sha256": "353ec742b0129278124ec02d10243772bd3d4b38a9e098a9b22e782c4b9f9116"
+    },
+    {
+      "path": "native-intake.mjs",
+      "bytes": 10158,
+      "sha256": "61eaff6d107b83b7176f517825c3f4bc595e2115d4b4990ba05718a12dc1d6b5"
+    },
+    {
+      "path": "native/NATIVE_HELPER.md",
+      "bytes": 15293,
+      "sha256": "3581a9159115008e4ba6ce62544c745bfcdafea635cbea8be0245db876863593"
+    },
+    {
+      "path": "native/commission-native.pl",
+      "bytes": 5722,
+      "sha256": "4fbe23297e1fbf8b5482b7891452c82e86b5021ac6a5742e51ce49f1442e833b"
+    },
+    {
+      "path": "native/otobo-native-handover.pl",
+      "bytes": 40768,
+      "sha256": "c846095271b335a89be0e9c7b44c5dbfc6624f38c67af331475c31b6898810ad"
+    },
+    {
+      "path": "native/prepare-handover.mjs",
+      "bytes": 5613,
+      "sha256": "0d7a2c54033763bbac5b1c1cb35873d9fcbb1de29e35d33ddd8a3f927674e331"
+    },
+    {
+      "path": "project.mjs",
+      "bytes": 6779,
+      "sha256": "caae5db22a1866e09d91d3875e1f7f346c77f0d6f4132051daf3fbb56f5c1eca"
+    },
+    {
+      "path": "provider-input.mjs",
+      "bytes": 7400,
+      "sha256": "639793f1c1e495d971c82ea047e0e413f2f80f3cd7a130ab7283d363153488db"
+    },
+    {
+      "path": "receive.mjs",
+      "bytes": 22546,
+      "sha256": "d1c13a18303a142fe875aba0337ddc5912c1b6e7785138dfb5f5f6df6af27f8c"
+    },
+    {
+      "path": "session.mjs",
+      "bytes": 6845,
+      "sha256": "d0f8f8461e5e6cc20a2c3ca1c4edfe3f373c96106489d87cd1a5fe97c1c0ece5"
+    },
+    {
+      "path": "sha256.mjs",
+      "bytes": 18412,
+      "sha256": "52a44d3fdb0c1e94282051fe073af67a9c1c57b16c9c94946bd5ebfdade394a6"
+    },
+    {
+      "path": "style.css",
+      "bytes": 6331,
+      "sha256": "c1084bc5517a222d83c32bac672c8e33ccffc33d7c081dab27c04e2bd10f9e62"
+    },
+    {
+      "path": "upstream/otobo/Kernel/Modules/AdminGenericAgentImportExport.pm",
+      "bytes": 10013,
+      "sha256": "74e3f3a1249c6fee0b254f54fb9af4d624a6d88ffdf5db892d22aec87b1fabe8"
+    },
+    {
+      "path": "upstream/otobo/Kernel/Modules/AdminQueueImportExport.pm",
+      "bytes": 9715,
+      "sha256": "3f46d0197417074050fee748ebbbd1c2efed6066fc9a1abecc131631627fd6ab"
+    },
+    {
+      "path": "upstream/otobo/Kernel/Modules/AdminQueueTemplatesImportExport.pm",
+      "bytes": 9511,
+      "sha256": "2b4d17e87725bbb1ecfd3547d2df272160355c95d278d4631a555173de3353cf"
+    },
+    {
+      "path": "upstream/otobo/Kernel/Modules/AdminRoleGroupImportExport.pm",
+      "bytes": 9226,
+      "sha256": "984b56a299507addaade8dd1477736695e06bbebc23b9e1ed2d4d5774ee0b55f"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/CSV.pm",
+      "bytes": 8653,
+      "sha256": "5797eff458a5acf3910faef9c9c7de67d6d113762885d6ad57e108aea29a4ef8"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Console/Command/Admin/ImportExport/ImportStandardObject.pm",
+      "bytes": 6464,
+      "sha256": "17f1ddc5afc0e7c7cd669a4db52b209ac33270eb0c5cfd0d685dc4ac95ce97c5"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Console/Command/Admin/Package/List.pm",
+      "bytes": 10748,
+      "sha256": "f3a534942e499716cef2511e9a078635bf893fe135f6be83d2404b226b6baf5c"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/GenericAgent.pm",
+      "bytes": 70874,
+      "sha256": "39d5d126e231af88ac9fee061ee3af3d5de9ee43d1711b2c53d413386ca42f66"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Group.pm",
+      "bytes": 80224,
+      "sha256": "81552d7e83a2c09473ea3523c31b28a68d67e45c79a791c4d69d4a1a108e6680"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/ImportExport.pm",
+      "bytes": 61582,
+      "sha256": "4d391811badf24ba925db06e374fa06975a9d6413d0e794638283375ff3954c6"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/ImportExport/FormatBackend/CSV.pm",
+      "bytes": 12223,
+      "sha256": "cb3584eb3ff32a93220627af78bfe290a1601770a466e658ac4b006359307090"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/ImportExport/FormatBackend/JSON.pm",
+      "bytes": 7050,
+      "sha256": "93b2ebe987f223441db241f15c4020357930b3e56d925b6b68f2fdae92a10459"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Lock.pm",
+      "bytes": 6023,
+      "sha256": "d779f7c79f7d76bb084e5997378fa849be76ec91f4f30e0673c4fc35ff3fe3d9"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Priority.pm",
+      "bytes": 8333,
+      "sha256": "7701df54a4b8fa9e69737259f282c93c0b5c3aada0186f12b87dc2546049973f"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Queue.pm",
+      "bytes": 61370,
+      "sha256": "a3f39943da31ab8e768d5bf9689017cc67fa2e128f94ccda6b0c386294f640a9"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/SLA.pm",
+      "bytes": 24704,
+      "sha256": "c67f0ffe8edf13af29dbc85f7ca2187b18bcc3984adf664dc00a60bd7c83c3da"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Salutation.pm",
+      "bytes": 7838,
+      "sha256": "d83b2adcedf91d930b2ecf4d0962a0cd9ab231e18fc7b815a4052167327414cc"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Service.pm",
+      "bytes": 40500,
+      "sha256": "6cc85fcc352493cbf35858fe06a837b38aa521d71522138e6b08c336649d2f8a"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Signature.pm",
+      "bytes": 6615,
+      "sha256": "d26668d95aafeac3c9bdc46cf853f0af2efda2ad8b0b37dfb070166f3bf72824"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/StandardTemplate.pm",
+      "bytes": 18040,
+      "sha256": "aba85000679932d1c3d8ced318b6e3f0c0d3852020d3f5c3a02288da715e4d5f"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/State.pm",
+      "bytes": 17017,
+      "sha256": "7c63a092643340cc5fcba44df378318834f78ee65b764b641eb0c5c8e53767aa"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/SystemAddress.pm",
+      "bytes": 16991,
+      "sha256": "eb44d01438c1d050145477a7cfca5113a1427626bbe06752d517dd7d01c5b70a"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Type.pm",
+      "bytes": 15120,
+      "sha256": "65efb16fd3f77d540a0098ce3d53a3be6d161e053691591582f4d48a2ed201c3"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/User.pm",
+      "bytes": 46132,
+      "sha256": "966cc18aecfdeccb688a29df4f40ce7d6c758f943ce3f520f8f06cc90250ae50"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/Valid.pm",
+      "bytes": 3930,
+      "sha256": "d9541de8936c005832b57187af7c61353f3f1c684d730e8a324ab27d49d303f4"
+    },
+    {
+      "path": "upstream/otobo/Kernel/System/YAML.pm",
+      "bytes": 3796,
+      "sha256": "404692451cef4828087c92475161633279b4675b5e3c284bc48ca94f6537f9ea"
+    },
+    {
+      "path": "upstream/otobo/LICENSE",
+      "bytes": 35149,
+      "sha256": "3972dc9744f6499f0f9b2dbf76696f2ae7ad8af9b23dde66d6af86c9dfb36986"
+    },
+    {
+      "path": "upstream/otobo/RELEASE",
+      "bytes": 33,
+      "sha256": "e3e9677c7c503341c429be325b4dc9512dcc972ceb7769cb469a1c28eea07e5a"
+    },
+    {
+      "path": "upstream/otobo/cpanfile",
+      "bytes": 15623,
+      "sha256": "efc58aea2f7beef57dfcfb423b3271e996a2e36bb56e7c0f5228fcca3156ae2c"
+    },
+    {
+      "path": "upstream/otobo/cpanfile.docker.snapshot",
+      "bytes": 135416,
+      "sha256": "9ccd5cbd3213cc6eeeddde7e7a13722df7c442e3c44012453eb63ed6ef6ab7f3"
+    },
+    {
+      "path": "upstream/otobo/cpanfile.snapshot",
+      "bytes": 139248,
+      "sha256": "012d681564996599d02f1f263835c59e8d7ee443958d4ec9cf156d27a0067137"
+    },
+    {
+      "path": "upstream/otobo/scripts/DBUpdateTo11_1/DeprecateMailAccountOAuth2.pm",
+      "bytes": 1906,
+      "sha256": "eaf692ac37ce5f8ebc481670b3b0a1c629d5f3334ae07adf3f22aa1dbfa67eda"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/GenericAgent/ImportExportGenericAgent.t",
+      "bytes": 9183,
+      "sha256": "73043ade75106728e4e6e2232cf6b35a591def9d0f1fdff78e3193e49a4a4b71"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/Group/ImportExportGroup.t",
+      "bytes": 3168,
+      "sha256": "70ff452bd9a87ecb5a5d5dce6f5d4f194388302553011333896dae435aad8064"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/Group/ImportExportRoleGroup.t",
+      "bytes": 10446,
+      "sha256": "0e171c540caeeb596b2a2ad6d294282f0b5dd502f34f7080c3e917cca1a42821"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/Queue/ImportExportQueue.t",
+      "bytes": 10396,
+      "sha256": "4892768880a5bc4d56cbc46e947181f2f1172edc27775e06dbc00ef86793c54e"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/Service/ImportExportService.t",
+      "bytes": 6351,
+      "sha256": "2c3bebbba4f99bdfb07c0e4f76b0527cd2a541a7fbbd17a819c43048fcd23454"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/StandardTemplate/ImportExportStandardTemplate.t",
+      "bytes": 4054,
+      "sha256": "df87b0564eb4d543c77a65b5ca6756dfa429449659719cc03b41356722626572"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/YAML/YAML.t",
+      "bytes": 7653,
+      "sha256": "8cba3edc946e2798bc9199c866b624bd4c0a27ffc5cbda4b272261affd964bf3"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/sample/ACL/Properties.yml",
+      "bytes": 420,
+      "sha256": "a9f84f1626a40d3175e2b608bf6f815b7d8b8dfddb785c06a97fa832a53f5d8c"
+    },
+    {
+      "path": "upstream/otobo/scripts/test/sample/NotificationEvent/Export_Notification_Ticket_create_notification.yml",
+      "bytes": 5535,
+      "sha256": "4038dea02dfe50ffcd5c4cd034a02aaf639d57c8dacdce994048c0c3414fc9b7"
+    },
+    {
+      "path": "upstream/yaml-libyaml/LibYAML/License",
+      "bytes": 1158,
+      "sha256": "eeab0416380b11673d1e16ea23ed59b38da77b848f56e2a13698c6cee2d196fc"
+    },
+    {
+      "path": "upstream/yaml-libyaml/LibYAML/perl_libyaml.c",
+      "bytes": 65084,
+      "sha256": "b957260bd0d9bf195a6c7942795e0b113813ad2d683d1a08246a9fab5b016ef9"
+    },
+    {
+      "path": "upstream/yaml-libyaml/ReadMe.md",
+      "bytes": 5290,
+      "sha256": "894031a8adb70c8482ea24467c62fa3fbfb8972d42bf98d28fb8edf5ac18e7b8"
+    },
+    {
+      "path": "upstream/yaml-libyaml/lib/YAML/XS.pm",
+      "bytes": 3688,
+      "sha256": "0a89a37a5356cb5ca30677d2f6796185293cf10b4728297e3a4466345604790b"
+    }
+  ]
+}

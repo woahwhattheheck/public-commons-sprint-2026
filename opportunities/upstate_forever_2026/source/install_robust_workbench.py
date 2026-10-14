@@ -21,6 +21,24 @@ import stat
 import tempfile
 
 ALLOWED = frozenset({
+    "model/joint_delivery.py",
+    "operator/joint_delivery.py",
+    "source/joint-delivery/20261013/profile.json",
+    "operator/web/joint_delivery.mjs",
+    "operator/web/joint_delivery.css",
+    "operator/extensions/joint-delivery.json",
+    "source_tools/receive_joint_delivery.py",
+    "source_tools/receive_joint_delivery_browser.mjs",
+    "JOINT_DELIVERY.md",
+    "integration/component_fragments/joint-delivery.json",
+    "operator/web/conservation_working.mjs",
+    "operator/web/conservation_working_view.mjs",
+    "operator/CONSERVATION_WORKING_FILES.md",
+    "integration/component_fragments/conservation-working-files.json",
+    "model/conservation_joint_choices.py",
+    "operator/web/conservation_joint_choices.mjs",
+    "CONSERVATION_JOINT_CHOICES.md",
+    "integration/component_fragments/conservation-joint-choices.json",
     "CONSERVATION_DECISION_METHODS.md",
     "ecsa_runs/upstate.py",
     "integration/component_fragments/calibration-native-catchments.json",
@@ -631,6 +649,24 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/joint_delivery.py",
+    "operator/joint_delivery.py",
+    "source/joint-delivery/20261013/profile.json",
+    "operator/web/joint_delivery.mjs",
+    "operator/web/joint_delivery.css",
+    "operator/extensions/joint-delivery.json",
+    "source_tools/receive_joint_delivery.py",
+    "source_tools/receive_joint_delivery_browser.mjs",
+    "JOINT_DELIVERY.md",
+    "integration/component_fragments/joint-delivery.json",
+    "operator/web/conservation_working.mjs",
+    "operator/web/conservation_working_view.mjs",
+    "operator/CONSERVATION_WORKING_FILES.md",
+    "integration/component_fragments/conservation-working-files.json",
+    "model/conservation_joint_choices.py",
+    "operator/web/conservation_joint_choices.mjs",
+    "CONSERVATION_JOINT_CHOICES.md",
+    "integration/component_fragments/conservation-joint-choices.json",
     "CONSERVATION_DECISION_METHODS.md",
     "ecsa_runs/upstate.py",
     "integration/component_fragments/calibration-native-catchments.json",
@@ -2461,9 +2497,150 @@ def verify_conservation_sampling_dependencies(application, pending):
         assembled_data(application, pending, name)
 
 
+def verify_conservation_joint_dependencies(application, pending):
+    """Keep the original joint comparison kernel, desk and registration together."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+    native = source("model/conservation_optimization.py")
+    client = source("operator/web/conservation.mjs")
+    if not ((native is not None and b"conservation_joint_choices" in native)
+            or (client is not None and b"./conservation_joint_choices.mjs" in client)):
+        return
+    for name in (
+        "model/conservation_joint_choices.py",
+        "operator/web/conservation_joint_choices.mjs",
+        "CONSERVATION_JOINT_CHOICES.md",
+        "integration/component_fragments/conservation-joint-choices.json",
+        "model/conservation.py", "model/conservation_optimization.py",
+        "model/conservation_reporting.py", "model/conservation_report_source.py",
+        "model/conservation_study_transfer.py",
+        "operator/web/conservation.mjs", "operator/extensions/conservation.json",
+        "operator/install_conservation.py",
+    ):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending,
+        "operator/extensions/conservation.json"))
+    if "conservation_joint_choices.mjs" not in descriptor.get("assets", []):
+        raise ValueError("Register the original Conservation joint comparison browser module")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/conservation-joint-choices.json"))
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "conservation-joint-choices"):
+        raise ValueError("Retain the original Conservation joint component identity")
+    extension = fragment.get("extend_components", {}).get("conservation", {})
+    if not {"model/conservation_joint_choices.py",
+            "operator/web/conservation_joint_choices.mjs",
+            "CONSERVATION_JOINT_CHOICES.md"}.issubset(extension.get("paths", [])):
+        raise ValueError("Retain the complete original Conservation joint component paths")
+    if set(extension) - {"paths", "requires", "import_roots", "source_manifests"}:
+        raise ValueError("Conservation joint choices use original append-only component fields")
+
+
+
+def verify_conservation_working_dependencies(application, pending):
+    """Keep complete browser drafts, portable editions and their original editor together."""
+    editor = pending.get("operator/web/conservation.mjs")
+    if editor is None:
+        editor = read_existing(application, "operator/web/conservation.mjs")
+    if editor is None or b"./conservation_working_view.mjs" not in editor:
+        return
+    for name in ("operator/web/conservation_working.mjs",
+                 "operator/web/conservation_working_view.mjs",
+                 "operator/CONSERVATION_WORKING_FILES.md",
+                 "operator/extensions/conservation.json",
+                 "integration/component_fragments/conservation-working-files.json"):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending, "operator/extensions/conservation.json"))
+    if not {"conservation_working.mjs", "conservation_working_view.mjs"} <= set(descriptor.get("assets", [])):
+        raise ValueError("Register both original Conservation working-file web assets")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/conservation-working-files.json"))
+    component = fragment.get("extend_components", {}).get("conservation-scientific-report-source", {})
+    if set(component) - {"paths", "requires", "import_roots", "source_manifests"}:
+        raise ValueError("Conservation working files need the original append-only component fields")
+    for name in component.get("paths", []):
+        assembled_data(application, pending, name)
+
+def verify_joint_delivery_dependencies(application, pending):
+    """Receive Joint delivery with the original Customer reviews authority."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+    if (source("model/joint_delivery.py") is None
+            and source("operator/extensions/joint-delivery.json") is None):
+        return
+    for name in (
+        "model/joint_delivery.py",
+        "operator/joint_delivery.py",
+        "source/joint-delivery/20261013/profile.json",
+        "operator/web/joint_delivery.mjs",
+        "operator/web/joint_delivery.css",
+        "operator/extensions/joint-delivery.json",
+        "source_tools/receive_joint_delivery.py",
+        "source_tools/receive_joint_delivery_browser.mjs",
+        "JOINT_DELIVERY.md",
+        "integration/component_fragments/joint-delivery.json",
+        "model/common.py",
+        "model/reviews.py",
+        "model/review_handback.py",
+        "model/review_receiving.py",
+        "model/review_worklist.py",
+        "operator/customer_reviews.py",
+        "operator/review_app.html",
+        "operator/web/reviews.mjs",
+        "model/portable.py",
+        "model/workspace.py",
+        "operator/web/app.mjs",
+    ):
+        assembled_data(application, pending, name)
+    descriptor = json.loads(assembled_data(application, pending,
+        "operator/extensions/joint-delivery.json"))
+    if (descriptor.get("schema") != "upstate.operator-extension/v1"
+            or descriptor.get("id") != "joint-delivery"
+            or not {"joint_delivery.mjs", "joint_delivery.css"}.issubset(
+                descriptor.get("assets", []))):
+        raise ValueError("Receive both registered original Joint delivery assets")
+    if not {"customer.review.create", "customer.review.export"}.issubset(
+            descriptor.get("requires_actions", [])):
+        raise ValueError("Retain original Customer reviews actions for Joint delivery")
+    if (descriptor.get("backend", {}).get("module") != "joint_delivery"
+            or descriptor.get("client", {}).get("module") != "/web/joint_delivery.mjs"):
+        raise ValueError("Retain original Joint delivery model and browser registration")
+    app = assembled_data(application, pending, "operator/web/app.mjs")
+    if b"openSavedCustomerReview" not in app:
+        raise ValueError("Receive the original operator's Customer review opener")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/joint-delivery.json"))
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "joint-delivery"):
+        raise ValueError("Retain the original Joint delivery component identity")
+    component = fragment.get("components", {}).get("joint-delivery", {})
+    expected_paths = {
+        "model/joint_delivery.py",
+        "operator/joint_delivery.py",
+        "source/joint-delivery/20261013/profile.json",
+        "operator/web/joint_delivery.mjs",
+        "operator/web/joint_delivery.css",
+        "operator/extensions/joint-delivery.json",
+        "source_tools/receive_joint_delivery.py",
+        "source_tools/receive_joint_delivery_browser.mjs",
+        "JOINT_DELIVERY.md",
+        "integration/component_fragments/joint-delivery.json",
+    }
+    if not expected_paths.issubset(component.get("paths", [])):
+        raise ValueError("Receive the complete original Joint delivery component paths")
+    if not {"core", "study-transfer", "project-transfer"}.issubset(
+            component.get("requires", [])):
+        raise ValueError("Retain original review, Study and Project receiving dependencies")
+    for name in component.get("paths", []):
+        assembled_data(application, pending, name)
+
+
 def verify_composition(application, pending):
+    verify_joint_delivery_dependencies(application, pending)
+    verify_conservation_joint_dependencies(application, pending)
     verify_advancing_study_dependencies(application, pending)
     verify_conservation_sampling_dependencies(application, pending)
+    verify_conservation_working_dependencies(application, pending)
     verify_native_observation_context_dependencies(application, pending)
     verify_sampling_native_evidence_dependencies(application, pending)
     verify_terrain_receiving_dependencies(application, pending)

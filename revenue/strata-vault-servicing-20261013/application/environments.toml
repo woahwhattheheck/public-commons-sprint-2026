@@ -1,0 +1,93 @@
+### Development environment configuration
+[development.network]
+rpc-url = "http://localhost:8000/rpc"
+network-passphrase = "Standalone Network ; February 2017"
+run-locally = true # automatically start the local network container, if not already running
+
+[[development.accounts]]
+name = "me" # Required. Keys for this account will be saved to `./.stellar/identity`
+default = true # Optional. Whether to use this account as the `--source` for commands that need one.
+
+# Keys:
+#   client = true      build the crate, deploy it, and generate its TS client into
+#                      app-lib/clients. Requires the crate to be a member of the
+#                      local Cargo workspace, and the key here to be the
+#                      underscored form of its Cargo.toml `name`.
+#   constructor_args   arguments to `__constructor`, passed after `--` to
+#                      `stellar contract deploy`. Account and contract names here
+#                      resolve to their deployed addresses.
+#   after_deploy       `stellar contract invoke` calls to run once deployed; each
+#                      line is only the part after the `--`.
+#
+# `constructor_args` and `after_deploy` work in `development` and `testing` only.
+[development.contracts]
+
+[development.contracts.compliance]
+client = true
+constructor_args = "--admin me"
+
+[development.contracts.identity_verifier]
+client = true
+constructor_args = "--admin me"
+
+[development.contracts.share_token]
+client = true
+constructor_args = '--name "Strata Vault USDC" --symbol bvUSDC --admin me --compliance_authority me --compliance compliance --identity_verifier identity_verifier'
+
+# `--config` takes the OracleConfig struct as JSON. The values mirror the
+# contract's own tests: a one-hour freshness window, a one-minute cooldown, a
+# 10% deviation cap and a 0.5–100 band at the 18-decimal scale. The two i128
+# fields are strings because they do not survive a JSON number round trip.
+[development.contracts.nav_oracle]
+client = true
+constructor_args = "--admin me --attester me --guardian me --config '{\"freshness_duration\":3600,\"cooldown_secs\":60,\"max_up_bps\":1000,\"max_down_bps\":null,\"min_answer\":\"500000000000000000\",\"max_answer\":\"100000000000000000000\"}'"
+
+[development.contracts.async_vault]
+client = true
+constructor_args = '--asset share_token --share_token share_token --oracle nav_oracle --roles "{\"attester\":\"me\",\"compliance\":\"compliance\",\"governance\":\"me\",\"guardian\":\"me\",\"manager\":\"me\",\"treasury\":\"share_token\"}"'
+# Two grants are missing here on purpose, because this file cannot express them.
+# `after_deploy` lines are appended to `stellar contract invoke --id <this
+# contract> --`, so a line can only call the contract whose block it sits in.
+# The vault needs the share token's manager role and needs allowlisting on the
+# identity verifier, and both target other contracts while requiring the vault's
+# own address, which only exists after it deploys last. The deploy in
+# scripts/harness performs and verifies both. A deployment made only from
+# this file can take deposits but can neither deliver shares nor return them.
+
+
+### Staging environment configuration
+[staging.network]
+rpc-url = "https://soroban-testnet.stellar.org"
+network-passphrase = "Test SDF Network ; September 2015"
+
+[[staging.accounts]]
+name = "testnet-user"
+default = true
+
+# Deployed contract addresses go here as `name = { id = "C..." }`. The deploy
+# in scripts/harness is what emits them.
+#
+# `client` defaults to true, so none of these repeat it. `asset` is the
+# underlying Stellar Asset Contract and has no crate here; it still gets a
+# generated client, because a SAC carries its own spec.
+[staging.contracts]
+async_vault = { id = "CAXGUAAIZOCM6FIQ6PRTQEBBZG62GMN422TNT6N6UMIYY4HGFLJDUFCV" }
+nav_oracle = { id = "CBYVXBRLCKJTH56FVIZFBX7XUIBOLJOROP2DM4NYA4V6FOTTFZO7VJPL" }
+share_token = { id = "CCBANVMWNZXZ46WMV7N7EDGBPW3LIFOXZLILIOTRDTE63H4QXBM7XVYF" }
+identity_verifier = { id = "CBLCGV3YT5AM7ZQNFEIEX3FLA3ZY3XDVW3U2YQO4ZWSJVI47763LLL5T" }
+compliance = { id = "CA45ZSCHMNUMJEF2UDUT4UMCKHHMEG3LYYIB7QBK6LG2NIC7JYZ7XKRA" }
+asset = { id = "CCTSSUV5XYKFEMT44SJBS2GUNBEMMRUQXLK422RAJMPTGLF7WV6ALDKR" }
+
+### Production environment configuration
+# Commented out on purpose. Mainnet needs an external audit and an audited
+# OpenZeppelin release covering every module used, so M1 is testnet-only. A
+# config pointing at an RPC provider that does not exist is worse than no config.
+# [production.network]
+# rpc-url = "..."
+# network-passphrase = "Public Global Stellar Network ; September 2015"
+#
+# [[production.accounts]]
+# name = "..."
+# default = true
+#
+# [production.contracts]

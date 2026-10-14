@@ -19,6 +19,8 @@ from .grid_reuse import retain_grid_definition, reuse_grid_inputs
 from .record_catalog import ProjectedFileCache, delivery_summary
 from .operator_catalog import OperatorCatalogue
 from .verified_files import verified_operation
+if os.name == "nt":
+    from .windows_fs import native_path
 
 class Workspace:
     def __init__(self, root, *, create=False, title="Upper Savannah scientific workspace"):
@@ -190,6 +192,8 @@ class Workspace:
             raise ValueError("Select an existing source ID in the retained source edition")
         entry = found[0]
         view = self.root / "source-views" / collection_id / digest(source_id)
+        if os.name == "nt":
+            view = native_path(view)
         view.mkdir(parents=True, exist_ok=True)
         with held(self.root / "objects" / (".source-view-" + collection_id + "-" + digest(source_id) + ".lock")):
             for body in [entry["body"]] + entry["companions"]:
@@ -257,11 +261,8 @@ class Workspace:
     @verified_operation
     def save_scenario(self, value):
         value = scenario_spec(dict(value))
-        collection = identifier(value["source_collection_id"])
-        for patch in value.get("patches", []):
-            _, entry = self.source_file(collection, patch["mask_source_id"])
-            if entry["kind"] not in ("vector", "raster"):
-                raise ValueError("Scenario masks must be retained polygons or aligned binary rasters")
+        from .scenario_mask_sources import ScenarioMaskSources
+        ScenarioMaskSources(self, value)
         return self._save("scenarios", value)
 
     @verified_operation

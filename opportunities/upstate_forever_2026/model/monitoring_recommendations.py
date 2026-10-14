@@ -609,25 +609,35 @@ def design(workspace, *, recommendation_id, configuration, operation_id, title=N
     return _operation(workspace, operation_id, request, perform)
 
 
-def report_html(record, native_designs=None):
-    esc = lambda v: html.escape("" if v is None else str(v))
-    def table(headers, rows):
-        return "<div class='table'><table><thead><tr>" + "".join("<th>" + esc(x) + "</th>" for x in headers) + "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>" + esc(x) + "</td>" for x in row) + "</tr>" for row in rows) + "</tbody></table></div>"
+def report_html(record, native_designs=None, native_plans=None):
+    """Readable saved-proposal report; scientific records and exports stay exact."""
+    esc = lambda value: html.escape("" if value is None else str(value))
     def money(cents):
-        return "Unknown" if cents is None else "USD " + format(Decimal(cents) / 100, ".2f")
-    targets = table(["Target / source station", "Retained analytical cohort", "Months", "Historic dates / goal", "Proposed visits", "Planning cost", "Rationale"], [
-        (r["target_id"] + " / " + r["target"]["station_id"], r["cohort"]["label"],
-         ", ".join(str(m) for m in r["target"]["months"]),
-         "; ".join(str(m["month"]) + ": " + str(m["observed_dates"]) + " / " + str(m["minimum_dates"]) for m in r["evidence"]["monthly"]),
-         r["target"]["proposed_visits"], money(r["cost"]["total_cents"]),
-         r["target"]["reason"] + (" [Excluded from proposal]" if not r["target"]["included"] else ""))
-        for r in record["targets"]])
+        return "Not supplied" if cents is None else "USD " + format(Decimal(cents) / 100, ".2f")
+    def table(headers, rows):
+        header = "".join("<th scope='col'>" + esc(name) + "</th>" for name in headers)
+        body = "".join("<tr>" + "".join(
+            "<td><span class='cell-label' aria-hidden='true'>" + esc(name) +
+            "</span><span class='cell-value'>" + esc(value) + "</span></td>"
+            for name, value in zip(headers, row)) + "</tr>" for row in rows)
+        return "<div class='table'><table><thead><tr>" + header + "</tr></thead><tbody>" + body + "</tbody></table></div>"
+    months = ("", "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec")
+    target_rows = []
+    for row in record["targets"]:
+        target = row["target"]
+        coverage = "; ".join(months[item["month"]] + ": " + str(item["observed_dates"]) +
+            " / " + str(item["minimum_dates"]) for item in row["evidence"]["monthly"])
+        target_rows.append((row["cohort"]["label"] + "\n" + target["station_id"] + "\nTarget: " + row["target_id"],
+            "Historical dates / goal: " + coverage + "\nProposed visits: " + str(target["proposed_visits"]) +
+            "\nTarget planning cost: " + money(row["cost"]["total_cents"]),
+            target["reason"] + ("\nExcluded from proposal." if not target["included"] else "")))
+    targets = "<h2>Sampling targets</h2>" + table(["Target and retained analytical cohort", "Historical coverage and proposed work", "Planning rationale"], target_rows)
     details = ""
     for row in record["targets"]:
         target = row["target"]
-        details += "<section><h2>" + esc(target["id"]) + ": " + esc(row["cohort"]["label"]) + "</h2>"
-        details += "<p>Reporting-limit target: " + esc(target["reporting_limit"] if target["reporting_limit"] is not None else "Not entered") + ". " + esc(target["reporting_limit_basis"]) + "</p>"
-        details += "<p>Cost basis: " + esc(target["cost_basis"] or "Not entered") + ". Sensitivity context: " + esc(target["sensitivity_basis"] or "No model-sensitivity basis selected") + ".</p>"
+        details += "<section><div class='target-intro'><h2>" + esc(target["id"]) + ": " + esc(row["cohort"]["label"]) + "</h2>"
+        details += "<p><strong>Reporting-limit target:</strong> " + esc(target["reporting_limit"] if target["reporting_limit"] is not None else "Not entered") + ". " + esc(target["reporting_limit_basis"]) + "</p></div>"
+        details += "<p><strong>Cost basis:</strong> " + esc(target["cost_basis"] or "Not entered") + "</p><p><strong>Sensitivity context:</strong> " + esc(target["sensitivity_basis"] or "No model-sensitivity basis selected") + "</p>"
         if "model_evidence" in row:
             from .monitoring_evidence_report import render
             details += render(row["model_evidence"])
@@ -635,34 +645,82 @@ def report_html(record, native_designs=None):
             details += "<p>Flow goal: " + esc(target["flow_goal"]) + "; matching historical episodes: " + str(len(row["evidence"]["high_flow_episodes"])) + ". The retained flow scope applies to this station.</p>"
         else:
             details += "<p>Flow goal: " + esc(target["flow_goal"]) + ". Historical event coverage is unavailable for this station and source scope.</p>"
-        details += "<ul>" + "".join("<li>" + esc(x) + "</li>" for x in row["warnings"]) + "</ul>"
-        details += "<details><summary>Exact supporting observation and activity identifiers</summary><pre>" + esc(json.dumps({"observations": row["evidence"]["observation_ids"], "activities": row["evidence"]["activity_ids"], "cohort": row["cohort"]["fields"]}, ensure_ascii=False, indent=2)) + "</pre></details></section>"
+        details += "<ul>" + "".join("<li>" + esc(value) + "</li>" for value in row["warnings"]) + "</ul>"
+        details += "<details><summary>Exact supporting observations, activities and cohort fields</summary><pre>" + esc(json.dumps({"observations": row["evidence"]["observation_ids"], "activities": row["evidence"]["activity_ids"], "cohort": row["cohort"]["fields"]}, ensure_ascii=False, indent=2)) + "</pre></details></section>"
     native = ""
     for item in native_designs or []:
-        native += "<h2>Saved native design " + esc(item["plan_id"]) + "</h2><p>Status: " + esc(item["status"]) + ".</p>"
-        native += table(["Target", "Proposed visits", "Native calendar visits in selected months", "Count met"], [
-            (r["target_id"], r["proposed_visits"], r["calendar_visits_in_selected_months"], r["calendar_count_meets_request"]) for r in item["target_calendar"]])
-    total = money(record["budget"]["known_total_cents"])
+        native += "<section><h2>Saved native calendar</h2><p>Status: " + esc(item["status"]) + ".</p>"
+        cost = item.get("native_cost") or {}
+        if "total_cents" in cost:
+            native += "<p><strong>Geographic and calendar planning estimate: " + esc(money(cost["total_cents"])) + ".</strong> " + esc(cost.get("scope", "")) + ". Constituent-specific target costs above remain separately recorded.</p>"
+        native += table(["Target", "Total visits requested / scheduled", "Requested total met"], [
+            (row["target_id"], str(row["proposed_visits"]) + " / " + str(row["calendar_visits_in_selected_months"]), "Yes" if row["calendar_count_meets_request"] else "No") for row in item["target_calendar"]])
+        plan = (native_plans or {}).get(item["plan_id"])
+        if plan is not None:
+            visits = plan.get("calendar", {}).get("visits", [])
+            planned_dates = sorted({visit["date"] for visit in visits})
+            native += "<p><strong>Actual saved calendar dates:</strong> " + esc(", ".join(planned_dates) or "No scheduled visits") + ".</p>"
+            month_rows = []
+            for target_calendar in item["target_calendar"]:
+                target = next(row["target"] for row in record["targets"] if row["target_id"] == target_calendar["target_id"])
+                keys = set(target_calendar["visit_keys"])
+                selected_visits = [visit for visit in visits if visit["visit_key"] in keys]
+                month_counts = "; ".join(months[month] + ": " + str(len({visit["date"] for visit in selected_visits if int(visit["date"][5:7]) == month})) for month in target["months"])
+                month_rows.append((target["id"], month_counts))
+            native += table(["Target", "Scheduled distinct dates by selected month"], month_rows)
+            native += "<p>The requested-total check counts future visits across all selected months. Historical date goals and gaps above use the separate historical evidence window. Future slots do not change those recorded observations or establish a per-month coverage goal.</p>"
+            visit_rows = [(visit["date"] + " " + visit["start_local"] + " to " + visit["finish_local"] + " local",
+                item.get("station_bindings", {}).get(visit["site_id"], visit.get("site_label") or visit["site_id"]),
+                "Crew " + str(visit["crew"]) + "; " + visit["status"] + "\n" + visit["visit_key"]) for visit in visits]
+            native += "<details><summary>All original saved calendar slots</summary>" + table(["Date and local time", "Source station or search area", "Crew, status and visit key"], visit_rows) + "</details>"
+        native += "<details><summary>Full saved native plan identity</summary><p>" + esc(item["plan_id"]) + "</p></details></section>"
+    budget = record["budget"]
+    if budget["complete"]:
+        budget_text = "Included target planning total: " + money(budget["known_total_cents"]) + "."
+    elif budget["known_total_cents"] == 0:
+        budget_text = "A complete target budget is not yet available. Enter the missing selected field and laboratory costs. Recorded known-cost subtotal: USD 0.00."
+    else:
+        budget_text = "Known target-cost subtotal: " + money(budget["known_total_cents"]) + "; additional selected costs remain to be entered."
     source_support = ""
     if record["context_snapshot"].get("source_schema") == "upstate.monitoring-observed-source/v3":
         from .monitoring_concentration_report import sampling_support
         source_support = sampling_support(record["context_snapshot"])
-    return ("<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'>"
-        "<title>" + esc(record["title"]) + "</title><style>:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#eee;color:#202020;font:15px/1.5 system-ui,sans-serif}main{max-width:1200px;margin:auto;padding:28px;background:white}h1{font-size:28px}h2{font-size:20px;margin-top:30px}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #bbb;padding:8px;overflow-wrap:anywhere}th{background:#eee}.table{overflow:auto}pre{white-space:pre-wrap;overflow-wrap:anywhere}section{break-inside:auto}h2,h3,h4,caption{break-after:avoid}tr{break-inside:avoid}caption{text-align:left;font-weight:600;padding:8px 0}details{margin:12px 0}@media(max-width:500px){main{padding:14px}}@media print{body,main{background:white}main{padding:0;max-width:none}thead{display:table-header-group}.table{overflow:visible}details{display:block}details>*{display:block}table{font-size:10px}.sampling-native-evidence details{display:none}}</style></head><body><main>"
-        "<h1>" + esc(record["title"]) + "</h1><p>Proposed monitoring programme · recorded by " + esc(record["operator"]) + " at " + esc(record["recorded_at"]) + "</p>"
-        "<p>Historical evidence: " + esc(record["selection"]["evidence_start"]) + " to " + esc(record["selection"]["evidence_end"]) + ". Known included planning cost: " + total + ("; complete." if record["budget"]["complete"] else "; additional selected costs remain unknown.") + "</p>"
-        "<p>" + esc(record["selection"]["planning_basis"]) + "</p>" + source_support + targets + details + native +
-        "<h2>Interpretation</h2><ul>" + "".join("<li>" + esc(x) + "</li>" for x in record["interpretation"]) + "</ul>"
-        "<h2>Original source binding</h2><pre>" + esc(json.dumps(record["source_binding"], ensure_ascii=False, indent=2)) + "</pre>"
-        "<h2>Operator notes</h2><p>" + esc(record["selection"]["notes"]) + "</p></main></body></html>")
+    # Typography only: preserve the original authored notes in the saved record,
+    # source downloads and an exact-text disclosure when spacing changes.
+    original_notes = record["selection"]["notes"]
+    display_notes = re.sub(r"\bAll([0-9]+)originalrows\b", r"All \1 original rows", original_notes)
+    display_notes = re.sub(r"\bdepth([0-9]+(?:\.[0-9]+)?)m\b", r"depth \1 m", display_notes)
+    notes_source = ("<details><summary>Exact original operator notes</summary><pre>" + esc(original_notes) + "</pre></details>"
+                    if display_notes != original_notes else "")
+    stamp = datetime.fromisoformat(record["recorded_at"].replace("Z", "+00:00"))
+    stamp_text = stamp.strftime("%d %b %Y, %H:%M:%S %z")
+    style = """:root{color-scheme:light}*{box-sizing:border-box}body{margin:0;background:#eee;color:#202020;font:15px/1.5 system-ui,sans-serif;overflow-wrap:anywhere}main{max-width:1200px;margin:auto;padding:28px;background:white}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:30px}h2,h3,h4,caption{break-after:avoid}.target-intro{break-inside:avoid;page-break-inside:avoid}table{border-collapse:collapse;width:100%;font-size:13px;table-layout:fixed}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #bbb;padding:10px;word-break:normal;overflow-wrap:break-word}th{background:#eee}tr{break-inside:avoid}.table{overflow:auto}.cell-label{display:none}.cell-value{white-space:pre-line}pre{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-all;font-size:12px}details{margin:12px 0}summary{cursor:pointer;font-weight:600}nav{display:flex;gap:10px 20px;flex-wrap:wrap;margin:20px 0}a{color:inherit;text-underline-offset:3px}.print-note{display:none}
+@media(max-width:720px){main{padding:14px}table,tbody,tr,td{display:block;width:100%}thead{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}tr{border:1px solid #aaa;margin:0 0 16px;padding:4px 0}td{border:0;padding:8px 12px}.cell-label{display:block;font-weight:600;margin-bottom:3px}.cell-value{display:block}}
+@media print{@page{margin:16mm}body,main{background:white}main{padding:0;max-width:none}body{font-size:10pt}h1{font-size:20pt}h2{font-size:13pt}thead{display:table-header-group}.table{overflow:visible}table{font-size:9pt}th,td{padding:6px}details,nav{display:none}details[open]{display:block}.print-note{display:block;font-size:9pt;border-top:1px solid #999;padding-top:10px}.sampling-native-evidence details{display:none}}"""
+    return ("<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>" + esc(record["title"]) + "</title><style>" + style + "</style></head><body><main>"
+        "<h1>" + esc(record["title"]) + "</h1><p>Proposed monitoring programme. Recorded by " + esc(record["operator"]) + " at <time datetime='" + esc(record["recorded_at"]) + "' title='" + esc(record["recorded_at"]) + "'>" + esc(stamp_text) + "</time>.</p>"
+        "<p>Historical evidence: " + esc(record["selection"]["evidence_start"]) + " to " + esc(record["selection"]["evidence_end"]) + ".</p><p><strong>" + esc(budget_text) + "</strong></p>"
+        "<nav aria-label='Original report files'><a href='proposed-targets.csv'>Target worksheet CSV</a><a href='historical-month-gaps.csv'>Historical coverage CSV</a><a href='recommendation.json'>Full saved proposal</a><a href='native-designs.json'>Saved native designs</a><a href='planned-visits.csv'>Saved calendar CSV</a><a href='selection.json'>Editable selection</a></nav>"
+        + targets + native + "<details open><summary>Planning basis and original measurement support</summary><p>" + esc(record["selection"]["planning_basis"]) + "</p>" + source_support + "</details>" + details
+        + "<h2>Interpretation</h2><ul>" + "".join("<li>" + esc(value) + "</li>" for value in record["interpretation"]) + "</ul>"
+        + "<details><summary>Complete original source binding</summary><pre>" + esc(json.dumps(record["source_binding"], ensure_ascii=False, indent=2)) + "</pre></details>"
+        + "<h2>Operator notes</h2><p>" + esc(display_notes) + "</p>" + notes_source + "<p class='print-note'>The complete HTML report and its companion JSON/CSV files retain all original source identities, exact supporting observations and editable selections.</p></main></body></html>")
 
-
-def export_members(workspace, recommendation_id):
+def export_members(workspace, recommendation_id, *, design_ids=None):
     from .monitoring_packet import bytes_member, add_member
     from .monitoring_sources import source_export_members
     from .monitoring_workspace import MonitoringWorkspace, csv_text
     record = inspect(workspace, recommendation_id)
-    native = designs(workspace, recommendation_id)
+    if design_ids is None:
+        native = designs(workspace, recommendation_id)
+    else:
+        if (not isinstance(design_ids, list) or not design_ids
+                or any(not isinstance(key, str) for key in design_ids)
+                or len(set(design_ids)) != len(design_ids)):
+            raise ContractError("Select distinct exact original Sampling design IDs")
+        native = [inspect_design(workspace, key) for key in design_ids]
+        if any(row["recommendation_id"] != recommendation_id for row in native):
+            raise ContractError("Selected native designs must belong to this exact Sampling proposal")
     files = {}
     def add(name, body):
         add_member(files, name, bytes_member(body))
@@ -679,7 +737,20 @@ def export_members(workspace, recommendation_id):
         for name, member in native_evidence.export_members(workspace, proposal_history):
             add_member(files, name, member)
     add("native-designs.json", canonical_bytes(native))
-    add("sampling-review.html", report_html(record, native).encode("utf-8"))
+    # Render the actual retained slots, not dates inferred from solver settings.
+    native_plans = {}
+    planned_visits = []
+    for result in native:
+        plan = MonitoringWorkspace(workspace).get("plans", result["plan_id"])
+        if digest(plan) != result["plan_digest"]:
+            raise ContractError("The selected native design differs from its retained result")
+        native_plans[plan["id"]] = plan
+        for visit in plan.get("calendar", {}).get("visits", []):
+            planned_visits.append({**visit, "plan_id": plan["id"],
+                "source_station_id": result.get("station_bindings", {}).get(visit["site_id"], ""),
+                "target_ids": [target["target_id"] for target in result["target_calendar"] if visit["visit_key"] in target["visit_keys"]]})
+    add("planned-visits.csv", csv_text(planned_visits, ["plan_id", "visit_key", "date", "start_local", "finish_local", "crew", "site_id", "site_label", "source_station_id", "target_ids", "round", "round_deadline", "status"]).encode("utf-8"))
+    add("sampling-review.html", report_html(record, native, native_plans).encode("utf-8"))
     fields = ["target_id", "station_id", "cohort_id", "month", "observed_dates", "minimum_dates", "date_gap", "dates", "observation_ids", "activity_ids"]
     add("historical-month-gaps.csv", csv_text(record["gaps"], fields).encode("utf-8"))
     target_rows = [{**r["target"], "total_cost_cents": r["cost"]["total_cents"],
@@ -703,7 +774,7 @@ def export_members(workspace, recommendation_id):
         if digest(plan) != result["plan_digest"]:
             raise ContractError("The selected native design differs from its retained result")
         add("native-plans/" + plan["id"] + ".json", canonical_bytes(plan))
-    add("README.txt", ("Open sampling-review.html for the proposed programme. Historical observations, original sources, complete proposal history, explicit editable selection and all native designs are included.\n"
+    add("README.txt", ("Open sampling-review.html for the proposed programme. Historical observations, original sources, complete proposal history, explicit editable selection and selected native designs are included.\n"
         "Monthly date targets apply across the chosen historical window. Proposed visits and costs are operator planning inputs. Native calendars do not promise storm occurrence or laboratory suitability.\n"
         "Use the original complete Workspace export/import for editable application receiving. This report bundle retains original scientific files and is not a replacement Workspace.\n").encode("utf-8"))
     add("manifest.json", canonical_bytes({"schema": "upstate.monitoring-recommendation-export/v1",

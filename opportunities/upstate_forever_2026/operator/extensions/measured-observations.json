@@ -2,7 +2,7 @@
   "schema": "upstate.operator-extension/v1",
   "id": "measured-observations",
   "title": "Measured observations",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "order": 45,
   "assets": [
     "measured_observations.mjs",
@@ -27,7 +27,14 @@
     "sediment.mjs",
     "result_handback.mjs",
     "intake_comparison.mjs",
-    "sediment_comparisons.mjs"
+    "sediment_comparisons.mjs",
+    "chiques_nutrients.mjs",
+    "collection_working.mjs",
+    "collection_transfer.mjs",
+    "eco_handovers.mjs",
+    "collection_folder.mjs",
+    "edition_reader.mjs",
+    "edition_review.mjs"
   ],
   "backend": {
     "module": "measurement_workspace.extension",

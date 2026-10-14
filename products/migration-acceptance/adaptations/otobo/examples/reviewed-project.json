@@ -1,0 +1,2396 @@
+{
+  "schema": "tjlabs.provider-migration-project.v1",
+  "id": "otobo-authored-returned-reference",
+  "title": "Authored OTOBO complete returned comparison",
+  "createdAt": "2026-10-13T21:00:00Z",
+  "updatedAt": "2026-10-13T21:00:00Z",
+  "revision": 1,
+  "capture": {
+    "schema": "otobo.review-source.v1",
+    "source": {
+      "schema": "otobo.capture.v1",
+      "caseId": "otobo-configuration-reference",
+      "side": "source",
+      "workspaceReference": "authored-source-workspace",
+      "observedAt": "2026-10-13T12:00:00Z",
+      "evidenceKind": "authored-reference",
+      "environment": {
+        "parser": {
+          "module": "YAML::XS",
+          "version": "authored-reference",
+          "profile": "authored typed reference; actual native helper records installed version"
+        },
+        "description": "Authored reference shaped to native exports; native capture is a separate executable course."
+      },
+      "files": [
+        {
+          "id": "file-Groups",
+          "filename": "Groups.yml",
+          "family": "Groups",
+          "body_base64": "ewogICJHcm91cHMiOiB7CiAgICAic3VwcG9ydCI6IHsKICAgICAgIk5hbWUiOiAic3VwcG9ydCIsCiAgICAgICJDb21tZW50IjogIlN1cHBvcnQgb3BlcmF0b3JzIiwKICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgfQogIH0KfQo=",
+          "bytes": 131,
+          "sha256": "68a2ac3c43825c227504dc089c764a476195613cabc7933ce0e0c1fe8a1b450c",
+          "entries": [
+            {
+              "name": "support",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "support",
+                    "yamlToken": "--- \"support\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Support operators",
+                    "yamlToken": "--- \"Support operators\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Roles",
+          "filename": "Roles.yml",
+          "family": "Roles",
+          "body_base64": "ewogICJSb2xlcyI6IHsKICAgICJhZ2VudHMiOiB7CiAgICAgICJOYW1lIjogImFnZW50cyIsCiAgICAgICJDb21tZW50IjogIlNlcnZpY2UgYWdlbnRzIiwKICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgfQogIH0KfQo=",
+          "bytes": 125,
+          "sha256": "8feaa70a2b071999f8145bbcab1f08a0c71c65cef7a95bec4ca4fee76b2760fa",
+          "entries": [
+            {
+              "name": "agents",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "agents",
+                    "yamlToken": "--- \"agents\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Service agents",
+                    "yamlToken": "--- \"Service agents\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Types",
+          "filename": "Types.yml",
+          "family": "Types",
+          "body_base64": "ewogICJUeXBlcyI6IHsKICAgICJJbmNpZGVudCI6IHsKICAgICAgIk5hbWUiOiAiSW5jaWRlbnQiLAogICAgICAiVmFsaWQiOiAidmFsaWQiCiAgICB9CiAgfQp9Cg==",
+          "bytes": 94,
+          "sha256": "aad778744e1a981643395093a8f3aa37b08f7387637db786dc055c6084cb780d",
+          "entries": [
+            {
+              "name": "Incident",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Incident",
+                    "yamlToken": "--- \"Incident\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Templates",
+          "filename": "Templates.yml",
+          "family": "Templates",
+          "body_base64": "ewogICJUZW1wbGF0ZXMiOiB7CiAgICAiUmVwbHkiOiB7CiAgICAgICJOYW1lIjogIlJlcGx5IiwKICAgICAgIkNvbW1lbnQiOiAiUmV0YWluZWQgcmVzcG9uc2UiLAogICAgICAiVGVtcGxhdGUiOiAiSGVsbG8iLAogICAgICAiQ29udGVudFR5cGUiOiAidGV4dC9wbGFpbjsgY2hhcnNldD11dGYtOCIsCiAgICAgICJUZW1wbGF0ZVR5cGUiOiAiQW5zd2VyIiwKICAgICAgIlZhbGlkIjogInZhbGlkIiwKICAgICAgIlByZVNlbGVjdGVkVGlja2V0U3RhdGVJRCI6IG51bGwKICAgIH0KICB9Cn0K",
+          "bytes": 279,
+          "sha256": "aae53ee519516374e1044b0bc68e747b06bf972024950f38626a36034ac9c3fa",
+          "entries": [
+            {
+              "name": "Reply",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Reply",
+                    "yamlToken": "--- \"Reply\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Retained response",
+                    "yamlToken": "--- \"Retained response\"\n"
+                  },
+                  "Template": {
+                    "kind": "string",
+                    "value": "Hello",
+                    "yamlToken": "--- \"Hello\"\n"
+                  },
+                  "ContentType": {
+                    "kind": "string",
+                    "value": "text/plain; charset=utf-8",
+                    "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                  },
+                  "TemplateType": {
+                    "kind": "string",
+                    "value": "Answer",
+                    "yamlToken": "--- \"Answer\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "PreSelectedTicketStateID": {
+                    "kind": "null",
+                    "value": null,
+                    "yamlToken": "--- ~\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Services",
+          "filename": "Services.yml",
+          "family": "Services",
+          "body_base64": "ewogICJTZXJ2aWNlcyI6IHsKICAgICJTdXBwb3J0IjogewogICAgICAiTmFtZSI6ICJTdXBwb3J0IiwKICAgICAgIk5hbWVTaG9ydCI6ICJTdXBwb3J0IiwKICAgICAgIlBhcmVudCI6IG51bGwsCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgIH0sCiAgICAiU3VwcG9ydDo6UHJlbWl1bSI6IHsKICAgICAgIk5hbWUiOiAiU3VwcG9ydDo6UHJlbWl1bSIsCiAgICAgICJOYW1lU2hvcnQiOiAiUHJlbWl1bSIsCiAgICAgICJQYXJlbnQiOiAiU3VwcG9ydCIsCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgIH0KICB9Cn0K",
+          "bytes": 294,
+          "sha256": "e9081fdc53adcb52e435d5cc278046e255535a6593e72968c32af2fcc355c733",
+          "entries": [
+            {
+              "name": "Support",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "NameShort": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "Parent": {
+                    "kind": "null",
+                    "value": null,
+                    "yamlToken": "--- ~\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            },
+            {
+              "name": "Support::Premium",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Support::Premium",
+                    "yamlToken": "--- \"Support::Premium\"\n"
+                  },
+                  "NameShort": {
+                    "kind": "string",
+                    "value": "Premium",
+                    "yamlToken": "--- \"Premium\"\n"
+                  },
+                  "Parent": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-SLAs",
+          "filename": "SLAs.yml",
+          "family": "SLAs",
+          "body_base64": "ewogICJTTEFzIjogewogICAgIkdvbGQiOiB7CiAgICAgICJOYW1lIjogIkdvbGQiLAogICAgICAiU2VydmljZXMiOiBbCiAgICAgICAgIlN1cHBvcnQ6OlByZW1pdW0iCiAgICAgIF0sCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIsCiAgICAgICJGaXJzdFJlc3BvbnNlVGltZSI6IDMwCiAgICB9CiAgfQp9Cg==",
+          "bytes": 172,
+          "sha256": "0f799d88cf3ba44389c81f56f55102ebd9671f0344f8f3c7a729949d05efcbe3",
+          "entries": [
+            {
+              "name": "Gold",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Gold",
+                    "yamlToken": "--- \"Gold\"\n"
+                  },
+                  "Services": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "Support::Premium",
+                        "yamlToken": "--- \"Support::Premium\"\n"
+                      }
+                    ]
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "FirstResponseTime": {
+                    "kind": "integer",
+                    "value": "30",
+                    "yamlToken": "--- 30\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Queues",
+          "filename": "Queues.yml",
+          "family": "Queues",
+          "body_base64": "ewogICJRdWV1ZXMiOiB7CiAgICAiU3VwcG9ydFEiOiB7CiAgICAgICJOYW1lIjogIlN1cHBvcnRRIiwKICAgICAgIlJlYWxOYW1lIjogIlN1cHBvcnQgdGVhbSIsCiAgICAgICJHcm91cCI6ICJzdXBwb3J0IiwKICAgICAgIkNhbGVuZGFyIjogIiIsCiAgICAgICJGaXJzdFJlc3BvbnNlVGltZSI6IDAsCiAgICAgICJGaXJzdFJlc3BvbnNlTm90aWZ5IjogMCwKICAgICAgIlVwZGF0ZVRpbWUiOiAwLAogICAgICAiVXBkYXRlTm90aWZ5IjogMCwKICAgICAgIlNvbHV0aW9uVGltZSI6IDAsCiAgICAgICJTb2x1dGlvbk5vdGlmeSI6IDAsCiAgICAgICJVbmxvY2tUaW1lb3V0IjogMCwKICAgICAgIkZvbGxvd1VwIjogInBvc3NpYmxlIiwKICAgICAgIkZvbGxvd1VwTG9jayI6IDAsCiAgICAgICJEZWZhdWx0U2lnbktleSI6IDAsCiAgICAgICJTeXN0ZW1BZGRyZXNzIjogewogICAgICAgICJOYW1lIjogInN1cHBvcnRAZXhhbXBsZS5pbnZhbGlkIiwKICAgICAgICAiUmVhbG5hbWUiOiAiU3VwcG9ydCB0ZWFtIiwKICAgICAgICAiUXVldWUiOiAiU3VwcG9ydFEiLAogICAgICAgICJDb21tZW50IjogIkF1dGhvcmVkIHN1cHBvcnQgYWRkcmVzcyIsCiAgICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgICB9LAogICAgICAiU2FsdXRhdGlvbiI6IHsKICAgICAgICAiTmFtZSI6ICJTdXBwb3J0IGdyZWV0aW5nIiwKICAgICAgICAiVGV4dCI6ICJIZWxsbyxcbiIsCiAgICAgICAgIkNvbnRlbnRUeXBlIjogInRleHQvcGxhaW47IGNoYXJzZXQ9dXRmLTgiLAogICAgICAgICJDb21tZW50IjogIkF1dGhvcmVkIHNhbHV0YXRpb24iLAogICAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgICAgfSwKICAgICAgIlNpZ25hdHVyZSI6IHsKICAgICAgICAiTmFtZSI6ICJTdXBwb3J0IHNpZ25hdHVyZSIsCiAgICAgICAgIlRleHQiOiAiU3VwcG9ydCB0ZWFtXG4iLAogICAgICAgICJDb250ZW50VHlwZSI6ICJ0ZXh0L3BsYWluOyBjaGFyc2V0PXV0Zi04IiwKICAgICAgICAiQ29tbWVudCI6ICJBdXRob3JlZCBzaWduYXR1cmUiLAogICAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgICAgfSwKICAgICAgIlZhbGlkIjogInZhbGlkIiwKICAgICAgIkNvbW1lbnQiOiAiUmV2aWV3ZWQgc3VwcG9ydCBxdWV1ZSIKICAgIH0KICB9Cn0K",
+          "bytes": 1137,
+          "sha256": "ca6b1bf9339382acea3377c0a55f96235d6858ad115989196541bbcfa586f1eb",
+          "entries": [
+            {
+              "name": "SupportQ",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "SupportQ",
+                    "yamlToken": "--- \"SupportQ\"\n"
+                  },
+                  "RealName": {
+                    "kind": "string",
+                    "value": "Support team",
+                    "yamlToken": "--- \"Support team\"\n"
+                  },
+                  "Group": {
+                    "kind": "string",
+                    "value": "support",
+                    "yamlToken": "--- \"support\"\n"
+                  },
+                  "Calendar": {
+                    "kind": "string",
+                    "value": "",
+                    "yamlToken": "--- \"\"\n"
+                  },
+                  "FirstResponseTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "FirstResponseNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UpdateTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UpdateNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SolutionTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SolutionNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UnlockTimeout": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "FollowUp": {
+                    "kind": "string",
+                    "value": "possible",
+                    "yamlToken": "--- \"possible\"\n"
+                  },
+                  "FollowUpLock": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "DefaultSignKey": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SystemAddress": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "support@example.invalid",
+                        "yamlToken": "--- \"support@example.invalid\"\n"
+                      },
+                      "Realname": {
+                        "kind": "string",
+                        "value": "Support team",
+                        "yamlToken": "--- \"Support team\"\n"
+                      },
+                      "Queue": {
+                        "kind": "string",
+                        "value": "SupportQ",
+                        "yamlToken": "--- \"SupportQ\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored support address",
+                        "yamlToken": "--- \"Authored support address\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Salutation": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "Support greeting",
+                        "yamlToken": "--- \"Support greeting\"\n"
+                      },
+                      "Text": {
+                        "kind": "string",
+                        "value": "Hello,\n",
+                        "yamlToken": "--- \"Hello,\\n\"\n"
+                      },
+                      "ContentType": {
+                        "kind": "string",
+                        "value": "text/plain; charset=utf-8",
+                        "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored salutation",
+                        "yamlToken": "--- \"Authored salutation\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Signature": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "Support signature",
+                        "yamlToken": "--- \"Support signature\"\n"
+                      },
+                      "Text": {
+                        "kind": "string",
+                        "value": "Support team\n",
+                        "yamlToken": "--- \"Support team\\n\"\n"
+                      },
+                      "ContentType": {
+                        "kind": "string",
+                        "value": "text/plain; charset=utf-8",
+                        "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored signature",
+                        "yamlToken": "--- \"Authored signature\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Reviewed support queue",
+                    "yamlToken": "--- \"Reviewed support queue\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-QueueTemplates",
+          "filename": "QueueTemplates.yml",
+          "family": "QueueTemplates",
+          "body_base64": "ewogICJRdWV1ZVRlbXBsYXRlcyI6IHsKICAgICJTdXBwb3J0USI6IFsKICAgICAgIlJlcGx5IgogICAgXQogIH0KfQo=",
+          "bytes": 68,
+          "sha256": "bfcb558f85c7d896137fab97feb33af073e9a903c14c44c157d29eeb85eda468",
+          "entries": [
+            {
+              "name": "SupportQ",
+              "value": {
+                "kind": "array",
+                "value": [
+                  {
+                    "kind": "string",
+                    "value": "Reply",
+                    "yamlToken": "--- \"Reply\"\n"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-RoleGroups",
+          "filename": "RoleGroups.yml",
+          "family": "RoleGroups",
+          "body_base64": "ewogICJSb2xlR3JvdXBzIjogewogICAgImFnZW50cyI6IHsKICAgICAgInJvIjogWwogICAgICAgICJzdXBwb3J0IgogICAgICBdLAogICAgICAicnciOiBbXQogICAgfQogIH0KfQo=",
+          "bytes": 104,
+          "sha256": "3c2d43f050de705880c8f7330648aa7ba234ebc9953f9b9468f082c8286930e7",
+          "entries": [
+            {
+              "name": "agents",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "ro": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "support",
+                        "yamlToken": "--- \"support\"\n"
+                      }
+                    ]
+                  },
+                  "rw": {
+                    "kind": "array",
+                    "value": []
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-GenericAgents",
+          "filename": "GenericAgents.yml",
+          "family": "GenericAgents",
+          "body_base64": "ewogICJHZW5lcmljQWdlbnRzIjogewogICAgIldlZWtseSI6IHsKICAgICAgIk5hbWUiOiAiV2Vla2x5IiwKICAgICAgIk5ld1F1ZXVlIjogIlN1cHBvcnRRIiwKICAgICAgIk93bmVycyI6IFsKICAgICAgICAib3BzIgogICAgICBdLAogICAgICAiU2NoZWR1bGVEYXlzIjogWwogICAgICAgICIxIgogICAgICBdLAogICAgICAiVmFsaWQiOiAxCiAgICB9CiAgfQp9Cg==",
+          "bytes": 208,
+          "sha256": "0a8ccd2eeb48d1671efb91735d56151ca83b5186deacabf734e1755cb21c3955",
+          "entries": [
+            {
+              "name": "Weekly",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Weekly",
+                    "yamlToken": "--- \"Weekly\"\n"
+                  },
+                  "NewQueue": {
+                    "kind": "string",
+                    "value": "SupportQ",
+                    "yamlToken": "--- \"SupportQ\"\n"
+                  },
+                  "Owners": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "ops",
+                        "yamlToken": "--- \"ops\"\n"
+                      }
+                    ]
+                  },
+                  "ScheduleDays": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "1",
+                        "yamlToken": "--- \"1\"\n"
+                      }
+                    ]
+                  },
+                  "Valid": {
+                    "kind": "integer",
+                    "value": "1",
+                    "yamlToken": "--- 1\n"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "evidenceFiles": [
+        {
+          "id": "settings",
+          "filename": "settings.json",
+          "body_base64": "ewogICJWYWxpZCI6IFsKICAgICJ2YWxpZCIsCiAgICAiaW52YWxpZCIKICBdLAogICJGb2xsb3dVcCI6IFsKICAgICJwb3NzaWJsZSIKICBdLAogICJPd25lcnMiOiBbCiAgICAib3BzIgogIF0sCiAgInBlcm1pc3Npb25UeXBlcyI6IFsKICAgICJybyIsCiAgICAicnciCiAgXSwKICAibWF4UXVldWVMZXZlbCI6IDUKfQo=",
+          "bytes": 182,
+          "sha256": "c45c28ef64f753dffaccd2a128315e3ca828bd53685111813bd7a3674b391cac",
+          "purpose": "Authored target lookup reference"
+        }
+      ],
+      "completeness": {
+        "Groups": true,
+        "Roles": true,
+        "Types": true,
+        "Templates": true,
+        "Services": true,
+        "SLAs": true,
+        "Queues": true,
+        "QueueTemplates": true,
+        "RoleGroups": true,
+        "GenericAgents": true
+      },
+      "externalContext": {
+        "lookupSets": {
+          "Valid": {
+            "values": [
+              "valid",
+              "invalid"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          },
+          "FollowUp": {
+            "values": [
+              "possible"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          },
+          "Owners": {
+            "values": [
+              "ops"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          }
+        },
+        "permissionTypes": {
+          "values": [
+            "ro",
+            "rw"
+          ],
+          "evidenceFileIds": [
+            "settings"
+          ]
+        },
+        "maxQueueLevel": {
+          "value": 5,
+          "evidenceFileIds": [
+            "settings"
+          ]
+        }
+      },
+      "label": "Authored original configuration",
+      "captureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c"
+    },
+    "before": {
+      "schema": "otobo.capture.v1",
+      "caseId": "otobo-configuration-reference",
+      "side": "target",
+      "workspaceReference": "authored-target-workspace",
+      "observedAt": "2026-10-13T12:05:00Z",
+      "evidenceKind": "authored-reference",
+      "environment": {
+        "parser": {
+          "module": "YAML::XS",
+          "version": "authored-reference",
+          "profile": "authored typed reference; actual native helper records installed version"
+        },
+        "description": "Authored reference shaped to native exports; native capture is a separate executable course."
+      },
+      "files": [
+        {
+          "id": "file-Groups",
+          "filename": "Groups.yml",
+          "family": "Groups",
+          "body_base64": "ewogICJHcm91cHMiOiB7CiAgICAic3VwcG9ydCI6IHsKICAgICAgIk5hbWUiOiAic3VwcG9ydCIsCiAgICAgICJDb21tZW50IjogIlN1cHBvcnQgb3BlcmF0b3JzIiwKICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgfQogIH0KfQo=",
+          "bytes": 131,
+          "sha256": "68a2ac3c43825c227504dc089c764a476195613cabc7933ce0e0c1fe8a1b450c",
+          "entries": [
+            {
+              "name": "support",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "support",
+                    "yamlToken": "--- \"support\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Support operators",
+                    "yamlToken": "--- \"Support operators\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Roles",
+          "filename": "Roles.yml",
+          "family": "Roles",
+          "body_base64": "ewogICJSb2xlcyI6IHsKICAgICJhZ2VudHMiOiB7CiAgICAgICJOYW1lIjogImFnZW50cyIsCiAgICAgICJDb21tZW50IjogIlNlcnZpY2UgYWdlbnRzIiwKICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgfQogIH0KfQo=",
+          "bytes": 125,
+          "sha256": "8feaa70a2b071999f8145bbcab1f08a0c71c65cef7a95bec4ca4fee76b2760fa",
+          "entries": [
+            {
+              "name": "agents",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "agents",
+                    "yamlToken": "--- \"agents\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Service agents",
+                    "yamlToken": "--- \"Service agents\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Types",
+          "filename": "Types.yml",
+          "family": "Types",
+          "body_base64": "ewogICJUeXBlcyI6IHsKICAgICJJbmNpZGVudCI6IHsKICAgICAgIk5hbWUiOiAiSW5jaWRlbnQiLAogICAgICAiVmFsaWQiOiAidmFsaWQiCiAgICB9CiAgfQp9Cg==",
+          "bytes": 94,
+          "sha256": "aad778744e1a981643395093a8f3aa37b08f7387637db786dc055c6084cb780d",
+          "entries": [
+            {
+              "name": "Incident",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Incident",
+                    "yamlToken": "--- \"Incident\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Templates",
+          "filename": "Templates.yml",
+          "family": "Templates",
+          "body_base64": "ewogICJUZW1wbGF0ZXMiOiB7CiAgICAiUmVwbHkiOiB7CiAgICAgICJOYW1lIjogIlJlcGx5IiwKICAgICAgIkNvbW1lbnQiOiAiUmV0YWluZWQgcmVzcG9uc2UiLAogICAgICAiVGVtcGxhdGUiOiAiSGVsbG8iLAogICAgICAiQ29udGVudFR5cGUiOiAidGV4dC9wbGFpbjsgY2hhcnNldD11dGYtOCIsCiAgICAgICJUZW1wbGF0ZVR5cGUiOiAiQW5zd2VyIiwKICAgICAgIlZhbGlkIjogInZhbGlkIiwKICAgICAgIlByZVNlbGVjdGVkVGlja2V0U3RhdGVJRCI6IG51bGwKICAgIH0KICB9Cn0K",
+          "bytes": 279,
+          "sha256": "aae53ee519516374e1044b0bc68e747b06bf972024950f38626a36034ac9c3fa",
+          "entries": [
+            {
+              "name": "Reply",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Reply",
+                    "yamlToken": "--- \"Reply\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Retained response",
+                    "yamlToken": "--- \"Retained response\"\n"
+                  },
+                  "Template": {
+                    "kind": "string",
+                    "value": "Hello",
+                    "yamlToken": "--- \"Hello\"\n"
+                  },
+                  "ContentType": {
+                    "kind": "string",
+                    "value": "text/plain; charset=utf-8",
+                    "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                  },
+                  "TemplateType": {
+                    "kind": "string",
+                    "value": "Answer",
+                    "yamlToken": "--- \"Answer\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "PreSelectedTicketStateID": {
+                    "kind": "null",
+                    "value": null,
+                    "yamlToken": "--- ~\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Services",
+          "filename": "Services.yml",
+          "family": "Services",
+          "body_base64": "ewogICJTZXJ2aWNlcyI6IHsKICAgICJTdXBwb3J0IjogewogICAgICAiTmFtZSI6ICJTdXBwb3J0IiwKICAgICAgIk5hbWVTaG9ydCI6ICJTdXBwb3J0IiwKICAgICAgIlBhcmVudCI6IG51bGwsCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgIH0KICB9Cn0K",
+          "bytes": 147,
+          "sha256": "76e66d4e5b626d009fe6b9904e3cf0bf7c441775b5d545c7cc80fc5a80596068",
+          "entries": [
+            {
+              "name": "Support",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "NameShort": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "Parent": {
+                    "kind": "null",
+                    "value": null,
+                    "yamlToken": "--- ~\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-SLAs",
+          "filename": "SLAs.yml",
+          "family": "SLAs",
+          "body_base64": "ewogICJTTEFzIjoge30KfQo=",
+          "bytes": 17,
+          "sha256": "7a62394936557c25c777187bfda364424035c45537075a428bedbe3013288145",
+          "entries": []
+        },
+        {
+          "id": "file-Queues",
+          "filename": "Queues.yml",
+          "family": "Queues",
+          "body_base64": "ewogICJRdWV1ZXMiOiB7CiAgICAiU3VwcG9ydFEiOiB7CiAgICAgICJOYW1lIjogIlN1cHBvcnRRIiwKICAgICAgIlJlYWxOYW1lIjogIlN1cHBvcnQgdGVhbSIsCiAgICAgICJHcm91cCI6ICJzdXBwb3J0IiwKICAgICAgIkNhbGVuZGFyIjogIiIsCiAgICAgICJGaXJzdFJlc3BvbnNlVGltZSI6IDAsCiAgICAgICJGaXJzdFJlc3BvbnNlTm90aWZ5IjogMCwKICAgICAgIlVwZGF0ZVRpbWUiOiAwLAogICAgICAiVXBkYXRlTm90aWZ5IjogMCwKICAgICAgIlNvbHV0aW9uVGltZSI6IDAsCiAgICAgICJTb2x1dGlvbk5vdGlmeSI6IDAsCiAgICAgICJVbmxvY2tUaW1lb3V0IjogMCwKICAgICAgIkZvbGxvd1VwIjogInBvc3NpYmxlIiwKICAgICAgIkZvbGxvd1VwTG9jayI6IDAsCiAgICAgICJEZWZhdWx0U2lnbktleSI6IDAsCiAgICAgICJTeXN0ZW1BZGRyZXNzIjogewogICAgICAgICJOYW1lIjogInN1cHBvcnRAZXhhbXBsZS5pbnZhbGlkIiwKICAgICAgICAiUmVhbG5hbWUiOiAiU3VwcG9ydCB0ZWFtIiwKICAgICAgICAiUXVldWUiOiAiU3VwcG9ydFEiLAogICAgICAgICJDb21tZW50IjogIkF1dGhvcmVkIHN1cHBvcnQgYWRkcmVzcyIsCiAgICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgICB9LAogICAgICAiU2FsdXRhdGlvbiI6IHsKICAgICAgICAiTmFtZSI6ICJTdXBwb3J0IGdyZWV0aW5nIiwKICAgICAgICAiVGV4dCI6ICJIZWxsbyxcbiIsCiAgICAgICAgIkNvbnRlbnRUeXBlIjogInRleHQvcGxhaW47IGNoYXJzZXQ9dXRmLTgiLAogICAgICAgICJDb21tZW50IjogIkF1dGhvcmVkIHNhbHV0YXRpb24iLAogICAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgICAgfSwKICAgICAgIlNpZ25hdHVyZSI6IHsKICAgICAgICAiTmFtZSI6ICJTdXBwb3J0IHNpZ25hdHVyZSIsCiAgICAgICAgIlRleHQiOiAiU3VwcG9ydCB0ZWFtXG4iLAogICAgICAgICJDb250ZW50VHlwZSI6ICJ0ZXh0L3BsYWluOyBjaGFyc2V0PXV0Zi04IiwKICAgICAgICAiQ29tbWVudCI6ICJBdXRob3JlZCBzaWduYXR1cmUiLAogICAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgICAgfSwKICAgICAgIlZhbGlkIjogInZhbGlkIiwKICAgICAgIkNvbW1lbnQiOiAiRWFybGllciBxdWV1ZSBub3RlIgogICAgfQogIH0KfQo=",
+          "bytes": 1133,
+          "sha256": "f6d34bd20015d0de8b21ff2a9ceca7f8c0fc52a07c82d01eff32de2a62ca50be",
+          "entries": [
+            {
+              "name": "SupportQ",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "SupportQ",
+                    "yamlToken": "--- \"SupportQ\"\n"
+                  },
+                  "RealName": {
+                    "kind": "string",
+                    "value": "Support team",
+                    "yamlToken": "--- \"Support team\"\n"
+                  },
+                  "Group": {
+                    "kind": "string",
+                    "value": "support",
+                    "yamlToken": "--- \"support\"\n"
+                  },
+                  "Calendar": {
+                    "kind": "string",
+                    "value": "",
+                    "yamlToken": "--- \"\"\n"
+                  },
+                  "FirstResponseTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "FirstResponseNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UpdateTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UpdateNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SolutionTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SolutionNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UnlockTimeout": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "FollowUp": {
+                    "kind": "string",
+                    "value": "possible",
+                    "yamlToken": "--- \"possible\"\n"
+                  },
+                  "FollowUpLock": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "DefaultSignKey": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SystemAddress": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "support@example.invalid",
+                        "yamlToken": "--- \"support@example.invalid\"\n"
+                      },
+                      "Realname": {
+                        "kind": "string",
+                        "value": "Support team",
+                        "yamlToken": "--- \"Support team\"\n"
+                      },
+                      "Queue": {
+                        "kind": "string",
+                        "value": "SupportQ",
+                        "yamlToken": "--- \"SupportQ\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored support address",
+                        "yamlToken": "--- \"Authored support address\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Salutation": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "Support greeting",
+                        "yamlToken": "--- \"Support greeting\"\n"
+                      },
+                      "Text": {
+                        "kind": "string",
+                        "value": "Hello,\n",
+                        "yamlToken": "--- \"Hello,\\n\"\n"
+                      },
+                      "ContentType": {
+                        "kind": "string",
+                        "value": "text/plain; charset=utf-8",
+                        "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored salutation",
+                        "yamlToken": "--- \"Authored salutation\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Signature": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "Support signature",
+                        "yamlToken": "--- \"Support signature\"\n"
+                      },
+                      "Text": {
+                        "kind": "string",
+                        "value": "Support team\n",
+                        "yamlToken": "--- \"Support team\\n\"\n"
+                      },
+                      "ContentType": {
+                        "kind": "string",
+                        "value": "text/plain; charset=utf-8",
+                        "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored signature",
+                        "yamlToken": "--- \"Authored signature\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Earlier queue note",
+                    "yamlToken": "--- \"Earlier queue note\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-QueueTemplates",
+          "filename": "QueueTemplates.yml",
+          "family": "QueueTemplates",
+          "body_base64": "ewogICJRdWV1ZVRlbXBsYXRlcyI6IHsKICAgICJTdXBwb3J0USI6IFtdCiAgfQp9Cg==",
+          "bytes": 49,
+          "sha256": "c7a7dd17b121b1329136dbe4675e20e747280dbf9ddd6b45f38badae8c2e00d6",
+          "entries": [
+            {
+              "name": "SupportQ",
+              "value": {
+                "kind": "array",
+                "value": []
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-RoleGroups",
+          "filename": "RoleGroups.yml",
+          "family": "RoleGroups",
+          "body_base64": "ewogICJSb2xlR3JvdXBzIjogewogICAgImFnZW50cyI6IHsKICAgICAgInJvIjogWwogICAgICAgICJzdXBwb3J0IgogICAgICBdLAogICAgICAicnciOiBbCiAgICAgICAgInN1cHBvcnQiCiAgICAgIF0KICAgIH0KICB9Cn0K",
+          "bytes": 129,
+          "sha256": "71d63bdde6efb40f7669f88f4fb49201df4ea823cf1a0110a1cb02ac53bdb182",
+          "entries": [
+            {
+              "name": "agents",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "ro": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "support",
+                        "yamlToken": "--- \"support\"\n"
+                      }
+                    ]
+                  },
+                  "rw": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "support",
+                        "yamlToken": "--- \"support\"\n"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-GenericAgents",
+          "filename": "GenericAgents.yml",
+          "family": "GenericAgents",
+          "body_base64": "ewogICJHZW5lcmljQWdlbnRzIjoge30KfQo=",
+          "bytes": 26,
+          "sha256": "db06f18a34d172ec8debaf176e3d073f23843ebfe680c3d030caa988f115849b",
+          "entries": []
+        }
+      ],
+      "evidenceFiles": [
+        {
+          "id": "settings",
+          "filename": "settings.json",
+          "body_base64": "ewogICJWYWxpZCI6IFsKICAgICJ2YWxpZCIsCiAgICAiaW52YWxpZCIKICBdLAogICJGb2xsb3dVcCI6IFsKICAgICJwb3NzaWJsZSIKICBdLAogICJPd25lcnMiOiBbCiAgICAib3BzIgogIF0sCiAgInBlcm1pc3Npb25UeXBlcyI6IFsKICAgICJybyIsCiAgICAicnciCiAgXSwKICAibWF4UXVldWVMZXZlbCI6IDUKfQo=",
+          "bytes": 182,
+          "sha256": "c45c28ef64f753dffaccd2a128315e3ca828bd53685111813bd7a3674b391cac",
+          "purpose": "Authored target lookup reference"
+        }
+      ],
+      "completeness": {
+        "Groups": true,
+        "Roles": true,
+        "Types": true,
+        "Templates": true,
+        "Services": true,
+        "SLAs": true,
+        "Queues": true,
+        "QueueTemplates": true,
+        "RoleGroups": true,
+        "GenericAgents": true
+      },
+      "externalContext": {
+        "lookupSets": {
+          "Valid": {
+            "values": [
+              "valid",
+              "invalid"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          },
+          "FollowUp": {
+            "values": [
+              "possible"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          },
+          "Owners": {
+            "values": [
+              "ops"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          }
+        },
+        "permissionTypes": {
+          "values": [
+            "ro",
+            "rw"
+          ],
+          "evidenceFileIds": [
+            "settings"
+          ]
+        },
+        "maxQueueLevel": {
+          "value": 5,
+          "evidenceFileIds": [
+            "settings"
+          ]
+        }
+      },
+      "label": "Authored independent target baseline",
+      "captureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314"
+    },
+    "after": {
+      "schema": "otobo.capture.v1",
+      "caseId": "otobo-configuration-reference",
+      "side": "target",
+      "workspaceReference": "authored-target-workspace",
+      "observedAt": "2026-10-13T12:20:00Z",
+      "evidenceKind": "authored-reference",
+      "environment": {
+        "parser": {
+          "module": "YAML::XS",
+          "version": "authored-reference",
+          "profile": "authored typed reference; actual native helper records installed version"
+        },
+        "description": "Authored reference shaped to native exports; native capture is a separate executable course."
+      },
+      "files": [
+        {
+          "id": "file-Groups",
+          "filename": "Groups.yml",
+          "family": "Groups",
+          "body_base64": "ewogICJHcm91cHMiOiB7CiAgICAic3VwcG9ydCI6IHsKICAgICAgIk5hbWUiOiAic3VwcG9ydCIsCiAgICAgICJDb21tZW50IjogIlN1cHBvcnQgb3BlcmF0b3JzIiwKICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgfQogIH0KfQo=",
+          "bytes": 131,
+          "sha256": "68a2ac3c43825c227504dc089c764a476195613cabc7933ce0e0c1fe8a1b450c",
+          "entries": [
+            {
+              "name": "support",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "support",
+                    "yamlToken": "--- \"support\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Support operators",
+                    "yamlToken": "--- \"Support operators\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Roles",
+          "filename": "Roles.yml",
+          "family": "Roles",
+          "body_base64": "ewogICJSb2xlcyI6IHsKICAgICJhZ2VudHMiOiB7CiAgICAgICJOYW1lIjogImFnZW50cyIsCiAgICAgICJDb21tZW50IjogIlNlcnZpY2UgYWdlbnRzIiwKICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgfQogIH0KfQo=",
+          "bytes": 125,
+          "sha256": "8feaa70a2b071999f8145bbcab1f08a0c71c65cef7a95bec4ca4fee76b2760fa",
+          "entries": [
+            {
+              "name": "agents",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "agents",
+                    "yamlToken": "--- \"agents\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Service agents",
+                    "yamlToken": "--- \"Service agents\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Types",
+          "filename": "Types.yml",
+          "family": "Types",
+          "body_base64": "ewogICJUeXBlcyI6IHsKICAgICJJbmNpZGVudCI6IHsKICAgICAgIk5hbWUiOiAiSW5jaWRlbnQiLAogICAgICAiVmFsaWQiOiAidmFsaWQiCiAgICB9CiAgfQp9Cg==",
+          "bytes": 94,
+          "sha256": "aad778744e1a981643395093a8f3aa37b08f7387637db786dc055c6084cb780d",
+          "entries": [
+            {
+              "name": "Incident",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Incident",
+                    "yamlToken": "--- \"Incident\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Templates",
+          "filename": "Templates.yml",
+          "family": "Templates",
+          "body_base64": "ewogICJUZW1wbGF0ZXMiOiB7CiAgICAiUmVwbHkiOiB7CiAgICAgICJOYW1lIjogIlJlcGx5IiwKICAgICAgIkNvbW1lbnQiOiAiUmV0YWluZWQgcmVzcG9uc2UiLAogICAgICAiVGVtcGxhdGUiOiAiSGVsbG8iLAogICAgICAiQ29udGVudFR5cGUiOiAidGV4dC9wbGFpbjsgY2hhcnNldD11dGYtOCIsCiAgICAgICJUZW1wbGF0ZVR5cGUiOiAiQW5zd2VyIiwKICAgICAgIlZhbGlkIjogInZhbGlkIiwKICAgICAgIlByZVNlbGVjdGVkVGlja2V0U3RhdGVJRCI6IG51bGwKICAgIH0KICB9Cn0K",
+          "bytes": 279,
+          "sha256": "aae53ee519516374e1044b0bc68e747b06bf972024950f38626a36034ac9c3fa",
+          "entries": [
+            {
+              "name": "Reply",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Reply",
+                    "yamlToken": "--- \"Reply\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Retained response",
+                    "yamlToken": "--- \"Retained response\"\n"
+                  },
+                  "Template": {
+                    "kind": "string",
+                    "value": "Hello",
+                    "yamlToken": "--- \"Hello\"\n"
+                  },
+                  "ContentType": {
+                    "kind": "string",
+                    "value": "text/plain; charset=utf-8",
+                    "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                  },
+                  "TemplateType": {
+                    "kind": "string",
+                    "value": "Answer",
+                    "yamlToken": "--- \"Answer\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "PreSelectedTicketStateID": {
+                    "kind": "null",
+                    "value": null,
+                    "yamlToken": "--- ~\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Services",
+          "filename": "Services.yml",
+          "family": "Services",
+          "body_base64": "ewogICJTZXJ2aWNlcyI6IHsKICAgICJTdXBwb3J0IjogewogICAgICAiTmFtZSI6ICJTdXBwb3J0IiwKICAgICAgIk5hbWVTaG9ydCI6ICJTdXBwb3J0IiwKICAgICAgIlBhcmVudCI6IG51bGwsCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgIH0sCiAgICAiU3VwcG9ydDo6UHJlbWl1bSI6IHsKICAgICAgIk5hbWUiOiAiU3VwcG9ydDo6UHJlbWl1bSIsCiAgICAgICJOYW1lU2hvcnQiOiAiUHJlbWl1bSIsCiAgICAgICJQYXJlbnQiOiAiU3VwcG9ydCIsCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgIH0KICB9Cn0K",
+          "bytes": 294,
+          "sha256": "e9081fdc53adcb52e435d5cc278046e255535a6593e72968c32af2fcc355c733",
+          "entries": [
+            {
+              "name": "Support",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "NameShort": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "Parent": {
+                    "kind": "null",
+                    "value": null,
+                    "yamlToken": "--- ~\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            },
+            {
+              "name": "Support::Premium",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Support::Premium",
+                    "yamlToken": "--- \"Support::Premium\"\n"
+                  },
+                  "NameShort": {
+                    "kind": "string",
+                    "value": "Premium",
+                    "yamlToken": "--- \"Premium\"\n"
+                  },
+                  "Parent": {
+                    "kind": "string",
+                    "value": "Support",
+                    "yamlToken": "--- \"Support\"\n"
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-SLAs",
+          "filename": "SLAs.yml",
+          "family": "SLAs",
+          "body_base64": "ewogICJTTEFzIjogewogICAgIkdvbGQiOiB7CiAgICAgICJOYW1lIjogIkdvbGQiLAogICAgICAiU2VydmljZXMiOiBbCiAgICAgICAgIlN1cHBvcnQ6OlByZW1pdW0iCiAgICAgIF0sCiAgICAgICJWYWxpZCI6ICJ2YWxpZCIsCiAgICAgICJGaXJzdFJlc3BvbnNlVGltZSI6IDMwCiAgICB9CiAgfQp9Cg==",
+          "bytes": 172,
+          "sha256": "0f799d88cf3ba44389c81f56f55102ebd9671f0344f8f3c7a729949d05efcbe3",
+          "entries": [
+            {
+              "name": "Gold",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Gold",
+                    "yamlToken": "--- \"Gold\"\n"
+                  },
+                  "Services": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "Support::Premium",
+                        "yamlToken": "--- \"Support::Premium\"\n"
+                      }
+                    ]
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "FirstResponseTime": {
+                    "kind": "integer",
+                    "value": "30",
+                    "yamlToken": "--- 30\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-Queues",
+          "filename": "Queues.yml",
+          "family": "Queues",
+          "body_base64": "ewogICJRdWV1ZXMiOiB7CiAgICAiU3VwcG9ydFEiOiB7CiAgICAgICJOYW1lIjogIlN1cHBvcnRRIiwKICAgICAgIlJlYWxOYW1lIjogIlN1cHBvcnQgdGVhbSIsCiAgICAgICJHcm91cCI6ICJzdXBwb3J0IiwKICAgICAgIkNhbGVuZGFyIjogIiIsCiAgICAgICJGaXJzdFJlc3BvbnNlVGltZSI6IDAsCiAgICAgICJGaXJzdFJlc3BvbnNlTm90aWZ5IjogMCwKICAgICAgIlVwZGF0ZVRpbWUiOiAwLAogICAgICAiVXBkYXRlTm90aWZ5IjogMCwKICAgICAgIlNvbHV0aW9uVGltZSI6IDAsCiAgICAgICJTb2x1dGlvbk5vdGlmeSI6IDAsCiAgICAgICJVbmxvY2tUaW1lb3V0IjogMCwKICAgICAgIkZvbGxvd1VwIjogInBvc3NpYmxlIiwKICAgICAgIkZvbGxvd1VwTG9jayI6IDAsCiAgICAgICJEZWZhdWx0U2lnbktleSI6IDAsCiAgICAgICJTeXN0ZW1BZGRyZXNzIjogewogICAgICAgICJOYW1lIjogInN1cHBvcnRAZXhhbXBsZS5pbnZhbGlkIiwKICAgICAgICAiUmVhbG5hbWUiOiAiU3VwcG9ydCB0ZWFtIiwKICAgICAgICAiUXVldWUiOiAiU3VwcG9ydFEiLAogICAgICAgICJDb21tZW50IjogIkF1dGhvcmVkIHN1cHBvcnQgYWRkcmVzcyIsCiAgICAgICAgIlZhbGlkIjogInZhbGlkIgogICAgICB9LAogICAgICAiU2FsdXRhdGlvbiI6IHsKICAgICAgICAiTmFtZSI6ICJTdXBwb3J0IGdyZWV0aW5nIiwKICAgICAgICAiVGV4dCI6ICJIZWxsbyxcbiIsCiAgICAgICAgIkNvbnRlbnRUeXBlIjogInRleHQvcGxhaW47IGNoYXJzZXQ9dXRmLTgiLAogICAgICAgICJDb21tZW50IjogIkF1dGhvcmVkIHNhbHV0YXRpb24iLAogICAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgICAgfSwKICAgICAgIlNpZ25hdHVyZSI6IHsKICAgICAgICAiTmFtZSI6ICJTdXBwb3J0IHNpZ25hdHVyZSIsCiAgICAgICAgIlRleHQiOiAiU3VwcG9ydCB0ZWFtXG4iLAogICAgICAgICJDb250ZW50VHlwZSI6ICJ0ZXh0L3BsYWluOyBjaGFyc2V0PXV0Zi04IiwKICAgICAgICAiQ29tbWVudCI6ICJBdXRob3JlZCBzaWduYXR1cmUiLAogICAgICAgICJWYWxpZCI6ICJ2YWxpZCIKICAgICAgfSwKICAgICAgIlZhbGlkIjogInZhbGlkIiwKICAgICAgIkNvbW1lbnQiOiAiRWFybGllciBxdWV1ZSBub3RlIgogICAgfQogIH0KfQo=",
+          "bytes": 1133,
+          "sha256": "f6d34bd20015d0de8b21ff2a9ceca7f8c0fc52a07c82d01eff32de2a62ca50be",
+          "entries": [
+            {
+              "name": "SupportQ",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "SupportQ",
+                    "yamlToken": "--- \"SupportQ\"\n"
+                  },
+                  "RealName": {
+                    "kind": "string",
+                    "value": "Support team",
+                    "yamlToken": "--- \"Support team\"\n"
+                  },
+                  "Group": {
+                    "kind": "string",
+                    "value": "support",
+                    "yamlToken": "--- \"support\"\n"
+                  },
+                  "Calendar": {
+                    "kind": "string",
+                    "value": "",
+                    "yamlToken": "--- \"\"\n"
+                  },
+                  "FirstResponseTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "FirstResponseNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UpdateTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UpdateNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SolutionTime": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SolutionNotify": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "UnlockTimeout": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "FollowUp": {
+                    "kind": "string",
+                    "value": "possible",
+                    "yamlToken": "--- \"possible\"\n"
+                  },
+                  "FollowUpLock": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "DefaultSignKey": {
+                    "kind": "integer",
+                    "value": "0",
+                    "yamlToken": "--- 0\n"
+                  },
+                  "SystemAddress": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "support@example.invalid",
+                        "yamlToken": "--- \"support@example.invalid\"\n"
+                      },
+                      "Realname": {
+                        "kind": "string",
+                        "value": "Support team",
+                        "yamlToken": "--- \"Support team\"\n"
+                      },
+                      "Queue": {
+                        "kind": "string",
+                        "value": "SupportQ",
+                        "yamlToken": "--- \"SupportQ\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored support address",
+                        "yamlToken": "--- \"Authored support address\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Salutation": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "Support greeting",
+                        "yamlToken": "--- \"Support greeting\"\n"
+                      },
+                      "Text": {
+                        "kind": "string",
+                        "value": "Hello,\n",
+                        "yamlToken": "--- \"Hello,\\n\"\n"
+                      },
+                      "ContentType": {
+                        "kind": "string",
+                        "value": "text/plain; charset=utf-8",
+                        "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored salutation",
+                        "yamlToken": "--- \"Authored salutation\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Signature": {
+                    "kind": "map",
+                    "value": {
+                      "Name": {
+                        "kind": "string",
+                        "value": "Support signature",
+                        "yamlToken": "--- \"Support signature\"\n"
+                      },
+                      "Text": {
+                        "kind": "string",
+                        "value": "Support team\n",
+                        "yamlToken": "--- \"Support team\\n\"\n"
+                      },
+                      "ContentType": {
+                        "kind": "string",
+                        "value": "text/plain; charset=utf-8",
+                        "yamlToken": "--- \"text/plain; charset=utf-8\"\n"
+                      },
+                      "Comment": {
+                        "kind": "string",
+                        "value": "Authored signature",
+                        "yamlToken": "--- \"Authored signature\"\n"
+                      },
+                      "Valid": {
+                        "kind": "string",
+                        "value": "valid",
+                        "yamlToken": "--- \"valid\"\n"
+                      }
+                    }
+                  },
+                  "Valid": {
+                    "kind": "string",
+                    "value": "valid",
+                    "yamlToken": "--- \"valid\"\n"
+                  },
+                  "Comment": {
+                    "kind": "string",
+                    "value": "Earlier queue note",
+                    "yamlToken": "--- \"Earlier queue note\"\n"
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-QueueTemplates",
+          "filename": "QueueTemplates.yml",
+          "family": "QueueTemplates",
+          "body_base64": "ewogICJRdWV1ZVRlbXBsYXRlcyI6IHsKICAgICJTdXBwb3J0USI6IFsKICAgICAgIlJlcGx5IgogICAgXQogIH0KfQo=",
+          "bytes": 68,
+          "sha256": "bfcb558f85c7d896137fab97feb33af073e9a903c14c44c157d29eeb85eda468",
+          "entries": [
+            {
+              "name": "SupportQ",
+              "value": {
+                "kind": "array",
+                "value": [
+                  {
+                    "kind": "string",
+                    "value": "Reply",
+                    "yamlToken": "--- \"Reply\"\n"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-RoleGroups",
+          "filename": "RoleGroups.yml",
+          "family": "RoleGroups",
+          "body_base64": "ewogICJSb2xlR3JvdXBzIjogewogICAgImFnZW50cyI6IHsKICAgICAgInJvIjogWwogICAgICAgICJzdXBwb3J0IgogICAgICBdLAogICAgICAicnciOiBbCiAgICAgICAgInN1cHBvcnQiCiAgICAgIF0KICAgIH0KICB9Cn0K",
+          "bytes": 129,
+          "sha256": "71d63bdde6efb40f7669f88f4fb49201df4ea823cf1a0110a1cb02ac53bdb182",
+          "entries": [
+            {
+              "name": "agents",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "ro": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "support",
+                        "yamlToken": "--- \"support\"\n"
+                      }
+                    ]
+                  },
+                  "rw": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "support",
+                        "yamlToken": "--- \"support\"\n"
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "file-GenericAgents",
+          "filename": "GenericAgents.yml",
+          "family": "GenericAgents",
+          "body_base64": "ewogICJHZW5lcmljQWdlbnRzIjogewogICAgIldlZWtseSI6IHsKICAgICAgIk5hbWUiOiAiV2Vla2x5IiwKICAgICAgIk5ld1F1ZXVlIjogIlN1cHBvcnRRIiwKICAgICAgIk93bmVycyI6IFsKICAgICAgICAib3BzIgogICAgICBdLAogICAgICAiU2NoZWR1bGVEYXlzIjogWwogICAgICAgICIxIgogICAgICBdLAogICAgICAiVmFsaWQiOiAxCiAgICB9CiAgfQp9Cg==",
+          "bytes": 208,
+          "sha256": "0a8ccd2eeb48d1671efb91735d56151ca83b5186deacabf734e1755cb21c3955",
+          "entries": [
+            {
+              "name": "Weekly",
+              "value": {
+                "kind": "map",
+                "value": {
+                  "Name": {
+                    "kind": "string",
+                    "value": "Weekly",
+                    "yamlToken": "--- \"Weekly\"\n"
+                  },
+                  "NewQueue": {
+                    "kind": "string",
+                    "value": "SupportQ",
+                    "yamlToken": "--- \"SupportQ\"\n"
+                  },
+                  "Owners": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "ops",
+                        "yamlToken": "--- \"ops\"\n"
+                      }
+                    ]
+                  },
+                  "ScheduleDays": {
+                    "kind": "array",
+                    "value": [
+                      {
+                        "kind": "string",
+                        "value": "1",
+                        "yamlToken": "--- \"1\"\n"
+                      }
+                    ]
+                  },
+                  "Valid": {
+                    "kind": "integer",
+                    "value": "1",
+                    "yamlToken": "--- 1\n"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "evidenceFiles": [
+        {
+          "id": "settings",
+          "filename": "settings.json",
+          "body_base64": "ewogICJWYWxpZCI6IFsKICAgICJ2YWxpZCIsCiAgICAiaW52YWxpZCIKICBdLAogICJGb2xsb3dVcCI6IFsKICAgICJwb3NzaWJsZSIKICBdLAogICJPd25lcnMiOiBbCiAgICAib3BzIgogIF0sCiAgInBlcm1pc3Npb25UeXBlcyI6IFsKICAgICJybyIsCiAgICAicnciCiAgXSwKICAibWF4UXVldWVMZXZlbCI6IDUKfQo=",
+          "bytes": 182,
+          "sha256": "c45c28ef64f753dffaccd2a128315e3ca828bd53685111813bd7a3674b391cac",
+          "purpose": "Authored target lookup reference"
+        }
+      ],
+      "completeness": {
+        "Groups": true,
+        "Roles": true,
+        "Types": true,
+        "Templates": true,
+        "Services": true,
+        "SLAs": true,
+        "Queues": true,
+        "QueueTemplates": true,
+        "RoleGroups": true,
+        "GenericAgents": true
+      },
+      "externalContext": {
+        "lookupSets": {
+          "Valid": {
+            "values": [
+              "valid",
+              "invalid"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          },
+          "FollowUp": {
+            "values": [
+              "possible"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          },
+          "Owners": {
+            "values": [
+              "ops"
+            ],
+            "evidenceFileIds": [
+              "settings"
+            ]
+          }
+        },
+        "permissionTypes": {
+          "values": [
+            "ro",
+            "rw"
+          ],
+          "evidenceFileIds": [
+            "settings"
+          ]
+        },
+        "maxQueueLevel": {
+          "value": 5,
+          "evidenceFileIds": [
+            "settings"
+          ]
+        }
+      },
+      "label": "Authored return: queue note and permission replacement intentionally differ",
+      "captureId": "e33ff4d9df5417970121d42b86e81678c13aa6e4c77345d2a945be3de64a6e8a"
+    }
+  },
+  "captureSha256": "6c962b54efcfcf534690a89021ef6a6a4fd7631acc19100a35efc650f40a34db",
+  "initialMapping": {
+    "schema": "otobo.handover-plan.v1",
+    "caseId": "otobo-configuration-reference",
+    "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+    "targetCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+    "expectedParser": {
+      "module": "YAML::XS",
+      "version": "authored-reference",
+      "profile": "authored typed reference; actual native helper records installed version"
+    },
+    "reviewer": "Authored reference reviewer",
+    "reviewedAt": "2026-10-13T12:10:00Z",
+    "decisions": [
+      {
+        "sourceFileId": "file-Groups",
+        "family": "Groups",
+        "name": "support",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Roles",
+        "family": "Roles",
+        "name": "agents",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Types",
+        "family": "Types",
+        "name": "Incident",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Templates",
+        "family": "Templates",
+        "name": "Reply",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Services",
+        "family": "Services",
+        "name": "Support",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Services",
+        "family": "Services",
+        "name": "Support::Premium",
+        "action": "create",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-SLAs",
+        "family": "SLAs",
+        "name": "Gold",
+        "action": "create",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Queues",
+        "family": "Queues",
+        "name": "SupportQ",
+        "action": "overwrite",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-QueueTemplates",
+        "family": "QueueTemplates",
+        "name": "SupportQ",
+        "action": "add-links",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-RoleGroups",
+        "family": "RoleGroups",
+        "name": "agents",
+        "action": "replace-pair-permissions",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-GenericAgents",
+        "family": "GenericAgents",
+        "name": "Weekly",
+        "action": "create",
+        "reason": "Authored review of exact selected configuration",
+        "genericAgentReviewed": true
+      }
+    ],
+    "importOrder": [
+      {
+        "family": "Services",
+        "name": "Support::Premium",
+        "sourceFileId": "file-Services",
+        "action": "create"
+      },
+      {
+        "family": "SLAs",
+        "name": "Gold",
+        "sourceFileId": "file-SLAs",
+        "action": "create"
+      },
+      {
+        "family": "Queues",
+        "name": "SupportQ",
+        "sourceFileId": "file-Queues",
+        "action": "overwrite"
+      },
+      {
+        "family": "QueueTemplates",
+        "name": "SupportQ",
+        "sourceFileId": "file-QueueTemplates",
+        "action": "add-links"
+      },
+      {
+        "family": "RoleGroups",
+        "name": "agents",
+        "sourceFileId": "file-RoleGroups",
+        "action": "replace-pair-permissions"
+      },
+      {
+        "family": "GenericAgents",
+        "name": "Weekly",
+        "sourceFileId": "file-GenericAgents",
+        "action": "create"
+      }
+    ],
+    "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa"
+  },
+  "mapping": {
+    "schema": "otobo.handover-plan.v1",
+    "caseId": "otobo-configuration-reference",
+    "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+    "targetCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+    "expectedParser": {
+      "module": "YAML::XS",
+      "version": "authored-reference",
+      "profile": "authored typed reference; actual native helper records installed version"
+    },
+    "reviewer": "Authored reference reviewer",
+    "reviewedAt": "2026-10-13T12:10:00Z",
+    "decisions": [
+      {
+        "sourceFileId": "file-Groups",
+        "family": "Groups",
+        "name": "support",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Roles",
+        "family": "Roles",
+        "name": "agents",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Types",
+        "family": "Types",
+        "name": "Incident",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Templates",
+        "family": "Templates",
+        "name": "Reply",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Services",
+        "family": "Services",
+        "name": "Support",
+        "action": "keep-target",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Services",
+        "family": "Services",
+        "name": "Support::Premium",
+        "action": "create",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-SLAs",
+        "family": "SLAs",
+        "name": "Gold",
+        "action": "create",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-Queues",
+        "family": "Queues",
+        "name": "SupportQ",
+        "action": "overwrite",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-QueueTemplates",
+        "family": "QueueTemplates",
+        "name": "SupportQ",
+        "action": "add-links",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-RoleGroups",
+        "family": "RoleGroups",
+        "name": "agents",
+        "action": "replace-pair-permissions",
+        "reason": "Authored review of exact selected configuration"
+      },
+      {
+        "sourceFileId": "file-GenericAgents",
+        "family": "GenericAgents",
+        "name": "Weekly",
+        "action": "create",
+        "reason": "Authored review of exact selected configuration",
+        "genericAgentReviewed": true
+      }
+    ],
+    "importOrder": [
+      {
+        "family": "Services",
+        "name": "Support::Premium",
+        "sourceFileId": "file-Services",
+        "action": "create"
+      },
+      {
+        "family": "SLAs",
+        "name": "Gold",
+        "sourceFileId": "file-SLAs",
+        "action": "create"
+      },
+      {
+        "family": "Queues",
+        "name": "SupportQ",
+        "sourceFileId": "file-Queues",
+        "action": "overwrite"
+      },
+      {
+        "family": "QueueTemplates",
+        "name": "SupportQ",
+        "sourceFileId": "file-QueueTemplates",
+        "action": "add-links"
+      },
+      {
+        "family": "RoleGroups",
+        "name": "agents",
+        "sourceFileId": "file-RoleGroups",
+        "action": "replace-pair-permissions"
+      },
+      {
+        "family": "GenericAgents",
+        "name": "Weekly",
+        "sourceFileId": "file-GenericAgents",
+        "action": "create"
+      }
+    ],
+    "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa"
+  },
+  "approval": {
+    "captureSha256": "6c962b54efcfcf534690a89021ef6a6a4fd7631acc19100a35efc650f40a34db",
+    "mappingSha256": "06a86fb12b7a273c7c95768d1c531e82c793838cecb99337ef13ed9ffe67aeb6",
+    "actor": "Authored reference operator",
+    "reason": "Review all ten families and retain independent authored return with two differences",
+    "at": "2026-10-13T21:00:00Z"
+  },
+  "history": [
+    {
+      "revision": 1,
+      "operationId": "approve-authored-reference",
+      "previousMappingSha256": "06a86fb12b7a273c7c95768d1c531e82c793838cecb99337ef13ed9ffe67aeb6",
+      "mapping": {
+        "schema": "otobo.handover-plan.v1",
+        "caseId": "otobo-configuration-reference",
+        "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+        "targetCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+        "expectedParser": {
+          "module": "YAML::XS",
+          "version": "authored-reference",
+          "profile": "authored typed reference; actual native helper records installed version"
+        },
+        "reviewer": "Authored reference reviewer",
+        "reviewedAt": "2026-10-13T12:10:00Z",
+        "decisions": [
+          {
+            "sourceFileId": "file-Groups",
+            "family": "Groups",
+            "name": "support",
+            "action": "keep-target",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-Roles",
+            "family": "Roles",
+            "name": "agents",
+            "action": "keep-target",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-Types",
+            "family": "Types",
+            "name": "Incident",
+            "action": "keep-target",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-Templates",
+            "family": "Templates",
+            "name": "Reply",
+            "action": "keep-target",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-Services",
+            "family": "Services",
+            "name": "Support",
+            "action": "keep-target",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-Services",
+            "family": "Services",
+            "name": "Support::Premium",
+            "action": "create",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-SLAs",
+            "family": "SLAs",
+            "name": "Gold",
+            "action": "create",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-Queues",
+            "family": "Queues",
+            "name": "SupportQ",
+            "action": "overwrite",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-QueueTemplates",
+            "family": "QueueTemplates",
+            "name": "SupportQ",
+            "action": "add-links",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-RoleGroups",
+            "family": "RoleGroups",
+            "name": "agents",
+            "action": "replace-pair-permissions",
+            "reason": "Authored review of exact selected configuration"
+          },
+          {
+            "sourceFileId": "file-GenericAgents",
+            "family": "GenericAgents",
+            "name": "Weekly",
+            "action": "create",
+            "reason": "Authored review of exact selected configuration",
+            "genericAgentReviewed": true
+          }
+        ],
+        "importOrder": [
+          {
+            "family": "Services",
+            "name": "Support::Premium",
+            "sourceFileId": "file-Services",
+            "action": "create"
+          },
+          {
+            "family": "SLAs",
+            "name": "Gold",
+            "sourceFileId": "file-SLAs",
+            "action": "create"
+          },
+          {
+            "family": "Queues",
+            "name": "SupportQ",
+            "sourceFileId": "file-Queues",
+            "action": "overwrite"
+          },
+          {
+            "family": "QueueTemplates",
+            "name": "SupportQ",
+            "sourceFileId": "file-QueueTemplates",
+            "action": "add-links"
+          },
+          {
+            "family": "RoleGroups",
+            "name": "agents",
+            "sourceFileId": "file-RoleGroups",
+            "action": "replace-pair-permissions"
+          },
+          {
+            "family": "GenericAgents",
+            "name": "Weekly",
+            "sourceFileId": "file-GenericAgents",
+            "action": "create"
+          }
+        ],
+        "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa"
+      },
+      "mappingSha256": "06a86fb12b7a273c7c95768d1c531e82c793838cecb99337ef13ed9ffe67aeb6",
+      "actor": "Authored reference operator",
+      "reason": "Review all ten families and retain independent authored return with two differences",
+      "at": "2026-10-13T21:00:00Z",
+      "approval": {
+        "captureSha256": "6c962b54efcfcf534690a89021ef6a6a4fd7631acc19100a35efc650f40a34db",
+        "mappingSha256": "06a86fb12b7a273c7c95768d1c531e82c793838cecb99337ef13ed9ffe67aeb6",
+        "actor": "Authored reference operator",
+        "reason": "Review all ten families and retain independent authored return with two differences",
+        "at": "2026-10-13T21:00:00Z"
+      }
+    }
+  ],
+  "operations": [
+    {
+      "id": "approve-authored-reference",
+      "request": {
+        "operationId": "approve-authored-reference",
+        "projectId": "otobo-authored-returned-reference",
+        "captureSha256": "6c962b54efcfcf534690a89021ef6a6a4fd7631acc19100a35efc650f40a34db",
+        "expectedRevision": 0,
+        "mapping": {
+          "schema": "otobo.handover-plan.v1",
+          "caseId": "otobo-configuration-reference",
+          "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+          "targetCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+          "expectedParser": {
+            "module": "YAML::XS",
+            "version": "authored-reference",
+            "profile": "authored typed reference; actual native helper records installed version"
+          },
+          "reviewer": "Authored reference reviewer",
+          "reviewedAt": "2026-10-13T12:10:00Z",
+          "decisions": [
+            {
+              "sourceFileId": "file-Groups",
+              "family": "Groups",
+              "name": "support",
+              "action": "keep-target",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-Roles",
+              "family": "Roles",
+              "name": "agents",
+              "action": "keep-target",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-Types",
+              "family": "Types",
+              "name": "Incident",
+              "action": "keep-target",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-Templates",
+              "family": "Templates",
+              "name": "Reply",
+              "action": "keep-target",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-Services",
+              "family": "Services",
+              "name": "Support",
+              "action": "keep-target",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-Services",
+              "family": "Services",
+              "name": "Support::Premium",
+              "action": "create",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-SLAs",
+              "family": "SLAs",
+              "name": "Gold",
+              "action": "create",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-Queues",
+              "family": "Queues",
+              "name": "SupportQ",
+              "action": "overwrite",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-QueueTemplates",
+              "family": "QueueTemplates",
+              "name": "SupportQ",
+              "action": "add-links",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-RoleGroups",
+              "family": "RoleGroups",
+              "name": "agents",
+              "action": "replace-pair-permissions",
+              "reason": "Authored review of exact selected configuration"
+            },
+            {
+              "sourceFileId": "file-GenericAgents",
+              "family": "GenericAgents",
+              "name": "Weekly",
+              "action": "create",
+              "reason": "Authored review of exact selected configuration",
+              "genericAgentReviewed": true
+            }
+          ],
+          "importOrder": [
+            {
+              "family": "Services",
+              "name": "Support::Premium",
+              "sourceFileId": "file-Services",
+              "action": "create"
+            },
+            {
+              "family": "SLAs",
+              "name": "Gold",
+              "sourceFileId": "file-SLAs",
+              "action": "create"
+            },
+            {
+              "family": "Queues",
+              "name": "SupportQ",
+              "sourceFileId": "file-Queues",
+              "action": "overwrite"
+            },
+            {
+              "family": "QueueTemplates",
+              "name": "SupportQ",
+              "sourceFileId": "file-QueueTemplates",
+              "action": "add-links"
+            },
+            {
+              "family": "RoleGroups",
+              "name": "agents",
+              "sourceFileId": "file-RoleGroups",
+              "action": "replace-pair-permissions"
+            },
+            {
+              "family": "GenericAgents",
+              "name": "Weekly",
+              "sourceFileId": "file-GenericAgents",
+              "action": "create"
+            }
+          ],
+          "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa"
+        },
+        "actor": "Authored reference operator",
+        "reason": "Review all ten families and retain independent authored return with two differences",
+        "approve": true,
+        "at": "2026-10-13T21:00:00Z"
+      },
+      "requestSha256": "7877fcef9b6673e404cfa60ef71b4cdcc72705df5397d6d8f4e6d9eb485c46f5",
+      "resultRevision": 1
+    }
+  ]
+}

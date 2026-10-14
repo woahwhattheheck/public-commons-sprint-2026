@@ -12,6 +12,7 @@ join other completed inputs in a composed source edition.
 | --- | --- | --- |
 | USGS elevation | source_tools.raster_sources.prepare_dem | Original Float32 elevation tiles assembled on the selected land-cover grid; metres. |
 | PRISM precipitation | source_tools.raster_sources.prepare_prism | Original 1991–2020 annual normal and metadata; annual precipitation is the explicit NDR runoff proxy. |
+| PRISM annual archive | source_tools.prism_period.prepare through prism_annual_preparation | One retained AN calendar-year archive, its complete upstream domain and explicit native resolution; original files and annual temporal support retained. |
 | Annual NLCD | source_tools.nlcd_static.receive and prepare | The retained 2025 Collection 1.2 national product, clipped locally to the complete selected upstream domain. |
 | NOAA erosivity | source_tools.erosivity_sources.receive_original and prepare | Original historical R-factor raster, physical conversion and source period. |
 | USDA whole-soil K | source_tools.soil_sources.prepare | Native whole-soil surface interpretation and mapunit geometry on the selected model grid, with missing-data policy and SI conversion. |
@@ -71,6 +72,41 @@ The national land-cover receiver reads the actual archive byte count from the
 selected retained file. Its TIFF expansion capacity is selected explicitly
 within the operator's configured extraction limit. The original helper reads
 the real member inventory, native CRS, affine, classes and NoData.
+
+## Prepare an original annual PRISM archive
+
+Choose **PRISM annual precipitation archive**, select the complete original AN
+ZIP and the actual upstream polygon, then enter its calendar year and original
+800 m or 4 km product resolution. Keep the original domain layer/filter and
+explicit source-coverage buffer. An optional acquisition or transfer record is
+retained unchanged. The original archive metadata must agree with the selected
+year, precipitation variable, AN dataset and resolution; renaming a file does
+not establish that agreement. The actual 2025 release uses the detailed
+`an91/r2112` AN method code; this raw publisher value is retained alongside its
+AN family. The selected year still comes from the exact archive members and
+original period, not from the method-code digits.
+
+This method reuses the maintained `prism_period` engine without a publisher
+request. It reads the selected archive, retains every original member in that
+complete ZIP, clips its native precipitation grid and prepares the ordinary
+scientific source edition. The local archive-selection record describes the
+actual retained input; it does not manufacture a completed HTTP acquisition.
+The normal 1991–2020 method remains a distinct selection.
+
+The year is an explicit complete calendar interval: for 2025, January 1, 2025
+through January 1, 2026 exclusive. Its annual total is expressed as mm/year for
+that one year. The original source resolution and complete-period valid support
+remain visible in the source entry and derivation. The result is an NDR spatial
+runoff-proxy input, not an event hydrograph or a rainfall-erosivity estimate.
+Use independently sourced R-factor data for SDR. Scientific comparisons and
+model runs remain explicit subsequent choices in the original Climate workflow.
+
+Completed source tasks, original inputs, working selections and imported source
+editions use the same task/recovery/download/Workspace receiving controls as
+other preparation methods. Changing the year, domain or resolution is a new
+explicit selection; resume an interrupted original operation with its original
+identity. See `source_tools/CLIMATE_FORCING_PERIODS.md` for the retained scientific
+meaning and original multi-period command-line workflow.
 
 ## Preparation and recovery
 

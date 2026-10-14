@@ -1,0 +1,899 @@
+{
+  "schema": "upstate.joint-delivery-profile/v1",
+  "id": "ec-sdc-joint-delivery-20261013",
+  "title": "Upper Savannah joint delivery allocation",
+  "sources": {
+    "requirements": {
+      "path": "source/acceptance/20261012/review-requirements.json",
+      "git_blob": "ee75deb7045c08650c69e762c587b11756a1155b"
+    },
+    "workshare": {
+      "path": "WORKSHARE.md",
+      "git_blob": "3f093988615e1b4e5307ef7aa4607742968c73fa"
+    },
+    "issuer": {
+      "url": "https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf",
+      "sha256": "04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf"
+    }
+  },
+  "scope_note": "Internal proposed joint delivery allocation. Technical readiness, source selection and returned review do not accept a contract, authorize an invoice or record payment. Ecosystem Sciences retains scientific and prime/client interpretation; Bryce retains relationship and contract signature authority.",
+  "terms": {
+    "status": "proposed",
+    "currency": "USD",
+    "fee_cents": 1860000,
+    "engineering_hours": 186,
+    "active_business_days": 30,
+    "issuer_ceiling_cents": 5000000,
+    "proposal_deadline": "2026-11-06T17:00:00-05:00",
+    "delivery_date": "2027-11-01",
+    "milestones": [
+      {
+        "id": "source-method",
+        "title": "Source and method setup",
+        "fee_cents": 465000,
+        "active_start_day": 1,
+        "active_end_day": 10
+      },
+      {
+        "id": "modeled-review",
+        "title": "Complete modeled review release",
+        "fee_cents": 930000,
+        "active_start_day": 11,
+        "active_end_day": 25
+      },
+      {
+        "id": "correction-receiving",
+        "title": "Consolidated correction and receiving",
+        "fee_cents": 465000,
+        "active_start_day": 26,
+        "active_end_day": 30
+      }
+    ],
+    "effort_allowances": [
+      {
+        "id": "source-grid-profile",
+        "hours": 40
+      },
+      {
+        "id": "native-operator",
+        "hours": 64
+      },
+      {
+        "id": "gis-report",
+        "hours": 44
+      },
+      {
+        "id": "correction-receiving",
+        "hours": 38
+      }
+    ],
+    "included": "One baseline and two prime-selected alternatives; one consolidated correction and one source/profile revision followed by the same three-run production cycle."
+  },
+  "requirements": [
+    {
+      "id": "map.future_sediment_loss",
+      "title": "Land priorities for preventing future sediment loss",
+      "detail": "Identify lands whose protection or responsible management reduces future sediment loss. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: Publish the map and its geospatial data and metadata.; Explain the disturbance or land-cover scenario, baseline, sediment model and ranking method..",
+      "allocation": {
+        "id": "map.future_sediment_loss",
+        "prime": "Select the disturbance/protection question and interpret sediment loss versus sediment delivered to streams.",
+        "engineering": "Build both reviewed land-cover alternatives, retain original SDR runs and aligned baseline differences, and publish each alternative map with GIS and metadata.",
+        "receiving": "Open both alternative maps and their original quantitative rasters; trace selected priorities to retained scenario and physical quantity.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods",
+          "alternatives"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "map.future_nutrient_runoff",
+      "title": "Land priorities for reducing nutrient runoff",
+      "detail": "Identify lands whose protection or management reduces nutrient runoff. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: Publish the map and its geospatial data and metadata.; Describe nitrogen and phosphorus contributions, their units, and the method used to combine or separately rank them..",
+      "allocation": {
+        "id": "map.future_nutrient_runoff",
+        "prime": "Choose how nitrogen and phosphorus should inform the future-impact question and review the scenario interpretation.",
+        "engineering": "Produce original NDR baseline/alternative outputs and their separate N/P comparisons on common valid support.",
+        "receiving": "Open the two future-impact releases and verify original N/P quantities, support and legends.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods",
+          "alternatives"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "map.critical_drinking_water",
+      "title": "Land priorities for protecting drinking water",
+      "detail": "Identify critical drinking-water protection areas through source-water relevance and sediment transfer. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 1, 2, 8, 9. Review evidence: Relate modeled land priorities to the relevant source-water areas and drinking-water intakes.; Explain how sediment and nutrient pathways inform E. coli and cyanotoxin risk reduction..",
+      "allocation": {
+        "id": "map.critical_drinking_water",
+        "prime": "Confirm the authorized intake/protection geography and the scientific meaning of utility relevance.",
+        "engineering": "Bind original utility geography and upstream membership to the retained source and quantitative scenario outputs.",
+        "receiving": "Trace a drinking-water priority to its original feature, upstream context and selected model outputs.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "geography",
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "map.high_quality_waters",
+      "title": "Land priorities for high-quality water resources",
+      "detail": "Identify important lands for protecting high-quality water resources, including outstanding-resource and trout waters. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: Record the authoritative water-resource designation data and vintage.; Document hydrologic connectivity or other method linking priority lands to those resources..",
+      "allocation": {
+        "id": "map.high_quality_waters",
+        "prime": "Confirm applicable effective designations and the hydrologic relationship used for interpretation.",
+        "engineering": "Retain original SCDES designations, source dates and explicit spatial relationship; publish priority geography and source-linked maps.",
+        "receiving": "Open the designation source and priority layers together and inspect their recorded relationship.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "map.current_nutrient_export",
+      "title": "Current nitrogen and phosphorus exports",
+      "detail": "Show export rates under current land cover, using regional land-cover values and physical model inputs. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 2, 9. Review evidence: Retain separately interpretable nitrogen and phosphorus values and their units.; Document precipitation, slope, erosion, land-cover parameters and modeled export pathway..",
+      "allocation": {
+        "id": "map.current_nutrient_export",
+        "prime": "Approve the regional profile and interpretation of current land-cover N/P export.",
+        "engineering": "Run the original current-condition NDR selection and retain N/P rates, annual mass, units and lineage.",
+        "receiving": "Inspect separate N/P rasters and regional totals against the actual grid and reporting mask.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "map.current_sediment_export",
+      "title": "Current sediment export",
+      "detail": "Show present sediment export to waterways under current land cover. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 2, 9. Review evidence: Provide the per-pixel export rate with mass/time or other actual model units declared.; Describe the erosion and transport calculations and hydrologic routing..",
+      "allocation": {
+        "id": "map.current_sediment_export",
+        "prime": "Approve the current-condition SDR method and distinguish hillslope erosion from stream delivery.",
+        "engineering": "Retain the selected SDR run and actual sediment outputs, rate-to-mass conversion and coverage.",
+        "receiving": "Open the original sediment raster and totals with units and valid support.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "map.combined_pollutant_export",
+      "title": "Combined pollutant export presentation",
+      "detail": "Present nitrogen, phosphorus and sediment exports together. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: Retain the component values and legend meaning.; State whether the combined display uses panels, a composite index or another method; document normalization and weights whenever applied..",
+      "allocation": {
+        "id": "map.combined_pollutant_export",
+        "prime": "Choose and document any planning weights and normalization; retain interpretation of the separate physical components.",
+        "engineering": "Publish the saved panels or explicit dimensionless combined index with original N/P/sediment companions.",
+        "receiving": "Open the component values and saved weights/caps alongside the combined map.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "grid.resolution",
+      "title": "30 metre raster production grid",
+      "detail": "Prepare all map data on a 30 m × 30 m raster grid. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: raster grid metadata; projection and units; pixel dimensions.",
+      "allocation": {
+        "id": "grid.resolution",
+        "prime": "Confirm the regional production grid and its distinction from commissioning examples.",
+        "engineering": "Prepare and retain the required 30 m metric grid, affine origin, extent, masks and original transformation choices.",
+        "receiving": "Inspect the grid metadata and original inputs in the reopened setup project.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "geography"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "grid.alignment",
+      "title": "Shared geospatial alignment",
+      "detail": "For overlay and comparative interpretation, record each raster’s CRS, pixel size, grid origin, extent, mask and NoData value; document any alignment or resampling. Classification: engineering_acceptance. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: machine-readable raster manifest; per-layer alignment report.",
+      "allocation": {
+        "id": "grid.alignment",
+        "prime": "Review whether the selected grid and resampling support the intended scientific comparison.",
+        "engineering": "Retain per-layer CRS, alignment, NoData, origin, coverage and transformation metadata.",
+        "receiving": "Open representative source/prepared layers and inspect alignment on the exact retained grid.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "geography"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "scope.basin",
+      "title": "Upper Savannah coverage",
+      "detail": "Provide the requested individual maps, GIS data and metadata for the Upper Savannah River Basin in South Carolina. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: final basin and source-water geometry; coverage summary.",
+      "allocation": {
+        "id": "scope.basin",
+        "prime": "Confirm the actual regional decision extent and intended reporting area.",
+        "engineering": "Retain the Upper Savannah South Carolina reporting geometry separately from contributing upstream model geography.",
+        "receiving": "Open both boundaries and coverage summaries without treating whole upstream area as reporting area.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "geography"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "scope.buffer",
+      "title": "Modeled basin buffer",
+      "detail": "Include an area outside the Upper Savannah River Basin in modeling to improve ecosystem-based results; final map presentation may mask the external area. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: modeled extent and basin extent; buffer definition and rationale; separate analysis and display masks.",
+      "allocation": {
+        "id": "scope.buffer",
+        "prime": "Choose the scientifically appropriate upstream/exterior modeling support and record rationale.",
+        "engineering": "Retain source and reporting masks separately and run on the declared exterior domain.",
+        "receiving": "Inspect the domain, reporting mask and selected buffer rationale in the original project.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "geography",
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "scope.targeted_watersheds",
+      "title": "Targeted source-water context",
+      "detail": "Retain the appendix’s source-water context for ARJWS and PRWD and the four mapped HUC12 areas when defining and presenting the actual project coverage. Classification: engineering_acceptance. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 6, 8, 12, 14. Review evidence: utility intake/source-water relationship; HUC12 source identifiers; scope rationale.",
+      "allocation": {
+        "id": "scope.targeted_watersheds",
+        "prime": "Confirm utility questions and any authoritative project-specific geographic refinements.",
+        "engineering": "Preserve the four appendix HUC12 anchors and their distinct contributing unions with original identifiers.",
+        "receiving": "Open ARJWS and PRWD anchors/unions and inspect deduplicated membership.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "geography"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "maps.publication",
+      "title": "Publication map quality",
+      "detail": "Produce high-resolution maps suitable for print and online use, including legend, scale and north arrow. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: exported map documents; legend, scale and north arrow on each map.",
+      "allocation": {
+        "id": "maps.publication",
+        "prime": "Consolidate scientific/cartographic comments and approve intended audience wording.",
+        "engineering": "Produce complete maps with legends, scale, north arrow, units and coherent comparison ranges.",
+        "receiving": "Open every final print/web map at intended reading size and inspect GIS companions.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "delivery.formats",
+      "title": "Final and working files",
+      "detail": "Deliver final and working mapping/modeling files in high-resolution PDF and GIS formats and present the results to UF and its partners. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: final PDF collection; GIS data and project/workflow files; presentation materials.",
+      "allocation": {
+        "id": "delivery.formats",
+        "prime": "Confirm normal GIS/report receiving formats and prime presentation responsibilities.",
+        "engineering": "Assemble high-resolution PDFs, editable GIS/source projects, report companions and complete application/Study.",
+        "receiving": "Open final and working files in the selected receiving environment and repeat a saved export.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "receiving"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "delivery.metadata",
+      "title": "Geospatial metadata",
+      "detail": "Complete associated metadata for all maps and GIS data; created geospatial data must be consistent with FGDC-endorsed standards. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: metadata per dataset; selected standard and conformance mapping; source lineage.",
+      "allocation": {
+        "id": "delivery.metadata",
+        "prime": "Confirm required dataset conventions and prime source/license obligations.",
+        "engineering": "Create dataset-specific FGDC-aligned metadata with original lineage and explicit selected standard.",
+        "receiving": "Open each delivered dataset and its matching metadata/source references.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "receiving"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "delivery.report",
+      "title": "Accessible final report",
+      "detail": "Provide a final report suitable for UF’s internal and external distribution, explaining methods and outcomes clearly for a lay reader. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: final report; method and result explanations; map-to-finding references.",
+      "allocation": {
+        "id": "delivery.report",
+        "prime": "Own scientific conclusions, recommendations and client interpretation.",
+        "engineering": "Compose the lay-reader report from exact source/run/map editions with methods, units and support.",
+        "receiving": "Read the report and follow its findings to the same retained maps, tables and source.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods",
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "delivery.deadline",
+      "title": "November 1 delivery",
+      "detail": "Complete the final maps, GIS data and associated metadata no later than November 1, 2027; the proposed schedule must demonstrate this deadline. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 2, 3. Review evidence: project schedule; delivered product inventory.",
+      "allocation": {
+        "id": "delivery.deadline",
+        "prime": "Set the integrated prime schedule and client review dates to meet the issuer deadline.",
+        "engineering": "Schedule the proposed 30 active engineering days around actual input/review availability and retain delivered editions.",
+        "receiving": "Confirm selected output dates and recipient handoff against the integrated schedule.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "model.software",
+      "title": "Consultant model recommendation",
+      "detail": "Use a consultant-recommended ecosystem-service valuation and tradeoff modeling suite; InVEST or an equivalent software package may be used. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 1, 2, 8, 9. Review evidence: model recommendation and rationale; version and parameter record.",
+      "allocation": {
+        "id": "model.software",
+        "prime": "Select and justify the scientifically suitable model and version.",
+        "engineering": "Retain the exact installed runtime, source parameters, arguments and reproducible native opening.",
+        "receiving": "Open the model specification and actual runtime selections with the retained project.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "model.current_conditions",
+      "title": "Current-condition export interpretation",
+      "detail": "Base current pollutant exports on current land cover and regional land-cover values, with per-pixel rates reflecting model inputs such as precipitation, slope and erosion. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 2, 9. Review evidence: baseline dataset dates; per-pollutant units; regional parameter provenance.",
+      "allocation": {
+        "id": "model.current_conditions",
+        "prime": "Approve source vintages and regional profile suitability for the intended baseline.",
+        "engineering": "Retain original current land cover and climate/terrain/soil/profile inputs, quantities and original run outputs.",
+        "receiving": "Inspect baseline sources and unit meanings before comparing alternatives.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "methods",
+          "observations"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "model.contaminant_link",
+      "title": "Contaminant pathway explanation",
+      "detail": "Explain sediment and nutrient transfer as the modeled pathways relevant to bacterial pollution and harmful algal blooms, and identify the separate water-sampling evidence used when interpreting contaminants. Classification: engineering_acceptance. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 1, 8, 9. Review evidence: conceptual pathway description; modeled quantity definitions; sampling/model linkage.",
+      "allocation": {
+        "id": "model.contaminant_link",
+        "prime": "Interpret the separate field/laboratory observations and the limits of nutrient/sediment pathway inference.",
+        "engineering": "Preserve constituent, fraction, catchment, period, method and qualifiers; produce compatible observed/model comparisons.",
+        "receiving": "Read the conceptual pathway alongside original measurements without converting annual export into intake concentration.",
+        "milestone_id": "modeled-review",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "observations",
+          "methods"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "work.review",
+      "title": "Collaborative review",
+      "detail": "Work with UF’s Clean Water Team and meet at predetermined intervals to review deliverables and obtain feedback on drafts. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 2. Review evidence: review schedule; draft versions; feedback and resolution records.",
+      "allocation": {
+        "id": "work.review",
+        "prime": "Coordinate UF Clean Water Team meetings and consolidate actual scientific/client feedback.",
+        "engineering": "Prepare coherent dated draft releases and retain comments, engineering dispositions and resulting editions.",
+        "receiving": "Return review on the exact selected edition through the original Customer reviews workflow.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.experience",
+      "title": "Relevant project experience",
+      "detail": "Provide three to five similar project descriptions covering the previous five years, with a maximum of two pages per project. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: project descriptions; relevant dates and roles; page counts.",
+      "allocation": {
+        "id": "proposal.experience",
+        "prime": "Select 3–5 actual comparable projects from the previous five years and authorize references to firm work.",
+        "engineering": "Provide factual engineering contribution descriptions and format source-backed project material for the prime.",
+        "receiving": "Check actual project dates, role attribution and the two-page-per-project limit.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.team",
+      "title": "Team qualifications",
+      "detail": "Provide an organizational chart and short biographies or resumes for the people performing the work, with one page per person. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: organization chart; named team resumes; page counts.",
+      "allocation": {
+        "id": "proposal.team",
+        "prime": "Name the prime team, scientific roles and authorized biographies.",
+        "engineering": "Provide actual engineering role/capability material and compose the team allocation.",
+        "receiving": "Review the organization chart and one-page-per-person biographies.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.references",
+      "title": "Comparable-work references",
+      "detail": "Provide references from two organizations for comparable completed work, within one page; the stated exception applies to firms that completed at least two UF projects in the past two years. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: two organization references or documented UF exception; page count.",
+      "allocation": {
+        "id": "proposal.references",
+        "prime": "Supply the two authorized comparable-work references or actual qualifying UF exception.",
+        "engineering": "Format the authorized reference information within the issuer requirement.",
+        "receiving": "Check source contact authorization and one-page reference section.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.schedule",
+      "title": "Proposed project schedule",
+      "detail": "Describe a project schedule demonstrating completion by November 1, 2027, within two pages. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: dated schedule; page count.",
+      "allocation": {
+        "id": "proposal.schedule",
+        "prime": "Choose actual kickoff/review dates and prime/client dependencies.",
+        "engineering": "Provide the proposed staged engineering calendar and named outputs for the integrated two-page schedule.",
+        "receiving": "Confirm the schedule meets November 1, 2027 without treating proposed active days as accepted calendar dates.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.fee",
+      "title": "Inclusive project fee",
+      "detail": "Include a proposed fee and expected expenses with a total project cost no greater than $50,000; cover data preparation, model scenarios, meetings, travel, maps and the final report within a maximum ten-page fee section. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: itemized fee and expenses; inclusive total; page count.",
+      "allocation": {
+        "id": "proposal.fee",
+        "prime": "Own the inclusive prime fee, expenses and procurement commitment within the issuer ceiling.",
+        "engineering": "Provide the proposed USD18,600 engineering scope/milestones and explicit changes or external cost inputs.",
+        "receiving": "Review the complete prime budget, expenses and fee section against USD50,000; the remaining allocation is not profit.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.contacts",
+      "title": "Proposal and firm contacts",
+      "detail": "Include at least two proposal contacts with name, email, mailing address and telephone, plus the firm’s name, physical address and website, within one page. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: contact details; firm details; page count.",
+      "allocation": {
+        "id": "proposal.contacts",
+        "prime": "Select at least two authorized proposal contacts and actual firm contact information.",
+        "engineering": "Prepare the contact section from authorized source information.",
+        "receiving": "Check names, addresses, email/telephone and the one-page section.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.submission",
+      "title": "Complete electronic PDF submission",
+      "detail": "Submit one complete proposal in PDF format by email, labeled Response to EC-SDC Mapping RFP, to Josie Newton at jnewton@upstateforever.org. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: one complete PDF; submission label and recipient.",
+      "allocation": {
+        "id": "proposal.submission",
+        "prime": "Own final prime proposal selection and submission through the owner-authorized relationship.",
+        "engineering": "Prepare the complete labeled PDF and coherent engineering attachments for internal selection.",
+        "receiving": "Open the selected complete PDF and verify all required sections before any separately authorized send.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records",
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "proposal.deadline",
+      "title": "November 6 proposal deadline",
+      "detail": "The proposal must be received by 5:00 p.m. Eastern Time on November 6, 2026. Classification: issuer_requirement. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: receipt timestamp.",
+      "allocation": {
+        "id": "proposal.deadline",
+        "prime": "Own the final submission timetable and actual issuer receipt.",
+        "engineering": "Provide the engineering proposal material early enough for prime composition and review.",
+        "receiving": "Retain the actual deadline and, when supplied, the real submission receipt.",
+        "milestone_id": "proposal",
+        "target_date": "2026-11-06",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "review-calendar"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "procurement.selection",
+      "title": "Anticipated selection period",
+      "detail": "UF anticipates choosing a consultant in December 2026 and confirming selection by the end of January 2027; the evaluation team may conduct interviews. Classification: issuer_process. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 3. Review evidence: procurement schedule.",
+      "allocation": {
+        "id": "procurement.selection",
+        "prime": "Own issuer discussions and the actual procurement outcome.",
+        "engineering": "Keep the engineering source and commercial proposal current as requested by the prime.",
+        "receiving": "Record any actual issuer selection communication separately from application readiness.",
+        "milestone_id": "proposal",
+        "target_date": "",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "procurement.contract",
+      "title": "Project contract terms",
+      "detail": "The RFP calls for a negotiated, executed contract before contracted work begins and states that UF does not pay proposal-preparation or pre-contract costs. Classification: issuer_process. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF page 4. Review evidence: executed project agreement when awarded.",
+      "allocation": {
+        "id": "procurement.contract",
+        "prime": "Negotiate the project agreement; Bryce personally reviews and signs any TJLabs contract.",
+        "engineering": "Maintain the scoped proposed workshare and named input/output dependencies for contract preparation.",
+        "receiving": "Keep actual executed agreement metadata separate from technical review and readiness.",
+        "milestone_id": "proposal",
+        "target_date": "",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "proposal-records"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "context.community",
+      "title": "Community context traceability",
+      "detail": "Use the appendix’s 17 block-group records as attributed context, keeping population, household counts, income and household poverty measurements distinct. Classification: engineering_acceptance. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 7, 8, 15, 16. Review evidence: source table identity; record-level units and definitions.",
+      "allocation": {
+        "id": "context.community",
+        "prime": "Review how appendix community measures support the project narrative and keep geographic meanings distinct.",
+        "engineering": "Retain all17 original block-group records and the original population/household/income/poverty definitions.",
+        "receiving": "Open complete original context tables and keep utility-service populations separate.",
+        "milestone_id": "source-method",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [],
+        "evidence_ids": [],
+        "note": ""
+      }
+    },
+    {
+      "id": "delivery.receiving",
+      "title": "Customer review and receiving",
+      "detail": "Bind the final review to exact source, run, delivery and archive identities; preserve reviewer comments and decisions with the packet so the recipient can reopen the same products. Classification: engineering_acceptance. Source: https://www.upstateforever.org/files/files/20261002_FINAL_EC-SDC%20Mapping%20RFP%20APPENDIX%20COMBINED.pdf; native PDF SHA256 04313cdda0b19f98b4081ef1eeec2f52707437759f9058f8d0e5abc8d83d6dbf; PDF pages 2, 3. Review evidence: original Workspace review export; recipient decisions; reopened archive/product identities.",
+      "allocation": {
+        "id": "delivery.receiving",
+        "prime": "Choose the receiving operator and confirm scientific/client interpretation after operating the delivered project.",
+        "engineering": "Deliver complete exact original files and application/runtime instructions, preserve correction history and independent reopening.",
+        "receiving": "Operate the exact received project, inspect every outgoing attachment and return any findings through the original review.",
+        "milestone_id": "correction-receiving",
+        "target_date": "2027-11-01",
+        "active_start_day": null,
+        "active_end_day": null,
+        "effort_hours": null,
+        "input_ids": [
+          "receiving"
+        ],
+        "evidence_ids": [],
+        "note": ""
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "geography",
+      "title": "Project-specific intake and protection geography",
+      "needed": "Provide only authorized intake/protection files or corrections that are not available in the retained public sources; identify effective edition and use restrictions.",
+      "public_context": "Public basin geometry, four appendix anchors, original WBD upstream links and public water classifications remain independently available.",
+      "owner": "Ecosystem Sciences / utility data owner",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "map.critical_drinking_water",
+        "grid.resolution",
+        "grid.alignment",
+        "scope.basin",
+        "scope.buffer",
+        "scope.targeted_watersheds"
+      ]
+    },
+    {
+      "id": "methods",
+      "title": "Scientific method and coefficient decisions",
+      "needed": "Select scientifically appropriate profile lineage, coefficient adjustments, model support and interpretation from the concrete retained setup results.",
+      "public_context": "Retained original model documentation, regional reference profiles and public source/coverage comparisons are available for review.",
+      "owner": "Ecosystem Sciences scientific lead",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "map.future_sediment_loss",
+        "map.future_nutrient_runoff",
+        "map.critical_drinking_water",
+        "map.high_quality_waters",
+        "map.current_nutrient_export",
+        "map.current_sediment_export",
+        "map.combined_pollutant_export",
+        "scope.buffer",
+        "delivery.report",
+        "model.software",
+        "model.current_conditions",
+        "model.contaminant_link"
+      ]
+    },
+    {
+      "id": "alternatives",
+      "title": "Two intended management or development alternatives",
+      "needed": "Choose the actual decision questions, eligible geographic masks and class transitions for the two included alternatives.",
+      "public_context": "The application can edit scenarios and retain exact baseline/alternative selections; commissioning examples retain their own identity.",
+      "owner": "Ecosystem Sciences scientific lead",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "map.future_sediment_loss",
+        "map.future_nutrient_runoff"
+      ]
+    },
+    {
+      "id": "observations",
+      "title": "Authorized local observations and intended use",
+      "needed": "Provide project-specific licensed/local observations with original station/catchment, date/time, units, constituent/fraction, methods and qualifiers; select their calibration or independent assessment role.",
+      "public_context": "Existing public observations and prior studies remain retrievable and retained independently; public gaps are not requests for the client to do collection work.",
+      "owner": "Ecosystem Sciences / observation custodian",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "model.current_conditions",
+        "model.contaminant_link"
+      ]
+    },
+    {
+      "id": "receiving",
+      "title": "Recipient operating environment",
+      "needed": "Identify the intended recipient OS/GIS tools, available runtime and normal opening/export route, and name the receiving operator.",
+      "public_context": "The maintained application supplies a complete local working-project route and readable reports; existing equipped receiving remains available for preparation.",
+      "owner": "Ecosystem Sciences receiving operator",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "delivery.formats",
+        "delivery.metadata",
+        "delivery.receiving"
+      ]
+    },
+    {
+      "id": "review-calendar",
+      "title": "Prime and client review timing",
+      "needed": "Select actual setup, modeled-draft and consolidated-correction review dates around the field/client calendar; identify who consolidates scientific and UF feedback.",
+      "public_context": "The proposed engineering allocation and issuer November 1, 2027 delivery deadline are retained; the active engineering duration is distinct from calendar waiting.",
+      "owner": "Ecosystem Sciences project lead",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "maps.publication",
+        "delivery.report",
+        "delivery.deadline",
+        "work.review",
+        "proposal.schedule",
+        "proposal.submission",
+        "proposal.deadline"
+      ]
+    },
+    {
+      "id": "proposal-records",
+      "title": "Prime qualifications and authorized proposal information",
+      "needed": "Provide actual comparable projects, named team/biographies, authorized references, firm contacts and prime fee/expense decisions needed for the issuer proposal.",
+      "public_context": "Issuer page limits, proposal structure, public firm context and the scoped engineering offer are already retained.",
+      "owner": "Ecosystem Sciences proposal lead",
+      "status": "needed",
+      "decision": "",
+      "evidence_ids": [],
+      "requirement_ids": [
+        "proposal.experience",
+        "proposal.team",
+        "proposal.references",
+        "proposal.fee",
+        "proposal.contacts",
+        "proposal.submission",
+        "procurement.selection",
+        "procurement.contract"
+      ]
+    }
+  ]
+}

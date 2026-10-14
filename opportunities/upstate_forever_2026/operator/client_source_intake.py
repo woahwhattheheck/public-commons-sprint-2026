@@ -130,8 +130,21 @@ class ClientSourceIntake:
     def _downloads(self, workspace_key, ws, record):
         directory = self.directory(ws, record["id"])
         path = directory / "operation.json"
-        result = [self.operator._ticket(workspace_key, path, describe_file(ws.root, path),
-                                        "Complete source intake")]
+        from hashlib import sha256
+        from model.common import atomic_bytes
+        from model.client_source_inspection_report import render_inspection
+        reviewed = None
+        if record.get("selection_file"):
+            reviewed = read_json(verify_file(ws.root, record["selection_file"]))
+        readable = render_inspection(record, reviewed)
+        presentation = directory / ("inspection-readable-" + sha256(readable).hexdigest() + ".html")
+        atomic_bytes(presentation, readable, immutable=True)
+        descriptor = {**describe_file(ws.root, presentation), "filename": "source-inspection.html"}
+        report = self.operator._ticket(workspace_key, presentation, descriptor,
+                                       "Source inspection and reviewed meaning")
+        report.update(kind="html", role="source-inspection-report")
+        result = [report, self.operator._ticket(workspace_key, path, describe_file(ws.root, path),
+                                                "Complete source intake — technical JSON")]
         for row in record.get("files", []):
             body = row["original"]
             result.append(self.operator._ticket(workspace_key, self._raw(ws, body),
@@ -281,6 +294,8 @@ class ClientSourceIntake:
                                      "vintage": inspection["created_at"],
                                      **describe_file(directory, path),
                                      "client_source_original": True})
+        manifest_checkpoint = directory / "sources.json"
+        previous_manifest = read_json(manifest_checkpoint) if manifest_checkpoint.exists() else None
         for index, (choice, file, part) in enumerate(checked):
             path = materialized[choice["file_index"]]
             source_id = "client-" + digest({"inspection": inspection_id, "selection": choice})[:32]
@@ -288,6 +303,19 @@ class ClientSourceIntake:
             entry.update(id=source_id, kind=part["kind"], client_source={
                 "inspection_id": inspection_id, "source_sha256": file["original"]["sha256"],
                 "filename": file["filename"], "part_name": part["name"], "selection": choice})
+            if part["kind"] == "table":
+                if previous_manifest is None:
+                    saved_preview = {"schema": "upstate.client-source-preview/v1",
+                                     "source_sha256": file["original"]["sha256"],
+                                     "format": file["inspection"]["format"],
+                                     "options": deepcopy(file["options"]), "part": deepcopy(part)}
+                else:
+                    # Resume an already checkpointed edition with its original metadata.
+                    previous_entry = next((item for item in previous_manifest["entries"]
+                                           if item["id"] == source_id), {})
+                    saved_preview = previous_entry.get("client_source", {}).get("inspection")
+                if saved_preview is not None:
+                    entry["client_source"]["inspection"] = deepcopy(saved_preview)
             companions = [describe_file(directory, selection_path)]
             companions.extend({key: row[key] for key in ("path", "bytes", "sha256")} for row in original_entries)
             if part["kind"] == "vector":

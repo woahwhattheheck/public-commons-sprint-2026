@@ -123,3 +123,8 @@ The maintained standalone builder embeds the full declared application, includin
 ## Reviewed source-to-target asset identities
 
 Use the existing **Asset identity crosswalk** desk for explicit one-to-one original asset and book correspondences, hierarchy checks and exact mapped financial comparisons. Original identifiers, amounts, journals and work-order allocation remain unchanged. [ASSET_CROSSWALK.md](ASSET_CROSSWALK.md) gives full browser/CLI, supersession, handover and original receiving instructions. The complete application and CLI export this companion and every source member.
+
+
+## Named rehearsal editions
+
+[Rehearsal review](MIGRATION_REHEARSALS.md) captures the complete original financial, work-order and crosswalk observations at a named revision, compares actual returned editions with exact scoped decimal differences, and restores the original historical workspace independently. The browser, CLI, full handover and copied application retain all original edition records and reports.

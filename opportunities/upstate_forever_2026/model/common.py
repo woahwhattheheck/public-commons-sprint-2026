@@ -2,7 +2,10 @@
 from __future__ import annotations
 import contextlib
 import datetime as dt
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    from model import windows_fs as fcntl
 import hashlib
 import json
 import math
@@ -13,6 +16,23 @@ import shutil
 import stat
 import tempfile
 from .verified_files import source_identity, verified_operation
+if os.name == "nt":
+    from .windows_fs import no_follow_open, sync_directory as _windows_sync_directory, replace as _windows_replace, fd_stat as _windows_fd_stat, path_stat as _windows_path_stat, native_path as _windows_native_path
+
+_NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
+_NONBLOCK = getattr(os, "O_NONBLOCK", 0)
+
+def _fd_stat(descriptor):
+    return _windows_fd_stat(descriptor) if os.name == "nt" else os.fstat(descriptor)
+
+def _path_stat(path):
+    return _windows_path_stat(path) if os.name == "nt" else Path(path).lstat()
+
+def _open_original(path, flags, mode=0o600):
+    return no_follow_open(path, flags, mode) if os.name == "nt" else os.open(path, flags, mode)
+
+def _replace_original(source, destination):
+    return _windows_replace(source, destination) if os.name == "nt" else os.replace(source, destination)
 
 SCHEMA = "upstate.scientific-workbench/v1"
 INVEST_VERSION = "3.20.0"
@@ -78,15 +98,20 @@ def canonical(value):
 def digest(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 
+def _native_fs_path(path):
+    """Retain exact Windows filenames in the native extended namespace."""
+    return _windows_native_path(path) if os.name == "nt" else Path(path)
+
+
 def file_digest(path):
     h = hashlib.sha256()
-    with open(path, "rb") as f:
+    with open(_native_fs_path(path), "rb") as f:
         for b in iter(lambda: f.read(1024 * 1024), b""):
             h.update(b)
     return h.hexdigest()
 
 def atomic_bytes(path, data, *, immutable=False):
-    path = Path(path)
+    path = _native_fs_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if immutable and path.exists():
         if path.read_bytes() != data:
@@ -108,13 +133,9 @@ def atomic_bytes(path, data, *, immutable=False):
             pending.unlink()
             pending = None
         else:
-            os.replace(pending, path)
+            _replace_original(pending, path)
             pending = None
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -123,7 +144,7 @@ def atomic_json(path, value, *, immutable=False):
     atomic_bytes(path, canonical(value) + b"\n", immutable=immutable)
 
 def read_json(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(_native_fs_path(path).read_text(encoding="utf-8"))
 
 def identifier(value):
     if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
@@ -131,7 +152,7 @@ def identifier(value):
     return value
 
 def relative_file(root, value):
-    root = Path(root).resolve()
+    root = _native_fs_path(root).resolve()
     selected = Path(value)
     if selected.is_absolute() or not selected.parts or ".." in selected.parts:
         raise ValueError("Use a relative file within the selected project")
@@ -152,9 +173,9 @@ def finite(value, name, *, minimum=None, positive=False):
 
 @contextlib.contextmanager
 def held(path, *, blocking=True):
-    path = Path(path)
+    path = _native_fs_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
+    fd = _open_original(path, os.O_CREAT | os.O_RDWR | _NOFOLLOW, 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
         yield
@@ -166,6 +187,8 @@ def _file_state(value):
             value.st_mtime_ns, value.st_ctime_ns)
 
 def _sync_directory(path):
+    if os.name == "nt":
+        return _windows_sync_directory(path)
     fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
     try:
         os.fsync(fd)
@@ -173,7 +196,7 @@ def _sync_directory(path):
         os.close(fd)
 
 def _stream_identity(stream, label, *, expected_state=None, output=None):
-    before = os.fstat(stream.fileno())
+    before = _fd_stat(stream.fileno())
     if not stat.S_ISREG(before.st_mode):
         raise ValueError(label + " is not a regular file")
     state = _file_state(before)
@@ -185,17 +208,18 @@ def _stream_identity(stream, label, *, expected_state=None, output=None):
         if output is not None:
             output.write(block)
         size += len(block)
-    if _file_state(os.fstat(stream.fileno())) != state or size != before.st_size:
+    if _file_state(_fd_stat(stream.fileno())) != state or size != before.st_size:
         raise ValueError(label + " changed during intake")
     return checksum.hexdigest(), size, state
 
 def _retained_object_matches(path, checksum, size, *, verified_state=None):
     try:
-        descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        access = os.O_RDWR if os.name == "nt" else os.O_RDONLY
+        descriptor = _open_original(path, access | _NOFOLLOW | _NONBLOCK)
     except FileNotFoundError:
         return False
     with os.fdopen(descriptor, "rb") as stream:
-        opened = os.fstat(stream.fileno())
+        opened = _fd_stat(stream.fileno())
         if not stat.S_ISREG(opened.st_mode):
             raise ValueError("Retained original object is not a regular file")
         state = _file_state(opened)
@@ -209,7 +233,7 @@ def _retained_object_matches(path, checksum, size, *, verified_state=None):
             # ctime. Recheck under the digest lock before any copy or repair.
             return False
         try:
-            current = path.lstat()
+            current = _path_stat(path)
         except FileNotFoundError:
             return False
         if _file_state(current) != state or not stat.S_ISREG(current.st_mode):
@@ -235,7 +259,7 @@ def retain_file(project, source, expected_sha256=None):
             checksum, size, source_state = source_identity(src, source, "Original input")
             source_verified = True
         else:
-            opened = os.fstat(src.fileno())
+            opened = _fd_stat(src.fileno())
             if not stat.S_ISREG(opened.st_mode):
                 raise ValueError("Original input is not a regular file")
             checksum, size, source_state = expected, opened.st_size, _file_state(opened)
@@ -256,7 +280,7 @@ def retain_file(project, source, expected_sha256=None):
                 if actual != checksum or count != size:
                     raise ValueError("Original source hash differs: " + source.name)
                 source_verified = True
-            if _file_state(os.fstat(src.fileno())) != source_state:
+            if _file_state(_fd_stat(src.fileno())) != source_state:
                 raise ValueError("Original input changed during intake")
             _sync_directory(directory)
             _sync_directory(directory.parent)
@@ -268,7 +292,7 @@ def retain_file(project, source, expected_sha256=None):
         if matches():
             return reused()
         with held(directory / (".intake-" + checksum + ".lock")):
-            if _file_state(os.fstat(src.fileno())) != source_state:
+            if _file_state(_fd_stat(src.fileno())) != source_state:
                 raise ValueError("Original input changed during intake")
             if matches():
                 return reused()
@@ -281,8 +305,8 @@ def retain_file(project, source, expected_sha256=None):
                 # Unlink an old alias before creating an independent inode:
                 # truncating a prior installed hard link would damage its object.
                 candidate.unlink(missing_ok=True)
-                descriptor = os.open(candidate, os.O_WRONLY | os.O_CREAT |
-                                     os.O_EXCL | os.O_NOFOLLOW, 0o600)
+                descriptor = _open_original(candidate, os.O_WRONLY | os.O_CREAT |
+                                     os.O_EXCL | _NOFOLLOW, 0o600)
                 pending = candidate
                 with os.fdopen(descriptor, "wb") as out:
                     copied, copied_size, _ = source_identity(
@@ -291,7 +315,7 @@ def retain_file(project, source, expected_sha256=None):
                         raise ValueError("Original source hash differs: " + source.name)
                     out.flush()
                     os.fsync(out.fileno())
-                if _file_state(os.fstat(src.fileno())) != source_state:
+                if _file_state(_fd_stat(src.fileno())) != source_state:
                     raise ValueError("Original input changed during intake")
                 try:
                     os.link(pending, destination)
@@ -299,7 +323,7 @@ def retain_file(project, source, expected_sha256=None):
                     # Preserve a complete concurrent publication or atomically
                     # repair a damaged regular object with this verified copy.
                     if not _retained_object_matches(destination, checksum, size):
-                        os.replace(pending, destination)
+                        _replace_original(pending, destination)
                         pending = None
                 _sync_directory(directory)
                 _sync_directory(directory.parent)
@@ -315,8 +339,8 @@ def verify_file(root, item):
     return verify_path(relative_file(root, item["path"]), item)
 
 def describe_file(root, path, **metadata):
-    path = Path(path).resolve(strict=True)
-    root = Path(root).resolve()
+    path = _native_fs_path(path).resolve(strict=True)
+    root = _native_fs_path(root).resolve()
     if not path.is_relative_to(root):
         raise ValueError("Output is outside the current run")
     return {**metadata, "path": path.relative_to(root).as_posix(),

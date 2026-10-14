@@ -1,6 +1,6 @@
 # Large files and complete measurement handovers
 
-Version 1.2.3 · ECO-CLOUD-3F90 / CEDAR-10212-SCOUT · 13 October 2026
+Version 1.2.6 · ECO-CLOUD-3F90 / CEDAR-10212-SCOUT · 13 October 2026
 
 ## The complete operating course
 
@@ -30,22 +30,49 @@ python install_measurement_large_files.py \
 ```
 
 The source directory is normally the directory containing this command. --source-root
-selects another complete release source directory. --dry-run computes the exact
-installation without changing source files. The installer verifies the complete
-inventory, composes the authored hunks into the existing files, preserves unrelated
-modules and Python namespace initializers, and mirrors the composed browser modules
-to the original host's native aliases. It stages every changed body before publication.
-The same command reuses identical files and completes a stopped installation. A source
-hunk changed by another author is named precisely and retained for composition.
+selects another complete release directory. The ordinary invocation delegates to
+the existing guarded cumulative installer, operator/install_measurements.py. It
+uses integration/measurements/INSTALLATION.json, the original extension registry,
+the current native Chemistry component and the same shared installation lease.
+--dry-run computes the complete selection without publishing source files.
 
-The older install_measurements.py entry delegates to this installer when the 1.2
-source manifest is present. Restart the original operator after installation, keep
-its ordinary authentication, and open **Measured observations** in the selected
-Workspace. No shared server, job scheduler, scientific renderer or run is replaced.
+For the independent original CLI, select a separate receiving application directory:
 
-For the independent original CLI, create an application directory and add
---standalone. This skips only the check for the original extension_registry.py;
-the actual installed Measurements engine, CLI and native files are the same.
+```sh
+mkdir -p /absolute/measurements-cli
+python /absolute/complete-source/install_measurement_large_files.py \
+  --application /absolute/measurements-cli \
+  --source-root /absolute/complete-source --standalone --dry-run
+python /absolute/complete-source/install_measurement_large_files.py \
+  --application /absolute/measurements-cli \
+  --source-root /absolute/complete-source --standalone
+node /absolute/measurements-cli/measurement_workspace/engine/cli.mjs help
+node /absolute/measurements-cli/measurement_workspace/engine/cli.mjs serve \
+  --workspace /absolute/measured-project --port 3101
+```
+
+The complete standalone selection carries all current native engine and browser
+modules, their source tools and original receiving fixtures, the original Python
+helpers, operating guides and the current owner instruction. Its source manifest
+declares every member actually installed. When the cumulative source inventory is
+present, that original inventory selects the current native and source-tool bodies;
+the standalone receipt retains its exact identity. This keeps later complete native
+dependencies together. A standalone-only source package uses its explicit full
+selection in MEASUREMENT_LARGE_FILES_SOURCE.json.
+
+The standalone writer takes the same .locks/extension-install.lock lease as the
+registered-host installer. It checks every complete selected source before changing
+the application, retains original preimages, upgrades exact recorded/declared
+predecessors including native modules, and publishes its installed inventory last.
+An independently changed target is identified for composition and kept intact.
+The same command resumes a partially installed source from identical completed
+postimages and its original known predecessors. Local AGENTS.md instructions are
+preserved alongside the exact current owner-directed instruction block.
+
+The CLI's original loopback server serves the complete collection browser module
+graph, including selected-folder receiving. Use the original registered operator
+for its authenticated whole scientific Workspace and native Chemistry integration.
+Restart that original operator after its ordinary cumulative installation.
 
 ## Receive and review an original source
 

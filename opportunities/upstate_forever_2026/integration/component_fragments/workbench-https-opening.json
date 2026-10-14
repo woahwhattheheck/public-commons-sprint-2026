@@ -1,0 +1,23 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "workbench-https-opening",
+  "source_reference": "E7A1/workbench-https-opening/2026-10-14",
+  "components": {
+    "workbench-https-opening": {
+      "title": "Original workbench HTTPS opening",
+      "paths": [
+        "source_tools/workbench_transport.py",
+        "source_tools/workbench_session.py",
+        "integration/WORKBENCH_HTTPS_OPENING.md",
+        "integration/component_fragments/workbench-https-opening.json"
+      ],
+      "requires": [
+        "native-https-connector",
+        "recipient-workbench-opening"
+      ]
+    }
+  },
+  "required_components": [
+    "workbench-https-opening"
+  ]
+}

@@ -1,0 +1,326 @@
+{
+  "schema": "otobo.configuration-comparison.v1",
+  "sourceCaptureId": "3ef3a143e226e52c7bd9afa1e2bc116db1c79de6de35d3f8ed3a816481b11c5c",
+  "beforeCaptureId": "b0bcf19baad4a82f34fc4a2ff94b829ab88950d089d2c923e5bcee4272c98314",
+  "afterCaptureId": "e33ff4d9df5417970121d42b86e81678c13aa6e4c77345d2a945be3de64a6e8a",
+  "planId": "20be2c28a18b8f0c898191e3243c2e8d644298bf2e791f0efe84c336780e1cfa",
+  "ready": true,
+  "expectedRows": [
+    {
+      "family": "GenericAgents",
+      "identity_json": "{\"name\":\"Weekly\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Weekly\"},\"NewQueue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Owners\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"ops\"}]},\"ScheduleDays\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"1\"}]},\"Valid\":{\"kind\":\"integer\",\"value\":\"1\"}}}"
+    },
+    {
+      "family": "Groups",
+      "identity_json": "{\"name\":\"support\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Support operators\"},\"Name\":{\"kind\":\"string\",\"value\":\"support\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "QueueTemplates",
+      "identity_json": "{\"queue\":\"SupportQ\",\"template\":\"Reply\"}",
+      "value_json": "true"
+    },
+    {
+      "family": "Queues",
+      "identity_json": "{\"name\":\"SupportQ\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Calendar\":{\"kind\":\"string\",\"value\":\"\"},\"Comment\":{\"kind\":\"string\",\"value\":\"Reviewed support queue\"},\"DefaultSignKey\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"FollowUp\":{\"kind\":\"string\",\"value\":\"possible\"},\"FollowUpLock\":{\"kind\":\"integer\",\"value\":\"0\"},\"Group\":{\"kind\":\"string\",\"value\":\"support\"},\"Name\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"RealName\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Salutation\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored salutation\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support greeting\"},\"Text\":{\"kind\":\"string\",\"value\":\"Hello,\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"Signature\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored signature\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support signature\"},\"Text\":{\"kind\":\"string\",\"value\":\"Support team\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"SolutionNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"SolutionTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"SystemAddress\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored support address\"},\"Name\":{\"kind\":\"string\",\"value\":\"support@example.invalid\"},\"Queue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Realname\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"UnlockTimeout\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "RoleGroups",
+      "identity_json": "{\"group\":\"support\",\"role\":\"agents\"}",
+      "value_json": "{\"kind\":\"permission-set\",\"permissions\":[\"ro\"]}"
+    },
+    {
+      "family": "Roles",
+      "identity_json": "{\"name\":\"agents\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Service agents\"},\"Name\":{\"kind\":\"string\",\"value\":\"agents\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "SLAs",
+      "identity_json": "{\"name\":\"Gold\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"30\"},\"Name\":{\"kind\":\"string\",\"value\":\"Gold\"},\"Services\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"Support::Premium\"}]},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Services",
+      "identity_json": "{\"name\":\"Support::Premium\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Support::Premium\"},\"NameShort\":{\"kind\":\"string\",\"value\":\"Premium\"},\"Parent\":{\"kind\":\"string\",\"value\":\"Support\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Services",
+      "identity_json": "{\"name\":\"Support\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Support\"},\"NameShort\":{\"kind\":\"string\",\"value\":\"Support\"},\"Parent\":{\"kind\":\"null\",\"value\":null},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Templates",
+      "identity_json": "{\"name\":\"Reply\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Retained response\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Reply\"},\"PreSelectedTicketStateID\":{\"kind\":\"null\",\"value\":null},\"Template\":{\"kind\":\"string\",\"value\":\"Hello\"},\"TemplateType\":{\"kind\":\"string\",\"value\":\"Answer\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Types",
+      "identity_json": "{\"name\":\"Incident\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Incident\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    }
+  ],
+  "observedRows": [
+    {
+      "family": "GenericAgents",
+      "identity_json": "{\"name\":\"Weekly\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Weekly\"},\"NewQueue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Owners\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"ops\"}]},\"ScheduleDays\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"1\"}]},\"Valid\":{\"kind\":\"integer\",\"value\":\"1\"}}}"
+    },
+    {
+      "family": "Groups",
+      "identity_json": "{\"name\":\"support\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Support operators\"},\"Name\":{\"kind\":\"string\",\"value\":\"support\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "QueueTemplates",
+      "identity_json": "{\"queue\":\"SupportQ\",\"template\":\"Reply\"}",
+      "value_json": "true"
+    },
+    {
+      "family": "Queues",
+      "identity_json": "{\"name\":\"SupportQ\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Calendar\":{\"kind\":\"string\",\"value\":\"\"},\"Comment\":{\"kind\":\"string\",\"value\":\"Earlier queue note\"},\"DefaultSignKey\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"FollowUp\":{\"kind\":\"string\",\"value\":\"possible\"},\"FollowUpLock\":{\"kind\":\"integer\",\"value\":\"0\"},\"Group\":{\"kind\":\"string\",\"value\":\"support\"},\"Name\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"RealName\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Salutation\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored salutation\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support greeting\"},\"Text\":{\"kind\":\"string\",\"value\":\"Hello,\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"Signature\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored signature\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support signature\"},\"Text\":{\"kind\":\"string\",\"value\":\"Support team\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"SolutionNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"SolutionTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"SystemAddress\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored support address\"},\"Name\":{\"kind\":\"string\",\"value\":\"support@example.invalid\"},\"Queue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Realname\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"UnlockTimeout\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "RoleGroups",
+      "identity_json": "{\"group\":\"support\",\"role\":\"agents\"}",
+      "value_json": "{\"kind\":\"permission-set\",\"permissions\":[\"rw\"]}"
+    },
+    {
+      "family": "Roles",
+      "identity_json": "{\"name\":\"agents\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Service agents\"},\"Name\":{\"kind\":\"string\",\"value\":\"agents\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "SLAs",
+      "identity_json": "{\"name\":\"Gold\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"30\"},\"Name\":{\"kind\":\"string\",\"value\":\"Gold\"},\"Services\":{\"kind\":\"array\",\"value\":[{\"kind\":\"string\",\"value\":\"Support::Premium\"}]},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Services",
+      "identity_json": "{\"name\":\"Support::Premium\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Support::Premium\"},\"NameShort\":{\"kind\":\"string\",\"value\":\"Premium\"},\"Parent\":{\"kind\":\"string\",\"value\":\"Support\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Services",
+      "identity_json": "{\"name\":\"Support\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Support\"},\"NameShort\":{\"kind\":\"string\",\"value\":\"Support\"},\"Parent\":{\"kind\":\"null\",\"value\":null},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Templates",
+      "identity_json": "{\"name\":\"Reply\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Retained response\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Reply\"},\"PreSelectedTicketStateID\":{\"kind\":\"null\",\"value\":null},\"Template\":{\"kind\":\"string\",\"value\":\"Hello\"},\"TemplateType\":{\"kind\":\"string\",\"value\":\"Answer\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    },
+    {
+      "family": "Types",
+      "identity_json": "{\"name\":\"Incident\"}",
+      "value_json": "{\"kind\":\"map\",\"value\":{\"Name\":{\"kind\":\"string\",\"value\":\"Incident\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}"
+    }
+  ],
+  "coverage": [
+    {
+      "family": "QueueTemplates",
+      "identity": {
+        "queue": "SupportQ",
+        "template": "Reply"
+      },
+      "sourceFileId": "file-QueueTemplates",
+      "action": "add-links",
+      "status": "observed"
+    },
+    {
+      "family": "RoleGroups",
+      "identity": {
+        "role": "agents",
+        "group": "support"
+      },
+      "sourceFileId": "file-RoleGroups",
+      "action": "replace-pair-permissions",
+      "status": "observed"
+    },
+    {
+      "family": "Groups",
+      "identity": {
+        "name": "support"
+      },
+      "sourceFileId": "file-Groups",
+      "action": "keep-target",
+      "status": "observed"
+    },
+    {
+      "family": "Roles",
+      "identity": {
+        "name": "agents"
+      },
+      "sourceFileId": "file-Roles",
+      "action": "keep-target",
+      "status": "observed"
+    },
+    {
+      "family": "Types",
+      "identity": {
+        "name": "Incident"
+      },
+      "sourceFileId": "file-Types",
+      "action": "keep-target",
+      "status": "observed"
+    },
+    {
+      "family": "Templates",
+      "identity": {
+        "name": "Reply"
+      },
+      "sourceFileId": "file-Templates",
+      "action": "keep-target",
+      "status": "observed"
+    },
+    {
+      "family": "Services",
+      "identity": {
+        "name": "Support"
+      },
+      "sourceFileId": "file-Services",
+      "action": "keep-target",
+      "status": "observed"
+    },
+    {
+      "family": "Services",
+      "identity": {
+        "name": "Support::Premium"
+      },
+      "sourceFileId": "file-Services",
+      "action": "create",
+      "status": "observed"
+    },
+    {
+      "family": "SLAs",
+      "identity": {
+        "name": "Gold"
+      },
+      "sourceFileId": "file-SLAs",
+      "action": "create",
+      "status": "observed"
+    },
+    {
+      "family": "Queues",
+      "identity": {
+        "name": "SupportQ"
+      },
+      "sourceFileId": "file-Queues",
+      "action": "overwrite",
+      "status": "observed"
+    },
+    {
+      "family": "GenericAgents",
+      "identity": {
+        "name": "Weekly"
+      },
+      "sourceFileId": "file-GenericAgents",
+      "action": "create",
+      "status": "observed"
+    }
+  ],
+  "findings": [
+    {
+      "severity": "review",
+      "code": "shared-object-effect",
+      "message": "This queue overwrite can update its shared Salutation.",
+      "family": "Queues",
+      "name": "SupportQ",
+      "sharedKind": "Salutation",
+      "sharedName": "Support greeting",
+      "targetQueueScopeComplete": true
+    },
+    {
+      "severity": "review",
+      "code": "shared-object-effect",
+      "message": "This queue overwrite can update its shared Signature.",
+      "family": "Queues",
+      "name": "SupportQ",
+      "sharedKind": "Signature",
+      "sharedName": "Support signature",
+      "targetQueueScopeComplete": true
+    },
+    {
+      "severity": "review",
+      "code": "shared-object-effect",
+      "message": "This queue overwrite can update its shared SystemAddress.",
+      "family": "Queues",
+      "name": "SupportQ",
+      "sharedKind": "SystemAddress",
+      "sharedName": "support@example.invalid",
+      "targetQueueScopeComplete": true
+    },
+    {
+      "severity": "review",
+      "code": "permission-replacement",
+      "message": "Each mentioned role/group pair receives this complete permission set; unmentioned pairs remain unchanged.",
+      "family": "RoleGroups",
+      "name": "agents",
+      "pairs": [
+        {
+          "group": "support",
+          "permissions": [
+            "ro"
+          ]
+        }
+      ]
+    }
+  ],
+  "differences": [
+    {
+      "family": "Queues",
+      "identity_json": "{\"name\":\"SupportQ\"}",
+      "expected": "{\"kind\":\"map\",\"value\":{\"Calendar\":{\"kind\":\"string\",\"value\":\"\"},\"Comment\":{\"kind\":\"string\",\"value\":\"Reviewed support queue\"},\"DefaultSignKey\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"FollowUp\":{\"kind\":\"string\",\"value\":\"possible\"},\"FollowUpLock\":{\"kind\":\"integer\",\"value\":\"0\"},\"Group\":{\"kind\":\"string\",\"value\":\"support\"},\"Name\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"RealName\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Salutation\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored salutation\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support greeting\"},\"Text\":{\"kind\":\"string\",\"value\":\"Hello,\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"Signature\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored signature\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support signature\"},\"Text\":{\"kind\":\"string\",\"value\":\"Support team\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"SolutionNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"SolutionTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"SystemAddress\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored support address\"},\"Name\":{\"kind\":\"string\",\"value\":\"support@example.invalid\"},\"Queue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Realname\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"UnlockTimeout\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}",
+      "observed": "{\"kind\":\"map\",\"value\":{\"Calendar\":{\"kind\":\"string\",\"value\":\"\"},\"Comment\":{\"kind\":\"string\",\"value\":\"Earlier queue note\"},\"DefaultSignKey\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"FirstResponseTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"FollowUp\":{\"kind\":\"string\",\"value\":\"possible\"},\"FollowUpLock\":{\"kind\":\"integer\",\"value\":\"0\"},\"Group\":{\"kind\":\"string\",\"value\":\"support\"},\"Name\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"RealName\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Salutation\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored salutation\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support greeting\"},\"Text\":{\"kind\":\"string\",\"value\":\"Hello,\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"Signature\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored signature\"},\"ContentType\":{\"kind\":\"string\",\"value\":\"text/plain; charset=utf-8\"},\"Name\":{\"kind\":\"string\",\"value\":\"Support signature\"},\"Text\":{\"kind\":\"string\",\"value\":\"Support team\\n\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"SolutionNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"SolutionTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"SystemAddress\":{\"kind\":\"map\",\"value\":{\"Comment\":{\"kind\":\"string\",\"value\":\"Authored support address\"},\"Name\":{\"kind\":\"string\",\"value\":\"support@example.invalid\"},\"Queue\":{\"kind\":\"string\",\"value\":\"SupportQ\"},\"Realname\":{\"kind\":\"string\",\"value\":\"Support team\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}},\"UnlockTimeout\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateNotify\":{\"kind\":\"integer\",\"value\":\"0\"},\"UpdateTime\":{\"kind\":\"integer\",\"value\":\"0\"},\"Valid\":{\"kind\":\"string\",\"value\":\"valid\"}}}",
+      "status": "observed"
+    },
+    {
+      "family": "RoleGroups",
+      "identity_json": "{\"group\":\"support\",\"role\":\"agents\"}",
+      "expected": "{\"kind\":\"permission-set\",\"permissions\":[\"ro\"]}",
+      "observed": "{\"kind\":\"permission-set\",\"permissions\":[\"rw\"]}",
+      "status": "observed"
+    }
+  ],
+  "importOrder": [
+    {
+      "family": "Services",
+      "name": "Support::Premium",
+      "sourceFileId": "file-Services",
+      "action": "create"
+    },
+    {
+      "family": "SLAs",
+      "name": "Gold",
+      "sourceFileId": "file-SLAs",
+      "action": "create"
+    },
+    {
+      "family": "Queues",
+      "name": "SupportQ",
+      "sourceFileId": "file-Queues",
+      "action": "overwrite"
+    },
+    {
+      "family": "QueueTemplates",
+      "name": "SupportQ",
+      "sourceFileId": "file-QueueTemplates",
+      "action": "add-links"
+    },
+    {
+      "family": "RoleGroups",
+      "name": "agents",
+      "sourceFileId": "file-RoleGroups",
+      "action": "replace-pair-permissions"
+    },
+    {
+      "family": "GenericAgents",
+      "name": "Weekly",
+      "sourceFileId": "file-GenericAgents",
+      "action": "create"
+    }
+  ]
+}

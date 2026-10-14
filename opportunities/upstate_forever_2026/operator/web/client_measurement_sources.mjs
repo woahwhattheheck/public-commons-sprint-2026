@@ -3,11 +3,12 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const copy=x=>JSON.parse(JSON.stringify(x));
 const fields=['source_collection_id','source_id','kind','label','reviewer','note','context'];
 const schema='upstate.client-measurement-working/v1';
-function fresh(workspace){return {schema,workspace,form:{source_collection_id:'',source_id:'',kind:'wqp',label:'',reviewer:'',note:'',context:''},requests:[],history:[]};}
+function fresh(workspace){return {schema,workspace,form:{source_collection_id:'',source_id:'',kind:'wqp',label:'',reviewer:'',note:'',context:'',identifier_columns:[]},requests:[],history:[]};}
+const validIdentifiers=value=>value===undefined||(Array.isArray(value)&&value.length<=16384&&value.every(x=>typeof x==='string'&&/^c(?:0|[1-9][0-9]*)$/.test(x))&&new Set(value).size===value.length);
 function checked(value,workspace){
   if(value?.schema!==schema||value.workspace!==workspace||!value.form||!Array.isArray(value.requests))throw Error('Choose a complete working copy for this scientific workspace.');
-  if(fields.some(k=>typeof value.form[k]!=='string')||!['wqp','stations'].includes(value.form.kind))throw Error('The original preparation fields are incomplete.');
-  for(const request of value.requests)if(typeof request.operation_id!=='string'||request.action!=='client-measurement.prepare'||request.workspace!==workspace||!request.payload||fields.some(k=>typeof request.payload[k]!=='string')||typeof request.payload.target_workspace_id!=='string')throw Error('An original preparation request is incomplete.');
+  if(fields.some(k=>typeof value.form[k]!=='string')||!['wqp','stations'].includes(value.form.kind)||!validIdentifiers(value.form.identifier_columns))throw Error('The original preparation fields are incomplete.');
+  for(const request of value.requests)if(typeof request.operation_id!=='string'||request.action!=='client-measurement.prepare'||request.workspace!==workspace||!request.payload||fields.some(k=>typeof request.payload[k]!=='string')||typeof request.payload.target_workspace_id!=='string'||!validIdentifiers(request.payload.identifier_columns))throw Error('An original preparation request is incomplete.');
   if(value.history!==undefined&&(!Array.isArray(value.history)||value.history.some(x=>!x||!x.form||!Array.isArray(x.requests))))throw Error('The complete prior working history is invalid.');
   if(new TextEncoder().encode(JSON.stringify(value)).length>4*1024*1024)throw Error('Retain this complete working history separately before creating another preparation.');
   return value;
@@ -33,7 +34,12 @@ export function createClientMeasurementSources(host){
     const f=q('[data-form]');if(!f)return;
     for(const name of ['kind','label','reviewer','note','context'])draft.form[name]=f.elements[name].value;
     const chosen=catalog?.sources.find(s=>s.source_collection_id+'|'+s.source_id===f.elements.source.value);
+    const cleared=catalog&&f.elements.source.value==='';
+    const changed=chosen?(draft.form.source_collection_id!==chosen.source_collection_id||draft.form.source_id!==chosen.source_id):cleared&&!!draft.form.source_id;
     if(chosen){draft.form.source_collection_id=chosen.source_collection_id;draft.form.source_id=chosen.source_id;}
+    else if(cleared){draft.form.source_collection_id='';draft.form.source_id='';}
+    if(changed)draft.form.identifier_columns=[];
+    else if(f.querySelector('[data-identifiers]'))draft.form.identifier_columns=[...f.querySelectorAll('[name="identifier_column"]:checked')].map(input=>input.value);
     retain();
   }
   function messages(){
@@ -41,13 +47,27 @@ export function createClientMeasurementSources(host){
     q('[data-status]').textContent=status;q('[data-error]').textContent=failure;q('[data-storage]').textContent=storage;
     for(const el of root.querySelectorAll('[data-write]'))el.disabled=busy;
   }
+  function identifierChoices(){
+    const source=catalog?.sources.find(s=>s.source_collection_id===draft.form.source_collection_id&&s.source_id===draft.form.source_id);
+    if(!source||!['xlsx','xlsm'].includes(source.format))return '';
+    const selected=new Set(draft.form.identifier_columns||[]);
+    return '<fieldset data-identifiers><legend>Excel identifier columns</legend><p>Choose only identifier columns whose plain Excel zero mask must be preserved (for example numeric 1 shown as 001). Other values, including scientific measurements, keep their stored-value reading. Samples below are abbreviated; complete values remain in the original source. Text identifiers already retain their exact text. Review the derived identifiers in Measurements before importing.</p>'+
+      source.fields.map(field=>{
+        const samples=(source.preview||[]).slice(0,3).map(row=>{
+          const raw=row.cells?.[field.index],mask=row.cell_metadata?.[field.index]?.number_format;
+          const text=raw==null?'(blank)':String(raw),sample=text.length>120?text.slice(0,120)+'…':text;
+          return 'row '+row.row+': '+sample+(mask?' [Excel format '+mask+']':'');
+        }).join('; ');
+        return '<label class="ci-confirm"><input type="checkbox" name="identifier_column" data-write value="'+esc(field.id)+'"'+(selected.has(field.id)?' checked':'')+'><span style="min-width:0;overflow-wrap:anywhere">'+esc(field.display||field.label||field.id)+(samples?' — '+esc(samples):'')+'</span></label>';
+      }).join('')+'<p>Only whole, nonnegative numbers with plain zero masks are padded. Unsupported formats or unevaluated formulas produce a specific error; the original workbook stays intact. Earlier saved inspections may lack format previews.</p></fieldset>';
+  }
   function render(){
     if(!root)return;
     const f=draft.form,chosen=f.source_collection_id+'|'+f.source_id;
     root.innerHTML='<main class="ci-desk"><header><p class="eyebrow">SCIENTIFIC WORKBENCH</p><h1>Prepare workbook measurements</h1><p>Select a retained worksheet or delimited table. Its complete original and physical row map accompany a saved preparation in the existing Measurements workspace.</p></header><p data-error role="alert" class="ci-error"></p><p data-status role="status" aria-live="polite"></p><p data-storage class="ci-warning" role="status"></p>'+
     '<section><h2>Original worksheet and target</h2><p>The worksheet, header, encoding and formula-reading choices come from its reviewed source edition. Change those choices in Open my data to create another source edition.</p><form data-form><label>Retained measurement source<select name="source" data-write><option value="">Choose a saved measurement source</option>'+ (catalog?.sources||[]).map(s=>'<option value="'+esc(s.source_collection_id+'|'+s.source_id)+'"'+(chosen===s.source_collection_id+'|'+s.source_id?' selected':'')+'>'+esc(s.title+' · '+s.filename+(s.sheet?' / '+s.sheet:''))+'</option>').join('')+'</select></label><p>Measurements workspace: <code>'+esc(catalog?.target_workspace_id||'Loading original workspace…')+'</code></p>'+
     '<label>Scientific source type<select name="kind" data-write><option value="wqp"'+(f.kind==='wqp'?' selected':'')+'>Chemistry / WQP</option><option value="stations"'+(f.kind==='stations'?' selected':'')+'>Monitoring stations</option></select></label>'+
-    ['label','reviewer','note','context'].map(name=>'<label>'+({label:'Preparation name',reviewer:'Mapping reviewer',note:'Review note',context:'Original source context'})[name]+'<textarea name="'+name+'" rows="'+(name==='context'?3:1)+'" data-write>'+esc(f[name])+'</textarea></label>').join('')+
+    identifierChoices()+['label','reviewer','note','context'].map(name=>'<label>'+({label:'Preparation name',reviewer:'Mapping reviewer',note:'Review note',context:'Original source context'})[name]+'<textarea name="'+name+'" rows="'+(name==='context'?3:1)+'" data-write>'+esc(f[name])+'</textarea></label>').join('')+
     '<div class="ci-actions"><button type="submit" data-write>Save worksheet preparation</button><button type="button" data-action="sources">Open my data</button><button type="button" data-action="measurements">Open Measurements</button></div></form><p>No observations are imported by this control. Review the saved preparation’s columns, units, fractions, dates and native acceptance/rejection counts in Measurements before importing.</p></section>'+
     '<section><h2>Working copy and original operations</h2><div class="ci-actions"><button data-action="download">Download complete working copy</button><label>Open working copy<input type="file" accept=".json,application/json" data-open data-write></label>'+(invalid!==null?'<button data-action="invalid">Download exact previous browser copy</button>':'')+'<button data-action="refresh" data-write>Refresh saved preparations</button></div><div>'+
     (catalog?.operations||[]).map(row=>'<p><button data-action="result" data-id="'+esc(row.id)+'" data-write>'+esc(row.title+' · '+row.state)+'</button> <button data-action="task" data-id="'+esc(row.id)+'">Progress / original request</button> '+(row.state==='failed'?'<button data-action="resume" data-id="'+esc(row.id)+'" data-write>Resume original operation</button> ':'')+esc(row.preparation_id||'')+'</p>').join('')+draft.requests.filter(r=>r.task_id&&!(catalog?.operations||[]).some(o=>o.id===r.task_id)).map(r=>'<p><button data-action="task" data-id="'+esc(r.task_id)+'">Open retained queued operation</button></p>').join('')+'</div></section><section data-result></section></main>';
@@ -75,6 +95,8 @@ export function createClientMeasurementSources(host){
     if(!found||!q('[data-form]').elements.source.value)throw Error('Choose a retained original worksheet.');
     if(!draft.form.label.trim()||!draft.form.reviewer.trim())throw Error('Name this preparation and its mapping reviewer.');
     const payload={...copy(draft.form),target_workspace_id:catalog.target_workspace_id};
+    // Preserve the exact shape and identity of legacy stored-value requests.
+    if(!payload.identifier_columns?.length)delete payload.identifier_columns;
     let request=draft.requests.find(r=>JSON.stringify(r.payload)===JSON.stringify(payload));
     if(!request){request={workspace:w,action:'client-measurement.prepare',operation_id:'client-measurement-'+crypto.randomUUID(),payload};const candidate=copy(draft);candidate.requests.push(request);checked(candidate,w);draft=candidate;request=draft.requests.at(-1);retain();}
     status='Saving the retained worksheet through the original operator queue…';messages();
@@ -87,7 +109,7 @@ export function createClientMeasurementSources(host){
   function suspend(){if(root){capture();memory.set(workspace,copy(draft));}controller?.abort();root=null;epoch++;busy=false;}
   function mount(target){
     suspend();root=target;workspace=host.getWorkspace();epoch++;load();catalog=null;result=null;status='';failure='';render();controller=new AbortController();
-    root.addEventListener('input',event=>{if(event.target.closest('[data-form]')){capture();messages();}},{signal:controller.signal});
+    root.addEventListener('input',event=>{if(event.target.closest('[data-form]')&&event.target.name!=='source'){capture();messages();}},{signal:controller.signal});
     root.addEventListener('change',event=>{
       if(event.target.matches('[data-open]')){const file=event.target.files[0];if(file)void run(async()=>{
         capture();if(file.size>4*1024*1024)throw Error('Choose a complete working copy up to 4 MiB.');
@@ -95,7 +117,7 @@ export function createClientMeasurementSources(host){
         // Retain the full prior form/request history before explicit replacement.
         const candidate=copy(value);candidate.history=[...(draft.history||[]),...(value.history||[]),{form:copy(draft.form),requests:copy(draft.requests),openedAt:new Date().toISOString()}];checked(candidate,w);draft=candidate;retain();render();status='Complete working copy opened. Original native operations are not replayed automatically.';messages();
       });}
-      else if(event.target.closest('[data-form]')){capture();messages();}
+      else if(event.target.closest('[data-form]')){capture();if(event.target.name==='source')render();else messages();}
     },{signal:controller.signal});
     root.addEventListener('submit',event=>{if(event.target.matches('[data-form]')){event.preventDefault();void run(submit);}},{signal:controller.signal});
     root.addEventListener('click',event=>{

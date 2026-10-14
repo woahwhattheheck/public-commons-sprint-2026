@@ -1,0 +1,11 @@
+# Strata servicing derivative source
+
+This application retains the complete source of [BootNodeDev/strata-vault-kit](https://github.com/BootNodeDev/strata-vault-kit/tree/400754230a3fecaa69385687ba8457f1c2250d13), commit `400754230a3fecaa69385687ba8457f1c2250d13`, tree `4236846e85916d64db5b21330b512f2bc553999c`.
+
+The upstream Apache-2.0 LICENSE, NOTICE, AGENTS.md, CLAUDE.md, dependency lock, contract bodies and original address/client-generation pipeline are preserved. The only replaced upstream files are `app/src/App.tsx` and `app/src/App.module.css`; both contain prominent dated modification notices for the added History navigation. The complete original274-file carrier remains `4903c04b569effdab148879a89c66adf0ab05169` in the public source repository, SHA-256 `b66a5940a162f9eab0b7581ca00a77c7db0479ae518e576a45e686461be45286` over2,121,570 UTF-8 bytes. Its full original member roster is recorded separately in `UPSTREAM_SOURCE.json`.
+
+The added servicing model, read-only collector, CLI, portable archives, history/statement interface, operating guides and receiving programme were authored for this integration on2026-10-13. They add no contract, signer, transaction or administrative authority. Historical synchronous-vault examples are not substituted for the selected current asynchronous implementation. Proposed valuation/history servicing work is distinguished from the issuer's awarded milestone state.
+
+`DELIVERY_SOURCE.json` binds the complete selected authored project, excluding itself. `scripts/servicing/SOURCE.json` binds the exact executing collector, domain model and its selected original prerequisites; its runtime receipt separately identifies the installed SDK and Node. Generated deployment clients/build output and actual execution results are produced by the original build/receiving operation and must be retained as that actual output. A source manifest is not a build or rendered-product claim.
+
+Start with `docs/SERVICING.md` and `docs/SERVICING_RECEIVING.md`. Read `OWNER_INSTRUCTIONS.md` before client/demo delivery: the exact application and all relevant attachments must be operated and visually viewed by the producing worker. Source review alone does not establish readiness.

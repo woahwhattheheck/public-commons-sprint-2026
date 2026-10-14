@@ -1,0 +1,176 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "source-disturbance",
+  "title": "Source-selected land changes",
+  "version": "1",
+  "order": 67,
+  "assets": [
+    "source_disturbance.mjs",
+    "source_disturbance_storage.mjs",
+    "source_disturbance.css"
+  ],
+  "backend": {
+    "module": "source_disturbance",
+    "factory": {
+      "handler": "SourceDisturbanceDesk",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "source-disturbance.prepare",
+      "source-disturbance.report"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-disturbance/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-disturbance/features",
+        "operation": "features",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-disturbance/preview",
+        "operation": "preview",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-disturbance/item",
+        "operation": "item",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-disturbance/operation",
+        "operation": "operation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/source-disturbance/result",
+        "operation": "result",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "file_routes": [
+      {
+        "path": "/api/file/source-disturbance/{workspace_key}/{study_id}/{member...}",
+        "response": "ticket_policy_pair",
+        "handler": "report_member",
+        "args": [
+          "workspace_key",
+          "route.study_id",
+          "route.member"
+        ]
+      }
+    ],
+    "items": [
+      {
+        "kind": "source_disturbance",
+        "operation": "item",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "source_disturbance",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "verify_workspace": {
+      "module": "model.source_disturbance",
+      "handler": "verify_all",
+      "args": [
+        "workspace"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/source_disturbance.mjs",
+    "factory": "createSourceDisturbanceDesk",
+    "requires": [
+      "getState",
+      "api",
+      "endpoint",
+      "showTask",
+      "openItem",
+      "navigate",
+      "openDesk"
+    ],
+    "styles": [
+      "/web/source_disturbance.css"
+    ],
+    "view": {
+      "id": "source-disturbance",
+      "title": "Source-selected land changes",
+      "after": "disturbance-studies"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

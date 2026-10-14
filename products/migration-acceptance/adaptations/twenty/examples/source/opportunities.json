@@ -1,0 +1,20 @@
+[
+  {
+    "legacyId": "O001",
+    "name": "CRM setup",
+    "stage": "Proposal",
+    "amount": "1200.12",
+    "currency": "USD",
+    "companyKey": "001",
+    "contactKey": "P001"
+  },
+  {
+    "legacyId": "O002",
+    "name": "Support renewal",
+    "stage": "Qualification",
+    "amount": "0.00",
+    "currency": "CAD",
+    "companyKey": "002",
+    "contactKey": "P002"
+  }
+]

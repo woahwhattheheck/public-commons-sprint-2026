@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OTOBO configuration handover</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<div class="otobo-root">
+<header><div><p class="eyebrow">TokenJunkieLabs · Migration Acceptance</p><h1>OTOBO configuration handover</h1><p>Retain original exports, review changes and reconcile an independent target export.</p></div><a href="./OPERATING.md" download>Operating guide</a></header>
+<main>
+<section class="toolbar" aria-label="Working copy">
+<div class="actions"><button id="save-working">Save complete working copy</button><label class="file-button">Open working copy<input id="restore-file" type="file" accept=".json,application/json"></label><button id="download-selected" hidden>Download selected file</button><button id="new-work">New workspace</button></div>
+<p id="workspace-status" role="status">No capture selected.</p>
+<p id="error" role="alert" hidden></p>
+</section>
+<nav aria-label="Review sections">
+<button data-tab="intake">Captures</button><button data-tab="plan">Change plan</button><button data-tab="comparison">Returned target</button><button data-tab="history">History</button><button data-tab="files">Source files</button><button data-tab="native">Native receiving</button>
+</nav>
+
+<section id="panel-intake">
+<h2>Original source and target captures</h2>
+<p>Choose the JSON capture produced by the native capture tool. Each capture retains its original YAML files and tagged values. Source, target baseline and returned target remain separate editions.</p>
+<div class="capture-grid">
+<article><h3>Source configuration</h3><label class="file-button">Select source capture<input id="source-file" type="file" accept=".json,application/json"></label><div id="source-summary" class="capture-summary">No source capture.</div><button data-original="source" disabled>Download original capture</button></article>
+<article><h3>Target before import</h3><label class="file-button">Select baseline capture<input id="before-file" type="file" accept=".json,application/json"></label><div id="before-summary" class="capture-summary">No baseline capture.</div><button data-original="before" disabled>Download original capture</button></article>
+<article><h3>Target after import</h3><label class="file-button">Select returned capture<input id="after-file" type="file" accept=".json,application/json"></label><div id="after-summary" class="capture-summary">No returned target capture.</div><button data-original="after" disabled>Download original capture</button></article>
+</div>
+<div id="capture-populations" class="table-wrap"></div>
+</section>
+
+<section id="panel-plan" hidden>
+<div class="section-heading"><div><h2>Configuration change plan</h2><p>Review exact object identities, target values and dependencies before selecting native changes.</p></div><button id="make-plan">Create plan from captures</button></div>
+<div class="fields"><label>Family<select id="family-filter"></select></label><label>Find name or identity<input id="record-filter" type="search"></label></div>
+<div id="plan-overview"></div>
+<div id="plan-records" class="table-wrap"></div>
+<section id="record-detail" hidden>
+<h3 id="record-heading">Selected configuration</h3>
+<div id="record-semantics" class="notice"></div>
+<form id="decision-form"><div class="fields"><label>Decision<select id="decision"></select></label><label>Reason<textarea id="decision-reason" rows="3"></textarea></label></div>
+<label id="job-review-label" class="check" hidden><input id="job-reviewed" type="checkbox">I reviewed this job’s complete actions, schedule and activation settings.</label>
+<details><summary>Copy an observed target reference</summary><div class="fields"><label>Source field<select id="override-source-path"></select></label><label>Observed target entry<select id="override-target-entry"></select></label><label>Target field<select id="override-target-path"></select></label><label>Override reason<input id="override-reason"></label></div><button id="add-override" type="button">Add observed reference</button><label>Complete reference overrides<textarea id="overrides-json" rows="5" spellcheck="false"></textarea></label></details>
+<div class="actions"><button type="submit">Apply reviewed decision</button><button id="discard-decision-draft" type="button">Discard this unapplied draft</button></div></form>
+<div id="record-fields" class="table-wrap"></div><div id="record-dependencies"></div>
+</section>
+<details><summary>Complete plan JSON and original field values</summary><label>Editable complete plan<textarea id="plan-json" rows="18" spellcheck="false"></textarea></label><div class="actions"><label class="file-button">Open plan JSON<input id="plan-file" type="file" accept=".json,application/json"></label><button id="apply-plan">Review complete plan</button><button id="save-plan-draft">Download unfinished plan text</button></div></details>
+<section>
+<h3>Record the reviewed edition</h3>
+<div class="fields"><label>Project identifier<input id="project-id"></label><label>Project title<input id="project-title"></label><label>Reviewer<input id="reviewer"></label><label>Review reason<textarea id="review-reason" rows="3"></textarea></label></div>
+<label class="check"><input id="approve" type="checkbox">I reviewed the selected captures, full plan and unresolved findings shown here.</label>
+<div class="actions"><button id="save-reviewed">Save attributed plan edition</button><button id="download-plan" disabled>Download approved native handover plan</button><button id="download-project" disabled>Download complete project</button></div>
+<div id="review-result"></div>
+</section>
+</section>
+
+<section id="panel-comparison" hidden>
+<h2>Independent returned target</h2>
+<p>The actual returned target is compared with the reviewed expected configuration. Preserve native import logs separately from this re-export.</p>
+<div id="comparison-status"></div><div id="comparison-summary" class="table-wrap"></div><div id="comparison-records" class="table-wrap"></div>
+<div class="actions"><button id="download-comparison" disabled>Download complete comparison preparation</button><button id="download-findings" disabled>Download full findings</button></div>
+</section>
+
+<section id="panel-history" hidden><h2>Saved projects and attributed plan editions</h2><p>Earlier projects retain their original captures, decisions and reviewer history. Opening an earlier edition preserves the current working copy.</p><div id="history-list"></div></section>
+
+<section id="panel-files" hidden><h2>Complete original source</h2><p>Download the selected original capture, retained YAML member or complete source metadata. Original file bytes are kept with the working copy.</p><div id="source-files"></div></section>
+
+<section id="panel-native" hidden><h2>Native import and reconciliation</h2><div id="native-state"></div>
+<h3>Emit the selected native handover</h3><p>Use the approved plan and retained source captures with the supplied native emitter. Review its complete selected files before running the existing OTOBO import operation.</p><pre id="emitter-command"></pre>
+<h3>Retain the actual result</h3><p>Keep the native import command and complete log, then acquire a new independent target capture. Select it under Captures and save a separately attributed complete project. The original plan and prior projects remain in the working history.</p>
+<h3>Continue Migration Acceptance</h3><pre id="native-command"></pre><p>Use the original installed runtime and operation. The receiving driver retains source and request history, performs the local comparison and acceptance, and exports the complete editable handover.</p><a href="./OPERATING.md" download>Download the complete operating guide</a>
+</section>
+</main>
+<footer>Prepared by TokenJunkieLabs · Complete original source and working history stay with the selected edition.</footer>
+</div>
+<script type="module" src="./app.mjs"></script>
+</body>
+</html>

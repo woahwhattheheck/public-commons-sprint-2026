@@ -68,3 +68,8 @@ Use the actual receiving environment and preserve active user sessions and curre
 ## Asset correspondence continuation
 
 Current complete distributions include `asset-crosswalk.mjs`, `asset-crosswalk-ui.mjs`, `asset-crosswalk-receiving.mjs` and `ASSET_CROSSWALK.md`. Both browser and CLI full handovers retain the exact original source and reviewed crosswalk journal. The copied CLI-generated HTML includes guided native-source preparation and the crosswalk desk. The existing finance receiving course invokes the isolated original crosswalk continuation; read the guide for an explicitly separate continuation when the earlier parent receipt is already complete. Perform actual desktop/narrow LOOK and open all crosswalk HTML/CSV/JSON and the copied full application.
+
+
+## Named review observations
+
+The complete source closure includes [MIGRATION_REHEARSALS.md](MIGRATION_REHEARSALS.md) and the native/browser rehearsal continuation. Saved editions retain their original complete reports across application upgrades. Handover includes the latest readable comparison and every original supporting record; historical workspace downloads recover the exact original operation prefix in a separate file. Current financial basis review remains in the original desk after supporting evidence is saved.

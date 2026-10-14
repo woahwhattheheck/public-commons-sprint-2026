@@ -230,6 +230,10 @@ Use the same command with `--kind workspace` and no delivery ID for the entire e
 
 The recipient uses the original `record-mastering receive` command with the transferred SHA-256 and a new destination. Read its preserved workspace ID, revision, source editions and deliveries. A subsequent edit is independent of the sender. Reopen the sender's original setup to see its later current state; receiving and export never roll back those later decisions.
 
+## Review changes between customer deliveries
+
+The original Deliveries desk now compares two immutable editions by stable master identifier. It shows exact text, field presence, resolution and provenance changes, while retaining both original selections, omitted counts and source files. Its complete JSON, HTML and CSV downloads reopen through the same native workspace; comparison creates no new decision or revision. The original typed client, generic CLI and Merchant query expose `delivery.compare`. Read the [complete comparison procedure](../../stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/DELIVERY_COMPARISON.md) before interpreting missing records or handing over the result.
+
 ## Reopen, upgrade and operating records
 
 Reopen the original setup with `status`, the original Runtime Workspace with its same directory, and the selected mastering workspace with the native command. Retain all three owners plus the installed source/runtime identity in a full host backup. The customer workspace packet alone intentionally does not contain local application sessions, operator credentials, arbitrary host input paths or the installation's dependency tree.

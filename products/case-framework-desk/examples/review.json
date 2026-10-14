@@ -1,0 +1,55 @@
+{
+  "basisSha256": "e708c4670db3e90f9595cedda42d1c83e1cc1184aa7809ec9189972ae420512a",
+  "reviewer": "Example receiving operator",
+  "notes": "Authored exercise; investigate the deliberately conflicting local reference.",
+  "decisions": {
+    "CFAssociation:4b734fb0-450a-4f21-8b16-000000000100": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFAssociation:4b734fb0-450a-4f21-8b16-000000000101": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFAssociation:4b734fb0-450a-4f21-8b16-000000000107": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFAssociation:4b734fb0-450a-4f21-8b16-000000000108": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFAssociation:4b734fb0-450a-4f21-8b16-000000000121": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFAssociation:4b734fb0-450a-4f21-8b16-000000000122": {
+      "choice": "INVESTIGATE",
+      "note": "Await selected owner review."
+    },
+    "CFDocument:4b734fb0-450a-4f21-8b16-000000000001": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFItem:4b734fb0-450a-4f21-8b16-000000000012": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFItem:4b734fb0-450a-4f21-8b16-000000000013": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFItem:4b734fb0-450a-4f21-8b16-000000000017": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFItem:4b734fb0-450a-4f21-8b16-000000000018": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    },
+    "CFPackage:4b734fb0-450a-4f21-8b16-000000000001": {
+      "choice": "DEFER",
+      "note": "Await selected owner review."
+    }
+  }
+}

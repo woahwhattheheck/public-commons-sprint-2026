@@ -137,11 +137,14 @@ class ParameterStudyAPI:
         experiment_id = identifier(payload.get("id"))
         from model.parameter_result_query import DEFAULT_RESULTS
         try:
-            return DEFAULT_RESULTS.read(workspace, experiment_id, **{
+            result = DEFAULT_RESULTS.read(workspace, experiment_id, **{
                 name: payload[name] for name in (
                     "area_id", "pollutant", "offset", "limit", "range_offset", "range_limit",
                     "expected_artifact_sha256") if payload.get(name) not in (None, "")
             })
+            from model.parameter_response import EDITION, project_rows
+            return {**result, "response_interpretation_edition": EDITION,
+                    "rows": project_rows(result["rows"], experiments.PARAMETERS)}
         except FileNotFoundError as error:
             raise self.fault("PARAMETER_STUDY_RESULTS", str(error), 404) from error
         except BlockingIOError as error:
@@ -149,3 +152,4 @@ class ParameterStudyAPI:
                 "PARAMETER_STUDY_RESULTS_BUSY",
                 "The original study is publishing results. Reopen the completed result table after that operation.",
                 409) from error
+

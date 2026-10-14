@@ -1,0 +1,22 @@
+{
+  "name": "eco-workbench",
+  "main": "worker.mjs",
+  "compatibility_date": "2026-10-13",
+  "workers_dev": true,
+  "vars": {
+    "PUBLIC_ORIGIN": "https://eco-workbench.tjlabs-publisher.workers.dev",
+    "WORKSPACE_KEY": "tim-workbench",
+    "ECO_PREVIEW_MEMORY": "true"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RELAY",
+        "class_name": "WorkbenchRelay"
+      }
+    ]
+  },
+  "observability": {
+    "enabled": false
+  }
+}

@@ -426,3 +426,41 @@ Site acceptance or grant submission. The actual combined native Page callback
 and original publisher's saved/deployed version are separate owner-reported
 results. The current source edition can advance through the existing composer;
 the receiver always binds the actual four-file edition selected for that run.
+
+
+## Complete large originals in the public editor (14 October 2026)
+
+The public handover core uses the same bounded-stack Base64 validation as the
+maintained installed Grant edition (Merchant PR2071). A complete source index or
+other retained original can exceed the JavaScript stack used by the previous
+repeated-quartet expression while remaining inside the existing byte limit. The
+validator now checks length divisibility and the same alphabet/final padding
+without a repeated capturing group. Existing byte counts, SHA-256 verification,
+original file descriptors, draft schemas and size limits remain unchanged.
+
+The maintained full public submission runtime is also retained at
+`operations/grant-public-large-original-20261014/runtime.json`. It contains the
+36 exact native HTML/CSS/module sources reached from `/grant-submission.html`,
+including issuer-form workbooks, planning, evidence, prepared editions, complete
+working copies and application returns. Its source membership and every complete
+UTF-8 byte count/SHA were produced by the original `collectOfflineRuntime` and
+checked by `validateOfflineRuntime`. Pass that JSON as `runtime` to the existing
+`createOfflineEditor` with the original complete envelope or workingEnvelope.
+The ordinary browser export keeps gathering the same closure through its
+original mounted source routes; no alternate save store or bootstrap is added.
+
+This retained runtime is one explicit source edition. Newly installed editors
+continue to collect their own current complete closure. Keep an earlier offline
+HTML and its original runtime intact; create a successor through the existing
+open/save/export controls when adopting the maintained edition.
+
+Continue the already-owned native `receiveGrantHandover` operation above using
+the actual complete application/source bundle and the preserved original draft.
+Open the whole source package, retain its original files, prepare the existing
+output, download the complete draft and offline HTML, then reopen both in the
+normal recipient browser. Keep all current answers, field mappings, prepared
+editions and observations. Inspect the affected populated/error controls at the
+actual desktop and narrow widths; open and LOOK at all outgoing attachments,
+including the offline HTML and full source/draft JSON. Return a concrete source
+or rendered failure to this same operation. The original receiving owner and
+accepted native task retain custody throughout.

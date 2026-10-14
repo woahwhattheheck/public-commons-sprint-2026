@@ -1,6 +1,6 @@
 {
   "schema": "upstate.published-study-family/v1",
-  "version": "2.11.2",
+  "version": "2.11.3",
   "repository": "woahwhattheheck/public-commons-sprint-2026",
   "application_path": "opportunities/upstate_forever_2026",
   "source_reference_base": "8e5cb23856eb6f141184c367954177e5722ec8ed",
@@ -1708,8 +1708,8 @@
     },
     {
       "path": "operator/MONITORING_INTERPRETATION.md",
-      "bytes": 6822,
-      "sha256": "276e49065fe5003f7ea6e3854b8f422f2689bb9d554f2750a28e69882e39c2d7"
+      "bytes": 7690,
+      "sha256": "e4b3a60cc05b14ad574e0071c9d837a0b0847e39cdfbf0baf69df7bd0e7853ec"
     },
     {
       "path": "operator/published_report_preview.py",
@@ -1753,13 +1753,13 @@
     },
     {
       "path": "operator/web/published_interpretation.css",
-      "bytes": 4869,
-      "sha256": "df45dd7438a44dc6024095a6efaa16448824737d6061de0cc374130649b0fc14"
+      "bytes": 5472,
+      "sha256": "f2155c643e528842ef16553380cb2c0cc677ffa1a4f180703650567a27283892"
     },
     {
       "path": "operator/web/published_interpretation.mjs",
-      "bytes": 32274,
-      "sha256": "79fc110028d812babed2bf76a1bc63f21d2cc607f312d3f372be80942f40d0e6"
+      "bytes": 36254,
+      "sha256": "f6bb82a45be88b2ed5014fb5ec57e0ab3142463ce41bd89e088c5f4704c0ad0a"
     },
     {
       "path": "operator/web/published_microbial_selection.mjs",
@@ -3458,7 +3458,8 @@
         "edition": "readable-scientific-report/2",
         "scope": "Readable support, date and cohort summary; full metric/result/criterion unit separation; analyst choices and original source links; complete original-row table and unchanged scientific downloads.",
         "source_reference_base": "a2652dcaa99a830c76bf15752883bd805b4e3fcb",
-        "aggregate_bounds": "Display retained aggregate bounds without inventing endpoint openness; original observation comparator notation remains exact."
+        "aggregate_bounds": "Display retained aggregate bounds without inventing endpoint openness; original observation comparator notation remains exact.",
+        "operator": "Readable profile/frequency/source support, explicit fraction versus measurement thresholds, and retained previous-preview source identity while editing."
       }
     }
   }

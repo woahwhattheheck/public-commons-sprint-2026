@@ -3,3 +3,11 @@
 .sampling-evidence{min-width:0;border:1px solid #b8bdc2;border-left:4px solid #59626b;padding:14px;background:#fff;margin:14px 0}.sampling-evidence h4{margin:0 0 10px}.sampling-evidence>.sampling-grid{margin-top:14px}.sampling-evidence .sampling-table td:first-child{min-width:150px;font-weight:600}.sampling-evidence>.sampling-table{max-height:560px}.sampling-evidence>.sampling-table td{min-width:100px}@media(max-width:760px){.sampling-evidence{padding:11px}.sampling-evidence>.sampling-table{max-height:none}}@media print{.sampling-evidence>.sampling-table{max-height:none;overflow:visible}}
 
 .sampling-evidence h5{font-size:1rem;line-height:1.4;margin:18px 0 8px}.sampling-evidence .sampling-table td:not(:first-child){white-space:nowrap;overflow-wrap:normal}.sampling-evidence .sampling-table td:first-child{max-width:26rem;overflow-wrap:anywhere;white-space:normal}.sampling-evidence-files a{overflow-wrap:anywhere;min-width:0}.sampling-evidence>.sampling-table:first-of-type td{white-space:normal;overflow-wrap:anywhere}
+
+/* Saved-design and unfinished-work continuation. */
+.sampling-working h3,.sampling-working h4,.sampling-working p,.sampling-working label{overflow-wrap:anywhere}
+.sampling-request,.sampling-import-review{border:1px solid #bdc2c7;background:#f6f7f8;color:#20262c;padding:14px;margin:12px 0;min-width:0}
+.sampling-working input[type=file]{max-width:100%}
+.sampling-working .sampling-request p{margin:0 0 10px}
+.sampling-working .sampling-table td{white-space:normal;overflow-wrap:anywhere}
+@media(max-width:760px){.sampling-working .sampling-toolbar{display:grid;grid-template-columns:minmax(0,1fr)}.sampling-request button{width:100%;text-align:left}}

@@ -1,12 +1,16 @@
 """Reuse completed files as independently owned, verified operation outputs."""
 from __future__ import annotations
 import errno
-import fcntl
+try:
+    import fcntl
+except ImportError:
+    from model import windows_fs as fcntl
 import hashlib
 import os
 from pathlib import Path
 import tempfile
-from .common import canonical, describe_file, file_digest, relative_file, verify_file
+from .common import (canonical, describe_file, file_digest, relative_file, verify_file,
+                     _sync_directory, _replace_original)
 
 FICLONE = 0x40049409
 
@@ -66,14 +70,16 @@ def copy_verified(source_root, descriptor, destination_root, *, path=None, trans
             pending = Path(out.name)
             if os.fstat(src.fileno()).st_size != descriptor["bytes"]:
                 raise ValueError("Original retained file length changed during reuse")
-            method = "reflink"
-            try:
-                fcntl.ioctl(out.fileno(), FICLONE, src.fileno())
-            except OSError as exc:
-                if exc.errno not in (errno.EOPNOTSUPP, errno.ENOTTY, errno.EXDEV,
-                                     errno.EINVAL, errno.ENOSYS, errno.EPERM):
-                    raise
-                method = "copy"
+            method = "copy" if os.name == "nt" else "reflink"
+            if method == "reflink":
+                try:
+                    fcntl.ioctl(out.fileno(), FICLONE, src.fileno())
+                except OSError as exc:
+                    if exc.errno not in (errno.EOPNOTSUPP, errno.ENOTTY, errno.EXDEV,
+                                         errno.EINVAL, errno.ENOSYS, errno.EPERM):
+                        raise
+                    method = "copy"
+            if method == "copy":
                 src.seek(0)
                 out.seek(0)
                 out.truncate()
@@ -86,13 +92,9 @@ def copy_verified(source_root, descriptor, destination_root, *, path=None, trans
         actual = file_digest(pending) if method == "reflink" else fingerprint.hexdigest()
         if pending.stat().st_size != descriptor["bytes"] or actual != descriptor["sha256"]:
             raise ValueError("Original retained file changed during reuse")
-        os.replace(pending, target)
+        _replace_original(pending, target)
         pending = None
-        fd = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _sync_directory(target.parent)
         _transfer_count(transfer, method, descriptor["bytes"])
         return expected
     finally:

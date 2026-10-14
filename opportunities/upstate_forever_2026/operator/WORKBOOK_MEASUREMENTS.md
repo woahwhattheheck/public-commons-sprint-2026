@@ -6,7 +6,7 @@ Open a retained workbook or delimited table, review its worksheet and scientific
 
 In **Open my data**, retain the original XLSX, XLSM, CSV, TSV or text file. Choose its worksheet, original header row, encoding and formula-reading mode. Review its role as **MEASUREMENTS** and save the scientific source edition. The original binary, worksheet and reading choices remain part of that edition.
 
-Open **Prepare workbook measurements** from the saved source result, or **Workbook measurements** in the workbench. Select that exact source, choose **Chemistry / WQP** or **Monitoring stations**, and enter the preparation name, reviewer and original context. The page displays the actual existing Measurements workspace identity. **Save worksheet preparation** submits one retained operation to the workbench's original task queue.
+Open **Prepare workbook measurements** from the saved source result, or **Workbook measurements** in the workbench. Select that exact source, choose **Chemistry / WQP** or **Monitoring stations**, and enter the preparation name, reviewer and original context. The page displays the actual existing Measurements workspace identity. Review the source column previews and select only columns that are identifiers. For example, a numeric station code stored as `1` with the Excel format `000` is retained as the identifier `001`; a measurement stored as numeric `1` remains numeric. **Save worksheet preparation** submits one retained operation to the workbench's original task queue.
 
 The operation creates a named preparation, without importing observations or running a scientific model. Open **Measurements** and select that saved preparation.
 
@@ -14,13 +14,19 @@ The operation creates a named preparation, without importing observations or run
 
 The Measurements preparation displays the original filename, worksheet, source collection and source ID, selected header/encoding/formula mode, and complete row accounting. Sample tables show original worksheet rows or delimited-file line ranges alongside native CSV line numbers.
 
-Map source columns using the existing guided intake controls. Review the original units, fractions, dates, time zones and scientific interpretation. Save the mapping and select **Review mapped measurements**. The original normalizer supplies accepted and rejected counts and scientific values. Confirm that exact saved preview before **Import reviewed source**.
+Map source columns using the existing guided intake controls. Review the original units, fractions, dates, time zones and scientific interpretation. New Chemistry / WQP preparations select **Reported values and detection limits (current)**, the maintained `wqp-detection-conditions/v2` interpretation. A U-qualified number remains the original reported value; it does not become a detection bound unless the source supplies an explicit comparator or a matching declared limit. An absent bound remains unresolved and visible for review. Unqualified numeric results retain their normal reading.
+
+Saved and received preparations keep their original interpretation, including earlier unpinned editions. Reopening a saved preparation or making a full-history copy does not change that choice. The **Scientific interpretation** control shows the selected edition; an explicit change is retained in the new mapping edition and native source identity. Review the original source before choosing the compatibility interpretation.
+
+Save the mapping and select **Review mapped measurements**. The original normalizer supplies accepted and rejected counts and scientific values. Confirm that exact saved preview before **Import reviewed source**.
 
 Replaying an already accepted original request recovers its saved preparation or import. It does not apply a current draft to an earlier receipt. Native preparation editions and scientific import identities retain their original semantics.
 
 ## Original cells and row references
 
 The bridge uses the same file reader as Open my data. It mechanically creates CSV text for the existing importer; it does not infer missing values, convert units or choose scientific meaning.
+
+Identifier columns are an explicit saved choice. Text and blanks remain unchanged. For selected numeric identifiers, plain Excel zero masks such as `000` preserve leading zeros without rounding. A complex numeric format, date, boolean, error or unevaluated formula in a selected identifier column gives a specific correction message. The lineage retains the original stored value, cell type, number format and rendered identifier alongside the complete original workbook. Unselected columns retain their original values. Earlier preparations with no identifier choice keep their original projection and lineage.
 
 The complete column map preserves each original label and position. Duplicate or empty labels receive unique transport headings so the native CSV parser can address them; the original labels remain alongside those headings. Every original worksheet row or delimited record appears in the row accounting, including preamble, header and empty rows. Quoted multiline CSV fields retain their original physical line ranges.
 
@@ -36,7 +42,49 @@ The preparation's **Download original** returns the exact original binary or del
 
 The existing Measurements full-workspace export/receive transaction carries the binary table and lineage together with all native records. The scientific Workspace's existing portable archive includes the retained source objects, bridge operation directory and Measurements database. Original operator restore additionally invokes registered semantic verification. The direct model portable restore continues to verify archive members by the maintained inventory; it does not run an additional service merely to verify the bridge.
 
-A interrupted operation retains its original native request before dispatch. Reopening uses the same queued task and native preparation identity. The initial native edition is checked even if another view has since saved later editions. The bridge never overwrites those later editions.
+An interrupted operation retains its original native request before dispatch. Reopening uses the same queued task and native preparation identity. The initial native edition is checked even if another view has since saved later editions. The bridge never overwrites those later editions.
+
+## Reopen a source-only Study for a new preparation
+
+A selected **Scientific Study** can carry a saved MEASUREMENTS source collection
+before any Measurements preparation or import exists. In the Study desk select
+the source collection and review the selected original dependencies. The archive
+retains the complete source edition, original manifest, original file objects and
+companions. A current saved source also carries its exact selected native
+worksheet inspection and original reading options inside that immutable edition.
+An earlier source edition keeps its original inspection record and source files
+through the existing typed Study dependency receipt.
+
+After receiving the Study into its independent Workspace, **Workbook
+measurements** discovers the saved scientific source collections directly. It
+does not require a producer commit task or reinspection. Select the received
+source, review its original worksheet/header/formula or text reading choices,
+choose Chemistry / WQP or Monitoring stations, and save a named preparation
+through the normal queue. The original source collection, source ID, inspection
+ID, complete original byte identity and row/column lineage accompany that
+preparation. Scientific mapping and import still happen in Measurements.
+
+A transferred preview is evidence of the original reading, not a substitute for
+the original file. Preparation verifies the retained source file and its binding
+to the selected worksheet. Missing or inconsistent evidence gives a specific
+source-selection error; it does not choose another sheet, infer a mapping or
+substitute an example. Existing preparations and accepted tasks remain unchanged.
+A new preparation belongs to the receiving Measurements workspace and its own
+explicit operation; resume an accepted operation using its retained task identity.
+
+For the focused own-file receiving course, use an actual retained MEASUREMENTS
+source already present in the selected clean Workspace. Export that source
+collection using the existing Study control and open the verified archive in a
+separate receiving folder. Confirm the source's complete original bytes/hash and
+selected sheet/options match before proceeding. A current embedded-preview source
+does not need a `client-source-intake` directory in this source-only archive.
+Select it in Workbook measurements and continue the existing
+`receiveWorkbookMeasurements` function with the actual receiving workspace,
+source IDs and reviewed native mapping. It exercises preparation, mapped preview,
+explicit import, complete original/projection/lineage downloads, complete
+preparation-copy receiving and reopening. Inspect the actual desktop and narrow
+screens and OPEN, LOOK at and USE every returned recipient attachment. Retain
+the resulting original task/preparation identities for continuation.
 
 ## Installation and capacity
 
@@ -54,7 +102,7 @@ The course saves and reopens the native preparation, exercises actual mapping/pr
 
 Queued action: `client-measurement.prepare`.
 
-Payload fields: `source_collection_id`, `source_id`, `target_workspace_id`, `kind` (`wqp` or `stations`), `label`, `reviewer`, `note`, `context`.
+Payload fields: `source_collection_id`, `source_id`, `target_workspace_id`, `kind` (`wqp` or `stations`), `label`, `reviewer`, `note`, `context`; optional `identifier_columns` is a list of original column IDs such as `["c1"]`. Omit the optional field when no identifier formatting was selected, preserving earlier saved requests exactly.
 
 Result: original task identity, native `preparation_id`, target workspace identity, complete source binding, projection/lineage/preparation file identities and original download tickets.
 

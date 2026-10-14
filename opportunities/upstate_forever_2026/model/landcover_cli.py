@@ -6,7 +6,7 @@ from pathlib import Path
 import sys
 
 from .landcover_ledger import LedgerError, Options, RasterInput, run_ledger, run_native_workspace
-from .landcover_exports import export_report, make_portable, receive_portable
+from .landcover_exports import export_report, make_portable, receive_portable, export_interval_copy
 
 
 def mapping_args(values: list[str], parser: argparse.ArgumentParser) -> dict[str, str]:
@@ -217,6 +217,9 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--title", default="Land-cover change ledger")
     report = commands.add_parser("report", help="Regenerate exports from a retained complete ledger")
     report.add_argument("output", type=Path)
+    accounts = commands.add_parser("account-report", help="Create a separate adjacent-interval report from a verified original edition")
+    accounts.add_argument("source", type=Path)
+    accounts.add_argument("destination", type=Path)
     pack = commands.add_parser("pack", help="Export a complete portable report and raster edition")
     pack.add_argument("output", type=Path); pack.add_argument("destination", type=Path)
     receive = commands.add_parser("receive", help="Verify and receive a portable edition create-only")
@@ -280,6 +283,8 @@ def main(argv: list[str] | None = None) -> int:
                               "watersheds": len(result["zones"])-1, "scenarios": len(result["scenarios"])}))
         elif args.command == "report":
             print(json.dumps(export_report(args.output)))
+        elif args.command == "account-report":
+            print(json.dumps(export_interval_copy(args.source, args.destination)))
         elif args.command == "pack":
             print(json.dumps(make_portable(args.output, args.destination)))
         elif args.command == "receive":

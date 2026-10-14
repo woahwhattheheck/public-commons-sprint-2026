@@ -1,0 +1,59 @@
+.rows {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+	gap: 11px 24px;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.row {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	gap: 12px;
+	padding-bottom: 7px;
+}
+
+.rowLabel {
+	color: var(--vault-text-muted);
+	white-space: nowrap;
+}
+
+.rowValue {
+	white-space: nowrap;
+	user-select: all;
+}
+
+.rowLink {
+	color: var(--vault-ink);
+	white-space: nowrap;
+	text-decoration: none;
+	border-bottom: 1px solid transparent;
+}
+
+.rowLink:hover {
+	border-bottom-color: var(--vault-ink);
+}
+
+.rowIcon {
+	width: 13px;
+	height: 13px;
+	margin-left: 5px;
+	vertical-align: -2px;
+	color: var(--vault-text-muted);
+}
+
+.rowLink:hover .rowIcon {
+	color: var(--vault-ink);
+}
+
+.placeholder {
+	color: var(--vault-text-muted);
+	white-space: nowrap;
+}
+
+.rowSkeleton {
+	height: 1em;
+	width: 11ch;
+}

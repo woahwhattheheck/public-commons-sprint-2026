@@ -5,20 +5,20 @@
 <script type="module">
 const data=JSON.parse(document.querySelector('#bootstrap').textContent);
 const shaURL=URL.createObjectURL(new Blob([data.shaSource],{type:'text/javascript'}));
-const marker="import {sha256Utf8,sha256Bytes} from './sha256.mjs';";
+const marker="import {sha256Utf8,sha256Bytes,utf8Length} from './sha256.mjs';";
 if(!data.engineSource.startsWith(marker))throw new Error('The bundled engine dependency differs.');
-const engineSource=data.engineSource.replace(marker,'import {sha256Utf8,sha256Bytes} from '+JSON.stringify(shaURL)+';');
+const engineSource=data.engineSource.replace(marker,'import {sha256Utf8,sha256Bytes,utf8Length} from '+JSON.stringify(shaURL)+';');
 const engineURL=URL.createObjectURL(new Blob([engineSource],{type:'text/javascript'}));
 const appURL=URL.createObjectURL(new Blob([data.appSource],{type:'text/javascript'}));
 const issuerURL=URL.createObjectURL(new Blob([data.issuerSource],{type:'text/javascript'}));
 const issuerUIURL=URL.createObjectURL(new Blob([data.issuerUISource],{type:'text/javascript'}));
 let workOrderURL=null,workOrderUIURL=null,applicationSourceURL=null;
-const preparationURLs=[];
+const preparationURLs=[];let assetCrosswalkURL=null;
 try{
 const [engine,app,sha,issuer,issuerUI]=await Promise.all([import(engineURL),import(appURL),import(shaURL),import(issuerURL),import(issuerUIURL)]);
 let extensions=null;
 if(data.workOrderSource&&data.workOrderUISource){
-const source=data.workOrderSource.replace("import * as E from './engine.mjs';",'import * as E from '+JSON.stringify(engineURL)+';').replace("import {sha256Utf8} from './sha256.mjs';",'import {sha256Utf8} from '+JSON.stringify(shaURL)+';');
+const source=data.workOrderSource.replace("import * as E from './engine.mjs';",'import * as E from '+JSON.stringify(engineURL)+';').replace("import {sha256Utf8,utf8Length} from './sha256.mjs';",'import {sha256Utf8,utf8Length} from '+JSON.stringify(shaURL)+';');
 workOrderURL=URL.createObjectURL(new Blob([source],{type:'text/javascript'}));
 workOrderUIURL=URL.createObjectURL(new Blob([data.workOrderUISource],{type:'text/javascript'}));
 const [workOrders,ui]=await Promise.all([import(workOrderURL),import(workOrderUIURL)]);
@@ -33,8 +33,16 @@ extensions={...extensions,sourcePreparation:{prepareMasterCapture:master.prepare
 if(data.assetCrosswalkSource&&data.assetCrosswalkUISource){
 const source=data.assetCrosswalkSource.replace("import * as E from './engine.mjs';",'import * as E from '+JSON.stringify(engineURL)+';').replace("import {sha256Utf8} from './sha256.mjs';",'import {sha256Utf8} from '+JSON.stringify(shaURL)+';');
 const urls=[source,data.assetCrosswalkUISource].map(text=>URL.createObjectURL(new Blob([text],{type:'text/javascript'})));preparationURLs.push(...urls);
+assetCrosswalkURL=urls[0];
 const [assetCrosswalk,ui]=await Promise.all(urls.map(url=>import(url)));
 extensions={...extensions,assetCrosswalk,createAssetCrosswalkPanel:ui.createAssetCrosswalkPanel};
+}
+if(data.migrationRehearsalsSource&&data.migrationRehearsalsUISource){
+if(!workOrderURL||!assetCrosswalkURL)throw new Error('Retain the original work-order and crosswalk engines for rehearsal observations.');
+const source=data.migrationRehearsalsSource.replace("from './engine.mjs'","from "+JSON.stringify(engineURL)).replace("from './work-orders.mjs'","from "+JSON.stringify(workOrderURL)).replace("from './asset-crosswalk.mjs'","from "+JSON.stringify(assetCrosswalkURL)).replace("from './sha256.mjs'","from "+JSON.stringify(shaURL));
+const urls=[source,data.migrationRehearsalsUISource].map(text=>URL.createObjectURL(new Blob([text],{type:'text/javascript'})));preparationURLs.push(...urls);
+const [migrationRehearsals,ui]=await Promise.all(urls.map(url=>import(url)));
+extensions={...extensions,migrationRehearsals,createRehearsalPanel:ui.createRehearsalPanel};
 }
 if(data.applicationSourceModule){
 applicationSourceURL=URL.createObjectURL(new Blob([data.applicationSourceModule],{type:'text/javascript'}));

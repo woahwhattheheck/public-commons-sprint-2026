@@ -491,7 +491,7 @@ export function mountInstallations({container,current,api,saveApi,session,mutati
           return {applied:false,message:'The original complete case or reviewed source changed. Review the current preparation again.'};
         const key='source-'+crypto.randomUUID();
         session.drafts[key]={key,token:crypto.randomUUID(),label:input.document.name+' · source preparation',
-          installationId:null,expectedRevision:0,document:copy(input.document),
+          installationId:input.preview.installationId??null,expectedRevision:input.preview.expectedRevision??0,document:copy(input.document),
           note:'Receive complete source preparation '+input.sourcePreparationId+' for original Workshare '+input.workshareCaseId,dirty:true};
         session.draftKey=key;session.mode='edit';session.selected=null;selectedRow=null;
         preview=null;previewDraft=null;loading=false;

@@ -1,0 +1,48 @@
+{
+  "schema": "strata.commissioning-source-execution/v1",
+  "nativeExecuted": false,
+  "providerCalls": 0,
+  "actualSourceFunctions": true,
+  "checks": [
+    "Complete native-wide integer and all-signer-type evidence survives capture/report/CSV.",
+    "Completed capture reopens byte-identically without further reads.",
+    "Original complete Deployment projection retains defined public fields and omits secret/unknown data.",
+    "Lost response after complete publication reopens original completion with zero new reads.",
+    "Interrupted capture preserves accepted original observations while recording fresh attempts only for missing reads.",
+    "Wrong Horizon network stops before all contract/account reads.",
+    "Changed role count retains full source and yields UNKNOWN.",
+    "Changed retained request is rejected without network reads."
+  ],
+  "observations": 79,
+  "assessment": {
+    "MATCH": 17,
+    "DIFFERENT": 1,
+    "UNKNOWN": 2,
+    "NOT_SPECIFIED": 54
+  },
+  "captureSha256": "7436751190d202b706c411ccd158b7842926aaae8b44a39e0e913f1d5f8c6d12",
+  "reportCharacters": 234347,
+  "runtime": {
+    "kind": "V8 source execution",
+    "substitutions": [
+      "ESM import/export bindings supplied explicitly",
+      "Node SHA256 bridged through the retained exact pure SHA256 implementation",
+      "Buffer Base64 bridged with exact UTF8 Base64 encoding",
+      "URL parser fixture only for fixed example HTTPS endpoints",
+      "import.meta.url replaced only in the unexecuted native transport constructor"
+    ],
+    "nativeCLIExecuted": false,
+    "SDKExecuted": false,
+    "renderedViewed": false
+  },
+  "inputs": {
+    "example": {
+      "bytes": 1711,
+      "sha256": "7a50b93e03be2b881d7f6e86748ac07887a2c584a642043f77d1030693268ad3"
+    },
+    "sourceAnchors": {
+      "bytes": 14089,
+      "sha256": "353dbe6dda987b4638f6b79e52b9f58d3242bbbf346423086db7f5d304e7280f"
+    }
+  }
+}

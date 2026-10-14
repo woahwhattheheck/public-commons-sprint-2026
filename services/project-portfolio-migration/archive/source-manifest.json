@@ -6,21 +6,6 @@
   "integration": "Original PortfolioWorkspace and portfolio_target workspace/action/browser",
   "files": [
     {
-      "path": "README.md",
-      "bytes": 13124,
-      "sha256": "000e5fc4644c3089da965d53f93145be404b37d2063620e5b2e3431edb8b15db"
-    },
-    {
-      "path": "SOURCE_REFERENCES.json",
-      "bytes": 4599,
-      "sha256": "0812a6557f8ccc82481bfe517e05939057040d9b7af90eb91aa470553366532b"
-    },
-    {
-      "path": "TIMEPHASED.md",
-      "bytes": 17155,
-      "sha256": "4466f57de3bcf744934f544517facf53cb3f225397c693205065803bd24a4c47"
-    },
-    {
       "path": "__init__.py",
       "bytes": 156,
       "sha256": "18fa9256165b0857adc26986e020186b2be93890a12bbdafd87555f9acb7db6c"
@@ -29,6 +14,11 @@
       "path": "closure.py",
       "bytes": 12302,
       "sha256": "55f7caf7c8bc807c09f81824bbb6361c29fec688d64d306393438ca01110942c"
+    },
+    {
+      "path": "COMPARISON.md",
+      "bytes": 9356,
+      "sha256": "5746df2e4467817035af88b331a531892511fb3d10cfcf839554a8dee82234a2"
     },
     {
       "path": "dataset.py",
@@ -81,14 +71,14 @@
       "sha256": "aa490e8742b1e1fdc958b79a0f3b625ee502c9b2a92de951423e33ffd5ac1e20"
     },
     {
-      "path": "native/README.md",
-      "bytes": 9362,
-      "sha256": "d140ef859117c4113c92c630b84d6d01648c1374565c3445bfd41fe9a7595ada"
-    },
-    {
       "path": "native/browser.mjs",
       "bytes": 14013,
       "sha256": "58bfc6716e9b8fe6a6e8f10c0df77aa8cf7cfa1fd0c93c8fc2f2c2d3950aa755"
+    },
+    {
+      "path": "native/README.md",
+      "bytes": 9362,
+      "sha256": "d140ef859117c4113c92c630b84d6d01648c1374565c3445bfd41fe9a7595ada"
     },
     {
       "path": "native/receive.py",
@@ -101,9 +91,14 @@
       "sha256": "d892785c1e719136b9226e2c97337e81ea62e86fbfdef28902dfbfa843bbf0e1"
     },
     {
-      "path": "timephased.py",
-      "bytes": 32652,
-      "sha256": "df1d6f09ee7edb654e0127957f641a02d56feddff646712564907d4aa86437de"
+      "path": "README.md",
+      "bytes": 13696,
+      "sha256": "9b6648293e5578128d1c677f5973803aadc248fe323a032da271945abfeb331e"
+    },
+    {
+      "path": "SOURCE_REFERENCES.json",
+      "bytes": 4599,
+      "sha256": "0812a6557f8ccc82481bfe517e05939057040d9b7af90eb91aa470553366532b"
     },
     {
       "path": "timephased_contract.py",
@@ -121,14 +116,39 @@
       "sha256": "6c35341bcd53f17ab2a933f2d99d203fa7c06f5af1db4a729eaf4e3c45f01bf7"
     },
     {
+      "path": "TIMEPHASED.md",
+      "bytes": 17155,
+      "sha256": "4466f57de3bcf744934f544517facf53cb3f225397c693205065803bd24a4c47"
+    },
+    {
+      "path": "timephased.py",
+      "bytes": 32652,
+      "sha256": "df1d6f09ee7edb654e0127957f641a02d56feddff646712564907d4aa86437de"
+    },
+    {
       "path": "web/archive.js",
-      "bytes": 25020,
-      "sha256": "7cda03522efe9b2da67fb2f3e900a733682cb0451856df2e09e7a7994f295d18"
+      "bytes": 25261,
+      "sha256": "9ff9b1a78c3af54b334f956ec0d4008f018c250859c0d53397ed58c4bd307241"
     },
     {
       "path": "web/companions.js",
       "bytes": 11946,
       "sha256": "6ad22803230f80726599be65390b12d40e5666d14683993e156997eb805d294c"
+    },
+    {
+      "path": "web/comparison-panel.js",
+      "bytes": 14247,
+      "sha256": "239c5ab0595d677829b4bb34c209b8e922b2c1f3ab68a137c926ad6ea359539e"
+    },
+    {
+      "path": "web/comparison.css",
+      "bytes": 1225,
+      "sha256": "12cb51715339006619341036ccfcbc8acb3e82b231915dbfb3b5abe695b19591"
+    },
+    {
+      "path": "web/comparison.mjs",
+      "bytes": 17358,
+      "sha256": "86b5481f217ad3f8c7e0c28cab416f56b67af495c1c2f20c2f94704bfa4c8e70"
     },
     {
       "path": "web/timephased.js",

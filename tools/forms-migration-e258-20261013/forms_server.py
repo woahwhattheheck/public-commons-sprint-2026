@@ -16,6 +16,7 @@ import zipfile
 from discovery_engine import DiscoveryError, require, read_json, file_digest
 from migration_server import State as MigrationState, Handler as MigrationHandler, atomic_new_json
 from forms_workbench import verify_project, archive_members, regular_under
+from forms_report import render_html
 
 def complete_archive(path,root,result):
     if path is None:
@@ -46,8 +47,15 @@ def complete_archive(path,root,result):
     return {"path":str(path),"bytes":path.stat().st_size,"sha256":file_digest(path)}
 
 class State(MigrationState):
-    def __init__(self,project,archive=None):
-        outer,result = verify_project(project,check_application=True)
+    def __init__(self,project,archive=None,selected_software=None):
+        outer,result = verify_project(project,check_application=selected_software is None)
+        if selected_software is not None:
+            source=Path(selected_software)
+            require(source.is_dir() and not source.is_symlink(),"Original selected program directory required")
+            for row in result["source_files"]:
+                member=regular_under(source,row["path"])
+                require(member.stat().st_size==row["bytes"] and file_digest(member)==row["sha256"],
+                        "Original calculated program differs: "+row["path"])
         super().__init__(outer/"reconciliation")
         self.project_root = outer
         self.project_result = result
@@ -151,7 +159,11 @@ class Handler(MigrationHandler):
         try:
             if tail=="workspace/":
                 require(not query,"Workspace takes no filters")
-                self.file_response(self.state.project_root/"report.html","text/html; charset=utf-8")
+                # Present the retained result through the maintained renderer.
+                # Original report.html, source selection and project ZIP remain intact.
+                self.state.unchanged(self.state.project_root/"report.html")
+                body=render_html(self.state.project_result).encode("utf-8")
+                self.header(200,"text/html; charset=utf-8",len(body));self.wfile.write(body)
             elif tail=="api/forms/summary":
                 require(not query,"Summary takes no filters")
                 self.send_json(self.state.project_result)
@@ -201,6 +213,7 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project",required=True)
     parser.add_argument("--archive")
+    parser.add_argument("--selected-software",help="Complete original program retained by this calculated edition")
     parser.add_argument("--receipt",required=True)
     parser.add_argument("--port",type=int,default=0)
     args = parser.parse_args(argv)
@@ -211,7 +224,7 @@ def main(argv=None):
         receipt = Path(args.receipt).resolve()
         require(not receipt.exists() and not receipt.is_relative_to(root),"Choose a new private receipt outside the immutable project")
         csv.field_size_limit(16*1024*1024)
-        state = State(root,args.archive)
+        state = State(root,args.archive,args.selected_software)
         server = ThreadingHTTPServer(("127.0.0.1",args.port),Handler)
         server.daemon_threads = True
         server.case_state = state

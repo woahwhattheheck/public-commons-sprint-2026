@@ -1,0 +1,31 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "scenario-mask-collections",
+  "extend_components": {
+    "scenario-inputs": {
+      "paths": [
+        "model/scenario_mask_sources.py",
+        "model/scenario_footprint_study.py",
+        "model/workspace.py",
+        "model/scenario_footprint.py",
+        "model/native.py",
+        "model/study_transfer.py",
+        "operator/web/app.mjs",
+        "operator/scenario_mask_collections_receiving.mjs",
+        "source_tools/receive_scenario_mask_collections.py",
+        "operator/SCENARIO_MASK_COLLECTIONS.md",
+        "integration/component_fragments/scenario-mask-collections.json",
+        "operator/scenario_footprint.py",
+        "operator/extensions/scenario-footprint.json",
+        "operator/web/scenario-footprint.mjs",
+        "operator/web/scenario-footprint.html",
+        "operator/web/scenario-footprint.css",
+        "operator/web/scenario-footprint-nav.mjs",
+        "source_tools/SCENARIO_MASK_COLLECTIONS_RECEIVING.md"
+      ]
+    }
+  },
+  "required_components": [
+    "scenario-inputs"
+  ]
+}

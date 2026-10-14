@@ -162,7 +162,7 @@ def _forcing_signature(cell):
 
 def _selection(ws, raw, *, verify=False):
     allowed = {"title", "purpose", "reference_period_id", "periods",
-               "reporting_areas", "difference_maps"}
+               "reporting_areas", "difference_maps", "working_origin"}
     if not isinstance(raw, dict) or set(raw) - allowed:
         raise ValueError("Supply the complete explicit climate-management selection")
     periods = raw.get("periods")
@@ -234,6 +234,9 @@ def _selection(ws, raw, *, verify=False):
                  "purpose": _label(raw.get("purpose"), "the management question"),
                  "reference_period_id": reference, "periods": normalized,
                  "reporting_areas": _copy(areas), "difference_maps": maps}
+    if "working_origin" in raw:
+        from .climate_management_working import origin
+        selection["working_origin"] = origin(ws, raw["working_origin"], selection)
     versions = comparison_versions([cell["run"] for cell in cells], models)
     # No mutable latest-report pointer or unrelated prepared case is included in
     # the scientific identity. The complete parent families travel via Study.

@@ -1,0 +1,16 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "conservation-working-files",
+  "extend_components": {
+    "conservation-scientific-report-source": {
+      "paths": [
+        "operator/web/conservation_working.mjs",
+        "operator/web/conservation_working_view.mjs",
+        "operator/CONSERVATION_WORKING_FILES.md"
+      ]
+    }
+  },
+  "required_components": [
+    "conservation-scientific-report-source"
+  ]
+}

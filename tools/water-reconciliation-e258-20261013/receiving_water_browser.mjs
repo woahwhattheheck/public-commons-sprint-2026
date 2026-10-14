@@ -17,7 +17,7 @@ const check = (condition, message) => {if (!condition) throw new Error(message);
 const args = {};
 for (let i=2;i<process.argv.length;i++) {
   const name=process.argv[i];
-  check(["--receiving","--output","--playwright","--chromium","--resume","--adopt-loopback"].includes(name), "Unknown argument "+name);
+  check(["--receiving","--output","--playwright","--chromium","--resume","--adopt-loopback","--inspection"].includes(name), "Unknown argument "+name);
   if (name==="--resume") args.resume=true;
   else if(name==="--adopt-loopback")args.adoptLoopback=true;
   else {check(process.argv[i+1]&&!process.argv[i+1].startsWith("--"), "Missing value "+name);args[name.slice(2)]=process.argv[++i];}
@@ -46,11 +46,59 @@ for(const supplied of receiving.rendered_reports) {
     resultText:result.toString("utf8"),reportText:sourceReport.toString("utf8"),
     manifestText:manifest.toString("utf8"),result:value});
 }
+let inspection=null;
+if(args.inspection) {
+  check(!args.adoptLoopback,"Use a separate inspection output; original loopback adoption remains unchanged");
+  const inspectionPath=await fs.realpath(args.inspection), inspectionBytes=await fs.readFile(inspectionPath);
+  const selected=JSON.parse(inspectionBytes), expectedRenderer="c6ad4979676ccd8cb830b79c62be7320ea1c36b814f810ee86b2fa9ddd2bdd2d";
+  check(selected.schema==="tjlabs.water-reconciliation.inspection-edition.v1"&&selected.status==="INSPECTION_RENDERED",
+        "Select the complete source-bound presentation receipt");
+  check(selected.native_receiving.path===receivingPath&&selected.native_receiving.bytes===receivingBytes.length&&
+        selected.native_receiving.sha256===sha(receivingBytes),"Inspection must use this exact original native receiving");
+  check(selected.renderer.sha256===expectedRenderer,"Select the exact reviewed Water presentation renderer");
+  for(const descriptor of [selected.renderer,selected.producer,selected.input]) {
+    const actual=await fs.realpath(descriptor.path), body=await fs.readFile(actual);
+    check(actual===descriptor.path&&body.length===descriptor.bytes&&sha(body)===descriptor.sha256,"Inspection producer/source identity differs");
+  }
+  const staging=JSON.parse(await fs.readFile(selected.input.path,"utf8"));
+  check(staging.schema==="tjlabs.water-reconciliation.inspection-input.v1"&&
+        isDeepStrictEqual(staging.native_receiving,selected.native_receiving)&&
+        isDeepStrictEqual(staging.renderer,selected.renderer)&&isDeepStrictEqual(staging.producer,selected.producer)&&
+        selected.reports.length===reports.length&&staging.reports.length===reports.length,
+        "Complete original inspection input differs");
+  for(let i=0;i<reports.length;i++) {
+    const r=reports[i], item=selected.reports[i], {presentation,...original}=item;
+    check(isDeepStrictEqual(original,staging.reports[i])&&item.case===r.caseDir&&
+          item.original_html.path===r.path&&item.original_html.bytes===r.bytes&&item.original_html.sha256===r.sha256&&
+          item.source_run_identity===r.result.source_run_identity,"Inspection changed original native report selection");
+    const originals=[["water/result.json",r.resultText],["report.json",r.reportText],["manifest.json",r.manifestText]];
+    for(const [name,text] of originals) {
+      const descriptor=item.documents[name], bytes=Buffer.from(text,"utf8");
+      check(descriptor.path===path.join(r.caseDir,name)&&descriptor.bytes===bytes.length&&descriptor.sha256===sha(bytes),
+            "Inspection original document differs: "+name);
+    }
+    check(item.source_inputs.length===r.result.source_inputs.length,"Inspection source inventory differs");
+    for(let k=0;k<item.source_inputs.length;k++) {
+      const source=item.source_inputs[k], native=r.result.source_inputs[k];
+      check(source.table===native.table&&source.retained_path===native.retained_path&&
+            source.path===path.join(r.caseDir,native.retained_path)&&source.bytes===native.bytes&&source.sha256===native.sha256,
+            "Inspection original source binding differs");
+    }
+    const real=await fs.realpath(presentation.path), info=await fs.lstat(presentation.path), body=await fs.readFile(real);
+    check(info.isFile()&&!info.isSymbolicLink()&&real===presentation.path&&contained(real,path.dirname(inspectionPath))&&
+          !contained(real,nativeRoot)&&body.length===presentation.bytes&&sha(body)===presentation.sha256,
+          "Inspection HTML must be its exact separately retained original presentation");
+    r.originalPath=r.path;r.originalSha256=r.sha256;r.path=real;r.bytes=body.length;r.sha256=sha(body);
+  }
+  inspection={path:inspectionPath,bytes:inspectionBytes.length,sha256:sha(inspectionBytes),
+    renderer_sha256:selected.renderer.sha256,meaning:selected.meaning};
+}
 const helperPath=await fs.realpath(new URL(import.meta.url));
 const input={schema:SCHEMA,receiving_path:receivingPath,receiving_sha256:sha(receivingBytes),
   helper_sha256:sha(await fs.readFile(helperPath)),playwright:await fs.realpath(args.playwright),
   chromium:await fs.realpath(args.chromium),
   reports:reports.map(r=>({path:r.path,bytes:r.bytes,sha256:r.sha256,source_run_identity:r.result.source_run_identity}))};
+if(inspection)input.inspection=inspection;
 let inputText=JSON.stringify(input,null,2)+"\n";
 const predecessorHelperSha256="2cb210396e81432344ab054306748c3bff90f617d2f0a4743b25a706cf829b15";
 let adoption=null;
@@ -122,7 +170,7 @@ async function expose(file,route,expected=null) {
   check(route.startsWith("/")&&!route.split("/").includes("..")&&!served.has(route),"Unique selected loopback path required");
   const real=await fs.realpath(file), info=await fs.lstat(file);
   check(info.isFile()&&!info.isSymbolicLink()&&real===path.resolve(file),"Serve only the selected ordinary original file");
-  check(reports.some(r=>contained(real,r.caseDir))||(attemptDir&&contained(real,attemptDir)),"Loopback source escaped selected case or current attempt");
+  check(reports.some(r=>real===r.path||contained(real,r.caseDir))||(attemptDir&&contained(real,attemptDir)),"Loopback source escaped selected presentation/case or current attempt");
   const body=await fs.readFile(real), identity={bytes:body.length,sha256:sha(body)};
   if(expected)check(identity.bytes===expected.bytes&&identity.sha256===expected.sha256,"Loopback original differs: "+path.basename(file));
   const value={path:real,...identity,media_type:media(real)};
@@ -293,6 +341,19 @@ try {
       check(await page.locator("#tab-overview").getAttribute("aria-selected")==="true","Keyboard Home selects first tab");
       await page.setViewportSize({width:390,height:844});await capture(page,"07-overview-narrow.png");
       await page.locator("#tab-patterns").click();await capture(page,"08-patterns-narrow.png");
+      if(inspection) {
+        for(const [tab,name] of [["comparisons","08a-comparisons-narrow"],["charges","08b-charges-narrow"],["patterns","08c-patterns-scroll"]]) {
+          await page.locator("#tab-"+tab).click();
+          const table=page.locator("#panel-"+tab+" .table-wrap:visible").first();
+          await table.focus();
+          const dimensions=await table.evaluate(element=>({width:element.clientWidth,content:element.scrollWidth}));
+          check(dimensions.content>dimensions.width,"Narrow inspection must retain readable horizontally scrollable columns");
+          await page.keyboard.press("ArrowRight");
+          await table.evaluate(element=>{element.scrollLeft=element.scrollWidth;});
+          await capture(page,name+".png");
+          await table.evaluate(element=>{element.scrollLeft=0;});
+        }
+      }
       check(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth+2),"Narrow page does not overflow outside scrollable tables");
       await page.setViewportSize({width:1440,height:1050});return {narrow_width:390};
     });
@@ -315,7 +376,7 @@ try {
       await cold.locator("#reset-filters").click();
       check((await cold.locator("#filter-count").textContent()).startsWith(report.result.results.length+" of "),"Cold downloaded report retains all periods");
       await cold.locator("#tab-charges").click();await capture(cold,"09-downloaded-report-cold.png");
-      const pdf=path.join(attemptDir,"Water_Current_View.pdf");await cold.pdf({path:pdf,format:"A4",printBackground:true});await retained(pdf);
+      const pdf=path.join(attemptDir,"Water_Current_View.pdf");await cold.pdf({path:pdf,format:"A4",preferCSSPageSize:true,printBackground:true});await retained(pdf);
       await cold.close();return {all_periods:report.result.results.length,print_scope:"Current view only"};
     });
     await step("open-original-later-and-native-cold-reports",async()=>{
@@ -349,7 +410,7 @@ try {
     const result={schema:SCHEMA,status:"BROWSER_COURSE_COMPLETE",input_sha256:sha(Buffer.from(inputText)),
       native_receiving_sha256:input.receiving_sha256,data_class:receiving.data_class,
       browser_version:browserVersion,helper_sha256:input.helper_sha256,
-      transport:"scoped-read-only-loopback-http",helper_adoption:adoption,
+      transport:"scoped-read-only-loopback-http",helper_adoption:adoption,inspection,
       steps,artifacts,visual_review:"PENDING_ACTUAL_SCREENSHOT_AND_EXPORT_VIEWING",
       native_operation:"Existing completed water receiving case; no new calculation or dataset"};
     await atomic(outcomePath,JSON.stringify(result,null,2)+"\n",true);
@@ -357,7 +418,7 @@ try {
   }
 } catch(error) {
   if(attemptDir) {
-    const failure={schema:SCHEMA,status:"INCOMPLETE",input_sha256:sha(Buffer.from(inputText)),error:String(error),helper_sha256:input.helper_sha256,transport:"scoped-read-only-loopback-http",helper_adoption:adoption,steps,artifacts,
+    const failure={schema:SCHEMA,status:"INCOMPLETE",input_sha256:sha(Buffer.from(inputText)),error:String(error),helper_sha256:input.helper_sha256,transport:"scoped-read-only-loopback-http",helper_adoption:adoption,inspection,steps,artifacts,
       visual_review:"PENDING_ACTUAL_SCREENSHOT_AND_EXPORT_VIEWING"};
     await atomic(path.join(attemptDir,"failure.json"),JSON.stringify(failure,null,2)+"\n");
   }

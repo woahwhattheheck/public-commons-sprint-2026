@@ -1,6 +1,6 @@
 /** One complete retained import; uses the current normalizer and review records. */
 import {hash,stable,parseSource} from './normalise.mjs';
-import {InputError} from './parse.mjs';
+import {InputError,sourceLineEndings} from './parse.mjs';
 export const NATIVE_CAPTURE_SCHEMA='upstate.measurement-native-source/v1';
 export function nativeSourceCatalogue(ws){
  return ws.readConsistent(()=>({revision:ws.revision(),imports:ws.db.prepare("SELECT id,label,sha,created_at,summary FROM imports WHERE kind='wqp' ORDER BY created_at,id").all().map(r=>({...r,summary:JSON.parse(r.summary)}))}));
@@ -13,9 +13,9 @@ export function nativeSourceCapture(ws,id,expectedRevision){
   const source=ws.source(id);
   if(source.kind!=='wqp')throw new InputError('Choose a chemistry/property import; discharge remains in Daily flow');
   if(hash(source.content)!==source.sha)throw new InputError('Original source checksum differs',409);
-  const mapping=JSON.parse(source.mapping),parsed=parseSource({kind:source.kind,text:source.content,mapping});
+  const mapping=JSON.parse(source.mapping),summary=JSON.parse(source.summary),parsed=parseSource({kind:source.kind,text:source.content,mapping,lineEndings:sourceLineEndings(summary)});
   if(hash(stable([source.kind,source.sha,parsed.mapping]))!==source.id)throw new InputError('Original source/mapping identity differs',409);
-  if(stable(ws.describe(parsed))!==stable(JSON.parse(source.summary))||stable(parsed.rejected)!==stable(JSON.parse(source.rejected)))throw new InputError('Original source accounting differs',409);
+  if(stable(ws.describe(parsed))!==stable(summary)||stable(parsed.rejected)!==stable(JSON.parse(source.rejected)))throw new InputError('Original source accounting differs',409);
   const links=ws.db.prepare('SELECT record_id,source_line FROM import_records WHERE import_id=? ORDER BY source_line,record_id').all(id);
   const expected=parsed.rows.map(r=>({record_id:hash(stable([r.row.sourceKind,r.row])),source_line:r.line})).sort((a,b)=>a.source_line-b.source_line||(a.record_id<b.record_id?-1:a.record_id>b.record_id?1:0));
   if(stable(links)!==stable(expected))throw new InputError('Original row links differ',409);
@@ -28,7 +28,7 @@ export function nativeSourceCapture(ws,id,expectedRevision){
    const variants=ws.db.prepare('SELECT id FROM records WHERE logical_key=? ORDER BY id').all(canonical.logicalKey).map(r=>r.id);
    return {...link,canonical,review:review?JSON.parse(review.data):{state:'pending'},selected_version:chosen?.record_id||null,variants};
   });
-  const value={schema:NATIVE_CAPTURE_SCHEMA,revision,source:{...source,mapping,origin:JSON.parse(source.origin),summary:JSON.parse(source.summary),rejected:JSON.parse(source.rejected)},rows};
+  const value={schema:NATIVE_CAPTURE_SCHEMA,revision,source:{...source,mapping,origin:JSON.parse(source.origin),summary,rejected:JSON.parse(source.rejected)},rows};
   return {...value,id:hash(stable(value))};
  });
 }

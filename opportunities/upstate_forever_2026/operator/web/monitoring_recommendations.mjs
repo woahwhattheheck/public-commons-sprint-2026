@@ -1,3 +1,5 @@
+import {configurationChangeTable, downloadSamplingText, requestLabel} from './monitoring_working_copy.mjs';
+import {samplingComparisonMarkup, downloadSamplingComparison} from './monitoring_sampling_comparison.mjs';
 /* Source-bound sampling priorities. Original Workspace, queue and Monitoring design. */
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const copy=value=>JSON.parse(JSON.stringify(value));
@@ -41,7 +43,31 @@ export function samplingSelection(draft){
 function evidenceKey(value){return JSON.stringify([value.source_collection_id,value.source_id]);}
 function evidenceQuantity(row){return String(row.pollutant||'').replaceAll('_',' ')+' · '+text(row.units);}
 function newDraft(context){return {context_id:context.context_id,title:'Sampling priorities',operator:'',recorded_at:new Date().toISOString(),evidence_start:'',evidence_end:'',notes:'',planning_basis:'',targets:[]};}
-function designDraft(configuration=null){const c=configuration||{},calendar=c.calendar||{},cost=c.default_cost||{};return {title:'',budget:c.budget??'',max_sites:c.max_sites??'',program_overhead:c.program_overhead??'',coverage_mode:c.coverage_mode||'local',setup:cost.setup??'',per_visit:cost.per_visit??'',cost_basis:cost.basis||'',start_date:calendar.start_date||'',end_date:calendar.end_date||'',interval_days:calendar.interval_days??'',round_window_days:calendar.round_window_days??'',crews:calendar.crews??'',visit_minutes:calendar.visit_minutes??'',travel_buffer_minutes:calendar.travel_buffer_minutes??'',advanced:json(c)};}
+function roundDateText(value){
+  if(value===undefined)return '';
+  if(!value||typeof value!=='object'||Array.isArray(value))throw Error('Selected round dates must be an object.');
+  return Object.keys(value).sort((a,b)=>Number(a)-Number(b)).map(key=>{
+    if(!/^[1-9]\d*$/.test(key)||!Array.isArray(value[key])||!value[key].length)throw Error('Each selected round needs its original number and a nonempty date array.');
+    return key+' = '+value[key].join(', ');
+  }).join('\n');
+}
+function parseRoundDates(value){
+  const selected={};
+  for(const line of String(value??'').split(/\r?\n/)){
+    if(!line.trim())continue;
+    const match=/^\s*([1-9]\d*)\s*=\s*(.+?)\s*$/.exec(line);
+    if(!match||Object.prototype.hasOwnProperty.call(selected,match[1]))throw Error('Use one line per original round: 2 = 2026-12-04. Do not repeat a round.');
+    const dates=match[2].split(',').map(date=>date.trim());
+    if(dates.some(date=>!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T00:00:00Z'))||new Date(date+'T00:00:00Z').toISOString().slice(0,10)!==date)||dates.some((date,index)=>index&&date<=dates[index-1]))throw Error('Each round needs distinct ascending YYYY-MM-DD dates, separated by commas.');
+    selected[match[1]]=dates;
+  }
+  return selected;
+}
+function roundDateValue(draft, strict=false){
+  if(draft.selected_round_dates!==undefined)return draft.selected_round_dates;
+  try{return roundDateText(JSON.parse(draft.advanced||'{}').calendar?.selected_round_dates);}catch(error){if(strict)throw error;return '';}
+}
+function designDraft(configuration=null){const c=configuration||{},calendar=c.calendar||{},cost=c.default_cost||{};return {title:'',budget:c.budget??'',max_sites:c.max_sites??'',program_overhead:c.program_overhead??'',coverage_mode:c.coverage_mode||'local',setup:cost.setup??'',per_visit:cost.per_visit??'',cost_basis:cost.basis||'',start_date:calendar.start_date||'',end_date:calendar.end_date||'',interval_days:calendar.interval_days??'',round_window_days:calendar.round_window_days??'',crews:calendar.crews??'',visit_minutes:calendar.visit_minutes??'',travel_buffer_minutes:calendar.travel_buffer_minutes??'',selected_round_dates:configuration===null?undefined:roundDateText(calendar.selected_round_dates),advanced:json(c)};}
 function blankTarget(){return {id:'target-'+crypto.randomUUID(),station_id:'',cohort_id:'',months:[],minimum_dates_per_month:'',proposed_visits:'',reporting_limit:null,reporting_limit_basis:'',flow_goal:'any',reason:'',priority:3,included:true,setup_cost:null,per_visit_cost:null,cost_basis:'',sensitivity_basis:''};}
 function money(cents){return cents===null||cents===undefined?'Unknown':(cents/100).toLocaleString('en-US',{style:'currency',currency:'USD'});}
 export function attachMonitoringRecommendations(host){
@@ -55,10 +81,19 @@ export function attachMonitoringRecommendations(host){
     events=null;
   }
   const storageKey=state=>'eco-sampling-request:'+state.key;
-  function stateFor(key){if(!states.has(key))states.set(key,{key,catalog:{contexts:[],recommendations:[]},context:null,draft:null,saved:null,preview:null,dirty:false,designDirty:false,busy:false,busyOwner:null,filters:{station:'',gapsOnly:false},status:'Choose a retained observational context.',error:false,pending:stored('eco-sampling-request:'+key),lastTask:null,design:null,downloads:[],designDraft:designDraft()});return states.get(key);}
+  function stateFor(key){
+    if(!states.has(key)){
+      const prior=stored('eco-sampling-request:'+key),envelope=prior?.schema==='upstate.sampling-request-recovery/v1';
+      states.set(key,{key,catalog:{contexts:[],recommendations:[]},context:null,draft:null,saved:null,preview:null,dirty:false,designDirty:false,
+        busy:false,busyOwner:null,filters:{station:'',gapsOnly:false},status:'Choose a retained observational context.',error:false,
+        pending:envelope?prior.pending:prior,retainedRequests:envelope?(prior.retained||[]):[],
+        lastTask:null,design:null,downloads:[],designDraft:designDraft(),selectedDesignId:null,working:null,
+        workingRecords:[],workingTitle:'',workingOperator:'',workingNotes:'',editVersion:0,workingDirty:false,importPreview:null});
+    }return states.get(key);
+  }
   function status(state,message,error=false){state.status=message;state.error=error;if(current(state)){const node=root.querySelector('[data-status]');if(node){node.textContent=message;node.classList.toggle('sampling-error',error);}}}
   function fail(state,error){status(state,error?.message||String(error),true);if(current(state))toast?.(state.status);}
-  function changed(state){state.dirty=true;state.preview=null;state.downloads=[];status(state,'Unsaved changes. Preview the current targets, then save a new edition.');const result=root?.querySelector('[data-result]');if(current(state)&&result)result.innerHTML=results(state);updateActions(state);}
+  function changed(state){state.editVersion++;state.workingDirty=true;state.dirty=true;state.preview=null;state.downloads=[];status(state,'Unsaved changes. Preview the current targets, then save a new edition.');const result=root?.querySelector('[data-result]');if(current(state)&&result)result.innerHTML=results(state);updateActions(state);}
   function read(state,action,payload={}){return api('/api/monitoring-recommendations?'+new URLSearchParams({workspace:state.key,action,payload:JSON.stringify(payload)})).then(value=>{if(value.workspace_key&&value.workspace_key!==state.key)throw Error('The response belongs to another Workspace.');return value;});}
   function selectCohort(context,id){return (context?.cohorts||[]).find(row=>row.id===id);}
 
@@ -249,18 +284,159 @@ export function attachMonitoringRecommendations(host){
       '<ul>'+(value.interpretation||[]).map(line=>'<li>'+esc(line)+'</li>').join('')+'</ul>'+
       detail('Complete immutable recommendation and original context',value);
   }
+  function designChanges(state){
+    const selected=selectedDesign(state);if(!selected)return '';
+    try{return configurationChangeTable(selected.configuration,configuration(state));}
+    catch(error){return '<p>Complete the current design fields to compare the exact submitted configuration: '+esc(error.message)+'</p>';}
+  }
   function designPanel(state){
     const d=state.designDraft,designs=state.saved?.saved_designs||[],required=state.saved?.handoff?.required_catchment_ids||[];
-    return '<details><summary>Prepare an original Monitoring design from the saved edition</summary><p>Review the original design configuration. Station requirements come from the saved recommendation; unbound or conflicting station assignments must be resolved before preparation. Native budget and calendar costs are reviewed separately from the itemized target estimate.</p><p>Required catchments from the saved edition: '+esc(required.join(', ')||'None selected')+'. These exact IDs are included in the submitted design configuration.</p><div class="sampling-grid">'+
+    const selected=designs.find(item=>item.id===state.selectedDesignId)||null;
+    const changes=designChanges(state);
+    return '<details data-design-panel><summary>Review, revise and prepare a Monitoring design</summary>'+
+      '<div class="sampling-toolbar"><label>Retained native design<select data-design-selection>'+options(designs,item=>item.id,item=>(item.request_payload?.title||'Monitoring design')+' · '+item.status+' · '+item.id.slice(0,12),state.selectedDesignId,'Choose an exact saved design')+'</select></label><button type="button" data-action="load-design">Use selected design configuration</button></div>'+
+      (selected?'<h4>Original selected design</h4>'+table(['Saved result','Original value'],[['Design title',selected.request_payload?.title||'Monitoring design'],['Native outcome',selected.status],['Programme budget',money(selected.native_cost?.budget_cents)],['Calculated native cost',money(selected.native_cost?.total_cents)],['Remaining native budget',money(selected.native_cost?.remaining_cents)],['Cost scope',selected.native_cost?.scope],['Original plan',selected.plan_id]])+
+        table(['Target','Original station / catchment','Proposed visits','Scheduled visits in target months','Count requirement'],(selected.target_calendar||[]).map(row=>[row.target_id,row.station_id+' / '+row.catchment_id,row.proposed_visits,row.calendar_visits_in_selected_months,row.calendar_count_meets_request?'Met':'Not met']))+
+        '<p>Scheduled visits do not establish storm occurrence or laboratory suitability. The saved result remains unchanged when you edit the configuration.</p><details open><summary>Changes from the selected saved design</summary><div data-design-changes>'+changes+'</div></details>':'')+
+      '<p>Review the original design configuration. Station requirements come from the saved recommendation; unbound or conflicting station assignments must be resolved before preparation. Native budget and calendar costs are reviewed separately from the itemized target estimate.</p><p>Required catchments from the saved edition: '+esc(required.join(', ')||'None selected')+'. These exact IDs are included in the submitted design configuration.</p><div class="sampling-grid">'+
       ['title','budget','max_sites','program_overhead','setup','per_visit','cost_basis','start_date','end_date','interval_days','round_window_days','crews','visit_minutes','travel_buffer_minutes'].map(key=>{
         const labels={title:'Design title',budget:'Programme budget (USD)',max_sites:'Maximum sites',program_overhead:'Programme overhead (USD)',setup:'Default setup cost per site (USD)',per_visit:'Default cost per visit (USD)',cost_basis:'Native design cost basis',start_date:'First round date',end_date:'Final round date',interval_days:'Days between rounds',round_window_days:'Days to finish each round',crews:'Field crews',visit_minutes:'Minutes per visit',travel_buffer_minutes:'Travel allowance per visit (minutes)'};
         return '<label>'+labels[key]+'<input data-design="'+key+'" value="'+esc(d[key])+'"'+(['start_date','end_date'].includes(key)?' type="date"':'')+'></label>';
       }).join('')+
       '<label>Coverage basis<select data-design="coverage_mode"><option value="local"'+(d.coverage_mode==='local'?' selected':'')+'>Local catchment presence</option><option value="outlet_context"'+(d.coverage_mode==='outlet_context'?' selected':'')+'>Upstream context at proposed outlets</option></select></label>'+
+      '<label class="sampling-wide">Selected field dates by original round (optional)<textarea rows="3" data-design="selected_round_dates" placeholder="2 = 2026-12-04">'+esc(roundDateValue(d))+'</textarea><span>Use one line per original round and comma-separated dates when more field days are needed. Blank keeps the original earliest eligible scheduling. Every selected date must satisfy that round’s unchanged window, weekdays, months, blackouts and crew capacity. This prepares a separate saved design; it does not alter historical observations or a previous calendar.</span></label>'+
       '<label class="sampling-wide">Additional original design configuration (JSON object; visible fields above take precedence)<textarea rows="5" data-design="advanced">'+esc(d.advanced)+'</textarea></label></div><button type="button" data-action="design">Prepare Monitoring design</button>'+
       designs.map(item=>'<p>Saved design '+esc(item.plan_id)+' · '+esc(item.status)+'</p><button type="button" data-action="open-design" data-id="'+esc(item.plan_id)+'">Open saved design and calendar</button>').join('')+
       (state.design?'<p>Prepared design '+esc(state.design.plan_id||state.design.id||'')+' · '+esc(state.design.status)+'</p>'+table(['Target','Catchment','Proposed visits','Calendar visits in selected months','Request met'],(state.design.target_calendar||[]).map(r=>[r.target_id,r.catchment_id,r.proposed_visits,r.calendar_visits_in_selected_months,r.calendar_count_meets_request?'Yes':'No']))+detail('Original design costs, bindings and field requirements',state.design)+'<button type="button" data-action="open-design" data-id="'+esc(state.design.plan_id)+'">Open design and field calendar</button>':'')+'</details>';
   }
+
+  function selectedDesign(state){return (state.saved?.saved_designs||[]).find(row=>row.id===state.selectedDesignId)||null;}
+  function workingFile(state){
+    if(!state.context)throw Error('Open the original observational context before saving a working copy.');
+    const design=selectedDesign(state),designDraft=copy(state.designDraft);
+    try{if(state.saved)designDraft.configuration=configuration(state);}catch{/* Incomplete authored fields remain editable. */}
+    return {schema:'upstate.sampling-working-copy/v1',project_id:state.catalog.project_id,workspace_key:state.key,
+      context_id:state.context.context_id,context_digest:state.context.context_digest,
+      recommendation_id:state.saved?.id||null,recommendation_digest:state.saved?.recommendation_digest||null,
+      design_id:design?.id||null,design_digest:design?.working_digest||null,
+      draft:copy(state.draft),design_draft:designDraft,pending_request:state.pending?copy(state.pending):null,
+      retained_requests:copy(state.retainedRequests),filters:copy(state.filters),
+      title:state.workingTitle||state.draft?.title||'Sampling working copy',operator:state.workingOperator||state.draft?.operator||'',notes:state.workingNotes,
+      editor_state:{dirty:state.dirty,design_dirty:state.designDirty,source_working_id:state.working?.id||null}};
+  }
+  function workingPanel(state){
+    const records=state.workingRecords||[],pending=state.pending,review=state.importPreview;
+    return '<section class="sampling-card sampling-working"><h3>Working copies and exact request recovery</h3>'+
+      '<p>Keep unfinished targets and Monitoring design settings, including empty or unknown values. A working copy is editable planning work; saving or opening it does not run the Monitoring solver.</p>'+
+      '<div class="sampling-toolbar"><label>Saved working copy<select data-working-saved>'+options(records,row=>row.id,row=>(row.title||row.working_file?.title||'Sampling working copy')+' · revision '+row.revision+' · '+row.id.slice(0,12),state.working?.id,'Choose a saved working copy')+'</select></label><button type="button" data-action="working-open">Open saved working copy</button></div>'+
+      '<div class="sampling-grid"><label>Working-copy title<input data-working-field="workingTitle" value="'+esc(state.workingTitle)+'"></label><label>Responsible operator<input data-working-field="workingOperator" value="'+esc(state.workingOperator)+'"></label><label class="sampling-wide">Working notes<textarea data-working-field="workingNotes">'+esc(state.workingNotes)+'</textarea></label></div>'+
+      '<div class="sampling-actions"><button type="button" data-action="working-save">Save '+(state.working?'new working-copy revision':'working copy')+'</button><button type="button" data-action="working-download">Download current working JSON</button><label>Open a working JSON file<input type="file" data-working-file accept=".json,application/json"></label></div>'+
+      (state.working?'<p>Retained working copy '+esc(state.working.working_file?.title||state.working.title)+' · revision '+esc(state.working.revision)+' · '+esc(state.working.id)+'. '+(state.workingDirty?'Current edits are not saved in this edition.':'This edition remains available unchanged.')+'</p><div class="sampling-actions"><button type="button" data-action="working-bundle">Export working copy, review and original sources</button><button type="button" data-action="working-workspace">Export complete editable Workspace</button></div>':'')+
+      (review?'<section class="sampling-import-review"><h4>Opened file · review before adoption</h4><p>'+esc(review.filename||'Working JSON')+' · '+esc(review.working_file?.title)+'</p>'+
+        table(['Binding','Reviewed original'],[['Project',review.working_file?.project_id],['Observed context',review.working_file?.context_id],['Saved recommendation',review.working_file?.recommendation_id],['Selected native design',review.working_file?.design_id],['Original operator Workspace',review.working_file?.workspace_key],['Pending request can resume here',review.can_resume_pending?'Yes, after explicit selection':'No automatic retry']])+
+        (review.warnings?.length?'<ul>'+review.warnings.map(w=>'<li>'+esc(typeof w==='string'?w:json(w))+'</li>').join('')+'</ul>':'')+
+        '<div class="sampling-actions"><button type="button" data-action="working-adopt">Open reviewed working copy</button><button type="button" data-action="working-cancel">Keep current work</button></div></section>':'')+
+      (pending?'<p>Pending '+esc(requestLabel(pending))+' · '+esc(pending.operation_id)+' · '+esc(pending.state)+'. Its exact original payload is retained.</p>'+
+        '<button type="button" data-action="request-retain">Keep original request and continue editing</button><p>If a request has no confirmed task identity, use Resume original request before retaining it. A downloaded or imported request requires its original native task for later recovery.</p>':'')+
+      (state.retainedRequests.length?'<h4>Retained original requests</h4><p>Recovering an older request does not replace newer target or design edits. Native task status determines whether the original operation can continue.</p>'+state.retainedRequests.map((row,index)=>'<div class="sampling-request"><p>'+esc(requestLabel(row))+' · '+esc(row.operation_id)+' · '+esc(row.state||'Unconfirmed')+'</p><button type="button" data-action="request-recover" data-id="'+index+'">Inspect or recover this exact request</button></div>').join(''):'')+
+      (state.completedSelection?'<p>Original request completed while the current edits were retained.</p><button type="button" data-action="open-completed">Open the completed recommendation</button>':'')+'</section>';
+  }
+  function editorSnapshot(state){return JSON.stringify({draft:state.draft,design_draft:state.designDraft,selected_design_id:state.selectedDesignId});}
+  function persistRequests(state){
+    const envelope={schema:'upstate.sampling-request-recovery/v1',pending:state.pending,retained:state.retainedRequests};
+    keep(storageKey(state),envelope);
+  }
+  function retainPending(state){
+    if(!state.pending)return;
+    const previous=state.pending,history=state.retainedRequests;
+    state.retainedRequests=[...history.filter(row=>row.operation_id!==previous.operation_id),{...copy(previous),recovery_only:true}];state.pending=null;
+    try{persistRequests(state);}catch(error){state.pending=previous;state.retainedRequests=history;throw error;}
+    state.workingDirty=true;status(state,'Original request retained for explicit recovery. Current edits remain available.');render(state);
+  }
+  async function openWorking(state,workingId){
+    if(!ID.test(workingId||''))throw Error('Choose a saved working copy.');
+    if(!discard(state))return;
+    await guarded(state,async valid=>{
+      const response=await read(state,'working-get',{working_id:workingId});
+      if(!valid())return;
+      await adoptWorking(state,response,valid);
+    });
+  }
+  async function adoptWorking(state,response,valid){
+    const w=response.working_file;
+    if(!w||w.schema!=='upstate.sampling-working-copy/v1')throw Error('Open a complete original Sampling working file.');
+    const context=await read(state,'context',{context_id:w.context_id});if(!valid())return;
+    let saved=null;if(w.recommendation_id){saved=await read(state,'get',{recommendation_id:w.recommendation_id});if(!valid())return;}
+    if(context.context_id!==w.context_id||context.context_digest!==w.context_digest)throw Error('The original observational context changed.');
+    if(saved&&(saved.id!==w.recommendation_id||saved.recommendation_digest!==w.recommendation_digest))throw Error('The original saved recommendation changed.');
+    if(w.design_id&&!saved?.saved_designs?.some(row=>row.id===w.design_id&&row.working_digest===w.design_digest))throw Error('The selected native design is not in its original recommendation.');
+    const requests=copy(w.retained_requests||[]),imported=w.pending_request?{...copy(w.pending_request),imported:true,recovery_only:true}:null;
+    for(const row of [...requests,...(imported?[imported]:[])])if(!row.workspace_key)row.workspace_key=w.workspace_key;
+    // Preserve every local uncertain operation even when opening a different file.
+    for(const row of [...state.retainedRequests,...(state.pending?[state.pending]:[])]){
+      const equal=requests.find(item=>item.operation_id===row.operation_id)||(imported?.operation_id===row.operation_id?imported:null);
+      if(equal&&JSON.stringify({kind:equal.kind,payload:equal.payload,workspace_key:equal.workspace_key||state.key})!==JSON.stringify({kind:row.kind,payload:row.payload,workspace_key:row.workspace_key||state.key}))throw Error('A retained original operation ID has a different request. Keep both original files for review.');
+      if(!equal)requests.push({...copy(row),recovery_only:true});
+    }
+    if(!valid())return;
+    const next={context,saved,draft:copy(w.draft),designDraft:{...designDraft(),...copy(w.design_draft)},
+      selectedDesignId:w.design_id||null,filters:copy(w.filters||{station:'',gapsOnly:false}),
+      workingTitle:w.title||'',workingOperator:w.operator||'',workingNotes:w.notes||'',
+      working:response.record||null,pending:imported,retainedRequests:requests,
+      preview:null,downloads:[],importPreview:null,dirty:Boolean(w.editor_state?.dirty),
+      designDirty:Boolean(w.editor_state?.design_dirty),workingDirty:false,editVersion:state.editVersion+1};
+    delete next.designDraft.configuration;
+    next.design=(saved?.saved_designs||[]).find(row=>row.id===next.selectedDesignId)||null;
+    if(!next.working){next.dirty=Boolean(next.draft);next.designDirty=true;}
+    // Browser persistence must succeed before replacing the current editor.
+    keep(storageKey(state),{schema:'upstate.sampling-request-recovery/v1',pending:next.pending,retained:next.retainedRequests});
+    Object.assign(state,next);
+    status(state,'Opened the complete verified working copy. Original requests were retained; no scientific operation was dispatched.');
+  }
+  async function importWorking(state,file){
+    if(!file)return;
+    if(file.size>8*1024*1024)throw Error('Working JSON exceeds the 8 MiB opening limit.');
+    const version=state.editVersion;
+    await guarded(state,async valid=>{
+      const raw=new TextDecoder('utf-8',{fatal:true}).decode(await file.arrayBuffer());
+      if(!valid()||state.editVersion!==version)return;
+      const preview=await previewWorking(state,raw);
+      if(!valid()||state.editVersion!==version)return;
+      state.importPreview={...preview,filename:file.name};status(state,'The working file has been checked against the retained source. Review its binding, then choose Open reviewed working copy.');
+    });
+  }
+
+  async function previewWorking(state,working_file){
+    const value=await api('/api/monitoring-recommendations?'+new URLSearchParams({workspace:state.key}),{method:'POST',body:{action:'working-preview',payload:{working_file}}});
+    if(value.workspace_key&&value.workspace_key!==state.key)throw Error('The working file preview belongs to another Workspace.');
+    return value;
+  }
+  function resetWorking(state){state.comparisonPair={};state.comparison=null;state.selectedDesignId=null;state.working=null;state.workingTitle='';state.workingOperator='';state.workingNotes='';state.workingDirty=false;state.importPreview=null;state.editVersion++;}
+  function sameJSON(a,b){
+    if(a===b)return true;if(!a||!b||typeof a!=='object'||typeof b!=='object'||Array.isArray(a)!==Array.isArray(b))return false;
+    const keys=Object.keys(a),other=Object.keys(b);return keys.length===other.length&&keys.every(key=>Object.prototype.hasOwnProperty.call(b,key)&&sameJSON(a[key],b[key]));
+  }
+  function verifyOriginalTask(state,request,task){
+    if(!task||!task.id||(request.task_id&&request.task_id!==task.id)||task.workspace!==state.key||task.action!=='monitoring.recommendations.'+request.kind||!sameJSON(task.payload,request.payload))throw Error('The retained task does not match this original Workspace, action and exact request. Keep its working JSON for original operator reconciliation.');
+  }
+  async function recoverRequest(state,index){
+    const selected=state.retainedRequests[Number(index)];if(!selected)throw Error('Choose a retained original request.');
+    if(selected.workspace_key&&selected.workspace_key!==state.key)throw Error('This request belongs to its original operator Workspace; its full bytes remain retained here.');
+    // An imported request is never submitted merely because a Workspace label matches.
+    if(!selected.task_id)throw Error('This retained request has no confirmed native task identity. Its exact payload remains in the working JSON for original operator reconciliation.');
+    await guarded(state,async valid=>{
+      const task=await api('/api/task?'+new URLSearchParams({workspace:state.key,id:selected.task_id}));
+      if(!valid())return;
+      verifyOriginalTask(state,selected,task);
+      const history=[...state.retainedRequests.filter(row=>row.operation_id!==selected.operation_id)];
+      if(state.pending&&state.pending.operation_id!==selected.operation_id&&!history.some(row=>row.operation_id===state.pending.operation_id))history.push({...copy(state.pending),recovery_only:true});
+      const pending={...copy(selected),recovery_only:true};
+      keep(storageKey(state),{schema:'upstate.sampling-request-recovery/v1',pending,retained:history});
+      state.pending=pending;state.retainedRequests=history;state.workingDirty=true;
+      status(state,'Original native task found. Choose Resume original request to read or continue that exact task; later edits remain retained.');
+    });
+  }
+
   function render(state){
     if(!current(state))return;
     const d=state.draft;
@@ -280,6 +456,7 @@ export function attachMonitoringRecommendations(host){
       '<div class="sampling-queue">'+(state.pending?'<p>Original '+esc(state.pending.kind)+' request · '+esc(state.pending.state||'awaiting acknowledgement')+'</p><button type="button" data-action="resume">Resume original request</button>':'')+(state.pending?.task_id||(!state.pending&&state.lastTask)?'<button type="button" data-action="task">Open retained operation</button>':'')+'</div>'+
       '<section class="sampling-card" data-result>'+results(state)+'</section>'+
       '<section class="sampling-card">'+designPanel(state)+'</section>'+
+      '<section class="sampling-card">'+samplingComparisonMarkup(state.saved,state.comparisonPair,state.comparison?.comparison)+'</section>'+workingPanel(state)+
       '<div class="sampling-downloads" data-downloads></div></section>';
     for(const item of state.downloads)appendDownload(state,item);
     clearEvents();
@@ -295,28 +472,38 @@ export function attachMonitoringRecommendations(host){
   }
   function updateActions(state){
     if(!current(state))return;
-    const blocked=state.busy||Boolean(state.pending&&!terminal.has(state.pending.state));
+    const pending=Boolean(state.pending&&!terminal.has(state.pending.state)),blocked=state.busy||pending;
     for(const node of root.querySelectorAll('input,textarea,select,.sampling-editor button'))node.disabled=blocked;
     for(const node of root.querySelectorAll('[data-action]')){
       const a=node.dataset.action;
-      node.disabled=(state.busy&&a!=='task')||(Boolean(state.pending&&!terminal.has(state.pending.state))&&!['resume','task'].includes(a))||
+      node.disabled=(state.busy&&a!=='task')||(pending&&!['resume','task','request-retain','working-download'].includes(a))||
         (['preview','prepare','add-target'].includes(a)&&!state.draft)||
         (['design','export','transfer'].includes(a)&&!state.saved)||
-        (['open-context','use-period'].includes(a)&&!state.context)||
-        (a==='open-design'&&!node.dataset.id);
+        (['open-context','use-period','working-save','working-download'].includes(a)&&!state.context)||
+        (a==='open-design'&&!node.dataset.id)||(a==='load-design'&&!state.saved?.saved_designs?.length)||
+        (a==='design'&&state.dirty)||(a==='compare-designs'&&(state.saved?.saved_designs?.length||0)<2)||(a==='working-open'&&!state.workingRecords.length)||
+        (['working-bundle','working-workspace'].includes(a)&&!state.working);
     }
   }
   function input(state,event){
     if(!current(state))return;const node=event.target;
+    if(node.dataset.workingField){state[node.dataset.workingField]=node.value;state.workingDirty=true;state.editVersion++;return;}
     if(node.dataset.field&&state.draft){state.draft[node.dataset.field]=node.value;changed(state);}
     if(node.dataset.targetField&&state.draft){const row=state.draft.targets.find(r=>r.id===node.dataset.target);if(row){row[node.dataset.targetField]=node.type==='checkbox'?node.checked:node.value;changed(state);}}
     if(node.dataset.month&&state.draft){const row=state.draft.targets.find(r=>r.id===node.dataset.target),month=Number(node.dataset.month);if(row){row.months=node.checked?[...new Set([...row.months,month])]:row.months.filter(n=>n!==month);changed(state);}}
     if(node.hasAttribute('data-evidence-applicability')&&state.draft){const row=state.draft.targets.find(item=>item.id===node.dataset.target);if(row?.model_evidence){row.model_evidence.applicability=node.value;changed(state);}}
-    if(node.dataset.design){state.designDraft[node.dataset.design]=node.value;state.designDirty=true;status(state,'Unsaved Monitoring design configuration. Prepare a design to retain these exact choices.');}
+    if(node.dataset.design){state.editVersion++;state.workingDirty=true;state.designDraft[node.dataset.design]=node.value;state.designDirty=true;status(state,'Unsaved Monitoring design configuration. Prepare a design to retain these exact choices.');const comparison=root.querySelector('[data-design-changes]');if(comparison)comparison.innerHTML=designChanges(state);}
   }
   function change(state,event){
     if(!current(state))return;
     const node=event.target;
+    if(node.hasAttribute('data-comparison-file'))return reopenComparison(state,node.files?.[0]);
+    if(node.dataset.comparisonSide){
+      if(!['left','right'].includes(node.dataset.comparisonSide))throw Error('Choose an original comparison side.');
+      state.comparisonPair={...(state.comparisonPair||{}),[node.dataset.comparisonSide]:node.value};
+      state.comparison=null;render(state);root.querySelector('[data-comparison-panel]')?.setAttribute('open','');return;
+    }
+    if(node.hasAttribute('data-working-file'))return importWorking(state,node.files?.[0]).catch(error=>{if(current(state))fail(state,error);});
     if(node.hasAttribute('data-evidence-source')&&state.draft){
       const row=state.draft.targets.find(item=>item.id===node.dataset.target);if(!row)return;
       if(!node.value)delete row.model_evidence;
@@ -333,12 +520,13 @@ export function attachMonitoringRecommendations(host){
     else if(event.target.dataset.targetField||event.target.dataset.month||event.target.dataset.design){input(state,event);if(['station_id','cohort_id'].includes(event.target.dataset.targetField))render(state);}
   }
   async function guarded(state,fn){const version=generation,ticket=++request,owner={};state.busyOwner=owner;state.busy=true;updateActions(state);try{await fn(()=>current(state,version)&&ticket===request);}catch(error){if(current(state,version)&&ticket===request)fail(state,error);}finally{if(state.busyOwner===owner){state.busy=false;state.busyOwner=null;if(current(state,version))render(state);}}}
-  function discard(state){return !(state.dirty||state.designDirty)||confirm('Replace the unsaved sampling targets or design configuration with the selected saved evidence?');}
-  async function refresh(state){await guarded(state,async valid=>{const value=await read(state,'catalog');if(!valid())return;state.catalog=value;status(state,(value.contexts||[]).length+' saved observation contexts · '+(value.recommendations||[]).length+' saved sampling editions.');});}
+  function hasUnsaved(state){return state.workingDirty||(!state.working&&(state.dirty||state.designDirty));}
+  function discard(state){return !hasUnsaved(state)||confirm('Replace the current unsaved targets, design configuration and working-copy notes? Download current working JSON to retain them before opening other work. Original uncertain requests remain retained.');}
+  async function refresh(state){await guarded(state,async valid=>{const [value,working]=await Promise.all([read(state,'catalog'),read(state,'working-list')]);if(!valid())return;state.catalog=value;state.workingRecords=working.records||[];status(state,(value.contexts||[]).length+' saved observation contexts · '+(value.recommendations||[]).length+' saved sampling editions.');});}
   async function loadContext(state,id,isCurrent=()=>true){
     if(!ID.test(id))throw Error('Choose a saved context identity.');
     if(!discard(state)){render(state);return;}
-    await guarded(state,async valid=>{const value=await read(state,'context',{context_id:id});if(!valid()||!isCurrent())return;if(value.context_id!==id)throw Error('The original context identity changed.');state.context=value;state.designDraft=designDraft(value.design_configuration);state.designDirty=false;state.draft=newDraft(value);state.saved=null;state.preview=null;state.design=null;state.downloads=[];state.dirty=false;status(state,'Original context opened. Enter the historical evidence window and explicit future targets.');});
+    await guarded(state,async valid=>{const value=await read(state,'context',{context_id:id});if(!valid()||!isCurrent())return;if(value.context_id!==id)throw Error('The original context identity changed.');resetWorking(state);state.context=value;state.designDraft=designDraft(value.design_configuration);state.designDirty=false;state.draft=newDraft(value);state.saved=null;state.preview=null;state.design=null;state.downloads=[];state.dirty=false;status(state,'Original context opened. Enter the historical evidence window and explicit future targets.');});
   }
   async function openSaved(state,id,{force=false}={}){
     if(!ID.test(id||''))throw Error('Choose a retained sampling edition.');
@@ -349,7 +537,7 @@ export function attachMonitoringRecommendations(host){
       const selection=value.selection;if(!selection)throw Error('The saved edition does not contain its original target selection.');
       const context=await read(state,'context',{context_id:selection.context_id});
       if(!valid())return;if(context.context_id!==selection.context_id)throw Error('The original context identity changed.');
-      state.context=context;state.designDraft=designDraft(context.design_configuration);state.designDirty=false;state.saved=value;state.draft=copy(selection);state.preview=null;state.design=null;state.downloads=[];state.dirty=false;status(state,'Opened this exact saved edition. Edits are saved as a new revision; the original remains retained.');
+      resetWorking(state);state.context=context;state.designDraft=designDraft(context.design_configuration);state.designDirty=false;state.saved=value;state.draft=copy(selection);state.preview=null;state.design=null;state.downloads=[];state.dirty=false;status(state,'Opened this exact saved edition. Edits are saved as a new revision; the original remains retained.');
     });
   }
   function configuration(state){
@@ -359,65 +547,146 @@ export function attachMonitoringRecommendations(host){
     if(!d.cost_basis.trim())throw Error('Enter the basis for the native design costs.');
     if(!d.start_date||!d.end_date||d.end_date<d.start_date)throw Error('Choose an ordered future calendar window.');
     if(extra.required_ids!==undefined&&!Array.isArray(extra.required_ids))throw Error('Additional required_ids must be an array of exact catchment IDs.');
+    const selectedDates=parseRoundDates(roundDateValue(d,true));
+    const calendar={...(extra.calendar||{})};
+    if(Object.keys(selectedDates).length)calendar.selected_round_dates=selectedDates;
+    else delete calendar.selected_round_dates;
     return {...extra,required_ids:[...new Set([...(extra.required_ids||[]),...(state.saved.handoff?.required_catchment_ids||[])])],coverage_mode:d.coverage_mode,budget:requiredDecimal('budget','programme budget'),max_sites:integer(d.max_sites,'Maximum sites'),program_overhead:requiredDecimal('program_overhead','programme overhead'),
       default_cost:{...(extra.default_cost||{}),setup:requiredDecimal('setup','default setup cost'),per_visit:requiredDecimal('per_visit','default cost per visit'),basis:d.cost_basis},
-      calendar:{...(extra.calendar||{}),start_date:d.start_date,end_date:d.end_date,interval_days:integer(d.interval_days,'Days between rounds',1),round_window_days:integer(d.round_window_days,'Round window',1),crews:integer(d.crews,'Field crews',1),visit_minutes:integer(d.visit_minutes,'Minutes per visit',1),travel_buffer_minutes:integer(d.travel_buffer_minutes,'Travel allowance') }};
+      calendar:{...calendar,start_date:d.start_date,end_date:d.end_date,interval_days:integer(d.interval_days,'Days between rounds',1),round_window_days:integer(d.round_window_days,'Round window',1),crews:integer(d.crews,'Field crews',1),visit_minutes:integer(d.visit_minutes,'Minutes per visit',1),travel_buffer_minutes:integer(d.travel_buffer_minutes,'Travel allowance') }};
   }
   function appendDownload(state,item){
     if(!current(state))return;const url=new URL(item.url,document.baseURI);if(url.origin!==location.origin||!/^\/api\/file\//.test(url.pathname))throw Error('The export did not return an original same-origin file ticket.');
     const a=document.createElement('a');a.href=url.href;a.download='';a.textContent=item.label;root.querySelector('[data-downloads]')?.append(a);
   }
   async function queue(state,kind,payload){
+    if(state.busy)return;
     const intent=JSON.stringify({kind,payload});
-    if(state.pending&&JSON.stringify({kind:state.pending.kind,payload:state.pending.payload})!==intent&&!terminal.has(state.pending.state))throw Error('Resume the existing sampling request before submitting a different one.');
-    if(!state.pending||JSON.stringify({kind:state.pending.kind,payload:state.pending.payload})!==intent||state.pending.state==='complete')state.pending={kind,payload:copy(payload),operation_id:'sampling-'+crypto.randomUUID(),state:'unsent',task_id:null};
-    try{keep(storageKey(state),state.pending);}catch(error){render(state);throw error;}await resume(state);
+    if(state.pending&&JSON.stringify({kind:state.pending.kind,payload:state.pending.payload})!==intent&&!terminal.has(state.pending.state))throw Error('Resume the existing request, or keep it for explicit recovery, before submitting a different one.');
+    if(!state.pending||JSON.stringify({kind:state.pending.kind,payload:state.pending.payload})!==intent||state.pending.state==='complete'){
+      if(state.pending&&!state.pending.kind.startsWith('working-'))state.retainedRequests=[...state.retainedRequests.filter(row=>row.operation_id!==state.pending.operation_id),{...copy(state.pending),recovery_only:true}];
+      state.pending={kind,payload:copy(payload),operation_id:'sampling-'+crypto.randomUUID(),state:'unsent',task_id:null,workspace_key:state.key,editor_snapshot:editorSnapshot(state)};
+    }
+    try{persistRequests(state);}catch(error){render(state);throw error;}await resume(state);
   }
   async function resume(state){
     if(!state.pending||state.busy)return;
-    keep(storageKey(state),state.pending);
-    const pending=state.pending,version=generation,owner={};state.busyOwner=owner;state.busy=true;status(state,'Continuing the original sampling request.');render(state);
+    const pending=state.pending;
+    if(pending.workspace_key&&pending.workspace_key!==state.key)throw Error('This request belongs to the original operator Workspace. Its bytes remain retained here; reopen that original operation to recover it.');
+    if(pending.imported&&!pending.task_id)throw Error('The imported request has no confirmed native task identity. Its exact original payload remains retained for operator reconciliation.');
+    persistRequests(state);
+    const version=generation,owner={};state.busyOwner=owner;state.busy=true;status(state,'Continuing the original '+requestLabel(pending).toLowerCase()+' request.');render(state);
     try{
       let task=pending.task_id?await api('/api/task?'+new URLSearchParams({workspace:state.key,id:pending.task_id})):await api('/api/actions',{method:'POST',body:{workspace:state.key,action:'monitoring.recommendations.'+pending.kind,payload:pending.payload,operation_id:pending.operation_id}});
-      pending.task_id=task.id;pending.state=task.state;state.lastTask=task.id;keep(storageKey(state),pending);
+      verifyOriginalTask(state,pending,task);
+      pending.task_id=task.id;pending.state=task.state;state.lastTask=task.id;persistRequests(state);
       while(!terminal.has(task.state)){
         if(!current(state,version))return;
         status(state,'Original operation '+task.state+'. You can open its retained task.');await new Promise(resolve=>setTimeout(resolve,700));
         if(!current(state,version))return;
-        task=await api('/api/task?'+new URLSearchParams({workspace:state.key,id:pending.task_id}));pending.state=task.state;keep(storageKey(state),pending);
+        task=await api('/api/task?'+new URLSearchParams({workspace:state.key,id:pending.task_id}));pending.state=task.state;persistRequests(state);
       }
       if(!current(state,version))return;
-      if(task.state!=='complete')throw Error((task.error?.message||'The original operation is '+task.state)+'. Open its task to inspect or resume it.');
+      if(task.state!=='complete')throw Error((task.error?.message||'The original operation is '+task.state)+'. Open its task to inspect or resume it. Your current edits and exact request remain retained.');
       task=await api('/api/task?'+new URLSearchParams({workspace:state.key,id:pending.task_id}));
       if(!current(state,version))return;
-      const result=task.result||{};
+      const result=task.result||{},canAdopt=!pending.recovery_only&&(!state.draft||pending.editor_snapshot===editorSnapshot(state));
       if(pending.kind==='prepare'){
         const id=result.recommendation_id||result.id;if(!ID.test(id||''))throw Error('The completed operation did not identify its saved recommendation.');
         const saved=await read(state,'get',{recommendation_id:id});if(!current(state,version))return;
-        state.saved=saved;state.draft=copy(saved.selection);state.preview=null;state.dirty=false;state.design=null;
         state.catalog.recommendations=[...(state.catalog.recommendations||[]).filter(r=>(r.id||r.recommendation_id)!==id),saved];
-        status(state,'Saved the complete source-bound recommendation. Its original targets and observations remain retained.');
-      }else if(pending.kind==='design'){state.design=result;state.designDirty=false;status(state,'Prepared the original Monitoring design. Open it to inspect feasibility and arrange the field calendar.');}
-      else{
+        if(canAdopt){
+          const context=await read(state,'context',{context_id:saved.context_id||saved.selection.context_id});if(!current(state,version))return;
+          state.context=context;state.saved=saved;state.draft=copy(saved.selection);state.preview=null;state.dirty=false;state.design=null;state.selectedDesignId=null;
+          status(state,'Saved the complete source-bound recommendation. Its original targets and observations remain retained.');
+        }else{state.completedSelection={recommendation_id:id};status(state,'The original recommendation save completed. Your later edits remain unchanged; open its completed recommendation separately.');}
+        state.workingDirty=true;
+      }else if(pending.kind==='design'){
+        if(state.saved?.id===result.recommendation_id){
+          // Fetch the verified digest supplied by the native reader, never hash Python values in the browser.
+          const saved=await read(state,'get',{recommendation_id:result.recommendation_id});if(!current(state,version))return;
+          state.saved.saved_designs=saved.saved_designs;state.saved.recommendation_digest=saved.recommendation_digest;
+          if(canAdopt){state.design=result;state.selectedDesignId=result.id||null;state.designDirty=false;}
+        }
+        state.completedSelection={recommendation_id:result.recommendation_id};state.workingDirty=true;
+        status(state,canAdopt?'Prepared a new native Monitoring design. Its original configuration, costs and field calendar are retained.':'The original native design completed. Your later design edits remain unchanged.');
+      }else if(pending.kind==='working-save'){
+        const id=result.id||result.working_id;if(!ID.test(id||''))throw Error('The completed operation did not identify its saved working copy.');
+        const response=await read(state,'working-get',{working_id:id});if(!current(state,version))return;
+        state.workingRecords=[...(state.workingRecords||[]).filter(row=>row.id!==id),response.record];
+        if(canAdopt){state.working=response.record;state.workingDirty=false;}
+        status(state,'Saved the complete editable working copy. Scientific results and any earlier working-copy edition remain unchanged.');
+      }else{
         const url=result.download_url;if(!url)throw Error('The completed export has no original file ticket.');
-        const item={url,label:'Download complete sampling edition and original sources'+(result.bytes?' · '+Number(result.bytes).toLocaleString()+' bytes':'')};appendDownload(state,item);state.downloads=[item];status(state,'Complete export ready with the retained edition and original source attachments.');
+        const label=pending.kind==='working-export'?(pending.payload.format==='workspace'?'Download complete editable Workspace':'Download working copy, review and original sources'):'Download complete sampling edition and original sources';
+        const item={url,label:label+(result.bytes?' · '+Number(result.bytes).toLocaleString()+' bytes':'')};state.downloads=[...state.downloads.filter(row=>row.url!==url),item];
+        status(state,'Complete export ready. Open every included report and original source, then reopen the editable files.');
       }
-      keep(storageKey(state),null);state.pending=null;
+      if(!pending.kind.startsWith('working-'))state.retainedRequests=[...state.retainedRequests.filter(row=>row.operation_id!==pending.operation_id),{...copy(pending),state:'complete',recovery_only:true}];
+      state.pending=null;try{persistRequests(state);}catch(error){state.pending=pending;throw error;}
     }catch(error){if(current(state,version))fail(state,error);}
     finally{if(state.busyOwner===owner){state.busy=false;state.busyOwner=null;if(current(state,version))render(state);}}
   }
+  function comparisonSelection(state,pair=state.comparisonPair){
+    const recommendation_id=state.saved?.id||state.saved?.recommendation_id;
+    if(!ID.test(recommendation_id||'')||!ID.test(pair?.left||'')||!ID.test(pair?.right||'')||pair.left===pair.right)throw Error('Choose two distinct saved designs from this recommendation.');
+    return {recommendation_id,left_design_id:pair.left,right_design_id:pair.right};
+  }
+  async function receiveComparison(state,selection,valid,expected=null){
+    const result=await read(state,'compare-designs',selection);
+    if(!valid()||(state.saved?.id||state.saved?.recommendation_id)!==selection.recommendation_id)return;
+    const value=result.comparison;
+    if(result.workspace_key!==state.key||result.project_id!==state.catalog.project_id||value?.project_id!==result.project_id||value?.schema!=='upstate.sampling-design-comparison/v1'||!ID.test(value?.id||'')||value.recommendation_id!==selection.recommendation_id||value.left?.design_id!==selection.left_design_id||value.right?.design_id!==selection.right_design_id)throw Error('The native comparison differs from the exact original selection.');
+    if(expected&&!sameJSON(value,expected))throw Error('The complete comparison differs from the retained original JSON. Keep that file and inspect its original Workspace/source records.');
+    state.comparisonPair={left:selection.left_design_id,right:selection.right_design_id};state.comparison=result;
+    status(state,expected?'Reopened this exact comparison from the retained native sources. No records were imported or changed.':'Compared the two exact saved designs. Original observations and historical gaps remain unchanged.');
+  }
+  async function reopenComparison(state,file){
+    if(!file||state.busy)return;
+    if(state.pending&&!terminal.has(state.pending.state)){fail(state,Error('Resume the original queued request before opening comparison files.'));return;}
+    return guarded(state,async valid=>{
+      const raw=await file.text();if(!valid())return;
+      let value;try{value=JSON.parse(raw);}catch{throw Error('Open a complete comparison JSON file.');}
+      if(value?.schema!=='upstate.sampling-design-comparison/v1'||value.project_id!==state.catalog.project_id||value.recommendation_id!==(state.saved?.id||state.saved?.recommendation_id))throw Error('Open this comparison in its original Workspace and saved recommendation. Use the ordinary Study import first when its native records are absent.');
+      const selection=comparisonSelection(state,{left:value.left?.design_id,right:value.right?.design_id});
+      await receiveComparison(state,selection,valid,value);
+    });
+  }
   async function act(state,action,id){
     if(!current(state))return;
+    if(state.busy&&action!=='task')return;
+    if(state.pending&&!terminal.has(state.pending.state)&&!['resume','task','request-retain','working-download'].includes(action))throw Error('Resolve or explicitly retain the original request before changing this work.');
+    if(action==='compare-designs'){const selection=comparisonSelection(state);return guarded(state,valid=>receiveComparison(state,selection,valid));}
+    if(action.startsWith('comparison-')){
+      const selection=comparisonSelection(state),value=state.comparison?.comparison;
+      if(!value||value.recommendation_id!==selection.recommendation_id||value.left.design_id!==selection.left_design_id||value.right.design_id!==selection.right_design_id)throw Error('Read this exact original pair before downloading.');
+      return downloadSamplingComparison(state.comparison,action.slice('comparison-'.length));
+    }
+    if(action==='working-open')return openWorking(state,root.querySelector('[data-working-saved]').value);
+    if(action==='working-save')return queue(state,'working-save',{working_file:workingFile(state),parent_id:state.working?.id||null,expected_parent_digest:state.working?.id||null});
+    if(action==='working-download')return guarded(state,async valid=>{const file=workingFile(state),preview=await previewWorking(state,file);if(valid()){downloadSamplingText(JSON.stringify(preview.working_file)+'\n','Sampling_Working_Copy.json');status(state,'Downloaded the current targets, full design text and exact retained requests. Saved scientific editions remain unchanged.');}});
+    if(action==='working-bundle'||action==='working-workspace')return queue(state,'working-export',{working_id:state.working.id,format:action==='working-workspace'?'workspace':'bundle'});
+    if(action==='working-adopt'){if(!state.importPreview||!discard(state))return;const selected=state.importPreview;return guarded(state,valid=>adoptWorking(state,selected,valid));}
+    if(action==='working-cancel'){state.importPreview=null;render(state);return;}
+    if(action==='request-retain')return retainPending(state);
+    if(action==='request-recover')return recoverRequest(state,id);
+    if(action==='open-completed')return openSaved(state,state.completedSelection.recommendation_id);
     if(action==='refresh')return refresh(state);
     if(action==='open-saved')return openSaved(state,root.querySelector('[data-saved]').value);
     if(action==='use-period'){if(!state.draft)return;state.draft.evidence_start=state.context.source_period.start_inclusive;state.draft.evidence_end=state.context.source_period.end_inclusive;changed(state);render(state);return;}
     if(action==='open-parent')return openSaved(state,state.saved.parent_id);
     if(action==='transfer')return openDesk('study-transfer','openForStudies',{workspace_key:state.key,roots:[{kind:'monitoring_recommendations',id:state.saved.id||state.saved.recommendation_id,title:state.saved.title||state.saved.selection.title,state:'saved'}]});
-    if(action==='new'){if(!state.context||!discard(state))return;state.designDraft=designDraft(state.context.design_configuration);state.designDirty=false;state.draft=newDraft(state.context);state.saved=null;state.preview=null;state.design=null;state.downloads=[];state.dirty=false;render(state);return;}
+    if(action==='new'){if(!state.context||!discard(state))return;resetWorking(state);state.designDraft=designDraft(state.context.design_configuration);state.designDirty=false;state.draft=newDraft(state.context);state.saved=null;state.preview=null;state.design=null;state.downloads=[];state.dirty=false;render(state);return;}
     if(action==='add-target'){state.draft.targets.push(blankTarget());changed(state);render(state);return;}
     if(action==='remove-target'){state.draft.targets=state.draft.targets.filter(r=>r.id!==id);changed(state);render(state);return;}
     if(action==='preview'){const selection=samplingSelection(state.draft);return guarded(state,async valid=>{const value=await read(state,'preview',{selection});if(valid()){state.preview=value;status(state,'Preview of these exact targets and historical observations. Save to retain the edition.');}});}
     if(action==='prepare'){const selection=samplingSelection(state.draft);return queue(state,'prepare',{selection,...(state.saved?{parent_id:state.saved.id||state.saved.recommendation_id,expected_parent_digest:state.saved.id||state.saved.recommendation_id}:{})});}
+    if(action==='load-design'){
+      const selected=(state.saved?.saved_designs||[]).find(item=>item.id===root.querySelector('[data-design-selection]')?.value);
+      if(!selected)throw Error('Choose one retained design from this exact saved recommendation.');
+      if(state.designDirty&&!confirm('Replace the unfinished design settings with this saved design? Save a working copy first if you need those edits.'))return;
+      state.designDraft=designDraft(selected.configuration);state.designDraft.title=selected.request_payload?.title||state.saved.title||state.saved.selection.title;state.design=copy(selected);state.selectedDesignId=selected.id;state.designDirty=false;state.workingDirty=true;state.editVersion++;status(state,'Opened the exact saved design configuration. Changes prepare a new native design; this original result is retained.');render(state);root.querySelector('[data-design-panel]')?.setAttribute('open','');return;
+    }
     if(action==='design')return queue(state,'design',{recommendation_id:state.saved.id||state.saved.recommendation_id,configuration:configuration(state),title:state.designDraft.title.trim()||state.saved.title||state.saved.selection.title});
     if(action==='export')return queue(state,'export',{recommendation_id:state.saved.id||state.saved.recommendation_id});
     if(action==='resume')return resume(state);
@@ -425,7 +694,7 @@ export function attachMonitoringRecommendations(host){
     if(action==='open-context')return openDesk('monitoring','openStudy',{workspace_key:state.key,kind:'monitoring_observed_contexts',id:state.context.context_id});
     if(action==='open-design')return openDesk('monitoring','openStudy',{workspace_key:state.key,kind:'monitoring_plans',id:id||state.design?.plan_id});
   }
-  function unload(event){if([...states.values()].some(s=>s.dirty||s.designDirty)){event.preventDefault();event.returnValue='';}}
+  function unload(event){if([...states.values()].some(s=>hasUnsaved(s)||s.pending||s.retainedRequests.some(r=>r.state!=='complete'))){event.preventDefault();event.returnValue='';}}
   window.addEventListener('beforeunload',unload);
   async function mount(node){clearEvents();root=node;generation++;request++;const key=workspace();if(!key){root.innerHTML='<p>Select an original Workspace to review sampling priorities.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}
   async function update(){if(root&&workspace()!==active?.key){clearEvents();generation++;request++;const key=workspace();if(!key){active=null;root.innerHTML='<p>Select an original Workspace.</p>';return;}active=stateFor(key);active.busy=false;active.busyOwner=null;render(active);await refresh(active);}}

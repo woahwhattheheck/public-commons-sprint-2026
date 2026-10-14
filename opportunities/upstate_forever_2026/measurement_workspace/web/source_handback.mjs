@@ -50,7 +50,7 @@ function rowResults(row){
 function countHtml(counts){return plain(counts)?'<dl class="sh-counts">'+Object.entries(counts).map(([k,v])=>'<div><dt>'+esc(k.replace(/([a-z])([A-Z])/g,'$1 $2').replaceAll('_',' '))+'</dt><dd>'+esc(text(v))+'</dd></div>').join('')+'</dl>':'<p>Counts are unavailable in this response.</p>';}
 function validateDeliveryContext(value){
  if(value.deliveryEdition===undefined||value.deliveryEdition===1)return null;
- need(value.deliveryEdition===2,'This return uses a newer delivery edition. Open it in the matching Measurements version.');
+ need([2,3].includes(value.deliveryEdition),'This return uses a newer delivery edition. Open it in the matching Measurements version.');
  const c=value.deliveryContext;
  need(plain(c)&&hash.test(c.projectSha256||'')&&hash.test(c.contextSha256||'')&&plain(c.project)&&Array.isArray(c.collections)&&typeof c.bindingNote==='string','The full included-project preview is incomplete.');
  for(const key of ['revision','imports','records','savedResults','intakeEditions'])need(Number.isSafeInteger(c.project[key])&&c.project[key]>=0,'The included native project count is incomplete.');
@@ -61,6 +61,7 @@ function validateDeliveryContext(value){
   const paths=new Set();
   for(const f of collection.files){need(plain(f)&&typeof f.path==='string'&&f.path&&!paths.has(f.path)&&typeof f.kind==='string'&&(f.importId===null||typeof f.importId==='string')&&Number.isSafeInteger(f.bytes)&&f.bytes>=0&&hash.test(f.sha256||''),'The included companion file identity is incomplete.');paths.add(f.path);}
  }
+ if(value.deliveryEdition===3)validateOriginalWorkbooks(value.originalWorkbooks);
  return c;
 }
 function deliveryContextHtml(value){
@@ -68,10 +69,37 @@ function deliveryContextHtml(value){
  const count=c.collections.reduce((n,x)=>n+x.files.length,0),p=c.project;
  return '<section class="sh-panel"><h4>Complete project accompanying these rows</h4><p>The return includes the whole native project: <strong>'+esc(p.imports)+'</strong> imports, <strong>'+esc(p.records)+'</strong> measurements, <strong>'+esc(p.savedResults)+'</strong> saved results and <strong>'+esc(p.intakeEditions)+'</strong> intake editions. This includes imports and saved results outside the selected row returns.</p><p>'+esc(c.collections.length)+' matching source collections include '+esc(count)+' original files and companions. Their exact inventory is included in this preview.</p><details><summary>Included original companion files</summary>'+(count?'<div class="sh-scroll"><table><thead><tr><th>Collection</th><th>Original file</th><th>Source type</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody>'+c.collections.flatMap(x=>x.files.map(f=>'<tr><td>'+esc(x.title||x.id)+'</td><td>'+esc(f.path)+'</td><td>'+esc(f.kind)+'</td><td>'+esc(f.bytes)+'</td><td class="sh-meta">'+esc(f.sha256)+'</td></tr>')).join('')+'</tbody></table></div>':'<p>No matching collection companions accompany this selection.</p>')+'</details><details><summary>Complete project identity</summary><p class="sh-meta">Project SHA-256 '+esc(c.projectSha256)+'<br>Native context SHA-256 '+esc(c.contextSha256)+'</p><p>'+esc(c.bindingNote)+'</p></details></section>';
 }
+function validateOriginalWorkbooks(values){
+ need(Array.isArray(values),'The complete original-workbook inventory is missing.');
+ const seen=new Set(),path=value=>typeof value==='string'&&value&&!value.startsWith('/')&&!value.includes('\\')&&value.split('/').every(x=>x&&x!=='.'&&x!=='..');
+ for(const x of values){
+  need(plain(x)&&['ready','original_only'].includes(x.state)&&hash.test(x.originalSha256||'')&&!seen.has(x.originalSha256)&&Number.isSafeInteger(x.originalBytes)&&x.originalBytes>=0&&
+   Array.isArray(x.originalFilenames)&&x.originalFilenames.length&&x.originalFilenames.every(n=>typeof n==='string')&&path(x.originalPath)&&path(x.lineagePath)&&Array.isArray(x.bindings)&&x.bindings.length===x.preparationCount,
+   'Retain each complete original workbook and its source binding.');seen.add(x.originalSha256);
+  if(x.state==='ready'){
+   need(path(x.returnedPath)&&path(x.partsPath)&&Number.isSafeInteger(x.returnedBytes)&&x.returnedBytes>0&&hash.test(x.returnedSha256||'')&&Array.isArray(x.sheets)&&x.sheets.length&&Array.isArray(x.originalSheets)&&Array.isArray(x.macroParts)&&Array.isArray(x.updatedCatalogs)&&Number.isSafeInteger(x.unchangedPartCount),
+    'The editable reviewed workbook inventory is incomplete.');
+   for(const sheet of x.sheets)need(plain(sheet)&&typeof sheet.name==='string'&&typeof sheet.sourceSheet==='string'&&Number.isSafeInteger(sheet.rows)&&sheet.rows>=0&&Number.isSafeInteger(sheet.columns)&&sheet.columns>0&&hash.test(sheet.sha256||''),'A reviewed worksheet has incomplete source or row identity.');
+  }else need(typeof x.reason==='string'&&x.reason&&x.returnedPath===null,'Keep the explanation and unchanged original workbook.');
+ }
+ return values;
+}
+function originalWorkbooksHtml(values,saved=false){
+ if(!values)return '';
+ validateOriginalWorkbooks(values);if(!values.length)return '';
+ const button=(path,label)=>saved?'<button type="button" data-original-member="'+esc(path)+'">'+label+'</button>':'';
+ return '<section class="sh-panel"><h4>Original workbook return</h4><p>The exact original stays available. Reviewed copies add source-bound literal-text sheets while preserving original worksheets, formulas, styles, media and macros.</p>'+
+ values.map(x=>'<article><h5>'+esc(x.originalFilenames.join(' / '))+'</h5><p>'+esc(x.originalBytes)+' original bytes · '+esc(x.preparationCount)+' retained preparation editions</p><p class="sh-meta">Original SHA-256 '+esc(x.originalSha256)+'</p>'+
+ (x.state==='ready'?'<p>'+x.sheets.map(y=>esc(y.name)+' → '+esc(y.sourceSheet)+' · '+esc(y.rows)+' complete original rows').join('<br>')+'</p><p>'+esc(x.unchangedPartCount)+' unchanged original parts; three catalogs register the review sheets. The recipient can open and edit the reviewed copy in their spreadsheet application.</p>':'<p class="sh-warning">'+esc(x.reason)+'</p>')+
+ '<div class="sh-toolbar">'+button(x.originalPath,'Download original workbook')+button(x.lineagePath,'Download complete worksheet lineage')+
+ (x.state==='ready'?button(x.returnedPath,'Download editable reviewed workbook')+button(x.partsPath,'Download original part comparison'):'')+'</div>'+
+ (!saved?'<p>Publish this inspected return to download these exact workbook files.</p>':'')+'</article>').join('')+'</section>';
+}
 function manifest(value){
   need(plain(value)&&typeof value.id==='string'&&value.id&&Number.isSafeInteger(value.revision)&&Array.isArray(value.files),'The operator did not return a complete saved edition.');
   need(value.requestFingerprint===value.id&&hash.test(value.id)&&plain(value.selection),'Retain the exact saved publication fingerprint and selection.');
   for(const f of value.files)need(plain(f)&&typeof f.name==='string'&&Number.isSafeInteger(f.bytes)&&f.bytes>=0&&hash.test(f.sha256),'A saved member is missing its complete identity.');
+  if(value.deliveryEdition===3)validateOriginalWorkbooks(value.originalWorkbooks);
   return value;
 }
 export function mountSourceHandback(container,{request,refresh=async()=>{},initialState=null,onStateChange=()=>{},css='/measurements/source_handback.css'}={}){
@@ -122,7 +150,7 @@ export function mountSourceHandback(container,{request,refresh=async()=>{},initi
   }
   function editionHtml(){
     if(!edition)return '<p class="sh-muted">Open a retained edition to inspect every member and download its complete archive.</p>';
-    return '<h3>'+esc(edition.title||edition.id)+'</h3><p>Saved revision '+esc(edition.revision)+' · '+esc(edition.createdAt||'')+'</p><p>'+esc(edition.note||'')+'</p><p class="sh-meta">'+esc(edition.id)+'</p>'+countHtml(edition.counts)+
+    return '<h3>'+esc(edition.title||edition.id)+'</h3><p>Saved revision '+esc(edition.revision)+' · '+esc(edition.createdAt||'')+'</p><p>'+esc(edition.note||'')+'</p><p class="sh-meta">'+esc(edition.id)+'</p>'+countHtml(edition.counts)+originalWorkbooksHtml(edition.originalWorkbooks,true)+
       '<div class="sh-scroll"><table><thead><tr><th>Original package member</th><th>Bytes</th><th>SHA-256</th></tr></thead><tbody>'+edition.files.map(f=>'<tr><td>'+esc(f.name)+'</td><td>'+esc(f.bytes)+'</td><td class="sh-meta">'+esc(f.sha256)+'</td></tr>').join('')+'</tbody></table></div>'+
       '<div class="sh-toolbar"><button type="button" data-action="bundle">Download complete verified ZIP</button><button type="button" data-action="manifest">Download edition manifest</button><button type="button" data-action="edition-view">Inspect saved source rows</button></div>'+(editionView?'<p>Saved source rows are shown below from the immutable edition.</p>'+deliveryContextHtml(editionView)+savedTable():'')+'<details><summary>Complete retained edition</summary><pre>'+esc(JSON.stringify(edition,null,2))+'</pre></details>';
   }
@@ -136,7 +164,7 @@ export function mountSourceHandback(container,{request,refresh=async()=>{},initi
       '<div class="sh-grid"><section class="sh-panel"><h3>1. Complete original sources</h3>'+selectionRows(catalog?.sources||[],state.draft.sourceIds,'source')+'</section><section class="sh-panel"><h3>2. Retained results to accompany them</h3><p>Choose saved outputs. This return does not run or change scientific calculations.</p>'+selectionRows(catalog?.results||[],state.draft.exportIds,'result')+'</section></div>'+
       '<section class="sh-panel"><h3>3. Review the whole source population</h3><div class="sh-fields"><label>Return title<input data-field="title" maxlength="240" data-pending-lock="true" value="'+esc(state.draft.title)+'"></label><label>Source and decision note<textarea data-field="note" maxlength="12000" data-pending-lock="true">'+esc(state.draft.note)+'</textarea></label></div>'+
       '<div class="sh-toolbar"><button type="button" data-action="preview" data-pending-lock="true" '+(!catalog||!state.draft.sourceIds.length||absent.length?'data-fixed="true"':'')+'>Preview every selected source row</button><button type="button" data-action="publish" data-pending-lock="true" '+(!ready||!state.draft.title.trim()?'data-fixed="true"':'')+'>Publish reviewed return edition</button></div>'+
-      (preview?'<p>Preview of original workspace revision '+esc(preview.revision)+'.</p>'+countHtml(preview.counts)+deliveryContextHtml(preview)+'<details><summary>Selected saved scientific results</summary>'+(preview.results||[]).map(r=>'<p>'+esc(r.kind)+' · original revision '+esc(r.revision)+' · '+esc(r.id)+' <button type="button" data-result-export="'+esc(r.id)+'">Download exact retained result</button></p>').join('')+'</details>':'')+sourceTable()+'</section>'+
+      (preview?'<p>Preview of original workspace revision '+esc(preview.revision)+'.</p>'+countHtml(preview.counts)+deliveryContextHtml(preview)+originalWorkbooksHtml(preview.originalWorkbooks,preview===editionView&&!!edition)+'<details><summary>Selected saved scientific results</summary>'+(preview.results||[]).map(r=>'<p>'+esc(r.kind)+' · original revision '+esc(r.revision)+' · '+esc(r.id)+' <button type="button" data-result-export="'+esc(r.id)+'">Download exact retained result</button></p>').join('')+'</details>':'')+sourceTable()+'</section>'+
       '<section class="sh-panel"><h3>4. Reopen a retained return</h3><div class="sh-toolbar"><label>Saved return edition<select data-edition><option value="">Choose a retained edition</option>'+(catalog?.editions||[]).map(e=>'<option value="'+esc(e.id)+'"'+(state.selectedEditionId===e.id?' selected':'')+'>'+esc(e.title||e.id)+' · revision '+esc(e.revision)+'</option>').join('')+'</select></label><button type="button" data-action="open">Open exact saved edition</button></div>'+editionHtml()+'</section>'+
       (rejectedFile?'<section class="sh-warning"><p>The selected working file was retained after the failed receive.</p><button type="button" data-action="rejected">Download exact selected file</button></section>':'')+
       '<p class="sh-muted">An original spreadsheet is preserved as supplied. The reviewed companion describes row and cell lineage; this workflow does not silently rewrite formulas, labels, units, dates or untouched cells. Use the existing complete workspace receiver to restore the scientific workspace.</p>';
@@ -187,7 +215,9 @@ export function mountSourceHandback(container,{request,refresh=async()=>{},initi
   },{signal:controller.signal});
   root.addEventListener('click',event=>{
     const resultButton=event.target.closest('[data-result-export]');if(resultButton&&root.contains(resultButton)&&!busy){event.preventDefault();const result=preview?.results.find(x=>x.id===resultButton.dataset.resultExport);if(result)saveFile(JSON.stringify(result,null,2)+'\n','saved-result-'+result.id+'.json');return;}
-    const saved=event.target.closest('[data-saved-source],[data-original-member]');if(saved&&root.contains(saved)&&!busy){event.preventDefault();if(saved.dataset.savedSource){const source=editionView?.sources.find(x=>x.id===saved.dataset.savedSource);if(source){preview=editionView;previewBasis='';sourceId=source.id;page=0;query='';render();say('Inspecting immutable saved rows. New publication requires a fresh current-workspace preview.');}return;}const name=saved.dataset.originalMember;if(name&&edition)void run(async()=>{const check=guard(),meta=edition.files.find(x=>x.name===name);need(meta,'Retain the original member identity.');const response=await request('/handbacks/'+encodeURIComponent(edition.id)+'/files?name='+encodeURIComponent(name),'GET');need(response.ok,'The saved original download failed.');const bytes=typeof response.arrayBuffer==='function'?await response.arrayBuffer():new TextEncoder().encode(await response.text());need(bytes.byteLength===meta.bytes&&await digest(bytes)===meta.sha256,'The saved original differs from its retained identity.');check();saveFile(bytes,name.split('/').at(-1),'application/octet-stream');});return;}
+    const saved=event.target.closest('[data-saved-source],[data-original-member]');if(saved&&root.contains(saved)&&!busy){event.preventDefault();if(saved.dataset.savedSource){const source=editionView?.sources.find(x=>x.id===saved.dataset.savedSource);if(source){preview=editionView;previewBasis='';sourceId=source.id;page=0;query='';render();say('Inspecting immutable saved rows. New publication requires a fresh current-workspace preview.');}return;}const name=saved.dataset.originalMember;if(name&&edition)void run(async()=>{const check=guard(),meta=edition.files.find(x=>x.name===name);need(meta,'Retain the original member identity.');const value=await api('/'+encodeURIComponent(edition.id)+'/member?name='+encodeURIComponent(name));
+      need(value.name===name&&value.bytes===meta.bytes&&value.sha256===meta.sha256&&typeof value.type==='string','The saved member differs from its retained identity.');
+      const bytes=decode(value.contentBase64);need(bytes.byteLength===meta.bytes&&await digest(bytes)===meta.sha256,'The complete saved member bytes changed.');check();saveFile(bytes,name.split('/').at(-1),value.type);});return;}
     const button=event.target.closest('[data-action]');if(!button||!root.contains(button))return;event.preventDefault();const action=button.dataset.action;
     if(action==='save-draft'){saveFile(JSON.stringify(state,null,2)+'\n','source-return-working.json');return;}
     if(busy)return;

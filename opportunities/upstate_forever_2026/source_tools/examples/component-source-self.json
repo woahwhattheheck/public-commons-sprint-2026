@@ -1,0 +1,45 @@
+{
+  "schema": "upstate.component-source-selection/v1",
+  "label": "Complete retained collector application",
+  "components": [
+    "component-source-collection"
+  ],
+  "python": [
+    {
+      "id": "collector-python",
+      "selection": {
+        "schema": "commons.python-source-selection/v1",
+        "label": "Original source collector namespace",
+        "module_roots": [
+          ".",
+          "source_tools",
+          "source_tools/vendor/source_closure"
+        ],
+        "entrypoints": [
+          {
+            "module": "source_tools.component_source_collection"
+          }
+        ],
+        "resources": [],
+        "external_modules": [],
+        "dynamic_imports": []
+      }
+    }
+  ],
+  "javascript": [
+    {
+      "id": "collector-node",
+      "selection": {
+        "schema": "commons.javascript-source-selection/v1",
+        "label": "Original retained native Node adapter",
+        "paths": [
+          "source_tools/vendor/source_closure/application_source_bridge.cjs"
+        ],
+        "resources": [],
+        "routes": []
+      }
+    }
+  ],
+  "unresolved_contexts": [],
+  "javascript_runtime": []
+}

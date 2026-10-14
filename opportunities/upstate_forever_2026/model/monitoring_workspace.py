@@ -381,10 +381,15 @@ class MonitoringWorkspace:
         visits = campaign["calendar"] if campaign else plan["calendar"]["visits"]
         events = campaign["events"] if campaign else []
         title = campaign["revision"]["title"] if campaign else plan["title"]
-        from . import utility_monitoring_report
+        from . import utility_monitoring_report, monitoring_sampling_protocol
+        sampling = monitoring_sampling_protocol.selection(self.workspace, plan)
         utility_contexts = utility_monitoring_report.contexts(self.workspace, plan, network, visits)
         report = utility_monitoring_report.attach(
             report_html(title, plan, network, visits, events), utility_contexts, links=format == "bundle")
+        if sampling is not None:
+            closing = "</body>" if "</body>" in report else "</html>"
+            report = report.replace(
+                closing, monitoring_sampling_protocol.report_html(sampling, visits) + closing, 1)
         if observed_context:
             context_html = observed.report_html(observed_context).split("</style>", 1)[1].rsplit("</html>", 1)[0]
             closing = "</body>" if "</body>" in report else "</html>"
@@ -426,6 +431,9 @@ class MonitoringWorkspace:
             if binding:
                 for name, member in source_export_members(self.workspace, label, binding):
                     add_member(files, name, member)
+        if sampling is not None:
+            for name, member in monitoring_sampling_protocol.export_members(self.workspace, sampling).items():
+                add_member(files, "sampling/" + name, member)
         add_member(files, "report.html", bytes_member(report.encode("utf-8")))
         for name, member in utility_monitoring_report.export_members(self.workspace, utility_contexts):
             add_member(files, name, member)

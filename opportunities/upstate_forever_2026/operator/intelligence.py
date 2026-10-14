@@ -17,7 +17,7 @@ import re
 from pydantic import ValidationError
 from model.common import (
     atomic_bytes, atomic_json, canonical, describe_file, digest, identifier,
-    read_json, verify_file,
+    read_json, verify_file, _native_fs_path,
 )
 from eco_intelligence.common import IntelligenceError
 from eco_intelligence.schemas import Action, Inspect, SessionCreate
@@ -56,6 +56,45 @@ class OperationStore:
 
     def __getattr__(self, name):
         return getattr(self.original, name)
+
+    def checkpoint_request(self, tenant, sid, rid, value):
+        self.original.authorize(tenant,sid)
+        if rid!=self.task['operation_id'] or sid!=self.task['payload'].get('session_id'):
+            raise IntelligenceError('The continuation belongs to another original operation.',409)
+        stored=getattr(self.original,'storage_tenant',lambda value:value)(tenant)
+        with self.original.db() as db:
+            db.execute("UPDATE requests SET body=? WHERE tenant=? AND session=? AND id=? AND status='running'",
+                       (json.dumps({'continuation':value},ensure_ascii=False,separators=(',',':')),stored,sid,rid))
+
+    def resume_request(self, tenant, sid, rid):
+        self.original.authorize(tenant,sid)
+        if rid!=self.task['operation_id'] or sid!=self.task['payload'].get('session_id') or len(self.task.get('attempts',[]))<2:
+            raise IntelligenceError('Resume the exact original queued operation.',409)
+        stored=getattr(self.original,'storage_tenant',lambda value:value)(tenant)
+        with self.original.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row=db.execute('SELECT status,body FROM requests WHERE tenant=? AND session=? AND id=?',(stored,sid,rid)).fetchone()
+            if not row: raise IntelligenceError('The original provider request has no retained continuation.',409)
+            body=json.loads(row['body']) if row['body'] else {}
+            if row['status']=='complete': return body
+            if body.get('continuation'):
+                value={'_continuation':body['continuation']}
+            elif 'HTTP 429' in body.get('error',''):
+                value={'_legacy_resume':True}
+            else:
+                raise IntelligenceError('This earlier operation has no resumable provider completion. Its retained result remains available.',409)
+            db.execute("UPDATE requests SET status='running' WHERE tenant=? AND session=? AND id=?",(stored,sid,rid))
+            return value
+
+    def finish_request(self, tenant, sid, rid, value, failed=False):
+        if failed:
+            stored=getattr(self.original,'storage_tenant',lambda item:item)(tenant)
+            with self.original.db() as db:
+                row=db.execute('SELECT body FROM requests WHERE tenant=? AND session=? AND id=?',(stored,sid,rid)).fetchone()
+            previous=json.loads(row['body']) if row and row['body'] else {}
+            if previous.get('continuation'): value={**value,'continuation':previous['continuation']}
+        return self.original.finish_request(tenant,sid,rid,value,failed)
+
 
     def create_session(self, tenant, title):
         key = digest({"kind": "intelligence-session", "task_id": self.task["id"]})
@@ -537,7 +576,23 @@ class IntelligenceFeature:
             assistant = self.integration.assistant(workspace)
             if assistant.engine is not engine:
                 raise IntelligenceError("The assistant must share the original investigation engine.", 503)
-            asyncio.run(assistant.ask(workspace, sid, question, task["operation_id"]))
+            focus_ref = value.get("focus_ref")
+            if focus_ref is not None:
+                if (not isinstance(focus_ref, dict) or set(focus_ref) - {"kind", "id", "member"}
+                        or focus_ref.get("kind") not in {"dataset", "artifact", "job", "ensemble"}
+                        or not isinstance(focus_ref.get("id"), str) or not focus_ref["id"]):
+                    raise IntelligenceError("Choose an original registered source or native result for this question.", 422)
+            def progress(value):
+                with self.operator.lock:
+                    current=self.operator.task(task['id'])
+                    if current.get('state')!='running': return
+                    current['provider_wait']=value
+                    task['provider_wait']=value
+                    atomic_json(self.operator.root/'tasks'/(task['id']+'.json'),current)
+            asyncio.run(assistant.ask(workspace,sid,question,task['operation_id'],focus_ref=focus_ref,
+                resume=len(task.get('attempts',[]))>1,
+                cancelled=lambda: bool(self.operator.task(task['id']).get('cancel_requested')),
+                progress=progress))
             return {"kind": "answer", "session_id": sid, "request_id": task["operation_id"]}
         if action == "intelligence.collection.export":
             record = self.collections.export(engine, task, sid)
@@ -600,7 +655,7 @@ class IntelligenceFeature:
         verified = {}
         for format_name, expected in record["files"].items():
             path = verify_file(ws.root, expected)
-            if path.resolve() != (directory / ("investigation." + format_name)).resolve():
+            if path.resolve() != _native_fs_path(directory / ("investigation." + format_name)).resolve():
                 raise IntelligenceError("The export member does not match its original operation.", 409)
             verified[format_name] = path
         return verified

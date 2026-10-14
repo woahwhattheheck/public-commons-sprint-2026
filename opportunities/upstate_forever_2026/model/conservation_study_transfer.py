@@ -25,7 +25,8 @@ REPORT_EDITIONS = frozenset(("conservation-saved-plan-report/1",
                              "conservation-saved-plan-report/2",
                              "conservation-saved-plan-report/3",
                              "conservation-saved-plan-report/4",
-                             "conservation-saved-plan-report/5"))
+                             "conservation-saved-plan-report/5",
+                             "conservation-saved-plan-report/6"))
 
 
 def _path(kind, key):
@@ -531,8 +532,9 @@ def include_source(closure, collection_id, entry):
             analysis = read("optimization/analysis.json")
             optimization = _optimization_analysis(study, plan, analysis)
             roles = _optimization_roles(analysis)
-            if "joint_comparison" in analysis and recipe["edition"] != "conservation-saved-plan-report/5":
-                raise ValueError("Joint Conservation report companions require their original edition 5.")
+            if "joint_comparison" in analysis and recipe["edition"] not in {
+                    "conservation-saved-plan-report/5", "conservation-saved-plan-report/6"}:
+                raise ValueError("Joint Conservation report companions require their original edition 5 or 6.")
             if {name for name in members if name.startswith("optimization/")} != {
                     "optimization/" + name for name in roles.values()}:
                 raise ValueError("The Conservation report optimization member inventory changed.")

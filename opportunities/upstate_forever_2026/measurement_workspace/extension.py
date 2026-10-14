@@ -109,7 +109,7 @@ class MeasuredObservationExtension:
             if any(part in {'.','..'} for part in parsed.path.split('/')):
                 raise ValueError('Invalid measured-data path')
             service=self._service(workspace)
-            if method == 'POST' and parsed.path == '/large/editions':
+            if method == 'POST' and parsed.path in {'/large/editions', '/large/handovers'}:
                 capture_native_domain(Path(workspace.root), service.directory)
             body=b'' if payload.get('payload') is None else json.dumps(payload['payload'],allow_nan=False).encode()
             status,headers,content=service.request(method,BASE+path,body)

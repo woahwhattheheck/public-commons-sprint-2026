@@ -14,6 +14,8 @@ import stat
 import tempfile
 import time
 
+from .common import _path_stat
+
 # This is the product's original project-local ProjectStore path. Unknown
 # SQLite files may be scientific source editions and must retain exact bytes.
 MUTABLE_DATABASE_MEMBERS = {
@@ -39,7 +41,7 @@ def _state_database(name, path):
 
 
 def _identity(path):
-    info = path.lstat()
+    info = _path_stat(path)
     if not stat.S_ISREG(info.st_mode):
         raise ValueError("Database capture requires a retained regular file")
     return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)

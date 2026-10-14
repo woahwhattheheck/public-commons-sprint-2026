@@ -14,7 +14,9 @@ import os
 from pathlib import Path
 import queue
 import re
+import runpy
 import shutil
+import signal
 import socket
 import stat
 import subprocess
@@ -184,6 +186,12 @@ def resolve_selection(args, application):
         "project_id": project["id"], "python": str(executable), "native": native,
         "port": port, "source_manifests": [str(p) for p in manifests],
         "source_roots": [str(p) for p in roots]}
+    requested_origin = getattr(args, "advertised_origin", None)
+    if requested_origin is None:
+        requested_origin = profile.get("advertised_origin")
+    if requested_origin is not None:
+        policy = runpy.run_path(str(root / "operator" / "origin_policy.py"))
+        selection["advertised_origin"] = policy["advertised_origin"](requested_origin)
     return selection, state, project
 
 
@@ -197,6 +205,8 @@ def save_profile(filename, selection):
         "native": selection["native"], "port": selection["port"],
         "source_manifests": [_portable(p, root) for p in selection["source_manifests"]],
         "source_roots": [_portable(p, root) for p in selection["source_roots"]]}
+    if selection.get("advertised_origin") is not None:
+        value["advertised_origin"] = selection["advertised_origin"]
     _write(path, value, exclusive=True)
     return path
 
@@ -209,6 +219,8 @@ def command_for(selection):
     for path in selection["source_roots"]:
         arguments.extend(["--source-root", path])
     arguments.extend(["--port", str(selection["port"])])
+    if selection.get("advertised_origin") is not None:
+        arguments.extend(["--advertised-origin", selection["advertised_origin"]])
     if selection["native"]:
         invocation = root / "source_tools/native_runtime/invocation.py"
         if not invocation.is_file():
@@ -255,6 +267,9 @@ def _request(url, route):
 
 def verify_session(receipt, selection):
     value = _request(receipt["operator_url"], "/api/whoami")
+    if value.get("advertised_origin") != selection.get("advertised_origin"):
+        raise RuntimeError("The running operator has a different advertised origin. "
+                           "Use its original launch selection or close it from its owning terminal.")
     expected_key = _digest({"directory": selection["workspace"]})
     rows = value.get("workspaces", [])
     if (not isinstance(rows, list) or value.get("default_workspace") != expected_key
@@ -321,9 +336,90 @@ def _collect(process, lines):
     try:
         assert process.stdout is not None
         for line in process.stdout:
-            lines.put(line)
+            # Record readiness before the main thread can dequeue or interrupt.
+            if not _launcher_signal_ready(process, line):
+                lines.put(line)
     finally:
         lines.put(None)
+
+
+
+def _launcher_signal_ready(process, line):
+    """Accept a handler acknowledgement only from this launcher-owned child."""
+    if os.name != "nt":
+        return False
+    try:
+        value = json.loads(line)
+    except (ValueError, TypeError):
+        return False
+    if (isinstance(value, dict)
+            and value.get("schema") == "upstate.workbench-launch-signals/v1"
+            and value.get("pid") == process.pid
+            and value.get("key") == getattr(process, "_workbench_signal_key", None)
+            and value.get("signal") == "SIGBREAK"):
+        process._workbench_drain_ready = True
+        return True
+    return False
+
+
+def _close_owned(process, lines):
+    """Drain the actual child, including cancellation before its first receipt.
+
+    Windows terminate() is TerminateProcess. CTRL_BREAK is used only after this
+    child's installed Python handler has acknowledged the launch nonce. The
+    collector keeps draining stdout while the original operator finishes work.
+    """
+    requested = False
+    explained = False
+    while process.poll() is None:
+        try:
+            if not requested:
+                if os.name != "nt":
+                    process.terminate()
+                    requested = True
+                elif getattr(process, "_workbench_drain_ready", False):
+                    try:
+                        process.send_signal(signal.CTRL_BREAK_EVENT)
+                    except OSError as error:
+                        if process.poll() is not None:
+                            break
+                        print("The console shutdown signal could not be delivered: " + str(error)
+                              + ". This launcher is still monitoring its own operator. "
+                              "Close it normally from its owning console.", flush=True)
+                    # One attempt; never repeatedly signal a live process.
+                    requested = True
+                elif not explained:
+                    print("Waiting for this operator to install its startup shutdown handler. "
+                          "Keep this terminal open.", flush=True)
+                    explained = True
+            try:
+                line = lines.get(timeout=.5)
+            except queue.Empty:
+                continue
+            if line is None:
+                # EOF can precede final process exit; wait without spinning.
+                try:
+                    process.wait(timeout=.5)
+                except subprocess.TimeoutExpired:
+                    pass
+            elif not _launcher_signal_ready(process, line):
+                # A cancelled startup can still produce its private receipt.
+                # Do not print that credential while reporting shutdown.
+                try:
+                    value = json.loads(line)
+                except (ValueError, TypeError):
+                    value = None
+                if not isinstance(value, dict) or "operator_url" not in value:
+                    if line.strip():
+                        print(line.rstrip(), flush=True)
+        except KeyboardInterrupt:
+            print("Shutdown is already in progress. Keep this terminal open until the "
+                  "original operator finishes its active task.", flush=True)
+        except OSError:
+            if process.poll() is not None:
+                break
+            raise
+    return process.wait()
 
 
 def start(selection, state):
@@ -338,13 +434,36 @@ def start(selection, state):
             environment.setdefault("GDAL_DATA", str(runtime / "share/gdal"))
     # Plain opening intentionally does not claim native readiness. Native mode
     # delegates all interpreter/GDAL/PROJ selection to the maintained invocation.
-    process = subprocess.Popen(command + arguments, cwd=selection["application"],
-        env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-        text=True, encoding="utf-8", errors="replace", bufsize=1)
+    signal_key = os.urandom(24).hex() if os.name == "nt" else None
+    if signal_key is not None:
+        arguments += ["--launcher-signals", signal_key]
+    process = None
     lines = queue.Queue()
-    threading.Thread(target=_collect, args=(process, lines), daemon=True).start()
     errors = []
+    deferred_interrupt = []
+    def defer_interrupt(signum, frame):
+        deferred_interrupt.append((signum, frame))
     try:
+        # Defer the ordinary Ctrl+C handler only while creating our child and
+        # starting its collector. Otherwise Popen can return into an interrupted
+        # assignment, leaving a real child without its owning cleanup path.
+        previous = None
+        if (threading.current_thread() is threading.main_thread()
+                and signal.getsignal(signal.SIGINT) is signal.default_int_handler):
+            previous = signal.signal(signal.SIGINT, defer_interrupt)
+        try:
+            process = subprocess.Popen(command + arguments, cwd=selection["application"],
+                env=environment, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace", bufsize=1,
+                creationflags=subprocess.CREATE_NEW_PROCESS_GROUP if os.name == "nt" else 0)
+            process._workbench_signal_key = signal_key
+            process._workbench_drain_ready = False
+            threading.Thread(target=_collect, args=(process, lines), daemon=True).start()
+        finally:
+            if previous is not None:
+                signal.signal(signal.SIGINT, previous)
+        if deferred_interrupt:
+            raise KeyboardInterrupt
         deadline = time.monotonic() + 60
         while time.monotonic() < deadline:
             try:
@@ -355,6 +474,8 @@ def start(selection, state):
                 continue
             if line is None:
                 break
+            if _launcher_signal_ready(process, line):
+                continue
             try:
                 receipt = json.loads(line)
             except ValueError:
@@ -366,6 +487,8 @@ def start(selection, state):
                 errors = errors[-12:]
                 continue
             _session_url(receipt["operator_url"])
+            if os.name == "nt" and not process._workbench_drain_ready:
+                raise RuntimeError("Receive the matching maintained server lifecycle source before opening on Windows")
             key = verify_session(receipt, selection)
             record = {"schema": SESSION_SCHEMA, "hostname": socket.gethostname(),
                 "pid": process.pid, "selection": selection, "workspace_key": key,
@@ -374,10 +497,8 @@ def start(selection, state):
         raise RuntimeError("The original operator did not start. Preserve any existing owning process; "
             "check its terminal and the selected Python/application.\n" + "\n".join(errors))
     except BaseException:
-        if process.poll() is None:
-            process.terminate()
-            # The original operator drains its active task. Never force-kill it.
-            process.wait()
+        if process is not None:
+            _close_owned(process, lines)
         raise
 
 
@@ -397,17 +518,29 @@ def main(application, argv=None):
     parser.add_argument("--source-manifest", action="append", default=None)
     parser.add_argument("--source-root", action="append", default=None)
     parser.add_argument("--port", type=int)
+    parser.add_argument("--advertised-origin", help="Exact canonical HTTPS origin; saved without credentials in the launch profile")
     parser.add_argument("--no-browser", action="store_true")
+    parser.add_argument("--connector-config", type=Path, help="Existing private native HTTPS configuration; retained only in this machine\'s operator state")
     parser.add_argument("--adopt-session", type=Path, help="Private original server startup JSON; reuse that running operator without claiming its runtime configuration")
     parser.add_argument("--status", action="store_true", help="Check existing local session; never starts a process or prints its credential")
     args = parser.parse_args(argv)
     process = None
     session_file = None
     record = None
+    transport = None
+    transport_module = None
+    transport_prepared = None
     try:
         if args.configure_only and not args.save_profile:
             raise ValueError("--configure-only requires a new --save-profile destination")
         selection, state, project = resolve_selection(args, application)
+        transport_source = Path(selection["application"]) / "source_tools/workbench_transport.py"
+        if transport_source.is_file():
+            transport_module = runpy.run_path(str(transport_source))
+            transport_prepared = transport_module["prepare"](selection, state, args.connector_config)
+        elif (args.connector_config is not None or (state / "eco-transport.json").exists()
+                or (state / "workbench-transport.json").exists()):
+            raise ValueError("Receive the complete workbench HTTPS opening source for this private selection")
         if args.save_profile:
             path = save_profile(args.save_profile, selection)
             print("Saved launch selection: " + str(path), flush=True)
@@ -438,12 +571,26 @@ def main(application, argv=None):
             print(json.dumps(public_status(record, selection, state)), flush=True)
         if args.status:
             return 0
+        if transport_prepared is not None:
+            transport = transport_module["Controller"](transport_prepared, record,
+                lambda: existing_session(session_file, selection))
+            transport.start()
         _open(record, args.no_browser)
-        if process is None:
+        if process is None and (transport is None or transport.reused):
             print("Reopened the existing original operator. Its owning terminal and tasks remain unchanged.", flush=True)
             return 0
-        print("Keep this owning terminal open; Ctrl+C closes this operator after its normal shutdown.", flush=True)
-        while process.poll() is None:
+        if process is None:
+            print("This terminal owns the configured HTTPS connection to the existing original operator.", flush=True)
+        else:
+            print("Keep this owning terminal open; Ctrl+C closes this operator after its normal shutdown.", flush=True)
+        while process is None or process.poll() is None:
+            if transport is not None:
+                transport.poll()
+            if process is None:
+                if not transport.native_present():
+                    break
+                time.sleep(.5)
+                continue
             try:
                 line = lines.get(timeout=.5)
                 if line is None:
@@ -452,7 +599,7 @@ def main(application, argv=None):
                     print(line.rstrip(), flush=True)
             except queue.Empty:
                 pass
-        return int(process.wait())
+        return int(process.wait()) if process is not None else 0
     except KeyboardInterrupt:
         print("\nClosing this launcher-owned local session.", flush=True)
         return 0
@@ -460,14 +607,18 @@ def main(application, argv=None):
         print(str(error), file=sys.stderr)
         return 1
     finally:
+        if transport is not None:
+            try:
+                transport.close()
+            except OSError as error:
+                print("The configured HTTPS child could not close: " + type(error).__name__, file=sys.stderr)
         if process is not None:
             if process.poll() is None:
                 print("Waiting for the original operator to finish its active task and close.", flush=True)
-                process.terminate()
-                # Preserve actual native jobs; operator.close owns graceful drain.
-                process.wait()
+                _close_owned(process, lines)
             if session_file and record:
                 with contextlib.suppress(OSError, ValueError):
-                    current = _json(session_file)
-                    if current.get("operator_url") == record.get("operator_url"):
-                        session_file.unlink()
+                    with _launch_lock(state):
+                        current = _json(session_file)
+                        if current.get("operator_url") == record.get("operator_url"):
+                            session_file.unlink()

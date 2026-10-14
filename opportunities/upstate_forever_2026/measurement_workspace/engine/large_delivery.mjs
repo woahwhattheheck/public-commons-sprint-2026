@@ -1,4 +1,8 @@
 import {validateBenchmarkExports} from './benchmark_workspace.mjs';
+import {validateSedimentExports} from './sediment_workspace.mjs';
+import {validateSedimentComparisonExports} from './sediment_comparison_workspace.mjs';
+import {exportIntakes,validateIntakes} from './intake.mjs';
+import {readOriginal} from './source_lineage.mjs';
 /** Complete streamed exports and independently editable receiving, on the original engine. */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -8,7 +12,7 @@ import {execFileSync} from 'node:child_process';
 import {DatabaseSync,backup} from 'node:sqlite';
 import {MeasurementWorkspace} from './workspace.mjs';
 import {hash,stable,parseSource} from './normalise.mjs';
-import {InputError,csv} from './parse.mjs';
+import {InputError,csv,SOURCE_LINE_EDITION,sourceLineEndings} from './parse.mjs';
 import {materializeOriginals} from './large_sources.mjs';
 import {ensureSourceSchema,sourceChunks,normalizedCSV,intakeRoot,intakeStatus} from './large_intake.mjs';
 import {CHUNK,identifier,atomicJSON,readJSON,fileChunks,fileDigest,copyVerified,withDirectoryLock,writeAll,listFiles,safePath} from './large_io.mjs';
@@ -18,9 +22,14 @@ const TABLES={
  import_records:['import_id','record_id','source_line'],stations:['id','data'],mappings:['station_id','reach_id','data'],
  reviews:['record_id','state','data'],selected_versions:['logical_key','record_id'],events:['id','created_at','kind','entity','data'],
  exports:['id','created_at','revision','kind','content'],source_chunks:['import_id','sequence','bytes'],
- source_rejections:['import_id','category','sequence','data'],large_receives:['id','source_revision','received_revision','manifest']
+ source_rejections:['import_id','category','sequence','data'],large_receives:['id','source_revision','received_revision','manifest'],
+ intake_meta:['key','value'],intake_sources:['sha','content'],intake_editions:['id','revision','created_at','digest','data'],
+ intake_receipts:['id','revision','data'],intake_origins:['id','data'],intake_binary_sources:['sha','bytes','content']
 };
 const CORE=Object.keys(TABLES).slice(0,10);
+const INTAKE=['intake_meta','intake_sources','intake_editions','intake_receipts','intake_origins'];
+const EMPTY_TABLES=Object.keys(TABLES).filter(name=>!['meta','intake_meta'].includes(name));
+function requireEmpty(w){for(const name of EMPTY_TABLES)if(w.db.prepare(`SELECT 1 FROM ${name} LIMIT 1`).get())throw new InputError('Choose an empty measured workspace for complete receiving; existing work is preserved',409);}
 const SKIP=new Set(['.large','measurements.sqlite','measurements.sqlite-wal','measurements.sqlite-shm','measurements.sqlite-journal','measurement-process.log']);
 const RECORD_FIELDS=['id','stationId','reachId','sampledDate','sampledAt','timePrecision','parameter','characteristic','basis','fraction','value','lower','upper','censor','unit','qualifier','status','method','laboratory','review','eligible','reasons','sourceResultId'];
 const INPUT_FIELDS=['id','stationId','reachId','sampledDate','sampledAt','timePrecision','parameter','basis','fraction','value','unit','method','sourceResultId'];
@@ -69,18 +78,27 @@ function verifyMembers(root,members){
  }
 }
 /** One revision, durable phase boundaries, same-ID reconnect after process death. */
-export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
+export async function exportEdition(w,{id=hash(randomUUID()),filters={},expectedRevision,collectionBinding}={}){
+ if(expectedRevision!==undefined&&(!Number.isSafeInteger(expectedRevision)||expectedRevision<0))throw new InputError('Select a valid workspace revision');
+ if(collectionBinding!==undefined&&(!collectionBinding||collectionBinding.format!=='upper-savannah-collection-large-edition/v1'||!identifier(collectionBinding.collectionId)||collectionBinding.editionId!==id||collectionBinding.expectedRevision!==expectedRevision||stable(collectionBinding.filters)!==stable(filters)))throw new InputError('Collection publication requires its exact original binding');
+ const selection={...(expectedRevision===undefined?{}:{expectedRevision}),...(collectionBinding===undefined?{}:{collectionBinding})};
+ const checkSelection=(value)=>{
+  if(expectedRevision!==undefined&&value.workspaceRevision!==expectedRevision)throw new InputError('Native edition belongs to another selected revision',409);
+  if(collectionBinding!==undefined&&stable(value.collectionBinding)!==stable(collectionBinding))throw new InputError('Native edition belongs to another collection selection',409);
+  return value;
+ };
  const root=editionRoot(w,id);
  return withDirectoryLock(root,async()=>{
   const resultFile=path.join(root,'edition.json'),ready=path.join(root,'files');
   const requestFile=path.join(root,'request.json');
   if(fs.existsSync(requestFile)){
-   if(stable(readJSON(requestFile).filters)!==stable(filters))throw new InputError('This edition retains different filters; reopen it or choose a new identifier',409);
-  }else atomicJSON(requestFile,{format:'upper-savannah-measurement-export-request/v1',id,filters});
-  if(fs.existsSync(resultFile))return registerEdition(w,readJSON(resultFile));
+   const previous=readJSON(requestFile);
+   if(stable(previous.filters)!==stable(filters)||stable(previous.expectedRevision)!==stable(expectedRevision)||stable(previous.collectionBinding)!==stable(collectionBinding))throw new InputError('This edition retains different filters, revision or collection selection; reopen its original request',409);
+  }else atomicJSON(requestFile,{format:'upper-savannah-measurement-export-request/v1',id,filters,...selection});
+  if(fs.existsSync(resultFile))return registerEdition(w,checkSelection(readJSON(resultFile)));
   // Publication may have completed just before the response/outer receipt was lost.
   if(fs.existsSync(path.join(ready,'edition.json'))){
-   const result=readJSON(path.join(ready,'edition.json'));verifyMembers(ready,result.files);
+   const result=checkSelection(readJSON(path.join(ready,'edition.json')));verifyMembers(ready,result.files);
    atomicJSON(resultFile,result);atomicJSON(path.join(root,'status.json'),{id,phase:'complete',workspaceRevision:result.workspaceRevision});return registerEdition(w,result);
   }
   const savedFile=path.join(w.directory,'saved-measurement-editions',id,'edition.json');
@@ -89,7 +107,7 @@ export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
   // A transferred saved population is already complete. Its receiving workspace
   // creates a new archive under a new ID; it never silently replaces that history.
   if(fs.existsSync(savedFile)&&!fs.existsSync(capturedFile)){
-   const saved=readJSON(savedFile);if(stable(saved.filters)!==stable(filters))throw new InputError('This saved edition retains different filters',409);return registerEdition(w,saved);
+   const saved=checkSelection(readJSON(savedFile));if(stable(saved.filters)!==stable(filters))throw new InputError('This saved edition retains different filters',409);return registerEdition(w,saved);
   }
   let view;
   try{
@@ -100,11 +118,15 @@ export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
     await backup(w.db,path.join(snapshot,'measurements.sqlite'));
     for(const member of before)copyVerified(path.join(w.directory,member.path),path.join(snapshot,member.path),member);
     if(stable(before)!==stable(listFiles(w.directory,{exclude:SKIP})))throw new InputError('Companion sources changed during capture; repeat this edition identifier',409);
-    view=new MeasurementWorkspace(snapshot);const revision=view.revision();materializeOriginals(view,snapshot);view.close();view=null;
+    view=new MeasurementWorkspace(snapshot);const revision=view.revision();
+    if(expectedRevision!==undefined&&revision!==expectedRevision)throw new InputError('Workspace changed before the selected snapshot; retain this request and select a new edition after review',409);
+    if(collectionBinding!==undefined){const selected=readJSON(path.join(snapshot,'collections',collectionBinding.collectionId,'large-editions',id,'selection.json'));if(stable(selected)!==stable(collectionBinding))throw new InputError('Captured collection binding differs',409);}
+    materializeOriginals(view,snapshot);view.close();view=null;
     for(const suffix of ['-wal','-shm','-journal'])fs.rmSync(path.join(snapshot,'measurements.sqlite'+suffix),{force:true});
     atomicJSON(capturedFile,{workspaceRevision:revision,files:listFiles(snapshot)});
    }
    const captured=readJSON(capturedFile),revision=captured.workspaceRevision;
+   if(expectedRevision!==undefined&&revision!==expectedRevision)throw new InputError('Retained capture belongs to another selected revision',409);
    verifyMembers(snapshot,captured.files);
    const populationNames=['records.csv','calibration.json','calibration.csv','accepted.jsonl','excluded.jsonl'];
    if(!fs.existsSync(populationFile)){
@@ -116,7 +138,7 @@ export async function exportEdition(w,{id=hash(randomUUID()),filters={}}={}){
    }
    const population=readJSON(populationFile),{calibration}=population,populationFiles=population.files;
    verifyMembers(build,populationFiles);
-   const saved={format:'upper-savannah-measurements-edition/v1',id,workspaceRevision:revision,createdAt:calibration.createdAt,filters,counts:calibration.counts,recordCount:calibration.counts.accepted+calibration.counts.excluded,calibrationSha256:calibration.sha256,files:populationFiles,chunkBytes:CHUNK};
+   const saved={format:'upper-savannah-measurements-edition/v1',id,workspaceRevision:revision,createdAt:calibration.createdAt,filters,counts:calibration.counts,recordCount:calibration.counts.accepted+calibration.counts.excluded,calibrationSha256:calibration.sha256,files:populationFiles,chunkBytes:CHUNK,...(collectionBinding===undefined?{}:{collectionBinding})};
    const savedRelative='saved-measurement-editions/'+id,snapshotSaved=path.join(snapshot,savedRelative);
    fs.mkdirSync(snapshotSaved,{recursive:true});
    for(const member of populationFiles)copyVerified(path.join(build,member.path),path.join(snapshotSaved,member.path),member);
@@ -174,6 +196,8 @@ function requireSchema(file){
   if(entries.some(x=>!['table','index'].includes(x.type)||!Object.hasOwn(TABLES,x.tbl_name)))throw new InputError('Archive uses an unsupported Measurements database schema');
   const names=entries.filter(x=>x.type==='table').map(x=>x.name);
   if(CORE.some(name=>!names.includes(name)))throw new InputError('Archive is missing a native Measurements table');
+  if(INTAKE.some(name=>names.includes(name))&&INTAKE.some(name=>!names.includes(name)))throw new InputError('Archive has an incomplete original intake schema');
+  if(names.includes('intake_binary_sources')&&!names.includes('intake_editions'))throw new InputError('Original workbook table has no intake history');
   for(const name of names){const columns=[...db.prepare(`PRAGMA table_info("${name}")`).iterate()].map(x=>x.name);if(stable(columns)!==stable(TABLES[name]))throw new InputError('Native table columns differ: '+name);}
   if(db.prepare('PRAGMA quick_check').get().quick_check!=='ok'||[...db.prepare('PRAGMA foreign_key_check').iterate()].length)throw new InputError('Native measurement database failed its integrity check');
   return names;
@@ -194,7 +218,7 @@ export function validateReceived(directory){
    imports++;expected.exec('DELETE FROM stations;DELETE FROM counts;DELETE FROM rejected');let accepted=0,rejected=0,censored=0,mapping;
    const digest=createHash('sha256');for(const b of sourceChunks(facade,source))digest.update(b);if(digest.digest('hex')!==source.sha)throw new InputError('Original source checksum differs');
    let stream;
-   if(['wqp','stations'].includes(source.kind))stream=normalizedCSV(sourceChunks(facade,source),source.kind,JSON.parse(source.mapping));
+   if(['wqp','stations'].includes(source.kind))stream=normalizedCSV(sourceChunks(facade,source),source.kind,JSON.parse(source.mapping),{lineEndings:sourceLineEndings(JSON.parse(source.summary))});
    else if(source.kind==='usgs-daily'){
     const parsed=parseSource({kind:source.kind,text:Buffer.concat([...sourceChunks(facade,source)]).toString('utf8'),mapping:JSON.parse(source.mapping)});
     stream=[{type:'header',mapping:parsed.mapping},...parsed.rows.map(x=>({type:'row',...x})),...parsed.rejected.map(entry=>({type:'rejected',category:1,entry}))];
@@ -205,7 +229,7 @@ export function validateReceived(directory){
     accepted++;const row=item.row;station.run(row.stationId||row.id);if(row.parameter)count.run('parameter',row.parameter);if(row.censor&&row.censor!=='none')censored++;for(const issue of row.issues||[])count.run('issue',issue);
     if(source.kind!=='stations'){const id=hash(stable([row.sourceKind,row]));saveRecord.run(id,stable(row));saveLink.run(source.id,id,item.line);}
    }
-   const summary={rows:accepted,rejectedCount:rejected,stationCount:expected.prepare('SELECT COUNT(*) n FROM stations').get().n,censored,parameters:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='parameter'").iterate().map(x=>[x.key,x.n])),issues:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='issue'").iterate().map(x=>[x.key,x.n]))};
+   const summary={...(source.kind!=='usgs-daily'&&sourceLineEndings(JSON.parse(source.summary))==='physical'?{sourceLineEdition:SOURCE_LINE_EDITION}:{}),rows:accepted,rejectedCount:rejected,stationCount:expected.prepare('SELECT COUNT(*) n FROM stations').get().n,censored,parameters:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='parameter'").iterate().map(x=>[x.key,x.n])),issues:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='issue'").iterate().map(x=>[x.key,x.n]))};
    if(hash(stable([source.kind,source.sha,mapping]))!==source.id||stable(summary)!==stable(JSON.parse(source.summary)))throw new InputError('Native source identity or parse accounting differs');
    const chunked=names.includes('source_chunks')&&db.prepare('SELECT 1 FROM source_chunks WHERE import_id=? LIMIT 1').get(source.id);
    const actualRejected=chunked?db.prepare('SELECT data FROM source_rejections WHERE import_id=? ORDER BY category,sequence').iterate(source.id):JSON.parse(source.rejected).map(data=>({data:JSON.stringify(data)}));
@@ -228,7 +252,15 @@ export function validateReceived(directory){
   for(const row of db.prepare('SELECT * FROM stations').iterate())if(JSON.parse(row.data).id!==row.id)throw new InputError('Invalid retained station');
   for(const row of db.prepare('SELECT * FROM mappings').iterate()){const data=JSON.parse(row.data);if(data.stationId!==row.station_id||data.reachId!==row.reach_id||!db.prepare('SELECT 1 FROM stations WHERE id=?').get(row.station_id))throw new InputError('Invalid retained native assignment');}
   const revision=db.prepare("SELECT value FROM meta WHERE key='revision'").get()?.value;if(!Number.isSafeInteger(revision)||revision<0)throw new InputError('Invalid native revision');
-  validateBenchmarkExports(db.prepare('SELECT * FROM exports').all());
+  const retainedExports=db.prepare('SELECT * FROM exports').all();
+  validateBenchmarkExports(retainedExports);validateSedimentExports(retainedExports);validateSedimentComparisonExports(retainedExports);
+  if(names.includes('intake_meta')){
+   const intake=exportIntakes(facade);validateIntakes(intake,db.prepare('SELECT id,sha FROM imports').all());
+   // Preserve and validate complete storage, including retained sources no longer
+   // referenced by the latest preparation. The original validator handles history.
+   for(const row of db.prepare('SELECT sha,content FROM intake_sources').iterate())if(hash(row.content)!==row.sha)throw new InputError('Retained preparation source checksum differs');
+   if(names.includes('intake_binary_sources'))for(const row of db.prepare('SELECT sha FROM intake_binary_sources').iterate())readOriginal(facade,row.sha);
+  }
   return {recordCount:expectedCount,sourceCount:imports,revision,tables:names};
  }finally{expected.close();db.close();for(const suffix of ['','-journal','-wal','-shm'])fs.rmSync(scratch+suffix,{force:true});}
 }
@@ -236,7 +268,7 @@ export function receiveArchive(w,archiveFile){
  ensureSourceSchema(w);const digest=fileDigest(archiveFile),id=digest.sha256,root=path.join(w.directory,'.large','receives',id);
  return withDirectoryLock(root,()=>{
   const previous=w.db.prepare('SELECT * FROM large_receives WHERE id=?').get(id);if(previous)return {id,duplicate:true,sourceRevision:previous.source_revision,revision:previous.received_revision,recordCount:w.db.prepare('SELECT COUNT(*) n FROM records').get().n};
-  for(const name of CORE.filter(x=>x!=='meta'))if(w.db.prepare(`SELECT 1 FROM ${name} LIMIT 1`).get())throw new InputError('Choose an empty measured workspace for complete receiving; existing work is preserved',409);
+  requireEmpty(w);
   const copy=path.join(root,'verified');if(!fs.existsSync(copy))archive('unpack',archiveFile,copy);
   const manifest=readJSON(path.join(copy,'MEASUREMENTS_ARCHIVE.json'));
   // Recheck a retained receiving copy after interruption before semantic validation.
@@ -254,9 +286,9 @@ export function receiveArchive(w,archiveFile){
   }
   const received=new DatabaseSync(path.join(copy,'measurements.sqlite'),{readOnly:true});w.db.exec('BEGIN IMMEDIATE');
   try{
-   for(const name of CORE.filter(x=>x!=='meta'))if(w.db.prepare(`SELECT 1 FROM ${name} LIMIT 1`).get())throw new InputError('Workspace changed during receiving; existing work is preserved',409);
+   requireEmpty(w);
    for(const name of Object.keys(TABLES)){
-    if(!validation.tables.includes(name))continue;if(name==='meta')w.db.exec('DELETE FROM meta');
+    if(!validation.tables.includes(name))continue;if(name==='meta'||name==='intake_meta')w.db.exec(`DELETE FROM ${name}`);
     const columns=TABLES[name],insert=w.db.prepare(`INSERT INTO ${name}(${columns.join(',')}) VALUES(${columns.map(()=>'?').join(',')})`);
     for(const row of received.prepare(`SELECT * FROM ${name}`).iterate())insert.run(...columns.map(x=>row[x]));
    }

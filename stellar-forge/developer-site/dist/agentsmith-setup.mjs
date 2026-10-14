@@ -2,7 +2,7 @@ import {AGENTSMITH_SCHEMA, AGENTSMITH_SOURCE, readAgentSmithBundle, importAgentS
   createAgentSmithPacket, sha256} from './agentsmith-onboarding.mjs';
 
 const $ = id => document.getElementById(id);
-let sourceText = '', source = null, generation = 0, assetsPromise, exporting = false;
+let sourceText = '', source = null, sourceLabel = '', generation = 0, assetsPromise, exporting = false, loading = false;
 const controls = ['packet-folder','private-directory','intent-id','actor','payer'];
 const keys = ['folder','privateDirectory','intentId','actor','payer'];
 const facts = ['capture-time','resource-url','http-response','offer-network','offer-amount',
@@ -10,7 +10,7 @@ const facts = ['capture-time','resource-url','http-response','offer-network','of
 const notice = (text, kind = 'success') => { $('notice').textContent = text; $('notice').dataset.kind = kind; $('notice').hidden = !text; };
 const show = (id, value) => { $(id).textContent = value; };
 const input = () => ({schema:AGENTSMITH_SCHEMA,...Object.fromEntries(controls.map((id,index)=>[keys[index],$(id).value.trim()])),sourceText});
-const enable = value => { $('download-packet').disabled = !value || exporting; $('save-draft').disabled = !value || exporting; };
+const enable = value => { $('download-packet').disabled = !value || exporting || loading; $('save-draft').disabled = !value || exporting || loading; };
 function atomicUSDC(value) {
   const padded = value.padStart(8,'0');
   return padded.slice(0,-7) + '.' + padded.slice(-7).replace(/0+$/,'').padEnd(1,'0');
@@ -34,21 +34,29 @@ function download(name, content, type) {
   document.body.append(anchor); anchor.click(); anchor.remove(); setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function beginSource() {
-  enable(false); sourceText = ''; source = null;
-  show('source-status','Reading original request and response bytes…');
-  facts.forEach(id=>show(id,'Loading…')); $('resource-url').removeAttribute('href');
+  loading = true; enable(false);
+  show('source-status',source ? 'Checking incoming source… Current preparation retained.' : 'Reading original request and response bytes…');
+  if (!source) { facts.forEach(id=>show(id,'Loading…')); $('resource-url').removeAttribute('href'); }
+  notice('');
   return ++generation;
 }
 function failSource(error, current) {
   if (current !== generation) return;
-  facts.forEach(id=>show(id,'—')); $('resource-url').removeAttribute('href');
-  show('source-status','Choose a complete original source bundle.');
-  notice(error.message,'error'); enable(false);
+  loading = false;
+  if (source) {
+    show('source-status',sourceLabel + ' · original bytes retained');
+    notice(error.message + ' Your current source and preparation are unchanged.','error');
+    enable(true);
+  } else {
+    facts.forEach(id=>show(id,'—')); $('resource-url').removeAttribute('href');
+    show('source-status','Choose a complete original source bundle.');
+    notice(error.message,'error'); enable(false);
+  }
 }
 async function applySource(text, label, current) {
   const parsed = await readAgentSmithBundle(text);
   if (current !== generation) return false;
-  sourceText = text; source = parsed;
+  sourceText = text; source = parsed; sourceLabel = label; loading = false;
   show('capture-time',parsed.capturedAt); show('resource-url',parsed.bundle.seller); $('resource-url').href = parsed.bundle.seller;
   show('http-response','POST 402 · facilitator GET 200');
   show('offer-network',parsed.selected.network);
@@ -105,7 +113,7 @@ $('receiving-form').addEventListener('submit',async event => {
   try {
     const packet = await createAgentSmithPacket(saved,await nativeAssets());
     download(saved.folder + '.zip',packet.zip,'application/zip');
-    notice('Receiving packet downloaded: ' + packet.files.length + ' files with the original request, source and native run guide.');
+    notice('Receiving packet downloaded for ' + saved.intentId + ': ' + packet.files.length + ' files with the original request, source and native run guide.');
   } catch (error) { notice(error.message,'error'); }
   finally { exporting = false; enable(Boolean(source)); }
 });
