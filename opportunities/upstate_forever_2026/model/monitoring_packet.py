@@ -13,6 +13,8 @@ import time
 import zipfile
 
 from .monitoring_common import ContractError
+from .portable_fs import (native_path, publish_file, sync_directory,
+                          validate_members)
 
 CHUNK_BYTES = 1024 * 1024
 
@@ -119,11 +121,19 @@ def retain_packet(path, files, *, metadata="deterministic"):
     """
     if metadata not in {"deterministic", "export"}:
         raise ValueError("Choose deterministic handoff or ordinary export ZIP metadata")
-    path = Path(path)
+    path = native_path(path)
     files = {_member_name(name): member for name, member in files.items()}
+    # The same original ZIP must reopen on all three recipient platforms.
+    # Validate complete member namespace before creating a retained packet.
+    try:
+        validate_members(files, portable=True)
+    except ValueError as error:
+        raise ContractError(str(error)) from error
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists() or path.is_symlink():
-        return _verify_existing(path, files)
+        result = _verify_existing(path, files)
+        sync_directory(path.parent)
+        return result
     pending = None
     try:
         with tempfile.NamedTemporaryFile(prefix=".monitoring-packet-", suffix=".zip",
@@ -142,19 +152,16 @@ def retain_packet(path, files, *, metadata="deterministic"):
             os.fsync(stream.fileno())
         result = _packet_identity(pending)
         try:
-            os.link(pending, path)
+            # Reuse native atomic create-only publishing, with verified streaming
+            # copies on removable volumes that do not support hard links.
+            publish_file(pending, path)
         except FileExistsError:
             result = _verify_existing(path, files)
         else:
             result["path"] = path
         pending.unlink()
         pending = None
-        if os.name != "nt":
-            descriptor = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-            try:
-                os.fsync(descriptor)
-            finally:
-                os.close(descriptor)
+        sync_directory(path.parent)
         return result
     finally:
         if pending is not None:
