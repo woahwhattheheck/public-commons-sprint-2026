@@ -7,6 +7,7 @@ contains the current local operator URL.
 from __future__ import annotations
 import argparse
 import contextlib
+import errno
 import hashlib
 import http.client
 import json
@@ -104,7 +105,8 @@ def _write(path, value, *, exclusive=False):
             stream.flush()
             os.fsync(stream.fileno())
         if exclusive:
-            os.link(temporary, path)
+            from model.portable_fs import publish_file
+            publish_file(temporary, path)
         else:
             if path.is_symlink():
                 raise ValueError("A private session file cannot be a symbolic link")
@@ -120,21 +122,70 @@ def _write(path, value, *, exclusive=False):
             os.unlink(temporary)
 
 
+def default_state_root():
+    """Return this platform's private application state directory."""
+    if os.name == "nt":
+        local = Path(os.environ.get("LOCALAPPDATA") or (Path.home() / "AppData/Local"))
+    elif sys.platform == "darwin":
+        local = Path(os.environ.get("XDG_STATE_HOME") or (Path.home() / "Library/Application Support"))
+    else:
+        local = Path(os.environ.get("XDG_STATE_HOME") or (Path.home() / ".local/state"))
+    return local.expanduser().resolve() / "ecosystem-workbench"
+
+
+def state_directory(identity):
+    """Retain a previous private state location when upgrading this launcher."""
+    if (not isinstance(identity, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", identity)):
+        raise ValueError("Select one original private state identifier")
+    current = default_state_root() / identity
+    legacy_local = Path(os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME")
+                        or (Path.home() / ".local/state"))
+    legacy = legacy_local.expanduser().resolve() / "ecosystem-workbench" / identity
+    # Earlier macOS versions used .local/state. Continue their existing operation.
+    if legacy != current and legacy.is_dir():
+        return legacy
+    return current
+
+
 @contextlib.contextmanager
-def _launch_lock(state):
-    path = state / ".workbench-launch.lock"
+def _launch_lock(state, timeout=180):
+    """Wait for the first opener, then authenticate and reuse its original server."""
+    if isinstance(timeout, bool) or not isinstance(timeout, (int, float)) or not 0 <= timeout <= 3600:
+        raise ValueError("Select a finite launch-lock wait from 0 through 3600 seconds")
+    path = Path(state) / ".workbench-launch.lock"
     flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
     fd = os.open(path, flags, 0o600)
     try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError("The private launch lock must be a regular file")
         if os.name == "nt":
             import msvcrt
             if os.fstat(fd).st_size == 0:
                 os.write(fd, b"0")
-            os.lseek(fd, 0, os.SEEK_SET)
-            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
         else:
             import fcntl
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        deadline = time.monotonic() + timeout
+        announced = False
+        while True:
+            try:
+                if os.name == "nt":
+                    os.lseek(fd, 0, os.SEEK_SET)
+                    msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
+                else:
+                    fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as error:
+                if (error.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK)
+                        and getattr(error, "winerror", None) not in (32, 33, 36)):
+                    raise
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise RuntimeError("Another opening still owns this launch selection. "
+                                       "Keep its terminal open and reopen when it is ready.") from error
+                if not announced:
+                    print("Waiting for the existing opening to become ready.", flush=True)
+                    announced = True
+                time.sleep(min(.2, remaining))
         yield
     finally:
         os.close(fd)
@@ -176,10 +227,8 @@ def resolve_selection(args, application):
     if any(not path.is_file() for path in manifests) or any(not path.is_dir() for path in roots):
         raise ValueError("Select existing source manifests and source directories")
     identity = hashlib.sha256(str(workspace).encode()).hexdigest()[:20]
-    local = Path(os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_STATE_HOME")
-                 or (Path.home() / ".local/state"))
     state = (Path(args.operator_state).expanduser() if args.operator_state else
-             local / "ecosystem-workbench" / identity).resolve()
+             state_directory(identity)).resolve()
     if any(state == item or item in state.parents for item in (root, workspace)):
         raise ValueError("Keep private operator state outside application and scientific Workspace directories")
     selection = {"application": str(root), "workspace": str(workspace),
@@ -327,9 +376,16 @@ def public_status(record, selection, state):
 
 
 def _open(record, no_browser):
-    if no_browser or not webbrowser.open(record["operator_url"]):
+    opened = False
+    if not no_browser:
+        try:
+            opened = bool(webbrowser.open(record["operator_url"]))
+        except Exception as error:
+            print("The default browser could not open: " + type(error).__name__
+                  + ". The original operator remains available.", flush=True)
+    if not opened:
         print("Open this PRIVATE session address on this same machine:\n" + record["operator_url"], flush=True)
-    print("Cloud loopback is not a recipient route on another device. Use the existing authorized receiving route.", flush=True)
+    print("Keep this address private and use it on the computer running this workbench.", flush=True)
 
 
 def _collect(process, lines):
@@ -422,6 +478,55 @@ def _close_owned(process, lines):
     return process.wait()
 
 
+def _prepare_native(selection, arguments):
+    """Use the selected application's maintained preparation and own its server."""
+    root = Path(selection["application"]).resolve(strict=True)
+    if root == Path(__file__).resolve().parents[1]:
+        from source_tools.native_runtime import invocation
+        return invocation.prepare(selection["python"], str(root),
+                                  "operator/server.py", arguments)
+    # --application may deliberately select another complete received application.
+    # Its one-shot preparation imports that application's capsule, never a cached
+    # module from this launcher. The actual server is still created below by us.
+    script = (
+        "import json,sys; request=json.load(sys.stdin); "
+        "sys.path.insert(0,request['application']); "
+        "from source_tools.native_runtime import invocation; "
+        "value=invocation.prepare(request['python'],request['application'],"
+        "'operator/server.py',request['arguments']); "
+        "print(json.dumps(value,ensure_ascii=False,allow_nan=False))"
+    )
+    environment = {key: value for key, value in os.environ.items()
+                   if not key.upper().startswith("PYTHON")}
+    environment.update(PYTHONUTF8="1", PYTHONUNBUFFERED="1",
+                       PYTHONIOENCODING="utf-8", PYTHONNOUSERSITE="1")
+    request = {"python": selection["python"], "application": str(root), "arguments": arguments}
+    try:
+        result = subprocess.run([selection["python"], "-B", "-c", script],
+            input=json.dumps(request, ensure_ascii=False), capture_output=True,
+            text=True, encoding="utf-8", errors="strict", cwd=str(root),
+            env=environment, timeout=180, check=True)
+    except subprocess.TimeoutExpired as error:
+        raise RuntimeError("The selected application's native preparation exceeded 180 seconds.") from error
+    except subprocess.CalledProcessError as error:
+        detail = (error.stderr or "").strip()[-2000:]
+        raise RuntimeError("The selected application's native preparation failed "
+                           "(exit " + str(error.returncode) + ")."
+                           + ("\n" + detail if detail else "")) from error
+    if len(result.stdout.encode("utf-8")) > MAX_JSON_BYTES:
+        raise ValueError("The selected native preparation returned an oversized result")
+    value = json.loads(result.stdout)
+    if (not isinstance(value, dict) or value.get("application") != str(root)
+            or not isinstance(value.get("command"), list) or not value["command"]
+            or any(not isinstance(item, str) or "\0" in item for item in value["command"])
+            or not isinstance(value.get("environment"), dict)
+            or any(not isinstance(key, str) or not isinstance(item, str)
+                   or "\0" in key or "\0" in item
+                   for key, item in value["environment"].items())):
+        raise ValueError("The selected native preparation returned an invalid command/environment")
+    return value
+
+
 def start(selection, state):
     command, arguments = command_for(selection)
     arguments += ["--operator-state", str(state)]
@@ -437,6 +542,15 @@ def start(selection, state):
     signal_key = os.urandom(24).hex() if os.name == "nt" else None
     if signal_key is not None:
         arguments += ["--launcher-signals", signal_key]
+    if selection["native"]:
+        # Resolve the selected scientific runtime here, then own the actual server
+        # process. On Windows an exec wrapper would give the launcher the wrong PID.
+        prepared = _prepare_native(selection, arguments)
+        command, arguments = prepared["command"], []
+        environment = prepared["environment"]
+    # Native prefix preparation removes inherited PYTHON* variables. Apply these
+    # after it so both the receipt and later scientific logs use the same encoding.
+    environment.update(PYTHONUTF8="1", PYTHONUNBUFFERED="1", PYTHONIOENCODING="utf-8")
     process = None
     lines = queue.Queue()
     errors = []
@@ -464,7 +578,7 @@ def start(selection, state):
                 signal.signal(signal.SIGINT, previous)
         if deferred_interrupt:
             raise KeyboardInterrupt
-        deadline = time.monotonic() + 60
+        deadline = time.monotonic() + 180
         while time.monotonic() < deadline:
             try:
                 line = lines.get(timeout=.5)
@@ -489,7 +603,7 @@ def start(selection, state):
             _session_url(receipt["operator_url"])
             if os.name == "nt" and not process._workbench_drain_ready:
                 raise RuntimeError("Receive the matching maintained server lifecycle source before opening on Windows")
-            key = verify_session(receipt, selection)
+            key = _verify_ready(receipt, selection, process, deadline)
             record = {"schema": SESSION_SCHEMA, "hostname": socket.gethostname(),
                 "pid": process.pid, "selection": selection, "workspace_key": key,
                 "operator_url": receipt["operator_url"], "started_at": time.time()}
@@ -500,6 +614,76 @@ def start(selection, state):
         if process is not None:
             _close_owned(process, lines)
         raise
+
+
+def _verify_ready(receipt, selection, process, deadline):
+    """Retry only transient connection failures from this newly owned process."""
+    transient = (ConnectionError, TimeoutError, http.client.RemoteDisconnected,
+                 http.client.IncompleteRead)
+    while True:
+        if process.poll() is not None:
+            raise RuntimeError("The original operator exited before authenticated readiness.")
+        try:
+            return verify_session(receipt, selection)
+        except transient as error:
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise RuntimeError("The original operator did not become reachable before "
+                                   "its startup deadline.") from error
+            time.sleep(min(.2, remaining))
+
+
+def export_connection(args, application):
+    """Export only an authenticated existing local selection, without opening it."""
+    incompatible = ("profile", "save_profile", "configure_only", "workspace", "application",
+                    "python_path", "source_manifest", "source_root", "advertised_origin",
+                    "connector_config", "adopt_session", "status")
+    if any(getattr(args, name, None) for name in incompatible) or args.native is not None or args.port is not None:
+        raise ValueError("Export with only --operator-state and --export-connection; "
+                         "the existing session supplies its exact selection.")
+    if not args.operator_state:
+        raise ValueError("--export-connection requires the existing private --operator-state directory")
+    state = Path(args.operator_state).expanduser().resolve(strict=True)
+    if not state.is_dir():
+        raise ValueError("Select the existing private operator-state directory")
+    with _launch_lock(state):
+        original = _json(state / "workbench-session.json")
+        selection = original.get("selection")
+        if not isinstance(selection, dict):
+            raise ValueError("The private session has no retained launch selection")
+        retained = argparse.Namespace(
+            profile=None, application=selection["application"], workspace=selection["workspace"],
+            python_path=selection["python"], operator_state=str(state), native=selection["native"],
+            port=selection["port"], source_manifest=selection["source_manifests"],
+            source_root=selection["source_roots"], advertised_origin=selection.get("advertised_origin"))
+        actual, selected_state, _ = resolve_selection(retained, application)
+        if actual != selection or selected_state != state:
+            raise ValueError("The retained session selection no longer names the same original project")
+        record = existing_session(state / "workbench-session.json", selection)
+        if record is None:
+            raise RuntimeError("The selected original operator is not running. Open its normal shortcut first.")
+        path = Path(args.export_connection).expanduser()
+        # A relative export stays with this machine's private state, never with
+        # the recipient's portable collection or the caller's current directory.
+        path = path if path.is_absolute() else state / path
+        parent = path.parent.resolve(strict=True)
+        path = parent / path.name
+        application_root = Path(selection["application"])
+        workspace_root = Path(selection["workspace"])
+        private_exclusions = [application_root, workspace_root]
+        if workspace_root.is_relative_to(application_root.parent):
+            private_exclusions.append(application_root.parent)
+        for folder in private_exclusions:
+            if path == folder or path.is_relative_to(folder):
+                raise ValueError("Keep the private connection outside the portable application and Workspace")
+        parts, _ = _session_url(record["operator_url"])
+        value = {"schema": "upstate.workbench-connection/v1",
+                 "origin": parts.scheme + "://" + parts.netloc,
+                 "operator_url": record["operator_url"], "workspace_key": record["workspace_key"]}
+        _write(path, value, exclusive=True)
+    print(json.dumps({"connection": str(path), "python": selection["python"]},
+                     ensure_ascii=False), flush=True)
+    return 0
 
 
 def main(application, argv=None):
@@ -523,6 +707,8 @@ def main(application, argv=None):
     parser.add_argument("--connector-config", type=Path, help="Existing private native HTTPS configuration; retained only in this machine\'s operator state")
     parser.add_argument("--adopt-session", type=Path, help="Private original server startup JSON; reuse that running operator without claiming its runtime configuration")
     parser.add_argument("--status", action="store_true", help="Check existing local session; never starts a process or prints its credential")
+    parser.add_argument("--export-connection", type=Path,
+                        help="Create a private connection file from the authenticated existing operator state")
     args = parser.parse_args(argv)
     process = None
     session_file = None
@@ -531,6 +717,8 @@ def main(application, argv=None):
     transport_module = None
     transport_prepared = None
     try:
+        if args.export_connection is not None:
+            return export_connection(args, application)
         if args.configure_only and not args.save_profile:
             raise ValueError("--configure-only requires a new --save-profile destination")
         selection, state, project = resolve_selection(args, application)

@@ -33,7 +33,10 @@ def apply(application: Path) -> list[str]:
         destination = application / name
         original = destination.read_bytes()
         text = original.decode("utf-8")
+        crlf = b"\r\n" in original and b"\n" not in original.replace(b"\r\n", b"")
         for before, after in edits:
+            if crlf:
+                before, after = before.replace("\n", "\r\n"), after.replace("\n", "\r\n")
             if text.count(after) == 1:
                 continue
             if text.count(before) != 1:
