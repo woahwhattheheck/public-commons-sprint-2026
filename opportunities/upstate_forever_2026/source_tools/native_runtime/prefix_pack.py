@@ -142,7 +142,7 @@ def pack_completed(original_prefix: str | Path, completed_prefix: str | Path, ou
         environment = packing_environment(original_prefix, completed_prefix, target=target, donors=donors)
         environment.pack(output=str(temporary), format=format, arcroot=archive_root,
                          zip_symlinks=True, zip_64=True, n_threads=1, verbose=False)
-        with temporary.open('rb') as stream:
+        with temporary.open('r+b' if os.name == 'nt' else 'rb') as stream:
             os.fsync(stream.fileno())
         receipt = {'schema': 'upstate.native-payload-archive/v1', 'target': target_name(target),
                    'archive': {'filename': output.name, 'bytes': temporary.stat().st_size,
