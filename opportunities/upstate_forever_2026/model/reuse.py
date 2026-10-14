@@ -7,22 +7,27 @@ except ImportError:
     from model import windows_fs as fcntl
 import hashlib
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import tempfile
 from .common import (canonical, describe_file, file_digest, relative_file, verify_file,
                      _sync_directory, _replace_original)
+from .portable_fs import native_path as _native_path, relative_name as _portable_relative_name
 
 FICLONE = 0x40049409
 
 
 def destination_file(root, relative):
-    root = Path(root).resolve()
-    member = Path(relative)
-    if (not isinstance(relative, str) or not member.parts or member.is_absolute()
-            or ".." in member.parts or "\\" in relative or "\0" in relative
-            or member.as_posix() != relative):
-        raise ValueError("Retained reuse requires a portable relative file name")
-    target = root / member
+    """Bind a retained output to the same portable native member on every host.
+
+    A Linux producer can create a perfectly ordinary path which Windows would
+    interpret as a reserved device or alternate data stream. Validate names
+    *before* creating a destination, and keep Windows long-path prefixes for
+    the original deep stage and source filenames.
+    """
+    _portable_relative_name(relative, windows=True)
+    root = _native_path(root).resolve()
+    member = PurePosixPath(relative)
+    target = root.joinpath(*member.parts)
     if target.is_symlink() or not target.resolve().is_relative_to(root):
         raise ValueError("Retained reuse destination escapes its operation")
     current = root
@@ -138,7 +143,7 @@ def registry_snapshot(directory, model, registry):
     """Keep each original registry identifier and its materialized path kind."""
     if not isinstance(registry, dict):
         raise ValueError("Native engine did not return its original output registry")
-    directory = Path(directory).resolve()
+    directory = _native_path(directory).resolve()
     files, outputs, directories = {}, {}, []
     for output_id, value in registry.items():
         if not isinstance(output_id, str):
@@ -147,6 +152,9 @@ def registry_snapshot(directory, model, registry):
             path = Path(value)
             if not path.is_absolute():
                 path = directory / model / path
+            # An original native engine may return a deep absolute Win32 path.
+            # Keep its extended path representation through stat and capture.
+            path = _native_path(path)
             resolved = path.resolve()
             if not resolved.is_relative_to(directory):
                 raise ValueError("Native registry output is outside its retained run")
