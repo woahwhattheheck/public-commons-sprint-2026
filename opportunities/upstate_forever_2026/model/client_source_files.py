@@ -80,6 +80,25 @@ def headers(values):
             for i, name in enumerate(raw)]
 
 
+def workbook_cell_value(cell):
+    """Keep lossless all-zero integer display IDs; never round quantities.
+
+    The complete original workbook and stored cell value remain retained.
+    This supports only the unambiguous Excel integer zero-padding format;
+    dates, formulas, fractions and complex number formats keep their values.
+    """
+    value = cell.value
+    formatting = cell.number_format or "General"
+    if (getattr(cell, "data_type", None) == "n" and type(value) in (int, float)
+            and math.isfinite(value) and value >= 0
+            and (type(value) is int or value.is_integer())
+            and re.fullmatch(r"0{2,64}", formatting)):
+        digits = str(int(value))
+        if len(digits) < len(formatting):
+            return digits.zfill(len(formatting))
+    return value
+
+
 def table_records(path, selected, sheet=None):
     """Yield original record and physical row/line positions through the same readers."""
     path = Path(path)
@@ -96,7 +115,9 @@ def table_records(path, selected, sheet=None):
             need(sheet in book.sheetnames, "Choose an original worksheet.")
             for number, row in enumerate(book[sheet].iter_rows(values_only=False), 1):
                 yield {"row": number, "line_start": number, "line_end": number,
-                       "values": [cell.value for cell in row],
+                       "values": [workbook_cell_value(cell) for cell in row],
+                       "stored_values": [cell.value for cell in row],
+                       "number_formats": [cell.number_format or "General" for cell in row],
                        "cell_metadata": [{"data_type": getattr(cell, "data_type", None),
                                           "number_format": getattr(cell, "number_format", None)}
                                          for cell in row]}
@@ -159,7 +180,8 @@ def table_preview(path, opts, sheet=None):
                 "sample_limit": PREVIEW_ROWS,
                 "formula_mode": opts["formula_mode"],
                 "questions": ["Confirm the selected header row and original column meanings.",
-                              "Confirm units, analytical fractions, dates/time zone and source period; these are not inferred from sample values."]}
+                              "Confirm units, analytical fractions, dates/time zone and source period; these are not inferred from sample values.",
+                              "Excel integer identifiers with an all-zero format keep their displayed leading zeros. Other number formats never round or convert stored quantities here; review identifier formatting explicitly."]}
     finally:
         iterator.close()
 
