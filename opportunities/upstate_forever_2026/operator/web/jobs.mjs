@@ -83,8 +83,29 @@ function reuseMarkup(native,state){
     '<p class="note">Byte counts are complete, independently retained and verified files. Copy, reflink and already-retained files keep their original source identities.</p>';
 }
 
+function cancellationMarkup(task,native){
+  if(!native.stop_requested&&!native.cancellation)return '';
+  const progress=native.cancellation,active=native.alive||['running','queued'].includes(task.state);
+  const heading=active?'Stop progress':'Saved stop request';
+  const requested=progress?.requested_at||native.stop_requested_at;
+  const records=Array.isArray(progress?.dispatches)?progress.dispatches:[];
+  const latest=records.at(-1);
+  const labels={graceful:'Graceful stop',terminate:'Terminate step',force_stop:'Force-stop step'};
+  const stage=active?labels[progress?.stage]||'Waiting for the original supervisor':'Retained operation history';
+  const delivery={sent:'Delivered to the original worker',attempting:'Delivery in progress',
+    failed:'Last delivery failed',not_sent:'Last attempt did not deliver a signal'};
+  const detail=latest?'<p>'+esc(delivery[latest.state]||'Recorded delivery state')+
+    (Number.isInteger(latest.attempt)?' · attempt '+count(latest.attempt):'')+'.'+
+    (active&&['failed','not_sent'].includes(latest.state)?' The supervisor can retry against the same worker.':'')+'</p>':'';
+  return '<h3>'+heading+'</h3><p class="note">'+esc(stage)+
+    (requested?' · requested '+esc(when(requested)):'')+'.</p>'+detail+
+    (active?'<p class="note">A saved stop request is not a completed stop. The original operation keeps its completed results while the worker closes.</p>':'')+
+    (latest?.error?'<details><summary>Last stop delivery details</summary><pre>'+esc(pretty(latest.error))+'</pre></details>':'');
+}
+
 export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDetailContext,openItem,toast,getState}){
   let selected=null,workspace=null,timer=null,controller=null,offset=0,stream='native',snapshot=null,busy=false,generation=0;
+  const mutations=new Map();
   const style=document.createElement('link');style.rel='stylesheet';style.href=new URL('./jobs.css',import.meta.url);document.head.append(style);
   const root=()=>document.querySelector('[data-native-console]');
   const renderedMarkup=new WeakMap();
@@ -103,10 +124,10 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
   function current(){return selected&&getWorkspace()===workspace&&getDetailContext()?.kind==='native-job'&&getDetailContext()?.id===selected&&root();}
   function detach(){generation++;clearTimeout(timer);timer=null;controller?.abort();controller=null;selected=null;snapshot=null;busy=false;}
   function controls(task,native){
-    const id=task.id;let html=button('refresh','Refresh',id);
-    if(task.state==='queued')html+=button('stop','Cancel queued run',id);
-    else if(native.alive||(native.ensemble_context&&task.state==='running'))html+=button('stop',native.stop_requested?'Stop requested':native.ensemble_context?'Stop saved ensemble':native.programme_context?'Stop calculation and pause programme':'Stop calculation',id,native.stop_requested);
-    if(['failed','interrupted','cancelled'].includes(task.state))html+=button('resume',native.alive?'Reconnect to calculation':'Resume retained run',id);
+    const id=task.id,pending=mutations.has(id);let html=button('refresh','Refresh',id);
+    if(task.state==='queued')html+=button('stop',native.stop_requested?'Stop requested':'Cancel queued run',id,pending||native.stop_requested);
+    else if(native.alive||task.state==='running')html+=button('stop',native.stop_requested?'Stop requested':native.ensemble_context?'Stop saved ensemble':native.programme_context?'Stop calculation and pause programme':'Stop calculation',id,pending||native.stop_requested);
+    if(['failed','interrupted','cancelled'].includes(task.state))html+=button('resume',native.alive?'Reconnect to calculation':'Resume retained run',id,pending);
     html+=button('result','Open saved maps and results',id)+button('snapshot','Download operation record',id);
     return html;
   }
@@ -126,6 +147,13 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     node.querySelector('[data-native-connection]').hidden=true;
     snapshot=value;const task=value.task,native=value.native_job;
     const view=nativePresentation(value,getState());
+    if(native.structural_context)view.context='Structural-study case';
+    if(task.state==='running'&&!native.alive&&native.run_state!=='complete'){
+      view.heading=native.stop_requested?'Stopping this saved operation':'Preparing or reconnecting the calculation';
+      view.message=native.stop_requested
+        ?'The stop request remains with this original task while its supervisor registers or reconciles the worker.'
+        :'The original task is active. Its supervisor is preparing or reconnecting the worker for this saved selection.';
+    }
     node.querySelector('[data-native-phase]').textContent=view.heading;
     node.querySelector('[data-native-guidance]').textContent=view.message;
     markup(node.querySelector('[data-native-case]'),selectionMarkup(view));
@@ -150,10 +178,12 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     node.querySelector('[data-native-storage]').textContent=bytes(native.storage_free_bytes);
     node.querySelector('[data-native-heartbeat]').textContent=when(native.heartbeat_at);
     markup(node.querySelector('[data-native-controls]'),controls(task,native));
+    const cancellation=node.querySelector('[data-native-cancellation]');
+    markup(cancellation,cancellationMarkup(task,native));cancellation.hidden=!cancellation.innerHTML;
     node.querySelector('[data-native-stages]').innerHTML=stageRows(native);
     node.querySelector('[data-native-selection]').textContent=pretty({
       selection:native.selection,native_run_id:native.run_id,execution_id:native.execution_id,
-      programme:native.programme_context,parameter_study:native.study_context,ensemble:native.ensemble_context});
+      programme:native.programme_context,parameter_study:native.study_context,ensemble:native.ensemble_context,structural_study:native.structural_context});
     const reuse=node.querySelector('[data-native-reuse]');
     markup(reuse,reuseMarkup(native,getState()));reuse.hidden=!reuse.innerHTML;
     const error=node.querySelector('[data-native-error]');
@@ -207,6 +237,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
       '<dl><dt>Workspace disk available</dt><dd data-native-storage>—</dd></dl>'+
       '<dl><dt>Last worker update</dt><dd data-native-heartbeat>—</dd></dl></div>'+
       '<div class="page-actions" data-native-controls></div>'+
+      '<section data-native-cancellation aria-live="polite" hidden></section>'+
       '<p class="notice error" data-native-connection hidden role="status"></p><section data-native-error hidden></section>'+
       '<section data-native-reuse aria-live="polite" hidden></section>'+
       '<section data-native-resources hidden></section>'+
@@ -227,7 +258,7 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     await update();
   }
   function taskActions(task){
-    const supported=task?.action==='run.start'||task?.action==='compute.programme.run'||task?.action==='parameter-study.run'||task?.action==='ensemble.run'||
+    const supported=task?.action==='run.start'||task?.action==='compute.programme.run'||task?.action==='parameter-study.run'||task?.action==='ensemble.run'||task?.action==='structural-study.run'||
       (task?.action==='compute.programme.pair-completion'&&task.payload?.run===true);
     return supported?'<div class="page-actions">'+button('open','Open calculation console',task.id)+'</div>':'';
   }
@@ -249,12 +280,20 @@ export function attachNativeJobs({api,endpoint,detail,refresh,getWorkspace,getDe
     if(action==='refresh')return update();
     if(action==='rewind')return resetLog();
     if(action==='stop'||action==='resume'){
-      target.disabled=true;
+      if(id!==selected||mutations.has(id)||target.disabled)return;
+      const mutation={action,workspace};mutations.set(id,mutation);target.disabled=true;
+      if(snapshot)markup(root().querySelector('[data-native-controls]'),controls(snapshot.task,snapshot.native_job));
       try{
         await api('/api/task/'+(action==='stop'?'cancel':'resume'),{method:'POST',body:{id}});
-        toast(action==='stop'?'Stop requested for the selected calculation.':'The retained calculation is continuing.');
-        await refresh({force:true});await update();
-      }finally{if(target.isConnected)target.disabled=false;}
+        if(selected===id&&getWorkspace()===mutation.workspace&&current()){
+          toast(action==='stop'?'Stop requested for the selected calculation.':'The retained calculation is continuing.');
+          await refresh({force:true});await update();
+        }
+      }finally{
+        if(mutations.get(id)===mutation)mutations.delete(id);
+        if(selected===id&&getWorkspace()===mutation.workspace&&current()&&snapshot)
+          markup(root().querySelector('[data-native-controls]'),controls(snapshot.task,snapshot.native_job));
+      }
       return;
     }
     if(action==='result'&&snapshot){const run=snapshot.native_job.run_id;detach();return openItem('runs',run);}
