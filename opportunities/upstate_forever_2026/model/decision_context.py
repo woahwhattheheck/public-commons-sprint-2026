@@ -20,6 +20,7 @@ import shutil
 import tempfile
 import zipfile
 
+from . import portable_fs as _fs
 from .common import (
     atomic_bytes, atomic_json, canonical, describe_file, digest, file_digest,
     held, identifier, now, read_json, relative_file, verify_file,
@@ -68,11 +69,13 @@ def _record_hash(value):
 
 
 def _read_source_json(path):
-    with Path(path).open("rb") as source:
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
         signature = source.read(2)
-    opener = gzip.open if signature == b"\x1f\x8b" else open
-    with opener(path, "rt", encoding="utf-8-sig") as source:
-        return json.load(source)
+        source.seek(0)
+        if signature == b"\x1f\x8b":
+            with gzip.GzipFile(fileobj=source, mode="rb") as decoded:
+                return json.load(io.TextIOWrapper(decoded, encoding="utf-8-sig"))
+        return json.load(io.TextIOWrapper(source, encoding="utf-8-sig"))
 
 
 def _source(workspace, selection, kind):
@@ -462,56 +465,45 @@ def report_html(record):
 
 
 def _retain_input(workspace_root, source, target, expected=None):
-    source, target = Path(source), Path(target)
+    source, target = _fs.native_path(source), _fs.native_path(target)
     expected = expected or describe_file(workspace_root, source)
     target.parent.mkdir(parents=True, exist_ok=True)
-    if not target.exists():
-        try:
-            os.link(source, target)
-        except FileExistsError:
-            pass
-        except OSError:
-            pending = None
-            try:
-                with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".input-", delete=False) as output:
-                    pending = Path(output.name)
-                    with source.open("rb") as incoming:
-                        shutil.copyfileobj(incoming, output, 1024 * 1024)
-                    output.flush()
-                    os.fsync(output.fileno())
-                if pending.stat().st_size != expected["bytes"] or file_digest(pending) != expected["sha256"]:
-                    raise ValueError("A retained decision-report input changed during its copy.")
-                try:
-                    os.link(pending, target)
-                except FileExistsError:
-                    pass
-            finally:
-                if pending is not None:
-                    pending.unlink(missing_ok=True)
-    if target.stat().st_size != expected["bytes"] or file_digest(target) != expected["sha256"]:
+    # Keep original inputs on volumes without hard links. Existing targets are
+    # accepted only by their original byte identity, never overwritten.
+    try:
+        _fs.publish_file(source, target)
+        _fs.sync_directory(target.parent)
+    except FileExistsError:
+        pass
+    if target.is_symlink() or target.stat().st_size != expected["bytes"] or file_digest(target) != expected["sha256"]:
         raise ValueError("A retained decision-report input differs from its original.")
     return describe_file(workspace_root, target)
 
 
 def _archive(target, members):
+    target = _fs.native_path(target)
+    members = list(members)
+    _fs.validate_members([name for name, _ in members], portable=True)
     pending = None
     try:
         with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".archive-", delete=False) as output:
-            pending = Path(output.name)
+            pending = _fs.native_path(output.name)
         with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
             for name, path in sorted(members):
                 info = zipfile.ZipInfo(name, date_time=(2026, 1, 1, 0, 0, 0))
                 info.compress_type = zipfile.ZIP_DEFLATED
                 info.external_attr = 0o100644 << 16
-                with Path(path).open("rb") as source, archive.open(info, "w", force_zip64=True) as output:
+                with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source, archive.open(info, "w", force_zip64=True) as output:
                     shutil.copyfileobj(source, output, 1024 * 1024)
         with pending.open("rb") as source:
             os.fsync(source.fileno())
-        if target.exists():
-            if target.stat().st_size != pending.stat().st_size or file_digest(target) != file_digest(pending):
+        try:
+            _fs.publish_file(pending, target)
+            _fs.sync_directory(target.parent)
+        except FileExistsError:
+            if (target.is_symlink() or target.stat().st_size != pending.stat().st_size
+                    or file_digest(target) != file_digest(pending)):
                 raise ValueError("The immutable decision archive differs from its saved report.")
-        else:
-            os.link(pending, target)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
