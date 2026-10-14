@@ -16,7 +16,7 @@ import re
 import stat
 import tempfile
 import zipfile
-from .common import _sync_directory as _sync_original_directory, _path_stat, _fd_stat
+from . import portable_fs as _fs
 
 from .common import (atomic_json, canonical, digest, file_digest,
                      held, identifier, now, read_json, retain_file)
@@ -34,24 +34,25 @@ _METADATA = re.compile(
 
 
 def recipe_root(ws):
-    return Path(ws.root) / "client-source-recipes"
+    return _fs.native_path(ws.root) / "client-source-recipes"
 
 
 @contextmanager
 def locked_recipes(root, *, blocking=False):
-    with held(Path(root) / "client-source-recipes" / ".writer.lock", blocking=blocking):
+    with held(_fs.native_path(root) / "client-source-recipes" / ".writer.lock", blocking=blocking):
         yield
 
 
 def _plain(path):
     path = Path(path)
-    value = _path_stat(path)
+    value = _fs.path_stat(path)
     need(stat.S_ISREG(value.st_mode), "Keep each complete recipe member as a regular file.")
     return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
 
 def _regular(root, relative):
-    path = Path(root)
+    path = _fs.native_path(root)
+    _fs.relative_name(relative)
     for part in relative.split("/"):
         need(part not in {"", ".", ".."} and "\\" not in part and "\0" not in part,
              "Keep each recipe member within its original directory.")
@@ -62,7 +63,7 @@ def _regular(root, relative):
 
 
 def _fsync_directory(path):
-    _sync_original_directory(path)
+    _fs.sync_directory(path)
 
 
 def _object_expectations(descriptors):
@@ -242,10 +243,13 @@ def _json(raw):
 
 
 def _read_archive(source, extraction=None):
+    source = _fs.native_path(source)
+    if extraction is not None:
+        extraction = _fs.native_path(extraction)
     before = _plain(source)
     metadata = {}
-    with Path(source).open("rb") as opened:
-        opened_stat = _fd_stat(opened.fileno())
+    with os.fdopen(_fs.open_file(source, os.O_RDONLY), "rb") as opened:
+        opened_stat = _fs.fd_stat(opened.fileno())
         need((opened_stat.st_dev, opened_stat.st_ino, opened_stat.st_size,
               opened_stat.st_mtime_ns, opened_stat.st_ctime_ns) == before,
              "The selected archive changed before it was opened.")
@@ -329,12 +333,21 @@ def inspect_recipe_archive(path):
 
 
 def _archive_descriptor(ws, path):
-    absolute = Path(path).absolute()
-    try:
-        relative = absolute.relative_to(Path(ws.root).absolute()).as_posix()
-    except ValueError:
-        relative = str(absolute)
-    return {"path": relative, "bytes": absolute.stat().st_size, "sha256": file_digest(absolute)}
+    physical = _fs.native_path(Path(path).absolute())
+    before = _plain(physical)
+    hashing = hashlib.sha256()
+    with os.fdopen(_fs.open_file(physical, os.O_RDONLY), "rb") as opened:
+        info = _fs.fd_stat(opened.fileno())
+        need((info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns) == before,
+             "The retained recipe archive changed before it was opened.")
+        for block in iter(lambda: opened.read(CHUNK), b""):
+            hashing.update(block)
+        info = _fs.fd_stat(opened.fileno())
+        need((info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns) == before,
+             "The retained recipe archive changed while it was read.")
+    need(_plain(physical) == before, "The retained recipe archive changed during inspection.")
+    return {"path": _archive_descriptor_path(ws, path), "bytes": before[2],
+            "sha256": hashing.hexdigest()}
 
 
 def _operation(ws, kind, operation_id, request):
@@ -347,14 +360,17 @@ def _operation(ws, kind, operation_id, request):
 def export_recipe(ws, recipe_id, output, *, operation_id):
     recipe_id, operation_id = identifier(recipe_id), identifier(operation_id)
     output = Path(output).absolute()
-    output.parent.mkdir(parents=True, exist_ok=True)
-    resolved = output.resolve()
+    # Keep the original request/display path. Only filesystem operations use the
+    # native namespace, so a saved operation still matches after this upgrade.
+    physical_output = _fs.native_path(output)
+    physical_output.parent.mkdir(parents=True, exist_ok=True)
+    resolved = physical_output.resolve()
     for protected in (Path(ws.root) / "objects", recipe_root(ws) / "recipes",
                       recipe_root(ws) / "uses", recipe_root(ws) / "operations",
                       recipe_root(ws) / "transfers"):
-        need(not resolved.is_relative_to(protected.resolve()),
+        need(not resolved.is_relative_to(_fs.native_path(protected).resolve()),
              "Choose an export path outside retained source and recipe records.")
-    need(not output.is_symlink(), "Choose an ordinary output archive path.")
+    need(not physical_output.is_symlink(), "Choose an ordinary output archive path.")
     request = {"schema": RECEIPT, "action": "export", "operation_id": operation_id,
                "project_id": ws.project["id"], "recipe_id": recipe_id, "output": str(output)}
     with locked_recipes(ws.root):
@@ -363,7 +379,7 @@ def export_recipe(ws, recipe_id, output, *, operation_id):
         if receipt_path.exists():
             receipt = read_json(receipt_path)
             need(receipt["request"] == request, "Keep the original recipe export request.")
-            need(output.exists() and _archive_descriptor(ws, output) == receipt["archive"],
+            need(physical_output.exists() and _archive_descriptor(ws, output) == receipt["archive"],
                  "Restore the retained exported archive at its original requested path.")
             inspect_recipe_archive(output)
             return receipt
@@ -412,7 +428,7 @@ def export_recipe(ws, recipe_id, output, *, operation_id):
                     # A crash before candidate publication leaves an unselected
                     # archive. Replace it only inside this exact locked operation.
                     archive_path.unlink()
-                os.link(temporary, archive_path)
+                _fs.publish_file(temporary, archive_path)
                 _fsync_directory(directory)
             finally:
                 temporary.unlink(missing_ok=True)
@@ -423,13 +439,13 @@ def export_recipe(ws, recipe_id, output, *, operation_id):
                          "archive": {"path": _archive_descriptor_path(ws, output), **{k: descriptor[k] for k in ("bytes", "sha256")}},
                          "manifest": manifest}
             atomic_json(candidate_path, candidate, immutable=True)
-        if output.exists():
+        if physical_output.exists():
             need(_archive_descriptor(ws, output) == candidate["archive"],
                  "The requested archive path already contains another file.")
         else:
-            # Cross-filesystem destinations are copied into their own filesystem,
-            # then linked without replacing a concurrent independent publication.
-            handle, staged = tempfile.mkstemp(prefix=".archive-recipe-", suffix=".pending", dir=output.parent)
+            # Stage on the destination filesystem and check the original hash.
+            # Shared create-only publication also works without hard-link support.
+            handle, staged = tempfile.mkstemp(prefix=".archive-recipe-", suffix=".pending", dir=physical_output.parent)
             try:
                 with os.fdopen(handle, "wb") as outgoing, archive_path.open("rb") as incoming:
                     for block in iter(lambda: incoming.read(CHUNK), b""):
@@ -438,8 +454,12 @@ def export_recipe(ws, recipe_id, output, *, operation_id):
                     os.fsync(outgoing.fileno())
                 need(file_digest(Path(staged)) == candidate["archive"]["sha256"],
                      "The complete exported archive changed during delivery.")
-                os.link(staged, output)
-                _fsync_directory(output.parent)
+                try:
+                    _fs.publish_file(staged, physical_output)
+                except FileExistsError:
+                    need(_archive_descriptor(ws, output) == candidate["archive"],
+                         "A concurrent publication selected a different recipe archive.")
+                _fsync_directory(physical_output.parent)
             finally:
                 Path(staged).unlink(missing_ok=True)
         atomic_json(receipt_path, candidate, immutable=True)
@@ -448,7 +468,8 @@ def export_recipe(ws, recipe_id, output, *, operation_id):
 
 def _archive_descriptor_path(ws, path):
     try:
-        return Path(path).absolute().relative_to(Path(ws.root).absolute()).as_posix()
+        return _fs.native_path(Path(path).absolute()).relative_to(
+            _fs.native_path(Path(ws.root).absolute())).as_posix()
     except ValueError:
         return str(Path(path).absolute())
 
@@ -494,7 +515,7 @@ def _publish_received(ws, value):
 
 def receive_recipe(ws, archive, *, operation_id):
     operation_id = identifier(operation_id)
-    archive = Path(archive).absolute()
+    archive = _fs.native_path(Path(archive).absolute())
     root = recipe_root(ws)
     root.mkdir(parents=True, exist_ok=True)
     # Full stream validation and extraction precede any destination publication.

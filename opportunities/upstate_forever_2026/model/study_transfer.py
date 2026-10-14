@@ -23,7 +23,8 @@ import zipfile
 from .common import (atomic_json, canonical, digest, held, identifier, now,
                      read_json)
 from . import portable, study_delivery_transfer as delivery_transfer
-from .common import _sync_directory, _path_stat
+from .common import _path_stat
+from . import portable_fs as _fs
 from . import monitoring_study_transfer as monitoring_transfer, study_report_transfer as report_transfer
 from . import scientific_report_study_transfer as report_editions
 from . import paired_ensemble_study_transfer as paired_transfer
@@ -860,25 +861,31 @@ def _capture_locks(stack, closure, already):
 
 
 def _stage_file(source, target, expected, linked_inodes):
+    source, target = _fs.native_path(source), _fs.native_path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     before = _identity(source)
     if before != expected["identity"] and not (
             before[:2] in linked_inodes and _stable_data_identity(before) == _stable_data_identity(expected["identity"])):
         raise ValueError("The original study member changed before capture.")
     try:
-        os.link(source, target, follow_symlinks=False)
-        linked_inodes.add(before[:2])
+        _fs.publish_file(source, target)
     except OSError as error:
-        if error.errno not in {errno.EXDEV, errno.EPERM, errno.EACCES, errno.EMLINK, errno.ENOTSUP}:
+        if error.errno not in {errno.EACCES, errno.EMLINK}:
             raise
-        # Cross-device receiving keeps one streaming copy, with stable-byte checks.
-        with source.open("rb") as src, target.open("xb") as out:
-            shutil.copyfileobj(src, out, 1024 * 1024)
-            out.flush()
-            os.fsync(out.fileno())
-        if _identity(source) != before:
-            raise ValueError("The original study member changed while it was copied.")
+        # Retain the original additional POSIX fallback for link-count/permission
+        # limits. This is an unpublished private study directory, not an export.
+        with os.fdopen(_fs.open_file(source, os.O_RDONLY), "rb") as src:
+            with os.fdopen(_fs.open_file(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL), "wb") as out:
+                shutil.copyfileobj(src, out, 1024 * 1024)
+                out.flush()
+                os.fsync(out.fileno())
     after = _identity(source)
+    if _identity(target)[:2] == before[:2]:
+        # Shared publication can either link or copy. Only an actual hard link
+        # permits the owned ctime change in the original closure's next capture.
+        linked_inodes.add(before[:2])
+    elif after != before:
+        raise ValueError("The original study member changed while it was copied.")
     if _stable_data_identity(after) != _stable_data_identity(before):
         raise ValueError("The original study member changed during staging.")
     return after
@@ -989,21 +996,22 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
     from .workspace import Workspace
     normal = normalise(selection)
     destination = Path(destination).absolute()
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    physical_destination = _fs.native_path(destination)
+    physical_destination.parent.mkdir(parents=True, exist_ok=True)
 
     def report(phase, **values):
         if progress:
             progress({"phase": phase, **values})
 
-    if destination.exists():
-        previous = inspect_transfer_archive(destination, verify=True)
+    if physical_destination.exists():
+        previous = inspect_transfer_archive(physical_destination, verify=True)
         if (previous["study"]["identity"]["selection"] != normal
                 or previous["manifest"]["project"] != workspace.project):
             raise ValueError("This retained archive belongs to a different study selection.")
         from .common import file_digest
         result = {"id": previous["study"]["id"], "project_id": workspace.project["id"],
-                  "path": str(destination), "bytes": destination.stat().st_size,
-                  "sha256": file_digest(destination), "members": len(previous["manifest"]["members"]),
+                  "path": str(destination), "bytes": _fs.path_stat(physical_destination).st_size,
+                  "sha256": file_digest(physical_destination), "members": len(previous["manifest"]["members"]),
                   "study": previous["study"], "reused_completed_output": True}
         report("complete", archive_bytes=result["bytes"], id=result["id"], reused_completed_output=True)
         return result
@@ -1045,7 +1053,7 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
         stage_parent = Path(stack.enter_context(tempfile.TemporaryDirectory(
             prefix=".study-workspace-", dir=root.parent)))
         output_parent = Path(stack.enter_context(tempfile.TemporaryDirectory(
-            prefix=".study-archive-", dir=destination.parent)))
+            prefix=".study-archive-", dir=physical_destination.parent)))
         stage_root = stage_parent / "workspace"
         stage_root.mkdir()
         report("staging", files=plan["files"], bytes=plan["bytes"], preview_changed=changed)
@@ -1182,8 +1190,8 @@ def export_study(workspace, destination, selection, *, progress=None, investigat
                 raise ValueError("The original scientific source bytes changed: " + relative)
         closure.assert_unchanged()
         report("publishing", archive_bytes=result["bytes"])
-        os.link(archive_path, destination)
-        _sync_directory(destination.parent)
+        _fs.publish_file(archive_path, physical_destination)
+        _fs.sync_directory(physical_destination.parent)
         result.update(id=transfer_id, path=str(destination), study=receipt,
                       source_files=source_files, source_bytes=source_bytes)
         report("complete", archive_bytes=result["bytes"], id=transfer_id)

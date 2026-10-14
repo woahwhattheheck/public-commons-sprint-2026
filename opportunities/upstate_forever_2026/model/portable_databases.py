@@ -6,15 +6,17 @@ used as application state are captured through SQLite's online backup API.
 from __future__ import annotations
 
 from contextlib import closing, contextmanager
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from urllib.parse import quote
 import hashlib
+import os
 import re
 import sqlite3
 import stat
 import tempfile
 import time
 
-from .common import _path_stat
+from . import portable_fs as _fs
 
 # This is the product's original project-local ProjectStore path. Unknown
 # SQLite files may be scientific source editions and must retain exact bytes.
@@ -26,6 +28,22 @@ MUTABLE_DATABASE_MEMBERS = {
     "workspace/measurement-observations/measurements.sqlite",
 }
 SIDECARS = ("-wal", "-shm", "-journal")
+
+
+def _database_uri(path, mode):
+    """Pass native filenames to SQLite without interpreting a UNC host as a URI authority.
+
+    Percent-encoding preserves Windows separators and its extended-path prefix.
+    The ordinary locking long-path VFS is used, never a no-lock or immutable VFS;
+    committed WAL pages therefore remain part of the online snapshot.
+    """
+    if mode not in {"ro", "rwc"}:
+        raise ValueError("Choose read-only source or createable snapshot access.")
+    if isinstance(path, PureWindowsPath):
+        if not path.is_absolute():
+            raise ValueError("SQLite snapshot paths must be absolute.")
+        return "file:" + quote(str(path), safe="") + "?mode=" + mode + "&vfs=win32-longpath"
+    return Path(path).absolute().as_uri() + "?mode=" + mode
 
 
 def _state_database(name, path):
@@ -41,7 +59,7 @@ def _state_database(name, path):
 
 
 def _identity(path):
-    info = _path_stat(path)
+    info = _fs.path_stat(path)
     if not stat.S_ISREG(info.st_mode):
         raise ValueError("Database capture requires a retained regular file")
     return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
@@ -67,6 +85,7 @@ def without_database_files(inventory, databases, namespace):
 
 def _verify_frozen_database(name, path, identity, descriptor):
     """Verify a caller-frozen, self-contained SQLite member without rewriting it."""
+    path = _fs.native_path(path)
     if not _state_database(name, path) or not isinstance(descriptor, dict):
         raise ValueError("Choose a supported frozen workspace database: " + name)
     size, expected = descriptor.get("bytes"), descriptor.get("sha256")
@@ -80,7 +99,7 @@ def _verify_frozen_database(name, path, identity, descriptor):
         if companion.exists() or companion.is_symlink():
             raise ValueError("A frozen database must have no live journal companions: " + name)
     digest = hashlib.sha256()
-    with path.open("rb") as source:
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
         while True:
             block = source.read(1024 * 1024)
             if not block:
@@ -115,7 +134,8 @@ def snapshot_databases(inputs, directory, *, frozen=None):
     for name, path, identity in inputs:
         if not _state_database(name, path):
             continue
-        with path.open("rb") as source:
+        path = _fs.native_path(path)
+        with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
             if source.read(16) != b"SQLite format 3\0":
                 continue
         _same_file(path, identity)
@@ -128,7 +148,7 @@ def snapshot_databases(inputs, directory, *, frozen=None):
         return
 
     ignored = {name + suffix for name in candidates for suffix in SIDECARS}
-    with tempfile.TemporaryDirectory(prefix=".archive-sqlite-", dir=directory) as temporary:
+    with tempfile.TemporaryDirectory(prefix=".archive-sqlite-", dir=_fs.native_path(directory)) as temporary:
         snapshots = {}
         records = {}
         captured_sources = {}
@@ -162,11 +182,11 @@ def snapshot_databases(inputs, directory, *, frozen=None):
             try:
                 # mode=ro retains committed WAL transactions. immutable=1 would
                 # silently ignore them and is deliberately not used here.
-                with closing(sqlite3.connect(path.absolute().as_uri() + "?mode=ro",
+                with closing(sqlite3.connect(_database_uri(path, "ro"),
                                              uri=True, timeout=30)) as source:
                     source.execute("BEGIN")
                     source.execute("SELECT name FROM sqlite_schema LIMIT 1").fetchone()
-                    with closing(sqlite3.connect(snapshot)) as target:
+                    with closing(sqlite3.connect(_database_uri(snapshot, "rwc"), uri=True)) as target:
                         source.backup(target, pages=256, progress=progress)
                         target.execute("PRAGMA journal_mode=DELETE")
                         target.commit()
