@@ -7,6 +7,7 @@
 .intelligence-desk p{margin:6px 0 12px}
 .intelligence-heading,.intelligence-inline{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .intelligence-heading{border-bottom:1px solid #c8c8c8;padding-bottom:16px}
+.intelligence-heading>div{min-width:0;max-width:100%;overflow-wrap:anywhere}
 .intelligence-eyebrow{font-size:12px;font-weight:650;text-transform:uppercase;letter-spacing:.05em}
 .intelligence-muted,.intelligence-desk small{color:#5a5a5a}
 .intelligence-desk label{display:flex;flex-direction:column;gap:5px;font-size:12px;font-weight:600;min-width:0}

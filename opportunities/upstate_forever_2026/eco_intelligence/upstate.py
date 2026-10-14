@@ -10,23 +10,16 @@ from contextlib import closing, contextmanager
 from contextvars import ContextVar
 from copy import deepcopy
 from dataclasses import dataclass
-import errno
 import json
-import os
-if os.name == "nt":
-    from model import windows_fs as fcntl
-else:
-    import fcntl
 from pathlib import Path, PurePosixPath
 import re
-import shutil
 import sqlite3
-import tempfile
 import threading
 import uuid
 from typing import Callable, Iterable
 
 from model.common import digest as native_digest, file_digest, identifier, read_json, _native_fs_path
+from model import portable_fs as _fs
 from .adapters import CallbackGateway, StoreBackedRepository
 from .common import IntelligenceError, digest, dumps, now, public_metadata
 from .engine import Engine
@@ -261,12 +254,8 @@ class ProjectStore(Store):
     def workspace_guard(self):
         ws = self.owner.operator.ws(self.workspace_key)
         self.storage_tenant(self.workspace_key)
-        with (ws.root / ".workspace.lock").open("a+b") as lock:
-            fcntl.flock(lock.fileno(), fcntl.LOCK_SH)
-            try:
-                yield
-            finally:
-                fcntl.flock(lock.fileno(), fcntl.LOCK_UN)
+        with _fs.locked(ws.root / ".workspace.lock", shared=True):
+            yield
 
     @contextmanager
     def db(self):
@@ -489,7 +478,7 @@ class UpstateInvestigations:
                    for name in ("ws", "submit", "task", "task_list")):
             raise TypeError("Select the original Upper Savannah Operator instance.")
         self.operator = operator
-        self.root = Path(state_directory) if state_directory is not None else None
+        self.root = _fs.native_path(state_directory) if state_directory is not None else None
         if self.root is not None:
             if self.root.is_symlink():
                 raise ValueError("Investigation state needs its original directory.")
@@ -534,7 +523,7 @@ class UpstateInvestigations:
                 if current["identity"] != identity:
                     raise IntelligenceError("The registered workspace identity changed.", 409)
                 return current
-            directory = self.root / tenant if self.root is not None else ws.root / "intelligence"
+            directory = _fs.native_path(self.root / tenant if self.root is not None else ws.root / "intelligence")
             if directory.is_symlink():
                 raise IntelligenceError("The original investigation state directory changed.", 409)
             directory.mkdir(mode=0o700, exist_ok=True)
@@ -834,36 +823,26 @@ class UpstateInvestigations:
             if _identity(body) != (row["bytes"], row["sha256"]):
                 raise IntelligenceError("The retained observation edition changed.", 409)
             original = _verify(_inside(ws.root, body["object"], existing=True), body)
-            target = _inside(ws.root, row["path"])
-            if Path(row["path"]).is_symlink():
+            member = str(PurePosixPath("source-views") / "observations" /
+                         identifier(locator["observation_id"]) / _member(body["filename"]))
+            target = _fs.native_path(ws.root.joinpath(*PurePosixPath(member).parts))
+            if _fs.native_path(row["path"]).absolute() != target.absolute():
+                raise IntelligenceError("The observation view names a different original member.", 409)
+            _inside(ws.root, target)
+            if target.is_symlink():
                 raise IntelligenceError("The observation source view became a file alias.", 409)
-            target.parent.mkdir(parents=True, exist_ok=True)
-            if not target.exists():
-                pending = None
+            # Keep the original parents pinned through create-only publication.
+            # The shared publisher copies and verifies on volumes without links;
+            # a received or independently edited view is never replaced here.
+            with _fs.parent_directory(ws.root, member, create=True) as (parent, name):
+                destination = parent.path / name if parent.descriptor is None else name
                 try:
-                    try:
-                        os.link(original, target)
-                    except FileExistsError:
-                        pass
-                    except OSError as error:
-                        if error.errno not in {errno.EXDEV, errno.EPERM, errno.EACCES,
-                                              errno.EMLINK, errno.ENOSYS, errno.EOPNOTSUPP}:
-                            raise
-                        with original.open("rb") as src, tempfile.NamedTemporaryFile(
-                                dir=target.parent, prefix=".source-view-", delete=False) as output:
-                            pending = Path(output.name)
-                            shutil.copyfileobj(src, output, 1024 * 1024)
-                            output.flush()
-                            os.fsync(output.fileno())
-                        _verify(pending, body)
-                        try:
-                            os.link(pending, target)
-                        except FileExistsError:
-                            pass
-                finally:
-                    if pending is not None:
-                        pending.unlink(missing_ok=True)
-            _verify(_inside(ws.root, target, existing=True), body)
+                    _fs.publish_file(original, destination, dst_dir_fd=parent.descriptor)
+                except FileExistsError:
+                    pass
+                else:
+                    parent.sync()
+                _verify(_inside(ws.root, target, existing=True), body)
 
     def _binding(self, tenant, plan_id):
         with self._context(tenant)["store"].db() as db:

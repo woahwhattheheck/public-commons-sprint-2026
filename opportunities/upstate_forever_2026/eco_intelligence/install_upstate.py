@@ -3,12 +3,17 @@ from __future__ import annotations
 import argparse
 import ast
 import datetime
-import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path
 import tempfile
+import sys
+
+# The delivered application supplies the same filesystem backend as its runtime.
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from model import portable_fs as _fs
 
 ORIGINAL = {
   "eco_intelligence/__init__.py": "e5b69de4261a189ea94a501588d78ea9ef57f05ff18c22038dfc8d77a3266a08",
@@ -54,7 +59,7 @@ KNOWN_CORRECTION_PREIMAGES = {
     "eco_intelligence/api.py": {"67d43dbe8d8b9651d6191515618ea714a5659b28b50c8417a81ec7b5720164cc"},
     "eco_intelligence/common.py": {"83f5b129599a119d0cd5e8bf5f0ece3b7f4251410c6b5177da80cecb8438ed64"},
     "eco_intelligence/engine.py": {"fd73a58e53e6e955dfea949b92867c1829c8ef99d6a36a51c634dc150a6fa650"},
-    "eco_intelligence/install_upstate.py": {"01dbe37229908cd1b2ec06bed18392a09f387df6b6a9d1c9f87df10ab2da939f", "966fc37537d4a61053ef1e87150d3bcb3b8ed11d78914fa6671652e278126b73", "9ceb6c85004fd8dc961fc6f3801bd221d3a12cfa5b3c35f02f583ec68f3d448f", "ee7528197541741e22c97c6d43c7363bcf67a3108e362ed68e1fb0a769202561", "fad1b60bab5f7c8948476b79df9701816215e03a1de2df257517b44d0f88f8ae"},
+    "eco_intelligence/install_upstate.py": {"778c67eca802dace56de6fa041f54a55e85f4cb4df6ae071ee6437d70290f6ea", "01dbe37229908cd1b2ec06bed18392a09f387df6b6a9d1c9f87df10ab2da939f", "966fc37537d4a61053ef1e87150d3bcb3b8ed11d78914fa6671652e278126b73", "9ceb6c85004fd8dc961fc6f3801bd221d3a12cfa5b3c35f02f583ec68f3d448f", "ee7528197541741e22c97c6d43c7363bcf67a3108e362ed68e1fb0a769202561", "fad1b60bab5f7c8948476b79df9701816215e03a1de2df257517b44d0f88f8ae"},
     "eco_intelligence/native_catalog.py": {"10ce9811ca6f672fd4bb83dbd01bf53517f6284fd92d43d90b2c4d88e2d416cd"},
     "eco_intelligence/profiling.py": {"b84d9f712b7a0adbf7e43607092d0a6de1fce52f1d4f3b07455947c52c36b725", "c19217e6e8605155b06a3d47fd902fd6ac624f5a6f9baed1d684e652308bead1"},
     "eco_intelligence/provider.py": {"afde356a4dc525bc813e39bdfccd0826c307bee0d4c9f6f4a7e8c3c22cfc458a"},
@@ -66,7 +71,7 @@ KNOWN_CORRECTION_PREIMAGES = {
     "eco_intelligence/static/style.css": {"07c3c32ba5dc2eea2aed8af46c518281163ad0d1055e490812c9e8a1059b219b"},
     "eco_intelligence/store.py": {"6fa57bbd062322ef44f1266013f17843786c58328a09ba73fb569f8f8027eb4d"},
     "eco_intelligence/study_transfer.py": {"248485dd4f4bcac3e7b803714da6783bd176c47a2ebc653e8d8064b9f68985e3", "62d88703212ebc52aaa9c8bec332d6f6d142f9fce9bcc76ababdf0ca7ae04dfd", "71d850483ef4be2f905fd68f88c62a22b507b380162287a9f259dbcc5cf85b54", "78e1b69a6cdb0cab5142e36c4990954e091b3919471f6ec5ffaeee355ebe9d79", "bf300ded7d07e3edec6d672053f3d76444f4757b10cc8694238f6eb3f7d2b99c", "d982ef3dd57768ec5bcda0e8e712816fb6b4693d49f003fcb2d659a02fd7ac7a"},
-    "eco_intelligence/upstate.py": {"65c42cf98e2646e821c593e81f02cd9dcf50d5d1907f98fd28a48023ded65046", "bc1f0e75195bf6b4590a6401eb66cf50df74f6908d4ad9f4648d7876bd4f2423"},
+    "eco_intelligence/upstate.py": {"96c5d55869926f1003413727d419de263c5b08d4d58c23215dfd5be55d36b7d7", "65c42cf98e2646e821c593e81f02cd9dcf50d5d1907f98fd28a48023ded65046", "bc1f0e75195bf6b4590a6401eb66cf50df74f6908d4ad9f4648d7876bd4f2423"},
     "eco_intelligence/upstate_experiments.py": {"373d1a4f2d6e6ee688d4d51f5dd3cfa24bca8c0d2f6410ab8eb94456ffdfb0f4", "a8edb0b5ae972cc16b6d3f94ca98f5cf36cf09fef315e1593119699730c8e718"},
 }
 MARKER = "# E258 complete Investigations application source"
@@ -75,11 +80,13 @@ def sha(body):
     return hashlib.sha256(body).hexdigest()
 
 def read(path):
+    path = _fs.native_path(path)
     if path.is_symlink():
         raise ValueError("Source publication requires a regular original path: " + str(path))
     return path.read_bytes() if path.exists() else None
 
 def publish(path, body):
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=".intelligence-source-", dir=path.parent)
     temporary = Path(name)
@@ -89,25 +96,20 @@ def publish(path, body):
             output.flush()
             os.fsync(output.fileno())
         os.chmod(temporary, path.stat().st_mode & 0o777 if path.exists() else 0o644)
-        os.replace(temporary, path)
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _fs.replace(temporary, path)
+        _fs.sync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
 
 def install(application, source_root):
-    application = Path(application).resolve(strict=True)
-    source_root = Path(source_root).resolve(strict=True)
+    application = _fs.native_path(application).resolve(strict=True)
+    source_root = _fs.native_path(source_root).resolve(strict=True)
     if not (application / "model" / "workspace.py").is_file():
         raise ValueError("Select the current original Upper Savannah application.")
     source_package = source_root / "eco_intelligence"
     if not (source_package / "upstate.py").is_file():
         raise ValueError("Receive the complete native binding source first.")
-    with (application / ".intelligence-binding-install.lock").open("a+b") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX)
+    with _fs.locked(application / ".intelligence-binding-install.lock"):
         before, after = {}, {}
         for source in sorted(source_package.rglob("*")):
             if not source.is_file() or source.is_symlink() or "__pycache__" in source.parts or source.suffix == ".pyc":
@@ -155,12 +157,12 @@ def install(application, source_root):
             if old is not None:
                 target = history / relative
                 target.parent.mkdir(parents=True, exist_ok=True)
-                target.write_bytes(old)
+                publish(target, old)
             manifest["files"][relative] = {
                 "previous_sha256": sha(old) if old is not None else None,
                 "sha256": sha(after[relative]), "bytes": len(after[relative]),
             }
-        (history / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
+        publish(history / "manifest.json", (json.dumps(manifest, indent=2) + "\n").encode("utf-8"))
         # Runtime modules are present before the complete portable source inventory.
         order = [path for path in changed if path != "model/portable.py"]
         if "model/portable.py" in changed:

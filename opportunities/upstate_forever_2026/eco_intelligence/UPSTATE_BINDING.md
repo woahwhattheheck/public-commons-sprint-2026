@@ -157,3 +157,68 @@ Completed or admitted plans retain their exact original native task binding and 
 ### Retained partial-model programmes
 
 The current original experiment producer validates its immutable plan and may add resolved model and legacy case fields in memory when reopening a retained partial-model programme. The binding verifies the exact original plan.json against its original experiment ID and project UUID, retains that source beside the producer's resolved native view, and uses the installed producer's actual view for preparation and execution. Existing plan bytes, scientific selections and case IDs remain the source of the same original programme. The current source interfaces were received from model/experiments.py blob 9afcb226af371301eb4c15deccee88d0f191ec4f and operator/experiment_operator.py blob e75b12a2dbe140a930813532cf27f24736b6ceb0.
+
+## Native filesystem and full-size collection receiving
+
+The Investigations binding uses the application's shared `model.portable_fs`
+backend for project locks, state paths and original observation views. Receive
+that current core together with `model/windows_fs.py` before applying this
+component. The source installer and runtime use the same existing backend; they
+do not introduce a second workspace store or another native-job queue.
+
+An observation view retains its original observation ID, original filename,
+content digest and declared source context. Creating that view is create-only.
+The shared publisher uses an original hard link when the volume supports it, or
+a synchronized, verified copy and create-only native rename when it does not.
+The original parent chain remains pinned during publication. Reopening a
+matching view reuses it. A separately edited file at that name is preserved and
+reported as different, rather than silently replaced. Source values, sample
+qualifiers, column names, units and observation admission remain the original
+scientific producer's responsibility.
+
+The maintained `install_upstate.py` accepts its exact prior Current195 edition
+alongside its earlier known predecessors. It keeps full previous source bytes
+and a synchronized source-history manifest before changing the live files.
+Unknown independently edited source is preserved for composition. Repeating an
+already applied installation returns `current`. Runtime modules precede the
+portable source inventory update, so an interrupted install can resume through
+the same command. Preserve this installer and complete source package in the
+normal application, including its operating guide.
+
+### Finding files without losing selections
+
+The original Investigations interface keeps the complete native catalog. Its
+Source collections, comparison, calibration and guided collection selectors
+show 100 matching files per page, with previous/next and a direct page field.
+Search applies to the whole loaded inventory, not only the current page.
+The browser does not shorten the scientific population or the submitted action.
+
+Source collection checkboxes retain choices across pages and searches. **Select
+visible files** adds the current page; **Select all matching files** adds the
+entire filtered inventory. The selected count includes choices outside the
+current view. Guided collection preparation submits all retained choices, and
+comparison/calibration inputs retain the selected original reference even when
+a different page is displayed. JSON member ordering is not part of a source's
+identity. Existing saved choices remain usable after that ordering changes.
+
+Catalog revision counters avoid repeatedly serializing the whole inventory
+when only an investigation event changes. File choosers render for their active
+panel, and expandable technical records format their complete retained body
+when opened. This changes presentation work only: original source references,
+complete manifests and export/download protocols remain intact. The normal
+source-inspection result and its complete technical evidence stay available.
+
+### Ordinary receiving course
+
+In the original workbench, reopen an investigation and inspect an original
+observation table. In Source collections, select files on different pages,
+filter for one of them, and reopen or export the retained collection. In Guided
+actions, prepare and execute the selected original collection. Reopen its saved
+result, create the complete JSON/readable HTML export, and open those received
+files. Close the workbench, move the workspace to its intended folder, and
+reopen the same project and investigation. Existing full-workspace backup and
+restore carry the same project namespace and saved investigation state.
+
+The Assistant panel continues to use the existing server provider configuration.
+Local inspection, guided analysis and exports work without a configured model;
+configuring a model does not replace those original native operations.

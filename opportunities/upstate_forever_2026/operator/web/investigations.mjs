@@ -31,7 +31,7 @@ export function createInvestigationClient(options) {
     experiment:null,experimentId:saved.experimentId||null,experimentOffset:saved.experimentOffset||0,experimentRead:0,
     nativeTask:null,nativeTaskRead:0,experimentSubmission:saved.experimentSubmission||null,
     diagnosticReport:null,diagnosticIntake:saved.diagnosticIntake||null,diagnosticRead:0,
-    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,taskRead:0,taskControl:null,controlError:null,loading:false,error:null,readErrors:{},registryReading:{}});
+    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,taskRead:0,taskControl:null,controlError:null,loading:false,error:null,readErrors:{},registryReading:{},registryVersions:{catalog:0,sources:0}});
   }return contexts.get(w);
  };
  const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,diagnosticIntake:c.diagnosticIntake,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
@@ -46,7 +46,7 @@ export function createInvestigationClient(options) {
   const c=context(w);c.registryReading[key]=true;delete c.readErrors[key];
   c.error=Object.values(c.readErrors).map(row=>row.label+': '+row.message).join('\n')||null;changed(c);
   const operation=Promise.resolve().then(()=>read(name,w)).then(value=>{
-   c[field]=value;delete c.readErrors[key];return value;
+   c[field]=value;c.registryVersions[key]=(c.registryVersions[key]||0)+1;delete c.readErrors[key];return value;
   }).catch(error=>{
    c.readErrors[key]={label,message:error?.message||String(error)};throw error;
   }).finally(()=>{
@@ -482,16 +482,25 @@ export function attachInvestigations(host) {
  function rememberField(event){
   const target=event.target,id=target?.dataset?.intelligenceField;
   if(id && id!=='sessions'){draft.fields||={};draft.fields[id]=target.value;}
-  if(target?.type==='checkbox' && nodes.collection.contains(target))draft.collection=[...nodes.collection.querySelectorAll('input')].filter(n=>n.checked).map(n=>n.value);
+  if(target?.type==='checkbox' && nodes.collection.contains(target)){
+   // A page changes only its visible choices; selections on other pages survive.
+   const chosen=new Set((draft.collection||[]).map(fileChoiceKey));
+   for(const n of nodes.collection.querySelectorAll('input'))n.checked?chosen.add(n.value):chosen.delete(n.value);
+   draft.collection=[...chosen];
+  }
   remember();
  }
  function show(name){
   panel=['analyze','assistant','actions','sources','history'].includes(name)?name:'analyze';
   for(const n of ['analyze','assistant','actions','sources','history']){nodes[n].hidden=n!==panel;nodes['tab-'+n].setAttribute('aria-selected',String(n===panel));}
   remember();
+  if(latest){renderFilePages();if(panel==='sources')renderSourceChoices(latest);}
  }
  function details(label,value){
-  const d=el('details'),p=el('pre',JSON.stringify(value,null,2));d.append(el('summary',label),p);return d;
+  const d=el('details'),p=el('pre');let populated=false;
+  d.append(el('summary',label),p);
+  d.addEventListener('toggle',()=>{if(d.open&&!populated){p.textContent=JSON.stringify(value,null,2);populated=true;}});
+  return d;
  }
  function dataTable(headers,rows){
   const scroll=el('div',null,'intelligence-table-scroll'),table=el('table'),thead=el('thead'),tr=el('tr');
@@ -503,20 +512,79 @@ export function attachInvestigations(host) {
   const list=el('dl',null,'intelligence-metrics');for(const [label,value]of values){const item=el('div');item.append(el('dt',label),el('dd',displayNumber(value)));list.append(item);}return list;
  }
  function fileRef(value){try{return JSON.parse(value);}catch{throw Error('Choose an original registered file.');}}
+ // Page the presentation, never the original registered inventory or action.
+ const FILE_PAGE_SIZE=100;
+ function pageRows(name,rows){
+  draft.pages||={};const pages=Math.max(1,Math.ceil(rows.length/FILE_PAGE_SIZE));
+  const requested=draft.pages[name];const page=Math.min(pages-1,Math.max(0,Number.isSafeInteger(requested)?requested:0));
+  draft.pages[name]=page;const offset=page*FILE_PAGE_SIZE;
+  return {page,pages,offset,total:rows.length,rows:rows.slice(offset,offset+FILE_PAGE_SIZE)};
+ }
+ function pageControls(node,name,label,view,render){
+  clear(node);const owner=workspace,generation=epoch;const change=value=>{
+   if(!Number.isSafeInteger(value)||value<0||value>=view.pages){notice('Choose a page from 1 to '+view.pages+'.');return;}
+   draft.pages||={};if(draft.pages[name]===value)return;draft.pages[name]=value;remember();
+   // Removing a focused page input can itself dispatch change; finish that event
+   // before replacing its parent, and ignore callbacks after a workspace change.
+   queueMicrotask(()=>{if(root&&workspace===owner&&epoch===generation)render();});
+  };
+  const previous=button('Previous '+label,()=>change(view.page-1));previous.disabled=view.page===0;
+  const next=button('Next '+label,()=>change(view.page+1));next.disabled=view.page+1===view.pages;
+  const status=el('span',(view.total?view.offset+1:0)+'–'+Math.min(view.total,view.offset+FILE_PAGE_SIZE)+' of '+view.total+' matching files','intelligence-muted');
+  status.setAttribute('role','status');
+  const jump=el('input');jump.type='number';jump.min='1';jump.max=String(view.pages);jump.value=String(view.page+1);
+  jump.setAttribute('aria-label','Page of '+label);jump.style.width='90px';
+  jump.addEventListener('change',()=>change(Number(jump.value)-1));
+  jump.addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();change(Number(jump.value)-1);}});
+  node.append(previous,status,jump,el('span','/ '+view.pages,'intelligence-muted'),next);
+ }
+ function fileChoiceKey(value){try{return stable(JSON.parse(value));}catch{return value;}}
+ function fileMatches(filter){
+  const term=(filter?.value||'').trim().toLowerCase();
+  return term?files.filter(row=>json([row.label,row.ref]).toLowerCase().includes(term)):files;
+ }
+ function renderFileChooser(name,fields,filter,pager,label){
+  const view=pageRows(name,fileMatches(filter));
+  const indexed=new Map(files.map(row=>[stable(row.ref),row]));
+  // Keep both original selections available even when searching another page.
+  const choices=new Map(view.rows.map(row=>[stable(row.ref),row]));
+  for(const field of fields){
+   const value=fileChoiceKey(draft.fields?.[field]??nodes[field].value);
+   if(indexed.has(value)&&!choices.has(value))choices.set(value,indexed.get(value));
+  }
+  const items=[{value:'',label:'Choose a registered file'},...[...choices].map(([value,row])=>({value,label:row.label}))];
+  for(const field of fields)selectOptions(nodes[field],items,fileChoiceKey(draft.fields?.[field]??nodes[field].value));
+  pageControls(pager,name,label,view,()=>renderFilePages());
+ }
+ function renderGuidedCollection(){
+  const chosen=new Set((draft.collection||[]).map(fileChoiceKey)),view=pageRows('guidedCollection',fileMatches(nodes.collectionFilter));
+  clear(nodes.collection);
+  for(const row of view.rows){
+   const label=el('label'),input=el('input');input.type='checkbox';input.value=stable(row.ref);input.checked=chosen.has(input.value);
+   label.append(input,el('span',row.label));nodes.collection.append(label);
+  }
+  nodes.collectionSelected.textContent=chosen.size+' selected across all pages';
+  pageControls(nodes.collectionPages,'guidedCollection','collection choices',view,()=>renderGuidedCollection());
+ }
+ function renderFilePages(){
+  if(panel==='analyze')renderFileChooser('comparison',['baseline','candidate'],nodes.comparisonFileFilter,nodes.comparisonFilePages,'comparison files');
+  if(panel==='actions'&&nodes.actionKind.value==='calibration')renderFileChooser('calibration',['observed','predicted'],nodes.calibrationFileFilter,nodes.calibrationFilePages,'calibration files');
+  if(panel==='actions'&&nodes.actionKind.value==='analyze_collection')renderGuidedCollection();
+ }
+ function sourceMatches(state){
+  const term=(nodes.sourceFilter.value||'').toLowerCase(),sources=state.sourceCatalog?.sources||[];
+  return term?sources.filter(source=>json([source.label,source.filename,source.ref,source.units]).toLowerCase().includes(term)):sources;
+ }
  function rebuildFiles(state){
-  const m=new Map();for(const source of state.sourceCatalog?.sources||[])m.set(json(source.ref),{ref:source.ref,label:source.label});
-  for(const d of state.catalog?.inventory?.datasets||[])m.set(json({kind:'dataset',id:d.id}),{ref:{kind:'dataset',id:d.id},label:resourceLabel(d)});
+  const stamp=stable({catalog:state.registryVersions?.catalog??state.catalog,
+   sources:state.registryVersions?.sources??state.sourceCatalog,
+   jobEvidence:(state.session?.evidence||[]).filter(row=>row.result?.job).map(row=>row.id)});
+  if(stamp===lastFiles)return;lastFiles=stamp;
+  const m=new Map();for(const source of state.sourceCatalog?.sources||[])m.set(stable(source.ref),{ref:source.ref,label:source.label});
+  for(const d of state.catalog?.inventory?.datasets||[])m.set(stable({kind:'dataset',id:d.id}),{ref:{kind:'dataset',id:d.id},label:resourceLabel(d)});
   for(const evidence of state.session?.evidence||[]){const result=evidence.result||{};
-   if(result.job)for(const f of result.files||[]){const ref={kind:'artifact',id:f.id||result.job.id,member:f.member};m.set(json(ref),{ref,label:resourceLabel(result.job)+' / '+f.member});}}
-  files=[...m.values()];
-  const stamp=stable(files);if(stamp!==lastFiles){
-   lastFiles=stamp;const checked=new Set(draft.collection||[]);clear(nodes.collection);
-   for(const f of files){const label=el('label'),input=el('input');input.type='checkbox';input.value=json(f.ref);input.checked=checked.has(input.value);
-    label.append(input,el('span',f.label));nodes.collection.append(label);}
-  }
-  for(const name of ['baseline','candidate','observed','predicted']){
-   if(nodes[name])selectOptions(nodes[name],[{value:'',label:'Choose a registered file'},...files.map(f=>({value:json(f.ref),label:f.label}))]);
-  }
+   if(result.job)for(const f of result.files||[]){const ref={kind:'artifact',id:f.id||result.job.id,member:f.member};m.set(stable(ref),{ref,label:resourceLabel(result.job)+' / '+f.member});}}
+  files=[...m.values()];renderFilePages();
  }
  function renderResources(state){
   clear(nodes.resources);const term=(nodes.filter.value||'').toLowerCase(),inventory=state.catalog?.inventory||{};
@@ -634,6 +702,7 @@ export function attachInvestigations(host) {
    ...programmes.map(row=>({value:row.id,label:(row.title||row.label||row.id)+' · '+(row.status||'retained')+' · '+displayNumber(row.counts?.cases??row.metadata?.resolved_native_plan?.counts?.cases)+' cases'}))]);
   nodes.method.textContent=kind==='analyze_collection'?'Each selected registered file is analyzed in full.':methods[kind]||'Uses the connected original service.';
   selectOptions(nodes.job,[{value:'',label:'Choose a retained native job'},...(state.catalog?.inventory?.jobs||[]).map(j=>({value:j.id,label:resourceLabel(j)+' · '+(j.status||j.state)}))]);
+  renderFilePages();
  }
  async function designNativeProgramme(){
   const owner=workspaceId(host.getState()),sid=client.requireSession(),state=client.snapshot();
@@ -659,9 +728,9 @@ export function attachInvestigations(host) {
  async function prepare(){
   const sid=client.requireSession(),kind=nodes.actionKind.value,action={kind};
   if(kind==='analyze_collection'){
-   const checked=[...nodes.collection.querySelectorAll('input')].filter(n=>n.checked);
+   const checked=draft.collection||[];
    if(!checked.length)throw Error('Select at least one registered file.');
-   action.refs=checked.map(n=>fileRef(n.value));
+   action.refs=checked.map(fileRef);
   }else if(kind==='calibration'){
    Object.assign(action,{observed:fileRef(nodes.observed.value),predicted:fileRef(nodes.predicted.value),time_column:nodes.time.value.trim(),
     observed_column:nodes.observedColumn.value.trim(),predicted_column:nodes.predictedColumn.value.trim(),
@@ -829,13 +898,13 @@ export function attachInvestigations(host) {
  function renderSourceChoices(state){
   const owner=workspace,generation=epoch;
   const term=(nodes.sourceFilter.value||'').toLowerCase(),chosen=new Set((state.sourceSelection||[]).map(stable));
+  const view=pageRows('sources',sourceMatches(state));
   const sources=state.sourceCatalog?.sources||[],known=new Set(sources.map(row=>stable(row.ref)));
   const readError=state.readErrors?.sources,inventoryKnown=!!state.sourceCatalog&&!readError;
   clear(nodes.sourceChoices);
   if(readError)nodes.sourceChoices.append(el('p',(state.sourceCatalog?'Showing the last loaded file list. Refresh failed: ':'Source inventory unavailable: ')+readError.message,'intelligence-error'));
   let shown=0;
-  for(const source of sources){
-   if(term&&!json([source.label,source.filename,source.ref,source.units]).toLowerCase().includes(term))continue;
+  for(const source of view.rows){
    shown++;
    const label=el('label',null,'intelligence-source-choice'),input=el('input'),body=el('span');
    input.type='checkbox';input.value=json(source.ref);input.checked=chosen.has(stable(source.ref));
@@ -856,6 +925,7 @@ export function attachInvestigations(host) {
   nodes.sourceCount.textContent=chosen.size+' selected · '+(state.sourceCatalog?sources.length+' '+(readError?'last loaded':'registered')+' files':
    readError?'source inventory unavailable':state.registryReading?.sources?'reading source inventory':'source inventory not loaded')+
    (missing?' · '+missing+' selected files need review':'');
+  pageControls(nodes.sourcePages,'sources','source files',view,()=>renderSourceChoices(latest));
  }
  function renderCollections(state){
   clear(nodes.sourceExports);
@@ -963,7 +1033,7 @@ export function attachInvestigations(host) {
   if(!root)return;
   nodes.notice.textContent=state.error||'';
   nodes.workspace.textContent=host.getState()?.data?.project?.title||state.catalog?.project?.title||'Selected workspace';
-  const cstamp=stable({inventory:state.catalog?.inventory,methods:state.catalog?.native_methods,actions:state.catalog?.actions,nativeExperiments:state.catalog?.native_experiments,sources:state.sourceCatalog,catalogError:state.readErrors?.catalog,catalogReading:state.registryReading?.catalog});
+  const cstamp=stable({catalog:state.registryVersions?.catalog??state.catalog,sources:state.registryVersions?.sources??state.sourceCatalog,catalogError:state.readErrors?.catalog,catalogReading:state.registryReading?.catalog});
   const sstamp=stable({session:state.session,exported:state.exported,collection:state.collection});
   if(cstamp!==lastCatalog){lastCatalog=cstamp;renderResources(state);rebuildFiles(state);renderActionFields(state);}
   selectOptions(nodes.sessions,[{value:'',label:'Choose a saved investigation'},...(state.catalog?.sessions||[]).map(s=>({value:s.id,label:s.title+' · '+displayTime(s.created)}))],state.sessionId);
@@ -974,7 +1044,7 @@ export function attachInvestigations(host) {
    !state.catalog?(state.registryReading?.catalog?'Reading the workspace catalog…':'Refresh originals to read the workspace catalog.'):
    state.catalog.provider_configured?'Configured model: '+state.catalog.provider_model:'Local analysis ready; configure an assistant model on the server to ask questions.';
   if(sstamp!==lastSession){lastSession=sstamp;renderSession(state);renderCollections(state);rebuildFiles(state);}
-  const sourceStamp=stable({catalog:state.sourceCatalog,selection:state.sourceSelection,error:state.readErrors?.sources,reading:state.registryReading?.sources});if(sourceStamp!==lastSources){lastSources=sourceStamp;renderSourceChoices(state);}
+  const sourceStamp=stable({catalog:state.registryVersions?.sources??state.sourceCatalog,selection:state.sourceSelection,error:state.readErrors?.sources,reading:state.registryReading?.sources});if(sourceStamp!==lastSources){lastSources=sourceStamp;if(panel==='sources')renderSourceChoices(state);}
   const submissionStamp=stable(state.experimentSubmission);
   if(submissionStamp!==lastSubmission){
    lastSubmission=submissionStamp;
@@ -1024,7 +1094,12 @@ export function attachInvestigations(host) {
   });
   selectedRow.append(nodes.selection,inspectButton,addSources,button('Open input lineage',()=>lineage.openResource(selected,latest),'intelligence-lineage-open'));analyze.append(selectedRow,el('p','Analysis covers the complete original file and retains its source identity, coverage and units.','intelligence-muted'));
   nodes.result=el('div');nodes.lineage=el('section',null,'intelligence-plan');nodes.lineage.dataset.intelligenceLineage='true';analyze.append(nodes.result,nodes.lineage);
-  const compare=el('form',null,'intelligence-form');compare.append(el('h3','Compare original files'),field('Baseline / observed file','baseline','select'),field('Candidate / predicted file','candidate','select'),field('Comparison','comparison','select'));
+  const compare=el('form',null,'intelligence-form');compare.append(el('h3','Compare original files'));
+  const comparisonChoices=el('div',null,'intelligence-form-group');
+  comparisonChoices.append(field('Find comparison files','comparisonFileFilter'));
+  nodes.comparisonFilePages=el('div',null,'intelligence-inline');comparisonChoices.append(nodes.comparisonFilePages);
+  nodes.comparisonFileFilter.addEventListener('input',()=>{draft.pages||={};draft.pages.comparison=0;renderFilePages();});
+  compare.append(comparisonChoices,field('Baseline / observed file','baseline','select'),field('Candidate / predicted file','candidate','select'),field('Comparison','comparison','select'));
   selectOptions(nodes.comparison,[{value:'raster_compare',label:'Aligned raster cells'},{value:'table_compare',label:'Exact-key observed / predicted rows'}]);
   nodes.tableFields=el('div',null,'intelligence-form-group');nodes.tableFields.append(field('Pairing columns, separated by commas','keys','input','date'),field('Observed column','compareObserved','input','observed_sediment'),field('Predicted column','comparePredicted','input','predicted_sediment'));
   compare.append(nodes.tableFields);nodes.comparison.addEventListener('change',()=>nodes.tableFields.hidden=nodes.comparison.value!=='table_compare');nodes.tableFields.hidden=nodes.comparison.value!=='table_compare';
@@ -1040,9 +1115,17 @@ export function attachInvestigations(host) {
    client.queue('intelligence.ask',{session_id:sid,question,...(focus?{focus_ref:focus}:{})}).catch(failure);}catch(error){failure(error);}});assistant.append(ask);
   const actions=section('actions','Guided original operations');actions.append(field('Operation','actionKind','select'));nodes.actionKind.addEventListener('change',()=>{rememberField({target:nodes.actionKind});if(latest)renderActionFields(latest);});
   nodes.method=el('p',null,'intelligence-muted');actions.append(nodes.method);
-  nodes.collectionFields=el('div');nodes.collectionFields.append(el('h3','Files in this collection'));nodes.collection=el('div',null,'intelligence-checks');nodes.collectionFields.append(nodes.collection);
+  nodes.collectionFields=el('div');nodes.collectionFields.append(el('h3','Files in this collection'),field('Find collection files','collectionFilter'));
+  nodes.collectionFilter.addEventListener('input',()=>{draft.pages||={};draft.pages.guidedCollection=0;renderGuidedCollection();});
+  nodes.collectionPages=el('div',null,'intelligence-inline');nodes.collectionSelected=el('p',null,'intelligence-muted');
+  nodes.collection=el('div',null,'intelligence-checks');
+  nodes.collectionFields.append(nodes.collectionPages,nodes.collectionSelected,button('Clear collection choices',()=>{draft.collection=[];remember();renderGuidedCollection();}),nodes.collection);
   nodes.jobFields=el('div',null,'intelligence-form-group');nodes.jobFields.append(field('Original prepared run','job','select'));
-  nodes.calibrationFields=el('div',null,'intelligence-form-group');nodes.calibrationFields.append(field('Observed file','observed','select'),field('Predicted file','predicted','select'),
+  nodes.calibrationFields=el('div',null,'intelligence-form-group');
+  nodes.calibrationFilePages=el('div',null,'intelligence-inline');
+  nodes.calibrationFields.append(field('Find calibration files','calibrationFileFilter'),nodes.calibrationFilePages);
+  nodes.calibrationFileFilter.addEventListener('input',()=>{draft.pages||={};draft.pages.calibration=0;renderFilePages();});
+  nodes.calibrationFields.append(field('Observed file','observed','select'),field('Predicted file','predicted','select'),
    field('ISO date / timestamp column','time','input','date'),field('Observed value column','observedColumn','input','observed_sediment'),field('Predicted value column','predictedColumn','input','predicted_sediment'),
    field('Same declared unit for both files','unit'),field('Chronological holdout fraction','holdout','input','0.25'));
   nodes.ensembleFields=el('div',null,'intelligence-form-group');nodes.ensembleFields.append(field('Native parameter grid (JSON)','grid','textarea','{}'),field('Requested member limit','members','input','64'));
@@ -1065,14 +1148,14 @@ export function attachInvestigations(host) {
   const sources=section('sources','Export original scientific files');
   sources.append(el('p','Select source data and native outputs. The collection includes the original file bytes, required companions, scientific inventory and portable catalog.','intelligence-muted'));
   sources.append(field('Collection title','collectionTitle','input',''),field('Find an original file','sourceFilter'));
-  nodes.sourceFilter.addEventListener('input',()=>latest&&renderSourceChoices(latest));
+  nodes.sourceFilter.addEventListener('input',()=>{draft.pages||={};draft.pages.sources=0;if(latest)renderSourceChoices(latest);});
   const sourceControls=el('div',null,'intelligence-inline');nodes.sourceCount=el('p',null,'intelligence-muted');
   sourceControls.append(nodes.sourceCount,button('Select visible files',()=>{
-   const term=(nodes.sourceFilter.value||'').toLowerCase(),refs=(latest?.sourceCatalog?.sources||[]).filter(source=>!term||json([source.label,source.filename,source.ref,source.units]).toLowerCase().includes(term)).map(source=>source.ref);
-   client.selectSources(refs);
-  }),button('Clear selection',()=>client.clearSourceSelection()),button('Refresh file list',()=>client.collectionSources()));
+   client.selectSources(pageRows('sources',sourceMatches(latest)).rows.map(source=>source.ref));
+  }),button('Select all matching files',()=>client.selectSources(sourceMatches(latest).map(source=>source.ref))),
+  button('Clear selection',()=>client.clearSourceSelection()),button('Refresh file list',()=>client.collectionSources()));
   nodes.sourceChoices=el('div',null,'intelligence-checks intelligence-source-choices');
-  sources.append(sourceControls,nodes.sourceChoices);
+  nodes.sourcePages=el('div',null,'intelligence-inline');sources.append(sourceControls,nodes.sourcePages,nodes.sourceChoices);
   const exportSources=button('Export selected original files',()=>client.exportCollection(nodes.collectionTitle.value));exportSources.dataset.submit='true';sources.append(exportSources);
   sources.append(el('p','After downloading, extract the ZIP and open START.html to browse the collection and its original files. Reopen a saved collection below to download it again.','intelligence-muted'));
   nodes.sourceExports=el('div');sources.append(nodes.sourceExports);
