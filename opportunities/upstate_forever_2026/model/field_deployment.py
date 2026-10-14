@@ -22,6 +22,7 @@ from .implementation import ImplementationStore, _fsync_directory
 from .implementation_schema import ImplementationError, _safe_id, document_digest, validate_plan
 from .implementation_observations import _attachment_inventory
 from .monitoring_packet import add_member, file_member, retain_packet
+from .portable_fs import native_path, publish_file
 
 SCHEMA = "upstate.field-deployment/v1"
 VERSION = "field-crew-packet/3-sampling-protocols"
@@ -628,22 +629,45 @@ def _sampling_html(item):
 
 
 def _copy_file(source, target, descriptor):
-    if target.exists():
-        verify_file(target.parent, {**descriptor, "path": target.name})
+    """Receive independent field-deployment originals with immutable publication.
+
+    A writable temporary copy prevents a hard link back to the scientific
+    original. A concurrent receiver's completed target is verified, not replaced.
+    """
+    source, target = native_path(source), native_path(target)
+    expected = {**descriptor, "path": target.name}
+    if target.exists() or target.is_symlink():
+        verify_file(target.parent, expected)
+        _fsync_directory(target.parent)
         return
+    if source.is_symlink() or not source.is_file():
+        raise ImplementationError("Original field deployment source must be a regular file")
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=".field-deployment-", dir=target.parent)
     pending = Path(temporary)
     try:
         import hashlib
         checksum, size = hashlib.sha256(), 0
-        with os.fdopen(fd, "wb") as outgoing, Path(source).open("rb") as incoming:
+        with os.fdopen(fd, "wb") as outgoing, source.open("rb") as incoming:
+            before = os.fstat(incoming.fileno())
             for body in iter(lambda: incoming.read(1024 * 1024), b""):
-                outgoing.write(body); checksum.update(body); size += len(body)
-            outgoing.flush(); os.fsync(outgoing.fileno())
+                outgoing.write(body)
+                checksum.update(body)
+                size += len(body)
+            outgoing.flush()
+            os.fsync(outgoing.fileno())
+            after = os.fstat(incoming.fileno())
+        identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
+                                 info.st_mtime_ns, info.st_ctime_ns)
+        if identity(before) != identity(after):
+            raise ImplementationError("Original field deployment source changed during copy")
         if size != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
             raise ImplementationError("An original field deployment source changed")
-        os.replace(pending, target)
+        try:
+            publish_file(pending, target)
+        except FileExistsError:
+            pass
+        verify_file(target.parent, expected)
         _fsync_directory(target.parent)
     finally:
         pending.unlink(missing_ok=True)
