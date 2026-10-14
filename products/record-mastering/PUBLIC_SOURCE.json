@@ -727,8 +727,8 @@
       {
         "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/package.json",
         "encoding": "utf-8",
-        "bytes": 599,
-        "sha256": "ecd7deedc9fc3cd6cf13d4ba132d7d3f890e2d8c40da03f08975ba58886e6571"
+        "bytes": 629,
+        "sha256": "a3e7f84659f01ada1be966ead38f88b3b50e6e154d2b2d87e9c5be438dc769fd"
       },
       {
         "path": "stellar/scf-starforge-20261009/sf30-seller-sdk/record-mastering/packet-reader.mjs",
