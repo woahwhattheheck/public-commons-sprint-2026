@@ -55,10 +55,11 @@
     },
     {
       "path": "prepare_runtime_dependencies.py",
-      "bytes": 15021,
-      "sha256": "de8c517e869981b6f3e2e12f7fab586def8b13ac65686813c13c9c79875afbb6",
+      "bytes": 16660,
+      "sha256": "ed1447858e4c48575d4ed706df43ee7b08e0f34fa778d13753a1bc33a46fd310",
       "predecessor_sha256": [
-        "0fce3e9eb9d6e03c061c2fb7c88ceb557bdd7bd3e8198c9c4a82bffd85ed6284"
+        "0fce3e9eb9d6e03c061c2fb7c88ceb557bdd7bd3e8198c9c4a82bffd85ed6284",
+        "de8c517e869981b6f3e2e12f7fab586def8b13ac65686813c13c9c79875afbb6"
       ],
       "mode": "0644"
     },
@@ -77,6 +78,13 @@
       "path": "receive_collection_studies.py",
       "bytes": 13321,
       "sha256": "d0ce60733b3c7ea49a37b93ec022b7ecee716e8d76d000ca3a9604a10ddbc2c4",
+      "predecessor_sha256": [],
+      "mode": "0644"
+    },
+    {
+      "path": "compose_runtime_dependencies.py",
+      "bytes": 11675,
+      "sha256": "c93c2ac9629898d511b588efdd94113a26d3c20d329df5f7ac6ec6653c07625e",
       "predecessor_sha256": [],
       "mode": "0644"
     }
