@@ -19,7 +19,7 @@ For an original File/Blob POST to `/api/upload`, the browser retains the origina
 
 Each chunk is accepted only when its acknowledgement agrees on request ID, offset plus exact length, bytes and SHA-256. A lost acknowledgement retries the exact same chunk and offset. An INPUT_PENDING response reads the original request status before retrying that same chunk. A repeated manifest or seal retains its original identity; neither repeats a native upload.
 
-The browser reads at most one file chunk at a time. Before creating the manifest it computes a bounded-memory fingerprint from the exact metadata and ordered chunk SHA-256 values. That fingerprint is an internal resume identity, not the original file's SHA-256. The session journal stores only fingerprint-to-request ID and creation time, without original bytes or credentials. A newly selected File with the same name but different contents therefore cannot reuse another upload. A browser reload or retry of the same exact content finds the same pending request and replays identical chunks from offset zero so every duplicate is checked against durable metadata. After the original response body is fully read, the journal is removed. Interruption, cancellation and uncertain native outcomes retain it.
+The browser reads at most one file chunk at a time. Before creating the manifest it computes a bounded-memory fingerprint from the exact metadata and ordered chunk SHA-256 values. That fingerprint is an internal resume identity, not the original file's SHA-256. The session journal stores the fingerprint-to-request ID, creation time, acknowledged phase and any validated original native task/recovery references, without original bytes or credentials. A newly selected File with the same name but different contents therefore cannot reuse another upload. A browser reload or retry of the same exact content finds the same request. During staging it replays identical chunks from offset zero so every duplicate is checked against the original native metadata. After an acknowledged seal or an uncertainty response at any phase, reentry reads only that same request's result. After the original response body is fully read, the journal is removed. Interruption, cancellation and uncertain native outcomes retain it.
 
 ## Ordinary API calls and cancellation
 
@@ -42,3 +42,11 @@ The implementation uses standard Blob slices and WebCrypto SHA-256 with AbortSig
 - https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice
 - https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
 - https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal
+
+## Recovery when preview relay state is lost
+
+The current preview relay can return HTTP 409 with X-Eco-Uncertain: 1, PREVIEW_STATE_LOST and the original request ID when its process loses transport state. A manifest, input chunk, seal or result response carrying this header immediately records uncertainty. It receives no chunk retry, and selecting the same exact file again reads only the original result. The file journal stays until its complete original native reply is consumed.
+
+The error carries its original transfer reference. When the native connector supplies validated operation_id, workspace, task_id and the matching relative /api/task lookup path, the browser retains those references and displays the actual task/operation IDs. Use the existing Operations view or maintained API to inspect that original native operation. A result that remains unavailable retains the same reference for reconciliation.
+
+The Python recipient's corresponding stage-file checkpoint follows the same rule for uncertainty during all control phases. Recipient API/download requests identify this client as TJLabs-Workbench-Recipient/1.0; the browser keeps its normal browser User-Agent.
