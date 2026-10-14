@@ -21,10 +21,12 @@ import os
 from pathlib import Path
 import re
 import signal
+import shutil
 import socket
 import sqlite3
 import ssl
 import stat
+import sys
 import threading
 import time
 import urllib.parse
@@ -46,6 +48,13 @@ RESPONSE_HEADERS = {"content-type", "content-length", "content-disposition", "co
                     "content-security-policy", "referrer-policy", "x-content-type-options",
                     "retry-after", "location", "vary"}
 STOP = threading.Event()
+
+# Standalone diagnostics and the owned launcher both use the selected isolated
+# interpreter. Resolve the shared filesystem layer from this application only.
+_APPLICATION = str(Path(__file__).resolve().parents[1])
+if _APPLICATION not in sys.path:
+    sys.path.insert(0, _APPLICATION)
+from model import portable_fs
 
 
 class ConnectorError(Exception):
@@ -104,12 +113,7 @@ def digest(value):
 
 
 def fsync_directory(path):
-    if os.name == "posix":
-        descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+    portable_fs.sync_directory(path)
 
 
 def event(name, request_id=None, **fields):
@@ -122,12 +126,13 @@ def private_json(path):
     path = Path(path)
     if path.is_symlink():
         raise ConnectorError("PRIVATE_FILE_SYMLINK")
-    mode = path.stat()
-    if not stat.S_ISREG(mode.st_mode):
-        raise ConnectorError("PRIVATE_FILE_REQUIRED")
-    if os.name == "posix" and (mode.st_uid != os.getuid() or mode.st_mode & 0o077):
-        raise ConnectorError("PRIVATE_FILE_REQUIRES_OWNER_ONLY_PERMISSIONS")
-    with path.open("r", encoding="utf-8") as handle:
+    descriptor = portable_fs.open_file(path, os.O_RDONLY)
+    with os.fdopen(descriptor, "r", encoding="utf-8") as handle:
+        mode = os.fstat(handle.fileno())
+        if not stat.S_ISREG(mode.st_mode):
+            raise ConnectorError("PRIVATE_FILE_REQUIRED")
+        if os.name == "posix" and (mode.st_uid != os.getuid() or mode.st_mode & 0o077):
+            raise ConnectorError("PRIVATE_FILE_REQUIRES_OWNER_ONLY_PERMISSIONS")
         value = json.load(handle)
     if not isinstance(value, dict):
         raise ConnectorError("PRIVATE_OBJECT_REQUIRED")
@@ -600,7 +605,7 @@ class Connector:
             used += sum(p.stat().st_size for p in self.config.directory.glob("*.response"))
             if used + extra > self.config.spool_limit:
                 raise ConnectorError("PRIVATE_SPOOL_CAPACITY")
-            free = os.statvfs(self.config.directory).f_bavail * os.statvfs(self.config.directory).f_frsize
+            free = shutil.disk_usage(self.config.directory).free
             if extra + 32 * CHUNK > free:
                 raise ConnectorError("PRIVATE_DISK_CAPACITY")
 
@@ -1001,18 +1006,14 @@ class Connector:
 
 @contextlib.contextmanager
 def instance_lock(directory):
-    import fcntl
-    path = directory / "connector.lock"
-    with path.open("a+b") as handle:
-        os.chmod(path, 0o600)
+    # Use the same whole-file lock as the native workbench, including its
+    # Windows handle implementation. Never remove/recreate a live lock file.
+    with contextlib.ExitStack() as owner:
         try:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            owner.enter_context(portable_fs.locked(directory / "connector.lock", blocking=False))
         except BlockingIOError:
-            raise ConnectorError("CONNECTOR_ALREADY_RUNNING")
-        try:
-            yield
-        finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            raise ConnectorError("CONNECTOR_ALREADY_RUNNING") from None
+        yield
 
 
 def main(argv=None):
@@ -1023,6 +1024,8 @@ def main(argv=None):
     os.umask(0o077)
     signal.signal(signal.SIGINT, lambda *_: STOP.set())
     signal.signal(signal.SIGTERM, lambda *_: STOP.set())
+    if hasattr(signal, "SIGBREAK"):
+        signal.signal(signal.SIGBREAK, lambda *_: STOP.set())
     try:
         config = Config(args.config)
         with instance_lock(config.directory):

@@ -6,7 +6,6 @@ retain this source and never copy its configuration, credentials or journal.
 from __future__ import annotations
 import argparse
 import contextlib
-import ctypes
 import importlib.util
 import json
 import os
@@ -24,13 +23,21 @@ import time
 
 SCHEMA = "upstate.workbench-transport-opening/v1"
 LIMIT = 256 * 1024
+CLOSE_GRACE_SECONDS = 15
+
+# Isolated Python (-I) omits the script/application directory from sys.path.
+# Import only the platform layer shipped beside this exact launcher source.
+_APPLICATION = str(Path(__file__).resolve().parents[1])
+if _APPLICATION not in sys.path:
+    sys.path.insert(0, _APPLICATION)
+from model import portable_fs
 
 
 def _private_json(path):
     path = Path(path)
     if path.is_symlink():
         raise ValueError("The private transport selection cannot be a symbolic link")
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    fd = portable_fs.open_file(path, os.O_RDONLY)
     with os.fdopen(fd, "rb") as stream:
         info = os.fstat(stream.fileno())
         if not stat.S_ISREG(info.st_mode) or info.st_size > LIMIT:
@@ -59,20 +66,15 @@ def _write_private(path, value):
     temporary = path.with_name("." + path.name + "-" + os.urandom(8).hex())
     body = (json.dumps(value, indent=2, ensure_ascii=False) + "\n").encode("utf-8")
     try:
-        fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        fd = portable_fs.open_file(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         with os.fdopen(fd, "wb") as stream:
             stream.write(body)
             stream.flush()
             os.fsync(stream.fileno())
         if path.is_symlink():
             raise ValueError("Private transport state cannot be a symbolic link")
-        os.replace(temporary, path)
-        if os.name == "posix":
-            fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+        portable_fs.replace(temporary, path)
+        portable_fs.sync_directory(path.parent)
     finally:
         with contextlib.suppress(FileNotFoundError):
             temporary.unlink()
@@ -100,8 +102,6 @@ def prepare(selection, state, configured=None):
     data = _private_json(path)
     if data.get("schema") != "upstate.eco-native-connector/v1":
         raise ValueError("Choose the original native HTTPS connector configuration")
-    if sys.platform != "linux":
-        raise ValueError("This configured outbound connector requires the qualified Linux receiving runtime")
     def selected_path(key):
         value = data.get(key)
         if not isinstance(value, str) or not value:
@@ -125,6 +125,7 @@ def prepare(selection, state, configured=None):
         raise ValueError("The private connector origin differs from the original selected advertised HTTPS origin")
     selection["advertised_origin"] = origin
     required = ("source_tools/eco_native_connector.py", "source_tools/workbench_transport.py",
+                "model/portable_fs.py", "model/windows_fs.py",
                 "integration/NATIVE_HTTPS_CONNECTOR.md",
                 "integration/component_fragments/native-https-connector.json")
     if any(not (application / relative).is_file() for relative in required):
@@ -185,12 +186,12 @@ class Controller:
             return None
 
     def start(self):
-        import fcntl
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
-        flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(self.root / ".workbench-transport-owner.lock", flags, 0o600)
+        locks = portable_fs.file_locks
+        fd = portable_fs.open_file(self.root / ".workbench-transport-owner.lock",
+                                   os.O_CREAT | os.O_RDWR, 0o600)
         try:
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            locks.flock(fd, locks.LOCK_EX | locks.LOCK_NB)
         except BlockingIOError:
             os.close(fd)
             retained = _private_json(self.root / "workbench-transport.json")
@@ -209,13 +210,21 @@ class Controller:
             os.close(fd)
             raise
         self.owner = fd
-        _write_private(self.root / "workbench-transport.json", {
-            "schema": SCHEMA, "hostname": socket.gethostname(),
-            "config": self.prepared["config"], "application": self.prepared["application"],
-            "project_id": self.prepared["project_id"]})
-        self._spawn()
+        try:
+            _write_private(self.root / "workbench-transport.json", {
+                "schema": SCHEMA, "hostname": socket.gethostname(),
+                "config": self.prepared["config"], "application": self.prepared["application"],
+                "project_id": self.prepared["project_id"]})
+            self._spawn()
+        except BaseException:
+            self.close()
+            raise
 
     def _spawn(self):
+        if self.process is not None:
+            if self.process.poll() is None:
+                raise RuntimeError("The original connector child is still running")
+            self._close_parent_pipe()
         self.last_signature = self._signature()
         command = [self.prepared["python"], "-I", "-B",
                    str(Path(self.prepared["application"]) / "source_tools/workbench_transport.py"),
@@ -229,9 +238,14 @@ class Controller:
                 and signal.getsignal(signal.SIGINT) is signal.default_int_handler):
             previous = signal.signal(signal.SIGINT, lambda signum, frame: interrupted.append(signum))
         try:
+            creation = ({"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP}
+                        if os.name == "nt" else {"start_new_session": True})
+            # The writer is held only by this launcher. EOF is an unambiguous
+            # lifetime signal even after abrupt exit or a later recycled PID.
             self.process = subprocess.Popen(command, cwd=self.prepared["application"],
-                stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                text=True, encoding="utf-8", errors="replace", bufsize=1, start_new_session=True)
+                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                text=True, encoding="utf-8", errors="replace", bufsize=1,
+                close_fds=True, **creation)
         finally:
             if previous is not None:
                 signal.signal(signal.SIGINT, previous)
@@ -305,17 +319,21 @@ class Controller:
             self.native_alive = False
         return self.native_alive
 
+    def _close_parent_pipe(self):
+        if self.process is not None and self.process.stdin is not None:
+            with contextlib.suppress(OSError):
+                self.process.stdin.close()
+
     def close(self):
         if self.closed or self.reused:
             return
         self.closed = True
         try:
+            # Windows terminate() is not a graceful signal. Closing our pipe
+            # first lets the same STOP path drain on Windows, macOS and Linux.
+            self._close_parent_pipe()
             if self.process is not None and self.process.poll() is None:
-                try:
-                    self.process.terminate()
-                except ProcessLookupError:
-                    pass
-                deadline = time.monotonic() + 15
+                deadline = time.monotonic() + CLOSE_GRACE_SECONDS
                 forced = False
                 while self.process.poll() is None:
                     try:
@@ -337,27 +355,50 @@ class Controller:
                 try:
                     self._publish("closed", self.code)
                 finally:
-                    os.close(self.owner)
-                    self.owner = None
+                    try:
+                        portable_fs.file_locks.flock(self.owner, portable_fs.file_locks.LOCK_UN)
+                    finally:
+                        os.close(self.owner)
+                        self.owner = None
+
+
+def _watch_parent_pipe(descriptor, stop, finished):
+    """The launcher's anonymous pipe is the lease, not a reusable process ID."""
+    try:
+        # No commands, credentials, heartbeats or scientific input use this pipe.
+        # Read the raw descriptor so interpreter shutdown never waits on a
+        # daemon holding sys.stdin's buffered-reader lock.
+        while os.read(descriptor, 1):
+            pass
+    except OSError:
+        pass
+    stop.set()
+    if not finished.wait(CLOSE_GRACE_SECONDS):
+        # An orphan may still be inside an HTTP read. Stop only this connector;
+        # durable SQLite state reconciles an interrupted write on normal reopen.
+        os._exit(1)
 
 
 def _run_native(config, parent_pid):
-    # The existing selected Linux process is also the service lifetime owner.
-    # If its launcher dies, preserve the original journal and stop accepting work.
-    if sys.platform != "linux" or os.getppid() != parent_pid:
-        raise RuntimeError("The original Linux workbench launcher must own this connector")
-    libc = ctypes.CDLL(None, use_errno=True)
-    if libc.prctl(1, signal.SIGTERM, 0, 0, 0) != 0:
-        raise OSError(ctypes.get_errno(), "Could not bind the connector to its original launcher")
-    if os.getppid() != parent_pid:
-        return 1
+    if parent_pid <= 0 or os.getppid() != parent_pid or sys.stdin is None:
+        raise RuntimeError("The original workbench launcher must own this connector")
+    descriptor = sys.stdin.fileno()
+    if not stat.S_ISFIFO(os.fstat(descriptor).st_mode):
+        raise RuntimeError("The original launcher must supply its private lifetime pipe")
     source = Path(__file__).resolve().with_name("eco_native_connector.py")
     spec = importlib.util.spec_from_file_location("_workbench_native_https", source)
     if spec is None or spec.loader is None:
         raise RuntimeError("The complete original connector source is required")
     native = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(native)
-    return native.main(["--config", str(config)])
+    finished = threading.Event()
+    threading.Thread(target=_watch_parent_pipe,
+                     args=(descriptor, native.STOP, finished),
+                     name="workbench-https-parent", daemon=True).start()
+    try:
+        return native.main(["--config", str(config)])
+    finally:
+        finished.set()
 
 
 def main(argv=None):

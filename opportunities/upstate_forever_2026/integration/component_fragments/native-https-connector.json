@@ -5,7 +5,8 @@
       "title": "Native HTTPS connector",
       "paths": [
         "source_tools/eco_native_connector.py",
-        "integration/NATIVE_HTTPS_CONNECTOR.md"
+        "integration/NATIVE_HTTPS_CONNECTOR.md",
+        "integration/NATIVE_HTTPS_CONNECTOR_PORTABILITY.md"
       ],
       "requires": [
         "core"
