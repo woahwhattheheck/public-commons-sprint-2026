@@ -11,6 +11,7 @@ from pathlib import PurePosixPath
 
 from .common import digest, identifier, read_json
 from . import calibration_study_transfer as dependencies
+from .portable_fs import validate_members
 
 ROOT_KINDS = dependencies.IMMUTABLE_KINDS
 EXPORT_BASES = {
@@ -152,6 +153,10 @@ def _export(closure, export_type, key, report, plan, *, expected=None):
         _same(dependencies._name(name), item.get("path"), "Calibration export member path")
         members.append(_member(closure, prefix + "/" + name, name, item))
     archive = closure.read(archive_path)
+    # Reject file aliases before independent Windows/macOS Study receiving.
+    # Preserve every original filename and the archived record bytes.
+    validate_members([*inventory, "manifest.json", "archive.json",
+                      dependencies._name(archive["path"])], portable=True)
     members.extend([_member(closure, manifest_path, "Original export inventory"),
                     _member(closure, archive_path, "Original archive descriptor"),
                     _member(closure, prefix + "/" + dependencies._name(archive["path"]),
