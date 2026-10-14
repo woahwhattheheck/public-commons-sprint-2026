@@ -42,7 +42,7 @@ WINDOWS_SYSTEM = frozenset("""
 advapi32.dll avrt.dll bcrypt.dll bcryptprimitives.dll cabinet.dll cfgmgr32.dll
 comctl32.dll comdlg32.dll crypt32.dll cryptbase.dll cryptsp.dll dbghelp.dll
 dnsapi.dll dwmapi.dll dxgi.dll gdi32.dll gdiplus.dll hid.dll imm32.dll
-iphlpapi.dll kernel32.dll kernelbase.dll mpr.dll msvcrt.dll mswsock.dll
+iphlpapi.dll kernel32.dll kernelbase.dll mpr.dll msi.dll msvcrt.dll mswsock.dll
 ncrypt.dll netapi32.dll normaliz.dll ntdll.dll ole32.dll oleacc.dll oleaut32.dll
 pdh.dll powrprof.dll propsys.dll psapi.dll rpcrt4.dll secur32.dll setupapi.dll
 shell32.dll shlwapi.dll user32.dll userenv.dll usp10.dll uxtheme.dll version.dll
