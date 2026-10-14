@@ -22,6 +22,8 @@ import zipfile
 
 from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
 from . import reviews
+from .portable_fs import (publish_file as _publish_file, publish_directory as _publish_directory,
+                          sync_directory as _sync_directory)
 
 SCHEMA = "upstate.customer-review-handback/v1"
 RECORD_SCHEMA = "upstate.review-handbacks/v1"
@@ -628,7 +630,7 @@ def export_handback(workspace, handback_id, destination, *, archive=None):
         inspected = _inspect_directory(pending)
         if destination.exists() or destination.is_symlink():
             raise ValueError("Engineering destination appeared during export")
-        os.rename(pending, destination)
+        _publish_directory(pending, destination)
         pending = None
         result = _export_result(destination, inspected)
         if archive is not None:
@@ -658,7 +660,8 @@ def archive_packet(directory, destination):
         verified = inspect_packet(pending)
         if verified["manifest"] != inspected["manifest"]:
             raise ValueError("Engineering desk changed while its archive was written")
-        os.link(pending, destination)
+        _publish_file(pending, destination)
+        _sync_directory(destination.parent)
         return {"path": str(destination), "bytes": destination.stat().st_size,
                 "sha256": file_digest(destination), "package_sha256": inspected["manifest"]["package_sha256"]}
     finally:
@@ -731,7 +734,7 @@ def receive_packet(path, destination, *, workspace=None):
         joined = _join(workspace, inspected) if workspace is not None else None
         if destination.exists() or destination.is_symlink():
             raise ValueError("Engineering receiving destination appeared during intake")
-        os.rename(pending, destination)
+        _publish_directory(pending, destination)
         pending = None
         return {**_export_result(destination, inspected), "joined": joined}
     finally:

@@ -17,6 +17,7 @@ import urllib.parse
 
 from model.common import atomic_json, canonical, digest, file_digest, identifier, read_json
 from model import reviews, review_handback, review_receiving, review_worklist
+from model.portable_fs import publish_file as _publish_file, sync_directory as _sync_directory
 
 ACTIONS = frozenset({
     "customer.review.create", "customer.review.export", "customer.review.response.import",
@@ -408,11 +409,12 @@ class CustomerReviews:
                 output.flush()
                 os.fsync(output.fileno())
             try:
-                os.link(pending, target)
+                _publish_file(pending, target)
             except FileExistsError:
                 original = reviews._regular(directory, target.name)
                 if original.stat().st_size != len(body) or file_digest(original) != checksum:
                     raise ValueError("The retained worklist CSV changed")
+            _sync_directory(directory)
         finally:
             if pending is not None:
                 pending.unlink(missing_ok=True)
