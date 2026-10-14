@@ -13,7 +13,6 @@ import math
 import time
 from typing import Any
 import numpy as np
-from scipy.optimize import Bounds, LinearConstraint, milp
 from .schema import Study, Objective
 
 
@@ -99,6 +98,9 @@ class Problem:
             return {"status": "time_limit", "message": "Shared study solve deadline reached", "x": None}
         if self.s.mode == "native_packages":
             return self.native_choice(kind, score, benchmarks, targets)
+        # Saved reports and whole-package catalogue choices do not use MILP.
+        # Load its native optimizer only when this additive solve needs it.
+        from scipy.optimize import Bounds, LinearConstraint, milp
         extra = kind in ("worst_case", "minimax_regret")
         size = self.n + int(extra)
         rows, lower, upper = [], [], []

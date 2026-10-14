@@ -32,8 +32,9 @@
     },
     {
       "path": "eco_robust/engine.py",
-      "bytes": 15690,
-      "sha256": "3f36b06704ee2980122e62c30f6d8e5003c137b7067e11c157148e1829c6ffdb"
+      "bytes": 15851,
+      "sha256": "6c050b747ddc921d5934fcfa8603e28172f3c1703e7c4e39258bb54207876d22",
+      "previous_sha256": "3f36b06704ee2980122e62c30f6d8e5003c137b7067e11c157148e1829c6ffdb"
     },
     {
       "path": "eco_robust/integration.py",
@@ -115,7 +116,7 @@
       "previous_sha256": "63893015deb509859fb363ae0772d07d6b5ba9fa332014873b4f7053d03e0475"
     }
   ],
-  "revision_operation_id": "ECO-DECISION-PORT-D92-A91-20261014",
+  "revision_operation_id": "ECO-DECISION-OPTIMIZER-STARTUP-20261014",
   "original_manifest_sha256": "a7f277a80ced3047f4c94ca609e4fd1212c9e03cb31d015e257b6585761f6cdc",
-  "previous_manifest_sha256": "8ca880018f5e857e3f7de2453845d2a6bf75c6b82f38b2223c58f002b7e9495d"
+  "previous_manifest_sha256": "0054d40ddb915cf30ca4ad2fe8e1557f932fb6e788150b6ab257cbf541e478a1"
 }
