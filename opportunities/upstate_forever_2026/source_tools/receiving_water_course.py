@@ -22,6 +22,7 @@ from model.common import atomic_json, canonical, digest, file_digest, held, read
 from model.workspace import Workspace
 from model.chemistry import Chemistry
 from model import portable
+from source_tools.receiving_process import receiving_lock, popen_with_lease
 
 OPERATION = "ECO-RECEIVING-WATER-9B2C-20261013"
 SCHEMA = "upstate.receiving-water-course/v1"
@@ -176,7 +177,7 @@ def run_child(argv, directory, name, timeout, lock_fd):
     directory.mkdir(parents=True, exist_ok=True)
     with (directory / (name + ".stdout")).open("wb") as out, (directory / (name + ".stderr")).open("wb") as err:
         env = dict(os.environ, PYTHONDONTWRITEBYTECODE="1")
-        process = subprocess.Popen(argv, stdout=out, stderr=err, env=env, pass_fds=(lock_fd,))
+        process = popen_with_lease(argv, stdout=out, stderr=err, env=env, pass_fds=(lock_fd,))
         try:
             code = process.wait(timeout=timeout)
         except BaseException:
@@ -225,9 +226,7 @@ def main():
     scratch.mkdir(parents=True, exist_ok=True, mode=0o700)
     journal = output / "course.json"
     # Hold the same course lock in every browser child, including parent failure.
-    import fcntl
-    with (output / ".course.lock").open("a+b") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with receiving_lock(output / ".course.lock") as lock_fd:
         manifest, periods, matrix = checked_sources(args.source_directory.resolve(), output)
         ids = {"inflow": args.inflow_id or ("in" if args.authored_unit_tracer else None),
                "outflow": args.outflow_id or ("out" if args.authored_unit_tracer else None),
@@ -325,7 +324,7 @@ def main():
                     "resume_failed_tasks": args.resume_failed_tasks, **(extra or {})}
                 atomic_json(control, private)
                 run_child([str(args.node), str(app / "source_tools/receiving_water_browser.mjs"), str(control)],
-                          run_dir, "browser", args.task_timeout_seconds * 12, lock.fileno())
+                          run_dir, "browser", args.task_timeout_seconds * 12, lock_fd)
                 return record(output / ("browser-" + mode + ".json"))
             finally:
                 server.close(); control.unlink(missing_ok=True)
