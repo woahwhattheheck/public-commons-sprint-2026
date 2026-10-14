@@ -1,0 +1,170 @@
+# Public-corpus initialization for the original 096 optimizer
+
+This arm turns the organizer's released Differometor-30k designs into a compact
+bank of coherent UIFO starting points. It then substitutes alternate starts in
+the original scalar 096 optimizer. The native optimizer controls every subsequent
+physics evaluation, gradient, trust update, noise draw, restart and stopping
+decision. The original 096, 099, Hessian candidates and accepted runner are not
+edited by this experiment.
+
+The compiled donor bank is included in this directory. On 12 October 2026 the
+original cloud operation downloaded the complete pinned organizer corpus and
+ran the unchanged compiler in the existing native environment. The bank supplies
+512 complete donors for size three and 512 for size four. Its full source
+identity, counts and runtime are retained in `corpus-compile.json` and in the bank.
+
+## Current candidate: finite public bounds
+
+The current `submission_corpus096.py` captures finite public bounds and the
+documented problem/parameter context before `prepare(unbounded=True)` selects
+unbounded search. It passes that snapshot to the original donor helper after the
+same random draws. This corrects initialization on the supported Objective,
+whose active `bounds` property is infinite in unbounded mode.
+
+The helper and the already compiled bank keep their original bytes. Package the
+corrected caller with the original `package_candidate.py` into a new filename,
+such as `corpus-seeded096-finite-bounds.zip`. The following retained archive
+receipt describes the earlier caller version. The integrated batched portfolio
+and its forty-cell GPU, twenty-cell CPU and four-hour native continuation are in
+[the adjacent original comparison project](../exact-hessian-107-20261011/batch-portfolio-d76c/README.md).
+
+## Completed corpus and original runtime archive
+
+The 74,920,439-byte original dataset has SHA-256
+`149f6aac17aff2e33750b4e1b6cebd3cef1c39d47ae49a3a7ed77315cb7838a7`.
+Compilation read the 29,650-entry index, inspected 1,024 complete saved power
+records, selected all 1,024 donors and skipped 71 duplicate selected topologies.
+The bank contains 646 semantic parameter keys and 33 role priors. Native
+compilation completed in 13.762996420999116 seconds with empty stderr, using
+Python 3.12.14, dfbench 0.3.3, differometor 0.0.5, h5py 3.15.1 and NumPy 2.5.4.
+
+`warmstart_bank.npz` is 2,170,687 bytes, SHA-256
+`609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39`,
+Git blob `79919340f40c600bf2f3537a67a47f6c4abd20b9`. Use the checked-in bank
+directly with the existing candidate, or reproduce it through the command below.
+
+The original packager produced the complete five-file `corpus-seeded096.zip`,
+2,175,528 bytes, SHA-256
+`2ccf5d2baa331ef3cbc74a7e85426ff227da504b679cca5304b873befbd7adb6`.
+`candidate-package.json` retains the actual archive and member identities.
+Native optimizer comparisons use the original Objective and measured run
+budgets described below; these compilation counts describe the released donors.
+
+## Data and physical meaning
+
+The input is the [official HDF5 dataset](https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/1dc4d6e7d0ff656555f48bcf3c22a4d284779386/dataset/dataset.h5),
+74,920,439 bytes, Git blob `6da06060a27e9530f630c3a2fb40c90082dfd152`.
+The [published schema](https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/1dc4d6e7d0ff656555f48bcf3c22a4d284779386/dataset/README.md)
+contains 29,650 broadband designs, saved bounded parameters, fifty-frequency
+sensitivities and named carrier-port powers. The compiler verifies the complete
+input's size and Git blob and records its independently computed SHA-256.
+
+`official/dataset_utils.py` is the organizer's exact reconstruction helper at
+that commit. It builds the structural parameter map without constructing or
+running an Objective. Coupled horizontal/vertical lengths remain one variable
+with every member in its key. Source/readout roles distinguish a laser or dark
+detector boundary even when its component's position has the same name.
+
+The offline donor filter applies the native `calculate_powers` contract to the
+saved, measured port arrays:
+
+| Component | Native power check |
+| --- | --- |
+| Mirror | Maximum of its left/right side maxima is at most 3,500,000 W; minimum of those side maxima is at most 2,000 W. |
+| Ordinary beamsplitter | Same check for left+top versus right+bottom sides. |
+| Directional beamsplitter | Every port is at most 2,000 W. |
+| Detector | Its actual reconstructed target/port/direction is at most 0.01 W. Each retained homodyne output is checked separately. |
+
+Side selection occurs per saved power column before reducing columns. Detector
+targets come from actual setup nodes, including native handling of repeated
+homodyne detector names. A low saved loss alone never qualifies a donor.
+
+Selection rotates across readout-placement and laser-count buckets, trying the
+lowest saved losses in each. It retains at most one physically qualified donor
+per topology and up to 512 donors for each configured grid size. This prevents
+reoptimized copies of one topology from filling the bank. The report distinguishes
+all source entries, inspected power records, rejected records and retained
+donors; it does not describe uninspected rows as feasible.
+
+At runtime, donors are ranked by readout placement, boundary roles, center types,
+orientation and saved loss. Exact semantic parameter keys transfer a whole donor
+vector coherently; only absent variables receive empirical role medians. The
+supplied Objective bounds control clipping, followed by the documented default
+sigmoid inverse. Transferred designs can behave differently on a new topology:
+their reported feasibility and loss come from actual logged Objective calls.
+
+## Compile on the existing equipped native runtime
+
+Use the accepted `dfbench==0.3.3`, `differometor==0.0.5` environment. Preprocessing
+additionally uses `h5py==3.15.1`; it is not a submission dependency. From this
+source directory, with the original downloaded corpus already available:
+
+```sh
+python compile_bank.py /absolute/existing/dataset.h5 \
+  --sizes 3 4 --max-donors-per-size 512 \
+  --output warmstart_bank.npz > corpus-compile.json
+python package_candidate.py corpus-seeded096.zip
+```
+
+Return `warmstart_bank.npz` and `corpus-compile.json` to the same original
+acquisition/initializer thread. They contain parameters, source identity and
+actual preprocessing counts; no simulator run is needed to create them. The
+compiler streams each selected record and retains compact structural metadata.
+Its wall time is in the report, outside the deterministic bank bytes.
+
+For this cloud seat's already retained reader, use the original L2D interpreter
+with `PYTHONPATH` containing
+`/workspace/scratch/dba55fe4658b/l2d-native/hdf5-reader/installed`.
+This adds the verified offline HDF5 reader without replacing the numerical stack.
+
+## Native optimizer comparison
+
+Original 096 source: SHA-256
+`97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077`.
+The new `submission_corpus096.py` draws the same full original random start list,
+then replaces slots 0, 2 and 4 by default. Other starts and random-stream
+advancement are retained. Caller-supplied `init_params` stays in slot 0; learned
+starts then use slots 1 and 3. Unsupported objectives/sizes or incomplete donor
+maps retain the corresponding original starts.
+
+The existing runner must be able to import this candidate's sibling helper.
+For a newly assigned, source-matched condition on an existing GPU allocation:
+
+```sh
+SOURCE_DIR=$(pwd)
+PYTHONPATH="$SOURCE_DIR${PYTHONPATH:+:$PYTHONPATH}" \
+  python /absolute/original/run_public_uifo.py \
+  --candidate "$SOURCE_DIR/submission_corpus096.py" \
+  --topology-seed 8 --algorithm-seed 42 --seconds 180 \
+  --out /absolute/new-output/corpus096-t8-s42-180.json
+```
+
+Compare against unchanged 096 on the same hardware, precision, full native
+size-three/fifty-frequency problem and budget. Reuse completed source-matched
+controls only when their actual runtime matches. The chosen public topology
+exposes an existing measured 096 weakness relative to V1; expand through the
+original comparison owner after that useful condition returns. The existing
+A6455 T24/S41 control, 6966 Hessian phase and completed Kaggle-output recovery
+retain their operation identities.
+
+The [official rules](https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/1dc4d6e7d0ff656555f48bcf3c22a4d284779386/docs/submission.md)
+allow inspecting public context and preparing learned starts before logging.
+This candidate makes no result-producing call then. `start_logging()` precedes
+every donor evaluation. Final evaluation remains the supplied four-hour
+Objective, four-and-a-half-hour container and organizer hardware; a public
+development comparison does not replace that evaluation.
+
+## Runtime archive and integration
+
+`package_candidate.py` includes exactly `submission.py`, `warmstart.py`, the
+compiled bank, mandatory `requirements.txt` and the upstream license. The offline
+compiler and helper contain simulator imports and are intentionally absent from
+the runtime ZIP. The official evaluator supplies NumPy and Optax, so this
+candidate requests no package overrides. The original submission owner chooses
+the entrant through the current organizer portal after measured comparison.
+
+The upstream helper and data retain the included MIT notice. Original work order:
+[FLEET-EOD-20261011-L2D02](https://tokenjunkielabs.slack.com/archives/C0BVDDS04G2/p1791722905517069).
+The original source carrier is `sol/l2d-budgeted-restarts-20261011` in
+`woahwhattheheck/public-commons-sprint-2026`; this experiment has its own directory
+alongside that carrier's original candidates.

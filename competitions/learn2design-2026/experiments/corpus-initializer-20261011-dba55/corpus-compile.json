@@ -1,0 +1,21 @@
+{
+  "source": {
+    "url": "https://raw.githubusercontent.com/artificial-scientist-lab/Learn2Design-2026/1dc4d6e7d0ff656555f48bcf3c22a4d284779386/dataset/dataset.h5",
+    "commit": "1dc4d6e7d0ff656555f48bcf3c22a4d284779386",
+    "git_blob_sha1": "6da06060a27e9530f630c3a2fb40c90082dfd152",
+    "bytes": 74920439,
+    "sha256": "149f6aac17aff2e33750b4e1b6cebd3cef1c39d47ae49a3a7ed77315cb7838a7"
+  },
+  "counts": {
+    "source_entries": 29650,
+    "power_records_inspected": 1024,
+    "duplicate_selected_topology_skipped": 71,
+    "selected_size_3": 512,
+    "selected_size_4": 512
+  },
+  "bank_bytes": 2170687,
+  "bank_sha256": "609a69e08ef1c9ec3460e3f012e7f1b52bb6a29c232c198a63415409d2ab7d39",
+  "keys": 646,
+  "prior_roles": 33,
+  "compile_wall_seconds": 13.762996420999116
+}

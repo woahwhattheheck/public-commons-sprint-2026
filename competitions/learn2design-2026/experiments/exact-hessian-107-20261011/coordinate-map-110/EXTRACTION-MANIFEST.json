@@ -1,0 +1,22 @@
+{
+  "build": "ROOT110-R",
+  "response": "work\\api-jobs\\l2d-coordinate-map-correction-113\\response.txt",
+  "response_sha256": "800a34126a207b8e09669d75d41ee9cc3742f15e0c0ae08fa1296efa885a0842",
+  "baseline_response_sha256": "8f49b479d0019337a0d61c427c251950707a315b9ab60c7a833d803c59dbb019",
+  "baseline_submission_sha256": "474e9191fbaa2a058257d0f616608bd207a757ec58481a1a838c2315f155ba17",
+  "candidate_submission_sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0",
+  "helper_sha256": "19e0117794f92debec27a7ea1c93f6ceb01b6cfb5cb08872bed68895d774d031",
+  "patch_sha256": "b84fe85359f2c700955cd13493af61cdec50ad105395e091169118bc4d81886c",
+  "cases_sha256": "de554391e0e38d61202f31c82661a062b1b7c024e829216c87a28f099882fc88",
+  "contract_cases_sha256": "6ae33b0e4c5018d656be0384dc9fe86a8f27c5576f2d303e5e9471190f9ef0e6",
+  "patch_check_returncode": 0,
+  "patch_check_stderr": "",
+  "patch_apply_returncode": 0,
+  "patch_apply_stderr": "",
+  "patch_applied_bytes_equal": false,
+  "patch_applied_text_equal_after_newline_normalization": true,
+  "candidate_bytes": 42436,
+  "applied_bytes": 43363,
+  "execution": "No source code or case was executed; static extraction and disposable patch-apply check only.",
+  "candidate_status": "HELD pending review and focused real-JAX cases"
+}

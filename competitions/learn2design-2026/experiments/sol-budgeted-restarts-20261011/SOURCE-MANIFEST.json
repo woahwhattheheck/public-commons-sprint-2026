@@ -1,0 +1,63 @@
+{
+  "operation": "SOL-L2D-RESTART-T15-S42-300-20261011",
+  "source_packet": "F0C8CDSQQ10",
+  "official_packet": "F0C8A2ANCNA",
+  "physics_status": "PENDING_EXISTING_MUSE_RUNTIME",
+  "files": [
+    {
+      "path": "submission_sol_restart.py",
+      "bytes": 10424,
+      "sha256": "c8c58df5cddcdbab033bcc870c09ced21869bf0386ae3e61d2758647cae115ea",
+      "git_blob_sha1": "ee54f0611291cac8930ce9a1ce559639b3cdcb23"
+    },
+    {
+      "path": "submission096.py",
+      "bytes": 6722,
+      "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+      "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f"
+    },
+    {
+      "path": "submission_v1.py",
+      "bytes": 4528,
+      "sha256": "9cdcb5fdb1c8e3987f173f2cf2182ba4886f9520835a765322d36d07a54d67c8",
+      "git_blob_sha1": "95b66925832e5f34c940657f6ca8cc5747b4c0a3"
+    },
+    {
+      "path": "core.py",
+      "bytes": 10747,
+      "sha256": "2ee2286420373f1a4c874814de0964887aa8533a3bcd16be6112a07655956b70",
+      "git_blob_sha1": "090cb477cd90076e5f8d6e139e958dff52648a19"
+    },
+    {
+      "path": "run_public_uifo.py",
+      "bytes": 18510,
+      "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08",
+      "git_blob_sha1": "a16a2d62f71c61fcbdfb229d52f47baf9b95b547"
+    },
+    {
+      "path": "requirements.txt",
+      "bytes": 42,
+      "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+      "git_blob_sha1": "7243ff0bc7a3bd0fc9d62761963fd53ecd7eaab2"
+    },
+    {
+      "path": "check_scheduler.py",
+      "bytes": 3808,
+      "sha256": "6845fe8dc4380869c0dd22246ce350c4e87ed1710d7c482545e8a13599d7e4a6",
+      "git_blob_sha1": "561022e275521f795588d2763cb4bbe1ab148863"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5898,
+      "sha256": "ed713dba78f55ac915ec8dc0243cf3ca76a71b0c47df1ae6ccbdd72503d0fc69",
+      "git_blob_sha1": "480fcaf749097359c599dab1bdbd667ceac5129f"
+    }
+  ],
+  "focused_check": {
+    "status": "PASS_PRE_STATIC_REPAIR",
+    "candidate_sha256": "ccc4a8107dee336e9c9aabbb5220cb07856e502389f1708bb147b0c2bc2b8e91",
+    "command": "python -B check_scheduler.py",
+    "scope": "mocked scheduler, per-lane state, feasible anchor, phase and predictive stop; no physics",
+    "post_repair_execution": "NOT_RUN"
+  }
+}

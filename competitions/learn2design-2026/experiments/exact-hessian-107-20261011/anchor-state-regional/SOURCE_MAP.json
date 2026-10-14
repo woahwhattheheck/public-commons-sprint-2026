@@ -1,0 +1,74 @@
+{
+  "schema": "tjlabs.l2d.anchor-state-source/v1",
+  "operation": "L2D-ANCHOR-STATE-REGIONAL-20261014",
+  "original": {
+    "path": "original/099/submission.py",
+    "bytes": 15794,
+    "sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96"
+  },
+  "candidate": {
+    "path": "anchor-state-regional/submission.py",
+    "bytes": 17487,
+    "sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4"
+  },
+  "guarded_changes": [
+    {
+      "before": "\"\"\"tjlabs_measured_portfolio099: noisy clipped-Adam portfolio with\nfeasibility-anchored trust-region acceptance.",
+      "after": "\"\"\"Source-bound Adam-state acceptance experiment derived from original 099.\n\nThe original 099 source remains unchanged. This candidate adds one explicit\npolicy: anchor restores the immutable optimizer state captured at the accepted\nanchor before retrying its gradient; legacy retains the original rolling state.\nThe same state policy applies after a nonfinite rejected trial. Random keys,\nradii, noise, Objective calls, feasibility, timing and restart policy are not\nrewound or replaced. This is an unmeasured candidate, not an improvement claim.\n\nOriginal 099 description: noisy clipped-Adam portfolio with\nfeasibility-anchored trust-region acceptance."
+    },
+    {
+      "before": "class MeasuredPortfolio099(OptimizationAlgorithm):\n    algorithm_str = \"tjlabs_measured_portfolio099\"",
+      "after": "class AnchorStatePortfolioRegional(OptimizationAlgorithm):\n    algorithm_str = \"tjlabs_anchor_state_portfolio_regional\""
+    },
+    {
+      "before": "        # --- feasibility-anchored acceptance (the new mechanism) ---\n        max_excursion:",
+      "after": "        # One treatment option; both arms use this same complete source.\n        backtracking_state: str = \"anchor\",\n        # --- feasibility-anchored acceptance (the new mechanism) ---\n        max_excursion:"
+    },
+    {
+      "before": "        # ---------------- validation ----------------\n",
+      "after": "        # ---------------- validation ----------------\n        if backtracking_state not in (\"anchor\", \"legacy\"):\n            raise ValueError(\"backtracking_state must be anchor or legacy\")\n"
+    },
+    {
+      "before": "            \"uses_aux\": use_aux,\n",
+      "after": "            \"uses_aux\": use_aux,\n            \"backtracking_state\": backtracking_state,\n            \"anchor_state_restores\": 0,\n            \"nonfinite_state_restores\": 0,\n"
+    },
+    {
+      "before": "            anchor = None  # dict(params, loss, grad, feasible)",
+      "after": "            anchor = None  # dict(params, loss, grad, feasible, optimizer_state)"
+    },
+    {
+      "before": "                    base_params, base_grad, base_loss = anchor[\"params\"], anchor[\"grad\"], anchor[\"loss\"]\n                    excursion = 0\n",
+      "after": "                    base_params, base_grad, base_loss = anchor[\"params\"], anchor[\"grad\"], anchor[\"loss\"]\n                    if backtracking_state == \"anchor\":\n                        state = anchor[\"optimizer_state\"]\n                        diag[\"anchor_state_restores\"] += 1\n                        diag[\"nonfinite_state_restores\"] += 1\n                    excursion = 0\n"
+    },
+    {
+      "before": "                        anchor = {\"params\": params, \"loss\": loss, \"grad\": grad, \"feasible\": feasible}",
+      "after": "                        # Optax/JAX updates return a new immutable pytree. The\n                        # retained state is the trajectory entering this point,\n                        # before its gradient is applied to the next proposal.\n                        anchor = {\"params\": params, \"loss\": loss, \"grad\": grad,\n                                  \"feasible\": feasible, \"optimizer_state\": state}"
+    },
+    {
+      "before": "                            base_params, base_grad, base_loss = anchor[\"params\"], anchor[\"grad\"], anchor[\"loss\"]\n                            radius =",
+      "after": "                            base_params, base_grad, base_loss = anchor[\"params\"], anchor[\"grad\"], anchor[\"loss\"]\n                            if backtracking_state == \"anchor\":\n                                state = anchor[\"optimizer_state\"]\n                                diag[\"anchor_state_restores\"] += 1\n                            radius ="
+    }
+  ],
+  "retained_pilot": {
+    "kernel": 138115140,
+    "user": "tokenjunkielabs",
+    "slug": "l2d084-pilot-b8",
+    "version": "v7",
+    "path": "results099pairs/pilot-summary.json",
+    "bytes": 9532,
+    "sha256": "613216c4f1bcf28fda9f4eb15726af8f3e9624ddf15e5ec782a652baa6333892",
+    "full_source_binding": "Not yet recovered; original complete-output pickup remains active."
+  },
+  "current_rules": {
+    "submission": {
+      "url": "https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/main/docs/submission.md",
+      "bytes": 9111,
+      "sha256": "60c865fb0fb069376f304234151232d8ed514050080c52ff16b9eb874125029c"
+    },
+    "readme": {
+      "url": "https://github.com/artificial-scientist-lab/Learn2Design-2026/blob/main/README.md",
+      "bytes": 29624,
+      "sha256": "33fd3c55e4b18a1fa0564ce108159cf2de8c075b76a8007b15b60c5ff468d130"
+    }
+  }
+}
