@@ -15,6 +15,21 @@ GURA_PYTHON=/path/to/equipped/python
   --application "$GURA_APPLICATION" --operation "$GURA_OPERATION"
 ```
 
+On Windows, use the selected native Python and the same application and operation
+paths in PowerShell. Quoting retains spaces and Unicode directory names:
+
+```powershell
+$GuraApplication = 'C:\Ecosystem Sciences\application'
+$GuraOperation = 'C:\Ecosystem Sciences\gura-operation'
+$GuraPython = 'C:\Ecosystem Sciences\runtime\python.exe'
+
+& $GuraPython -B "$GuraApplication\source_tools\receive_gura_operation.py" `
+  --application $GuraApplication --operation $GuraOperation
+```
+
+Select the actual received runtime path rather than a different system Python.
+The command has no execution deadline unless `--deadline-utc` is supplied.
+
 The default scientific Workspace is `OPERATION/workspace`. For a first intake, place the official ZIPs in `OPERATION/inputs` or select their directory explicitly. When that default directory is absent and `--inputs` is omitted, the supervisor and all four receivers verify the original source inventory already retained inside the Workspace.
 
 To continue an already retained scientific Workspace and archives elsewhere, provide both paths explicitly:
@@ -28,9 +43,9 @@ To continue an already retained scientific Workspace and archives elsewhere, pro
 A portable Workspace retains the original extracted inputs, argument documents and their exact descriptors. It can therefore resume without the old machine's external ZIP directory. Use a new operation directory outside the restored Workspace and omit `--inputs`:
 
 ```bash
-"$GURA_PYTHON" -B "$GURA_APPLICATION/source_tools/receive_gura_operation.py" \\
-  --application "$GURA_APPLICATION" --operation /path/to/reopened-gura-operation \\
-  --workspace /path/to/reopened/workspace --deadline-utc 2026-10-13T14:00:00Z
+"$GURA_PYTHON" -B "$GURA_APPLICATION/source_tools/receive_gura_operation.py" \
+  --application "$GURA_APPLICATION" --operation /path/to/reopened-gura-operation \
+  --workspace /path/to/reopened/workspace
 ```
 
 The native, planning, report and parameter receivers all use the maintained original-inventory verifier: exact member paths, sizes and hashes; original model arguments; release metadata; and the original scientific settings. It rebinds only machine-local paths. Missing or changed retained input bytes fail before a scientific selection is built. An explicit `--inputs` directory always follows the original pinned ZIP intake and is never silently replaced by another source.
@@ -58,29 +73,29 @@ The standard parameter suite contains 28 logical cases per landscape: four NDR c
 
 The supervisor executes one phase at a time. It sets numerical worker threads to one, GDAL’s cache to 64 MB, and `MALLOC_ARENA_MAX=2`. Temporary files use `OPERATION/tmp`, keeping this operation’s transient files on the same disk as the operation. Parameter cases use `--isolate-native-cases`, which releases each native interpreter’s memory before the next unfinished case. Original model parameters are retained.
 
-The operation lease is `OPERATION/operation.lock`. An active phase inherits that lock file descriptor. The isolated study receiver validates the inherited descriptor against the retained operation lock file and scientific Workspace, then passes the operation, suite and batch leases to each active native case. If the supervisor disappears while a child is still computing, the child retains custody. A second invocation must wait for the original live operation to finish or be deliberately stopped. PIDs can be reused across containers; the lock and actual saved native progress identify the live operation.
+The operation lease is `OPERATION/operation.lock`. An active phase retains that lease through an inherited descriptor on Linux/macOS or explicit native-handle custody on Windows. The isolated study receiver validates the adopted lease against the retained operation lock file and scientific Workspace, then passes the operation, suite and batch leases to each active native case. If the supervisor disappears while a child is still computing, the child retains custody. A second invocation must wait for the original live operation to finish or be deliberately stopped. PIDs can be reused across containers; the lock and actual saved native progress identify the live operation.
 
 Run the same command after an interrupted operation. Each receiver validates its retained source, runs and outputs, then continues unfinished work. The supervisor records a new numbered phase log and the driver’s SHA256 for each attempt. Old native artifacts, case IDs and earlier logs remain retained.
 
-A failure while starting a child is recorded as that phase’s launch error. A persistence failure after a child starts triggers bounded cleanup of that owned process session before the original failure propagates. Any surviving descendant retains the lease, and the supervisor does not start another phase alongside it. If restoration planning fails, the customer-release phase remains waiting for planning while the original-landscape parameter studies can still progress. The final operation state is `partial` until all selected phases complete.
+A failure while starting a child is recorded as that phase’s launch error. A persistence failure after a child starts triggers bounded cleanup of that owned process tree before the original failure propagates. Any surviving descendant retains the lease, and the supervisor does not start another phase alongside it. If restoration planning fails, the customer-release phase remains waiting for planning while the original-landscape parameter studies can still progress. The final operation state is `partial` until all selected phases complete.
 
 ### An explicit receiving deadline
 
-Supply an absolute instant for a time-limited receiving attempt:
-
-```bash
-"$GURA_PYTHON" -B "$GURA_APPLICATION/source_tools/receive_gura_operation.py" \
-  --application "$GURA_APPLICATION" --operation "$GURA_OPERATION" \
-  --deadline-utc 2026-10-13T14:00:00Z
-```
+Select an absolute ISO-8601 timestamp with its timezone for the current attempt,
+then append `--deadline-utc "$GURA_DEADLINE_UTC"` to the normal command after setting
+`GURA_DEADLINE_UTC` to that chosen timestamp. In PowerShell, use the chosen value
+in `$GuraDeadlineUtc`. Omit the option for ordinary continuation without a cutoff;
+an old example date is not a reusable execution window.
 
 The deadline belongs to this execution attempt and changes no scientific selection.
-At the instant, the supervisor stops dispatching further phases and sends SIGINT
-to the process session created for its current phase, including that phase's
-native descendants. It permits ten seconds for ordinary interruption journals,
-then uses SIGTERM and SIGKILL with bounded waits if necessary. SIGINT or SIGTERM
-sent to the supervisor uses the same owned-session cleanup. Unrelated processes
-and other Workspaces are outside that session.
+At the instant, the supervisor stops dispatching further phases and requests a
+graceful interruption of its current phase. Linux/macOS use the phase's owned
+process session. Windows uses its owned Job and the maintained native stop
+bridge, preserving the selected Python and the real child PID. It permits ten
+seconds for ordinary interruption journals, then finishes the remaining owned
+tree if necessary. Ctrl+C, SIGINT or SIGTERM uses the same cleanup; Windows also
+accepts Ctrl+Break. Unrelated processes and other Workspaces are outside that
+owned tree.
 
 The operation returns 130 and retains the original child return code, signal
 actions, logs, completed phase results and exact continuation arguments. An

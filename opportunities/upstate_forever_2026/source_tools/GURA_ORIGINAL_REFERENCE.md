@@ -11,7 +11,7 @@ The adopted author edition is recorded in [the receiving Page](https://chatgpt.c
 | Operation | Existing entry point | Retained scientific inputs and grid |
 | --- | --- | --- |
 | Original-resolution reference and direct model comparison | `python -m source_tools.receive_gura_native` | Official 3.20.0 sample archives and their embedded tables/arguments; original 15 m lattice; zero added context buffer |
-| Existing broader diagnostic and delivery continuation | `source_tools/gura_workflow.py` with `source_tools/receive_gura.py` | The current workflow pins the same original 3.20.0 archives, derives their actual 15 m land-cover cells, uses separately pinned biophysical tables and retains its independent 300 m context buffer; reopened cases keep their original source and grid identities |
+| Existing broader diagnostic and delivery continuation | `source_tools/gura_workflow.py` with `source_tools/receive_gura.py` | The current workflow pins the same original 3.20.0 archives, derives their actual 15 m land-cover cells, uses separately pinned biophysical tables and defaults to zero added context on first intake; reopened cases keep their original cell size, explicit context-buffer selection, source and grid identities |
 
 Keep each operation's Workspace and existing process. The reference command uses the original release archive, including its README, embedded source-version label, model-specific tables and selected native arguments. The original README describes a 30 m SRTM source resampled to the supplied 15 m land-use grid; the received raster's actual affine controls the reference run.
 

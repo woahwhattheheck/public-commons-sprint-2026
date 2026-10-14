@@ -13,7 +13,9 @@
         "source_tools/receiving_process.py",
         "source_tools/native_runtime/platform_runtime.py",
         "model/windows_process.py",
-        "model/windows_fs.py"
+        "model/windows_fs.py",
+        "source_tools/GURA_COMPLETE_OPERATION.md",
+        "source_tools/GURA_ORIGINAL_REFERENCE.md"
       ]
     }
   }
