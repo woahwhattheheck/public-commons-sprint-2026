@@ -27,7 +27,7 @@ import zipfile
 
 APPLICATION = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APPLICATION))
-from model.common import atomic_json, canonical, digest, file_digest, held, now, read_json
+from model.common import atomic_json, canonical, digest, file_digest, held, now, read_json, _native_fs_path
 from model.workspace import Workspace
 from model.record_catalog import ProjectedFileCache, task_summary
 from model import portable
@@ -1168,7 +1168,7 @@ class Operator:
         if not item:
             raise Fault("DOWNLOAD_MISSING", "Reopen the retained item before downloading its file.", 404)
         self.team.check_workspace(item["workspace"])
-        file = open(item["path"], "rb")
+        file = open(_native_fs_path(item["path"]), "rb")
         try:
             st = os.fstat(file.fileno())
             signature = (st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns)

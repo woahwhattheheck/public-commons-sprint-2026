@@ -70,6 +70,93 @@ def _source_links(recipe, members):
     return result
 
 
+def member_namespace(entry, recipe, members):
+    # Workspace views preserve sidecar relationships after removing their
+    # shared manifest-directory prefix. A retained recipe can instead declare
+    # the complete original manifest names. Admit that second, exact namespace
+    # only when the existing view namespace cannot resolve all declared inputs.
+    # Successful historical view-path bindings remain byte-for-byte unchanged.
+    declared = [_relative(item["path"]).as_posix() for item in recipe.get("inputs", [])]
+    original_names = False
+    if declared and any(name not in members for name in declared):
+        aliases = {}
+        for item in [entry["body"]] + entry.get("companions", []):
+            view_name = _relative(item.get("view_path", item["filename"])).as_posix()
+            source_name = item.get("source_path")
+            if source_name is None:
+                aliases = {}
+                break
+            source_name = _relative(source_name).as_posix()
+            if source_name in aliases:
+                raise ValueError("Observed source has duplicate original manifest paths")
+            aliases[source_name] = members[view_name]
+        if aliases and all(name in aliases for name in declared):
+            members = aliases
+            original_names = True
+    return members, original_names
+
+def same_retained_binding(current, captured):
+    """Verify saved report source identity across supported producer editions.
+
+    Read and completed-operation recovery preserve the captured tag. New
+    previews and rendering continue to require the current binding. Member
+    names, hashes, namespace mode, source identities and report order stay
+    exact; this admits only the known v4/v5 producer-version difference.
+    """
+    if current == captured:
+        return True
+    if not isinstance(current, dict) or not isinstance(captured, dict):
+        return False
+    supported = {"observed-context-20261013-v4", "observed-context-20261013-v5"}
+    source_suffix = "+original-manifest-names-v1"
+    set_suffix = "+ordered-reports-v1"
+
+    def edition(value, suffixes):
+        if not isinstance(value, str):
+            return None
+        for suffix in suffixes:
+            base = value[:-len(suffix)] if suffix and value.endswith(suffix) else value
+            if base in supported and value == base + suffix:
+                return base, suffix
+        return None
+
+    def source(left, right):
+        if (not isinstance(left, dict) or not isinstance(right, dict)
+                or left.get("schema") != "upstate.observed-report-binding/v1"
+                or right.get("schema") != left["schema"]):
+            return False
+        left_edition = edition(left.get("edition"), ("", source_suffix))
+        right_edition = edition(right.get("edition"), ("", source_suffix))
+        return (left_edition is not None and right_edition is not None
+                and left_edition[1] == right_edition[1]
+                and {key: value for key, value in left.items() if key != "edition"}
+                == {key: value for key, value in right.items() if key != "edition"})
+
+    if current.get("schema") == "upstate.observed-report-binding/v1":
+        return source(current, captured)
+    if (current.get("schema") != "upstate.observed-report-set-binding/v2"
+            or captured.get("schema") != current["schema"]):
+        return False
+    left_edition = edition(current.get("edition"), (set_suffix,))
+    right_edition = edition(captured.get("edition"), (set_suffix,))
+    left, right = current.get("reports"), captured.get("reports")
+    if (left_edition is None or right_edition is None
+            or not isinstance(left, list) or not isinstance(right, list)
+            or len(left) != len(right) or len(left) < 2
+            or {key: value for key, value in current.items()
+                if key not in ("edition", "reports")}
+            != {key: value for key, value in captured.items()
+                if key not in ("edition", "reports")}):
+        return False
+    for left_source, right_source in zip(left, right):
+        if not source(left_source, right_source):
+            return False
+        if (edition(left_source["edition"], ("", source_suffix))[0] != left_edition[0]
+                or edition(right_source["edition"], ("", source_suffix))[0] != right_edition[0]):
+            return False
+    return True
+
+
 def _source(workspace, selection):
     choice = selection.get("source_roles", {}).get(ROLE)
     if choice is None:
@@ -93,6 +180,7 @@ def _source(workspace, selection):
         if relative in members:
             raise ValueError("Observed source has duplicate member paths")
         members[relative] = {"path": actual, "bytes": item["bytes"], "sha256": item["sha256"]}
+    members, original_names = member_namespace(entry, recipe, members)
     for item in recipe.get("inputs", []):
         relative = _relative(item["path"]).as_posix()
         member = members.get(relative)
@@ -113,7 +201,8 @@ def _source(workspace, selection):
                 cols = block.get("columns", [])
                 if not cols or any(len(row) != len(cols) for row in block.get("rows", [])):
                     raise ValueError("Observed report table has inconsistent columns")
-    binding = {"schema": "upstate.observed-report-binding/v1", "edition": EDITION,
+    binding = {"schema": "upstate.observed-report-binding/v1",
+               "edition": EDITION + ("+original-manifest-names-v1" if original_names else ""),
                "source_collection_id": choice["source_collection_id"], "source_id": choice["source_id"],
                "body_sha256": entry["body"]["sha256"],
                "member_sha256": {name: members[name]["sha256"] for name in sorted(members)}}

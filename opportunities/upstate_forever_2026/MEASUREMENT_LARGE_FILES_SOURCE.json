@@ -11,8 +11,8 @@
     {
       "role": "native",
       "path": "CURRENT_OWNER_DIRECTION.md",
-      "bytes": 6093,
-      "sha256": "ad722b3f296436069493e034e9c56966d28abefe4889f2d16290177881d28609"
+      "bytes": 10823,
+      "sha256": "31a4fac8bf466fb5b3ba0e99750b66fab4bfa88fb83a4a1fa46be0b2fcc60f65"
     },
     {
       "role": "native",
@@ -22,8 +22,8 @@
     },
     {
       "path": "install_measurement_large_files.py",
-      "bytes": 13576,
-      "sha256": "1dacbdc762cde9e6719279349ea4b9427741825c5ab0030a7add66d51580d501",
+      "bytes": 14890,
+      "sha256": "7c72d30117c326466f423284cb73d0f4acc29da69ac11bb4c7038cd2c06c7830",
       "role": "addition"
     },
     {
@@ -131,8 +131,8 @@
     {
       "role": "native",
       "path": "measurement_workspace/engine/chiques_nutrient_cli.mjs",
-      "bytes": 4199,
-      "sha256": "6fd63e7544862ee5a9e62078227369e5b86f535bfc9632dd6da18554c5cf7de9"
+      "bytes": 3990,
+      "sha256": "915660b03a15ae2eb20a1931dda6bf0ed36837e0d160ed1f3afa9a2f8f0145cd"
     },
     {
       "role": "native",
@@ -179,14 +179,14 @@
     {
       "role": "native",
       "path": "measurement_workspace/engine/eco_handover.mjs",
-      "bytes": 25418,
-      "sha256": "952b44fc25b2a39851ed0115dedba581cd6a0d619443d7a8be42c66e9476d0b2"
+      "bytes": 25398,
+      "sha256": "0244b2b0b00f250ef584ce38d428d15337f1455d4f6a2a82a7a07c9f1d77f8f6"
     },
     {
       "role": "native",
       "path": "measurement_workspace/engine/file_product.mjs",
-      "bytes": 927,
-      "sha256": "54937b9ab989f1b6113c44169b7c46640614592285f4f97e42652e2f03ad18a9"
+      "bytes": 1017,
+      "sha256": "05d2f8d7f3b0433b33ad705607baa8e833cc01a6c90702c5ff8d678d8ac99a68"
     },
     {
       "role": "native",
@@ -245,8 +245,8 @@
     {
       "role": "native",
       "path": "measurement_workspace/engine/handover_archive.py",
-      "bytes": 6195,
-      "sha256": "95dfe338d56e8499a4ad57b37d45369853e2d2a7509bd034e7d5214a8882d795"
+      "bytes": 6185,
+      "sha256": "e931de5d3acffa8460a4c9ad7398cf2927548b5982734aece9e02e444bd8e48f"
     },
     {
       "path": "measurement_workspace/engine/http.mjs",
@@ -263,8 +263,8 @@
     {
       "role": "native",
       "path": "measurement_workspace/engine/intake-comparison-receiving.mjs",
-      "bytes": 11053,
-      "sha256": "7ec7fef90ad26b66aceff137cf6a7c75d6028ff597504e4cabdd60145e77024b"
+      "bytes": 11012,
+      "sha256": "83d6184fd2e1054591a69091e271141fd72009953d05af4924dbe731f4a7fc63"
     },
     {
       "role": "native",
@@ -280,8 +280,8 @@
     },
     {
       "path": "measurement_workspace/engine/large_archive.py",
-      "bytes": 7422,
-      "sha256": "b696119eefc797eb544887c70d3c17d4aa66334679ffff0d2363b2592b7b1a4d",
+      "bytes": 7438,
+      "sha256": "8548482299c701bc04461c01cc4ba7746a8402bdfbe1bf5b5612b0b3236603fa",
       "role": "addition"
     },
     {
@@ -640,8 +640,8 @@
     },
     {
       "path": "measurement_workspace/operator.py",
-      "bytes": 11230,
-      "sha256": "43075b7084ec675a3ce2fdf52689b1cd8f065973a0466bf9ed178fd2e267704b",
+      "bytes": 15926,
+      "sha256": "a4e4ae580d86a757c6dc988fe9bf916aca6257d6f0a9eb12595591ebbee7c015",
       "role": "patch"
     },
     {
@@ -983,8 +983,8 @@
     {
       "path": "model/portable_databases.py",
       "role": "native",
-      "bytes": 8315,
-      "sha256": "cef958863d57ea3c196413fb14fcee4411a5d40681b06caad27c593e676b1ca2"
+      "bytes": 8351,
+      "sha256": "fe667593b909f2979c5cd8c2e8bbe7a7d9971f8a62796a5a5360e933ade94576"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -1129,6 +1129,96 @@
       "path": "source_tools/WQP_OFFICIAL_EDITION.md",
       "bytes": 13586,
       "sha256": "6a5e27b274380d859e06ab50d8c924046cdefb4f64775f73e9af5743f02aabc9"
+    },
+    {
+      "path": "measurement_workspace/node_runtime.py",
+      "bytes": 7345,
+      "sha256": "bdfd204162031b862d2821a7f8ed38d297e6b3d7ad27dade17af45c4ffb81b03"
+    },
+    {
+      "path": "measurement_workspace/RUNTIME.md",
+      "bytes": 10904,
+      "sha256": "3918f43e8c248f1195d2c3dd81dba5a0ab39eb28ad92cea2efa3aab98b437bc6"
+    },
+    {
+      "path": "measurement_workspace/install_platform.py",
+      "bytes": 3550,
+      "sha256": "ee476bb36e2d95a36f5b7c3242cda58835cebb7f1cf6034c8569351063629eb1"
+    },
+    {
+      "path": "model/windows_fs.py",
+      "bytes": 6862,
+      "sha256": "7bf6bf9095f4bc1823099d79b8bdad835f2808d8d407b0d165c6771d77422880"
+    },
+    {
+      "path": "measurement_workspace/NATIVE_OBSERVATION_SELECTION.md",
+      "bytes": 9574,
+      "sha256": "31039aa841ed0e36522b0054b40346bae407b5fb13960847dff590ced28c472c"
+    },
+    {
+      "path": "measurement_workspace/TEMPORAL_ANALYSIS.md",
+      "bytes": 17604,
+      "sha256": "87c576e5befa73833e30871053326da550a9836766d1936afcd709fedda2b925"
+    },
+    {
+      "path": "measurement_workspace/TEMPORAL_COMPARISON.md",
+      "bytes": 10563,
+      "sha256": "b1b766c836376c909e042eea995e622768d17156987abfc32ba93aeaa00b93a8"
+    },
+    {
+      "path": "measurement_workspace/WINDOWS_FILE_WORKFLOW.md",
+      "bytes": 8607,
+      "sha256": "fa30b4ea885f0d01f92eb6565d6254f924abe8aac4c7dd273190af557d73ecd3"
+    },
+    {
+      "path": "measurement_workspace/engine/file_platform.mjs",
+      "bytes": 1570,
+      "sha256": "b26f1f4439095bb741383c962438a49156268519519189de59f808e8afe254cd"
+    },
+    {
+      "path": "measurement_workspace/engine/file_platform.py",
+      "bytes": 2419,
+      "sha256": "f3909573a5c119e169a62338ed18ebcf2843a6716870cddb38f08340fbf1d1b2"
+    },
+    {
+      "path": "measurement_workspace/temporal_analysis.py",
+      "bytes": 42660,
+      "sha256": "6969f7d4b8cbfe14ce791d1f3c0254ba85b16a0fb6c8ec7fa7f8b344a57c4b2c"
+    },
+    {
+      "path": "measurement_workspace/temporal_comparison.py",
+      "bytes": 28476,
+      "sha256": "d1aefda3fd278ed89f06d92d3e77ac4b777fca7ebbfa7044d640a96fd24cefc2"
+    },
+    {
+      "path": "measurement_workspace/temporal_report.html",
+      "bytes": 29320,
+      "sha256": "8c7b571539ae4184949ea20f57800141d225b4d6dc3594bc6ad3c8f1ec39123b"
+    },
+    {
+      "path": "measurement_workspace/temporal_transfer.py",
+      "bytes": 5233,
+      "sha256": "8a9f754c676e82951e2fb6e67492ea3418cb6f34ea95b425d9b440f88aa8890e"
+    },
+    {
+      "path": "measurement_workspace/temporal_workspace.py",
+      "bytes": 16595,
+      "sha256": "c5fdc9db1b181e26faf87b0e85efb695276545e036137d4f29b9b903f437de67"
+    },
+    {
+      "path": "source_tools/exercise_temporal_comparison.py",
+      "bytes": 4641,
+      "sha256": "1dcbc5caf394e7d79f8b98e2093012ec93e7d8d30f63943dff69648a565d36cf"
+    },
+    {
+      "path": "measurement_workspace/WINDOWS_LONG_PATH_SUCCESSOR.md",
+      "bytes": 4884,
+      "sha256": "ee910f4ee6a761046168ffd8cbfc8816c211f70ea9e073f52f3f3b624083d6c6"
+    },
+    {
+      "path": "integration/component_fragments/measurement-chemistry.json",
+      "bytes": 2020,
+      "sha256": "458bd013766b1152a1245f41f0069f2510d1df217404e9e1cc2acf5ef25f1840"
     }
   ],
   "origin_manifest_sha256": "812896a296ce245165102b480a66aa1532cf4ec84bead5bafd227f64b0d89ca7",
@@ -1199,6 +1289,36 @@
       "behavior": "Complete immutable accepted/excluded populations, checked bounded original paging, original source context and complete downloads; same saved folder offline; full reader custody in the existing collection working copy.",
       "owner_direction": "CURRENT_OWNER_DIRECTION.md version2026-10-13.4; contextual dismissible in-UI guidance from original owner thread1791926001.619199",
       "receiving": "Same original15227/7915–8007 native collection/folder course; retain complete current sources and personally use the actual reader and all original attachments."
+    },
+    "current_private_source": "complete Measurements source for existing whole-workbench",
+    "baseline": "6b8a4073",
+    "native_companion_dependencies": "integration/component_fragments/temporal-analysis.json",
+    "windows_long_path_successor": {
+      "source": "F0C8V3GJK7F",
+      "platform": {
+        "path": "model/windows_fs.py",
+        "bytes": 6862,
+        "sha256": "7bf6bf9095f4bc1823099d79b8bdad835f2808d8d407b0d165c6771d77422880"
+      },
+      "baseline": "F0C8YCK5CUE",
+      "behavior": "Same verified installer bytes and owned lease; the exact operated Windows helper and retained-file admission replace their known predecessors."
+    },
+    "native_probe_entry": {
+      "source": "F0C92C55473",
+      "actual_exception": "1791932359.160419",
+      "behavior": "Direct script execution removes only its matching script-directory sys.path entry before argparse imports; isolated and managed imports remain unchanged."
+    },
+    "whole_app_r5_composition": {
+      "operation_id": "ECO-SOURCE-COMPOSE-27B4",
+      "source_archive_sha256": "8e739e73986dcd391f083cf81d588010519f28ff29eb060946d2c8cce6a8ab7d",
+      "measurements_r2_sha256": "4d88cd3060633a0e95236ef916ae890062f9cad6ee282833af0f6e8587deea0f",
+      "preserved_shared_files": {
+        "model/portable_databases.py": "Native Windows ChangeTime identity uses the same maintained common._path_stat implementation.",
+        "operator/client_source_intake.py": "Current saved-XLSX original native worksheet previews and source-transfer behavior.",
+        "operator/web/client_source_intake.css": "Current source-reader worksheet and mapping presentation.",
+        "operator/web/client_source_intake.mjs": "Current original workbook/source review, beyond the historical Measurements branch."
+      },
+      "behavior": "Retain actual whole-application Windows and saved-source readers; include all original Measurements temporal/platform/runtime components."
     }
   },
   "standalone": {
@@ -1225,12 +1345,14 @@
       "measurement_workspace/LARGE_COLLECTIONS.md",
       "measurement_workspace/LEGACY_CHEMISTRY.md",
       "measurement_workspace/NATIVE_OBSERVATION_HANDOFF.md",
+      "measurement_workspace/NATIVE_OBSERVATION_SELECTION.md",
       "measurement_workspace/OBSERVATION_CONTEXT.md",
       "measurement_workspace/OBSERVATION_EDITIONS.md",
       "measurement_workspace/OBSERVATION_EDITION_CHEMISTRY.md",
       "measurement_workspace/OBSERVATION_EDITION_RECEIVING.md",
       "measurement_workspace/OBSERVED_BENCHMARKS.md",
       "measurement_workspace/READABLE_RESULTS.md",
+      "measurement_workspace/RUNTIME.md",
       "measurement_workspace/SAVED_RESULT_SOURCE_RETURNS.md",
       "measurement_workspace/SEDIMENT_COMPARISON.md",
       "measurement_workspace/SEDIMENT_COMPARISON_WORKSPACE.md",
@@ -1238,6 +1360,9 @@
       "measurement_workspace/SOURCE_HANDBACK.md",
       "measurement_workspace/SOURCE_HANDBACK_BROWSER.md",
       "measurement_workspace/SOURCE_RECONCILIATION.md",
+      "measurement_workspace/TEMPORAL_ANALYSIS.md",
+      "measurement_workspace/TEMPORAL_COMPARISON.md",
+      "measurement_workspace/WINDOWS_FILE_WORKFLOW.md",
       "measurement_workspace/__init__.py",
       "measurement_workspace/chemistry.py",
       "measurement_workspace/engine/benchmark_reports.mjs",
@@ -1254,6 +1379,8 @@
       "measurement_workspace/engine/collections.mjs",
       "measurement_workspace/engine/eco_handover.mjs",
       "measurement_workspace/engine/eco_handover_cli.mjs",
+      "measurement_workspace/engine/file_platform.mjs",
+      "measurement_workspace/engine/file_platform.py",
       "measurement_workspace/engine/file_product.mjs",
       "measurement_workspace/engine/flow_bundles.mjs",
       "measurement_workspace/engine/flow_comparison.mjs",
@@ -1312,10 +1439,12 @@
       "measurement_workspace/engine/stream_csv.mjs",
       "measurement_workspace/engine/workspace.mjs",
       "measurement_workspace/extension.py",
+      "measurement_workspace/install_platform.py",
       "measurement_workspace/large_context.py",
       "measurement_workspace/large_file_patches.json",
       "measurement_workspace/legacy_chemistry.py",
       "measurement_workspace/native_observations.py",
+      "measurement_workspace/node_runtime.py",
       "measurement_workspace/observation_edition_source.py",
       "measurement_workspace/operator.py",
       "measurement_workspace/reference/NATIVE_SEDIMENT_COMPARISON_RECEIVING.md",
@@ -1334,6 +1463,11 @@
       "measurement_workspace/reference/usgs_07144100_sediment_2004_2014.csv",
       "measurement_workspace/reference/usgs_07144100_sediment_2004_2014.json",
       "measurement_workspace/reference/usgs_07144100_sediment_table_extraction.txt",
+      "measurement_workspace/temporal_analysis.py",
+      "measurement_workspace/temporal_comparison.py",
+      "measurement_workspace/temporal_report.html",
+      "measurement_workspace/temporal_transfer.py",
+      "measurement_workspace/temporal_workspace.py",
       "measurement_workspace/web/benchmarks.mjs",
       "measurement_workspace/web/chemistry.mjs",
       "measurement_workspace/web/chiques_nutrients.mjs",
@@ -1367,6 +1501,7 @@
       "measurement_workspace/web/workspace.js",
       "model/MEASUREMENTS_PORTABLE.md",
       "model/portable_databases.py",
+      "model/windows_fs.py",
       "source_data/wqp_eight_20261013/sources.json",
       "source_data/wqp_eight_20261013/wqp_eight_monitoring_sites.geojson",
       "source_data/wqp_eight_20261013/wqp_eight_native.csv",
@@ -1377,6 +1512,7 @@
       "source_tools/OBSERVED_LOADS.md",
       "source_tools/WQP_OFFICIAL_EDITION.md",
       "source_tools/capture_wqp_edition.py",
+      "source_tools/exercise_temporal_comparison.py",
       "source_tools/flow_comparisons.mjs",
       "source_tools/flow_editions.mjs",
       "source_tools/flow_load_comparisons.mjs",
@@ -1385,7 +1521,8 @@
       "source_tools/prepare_wqp_measurement_collection.mjs",
       "source_tools/print_measurement_return.py",
       "source_tools/receive_flow_delivery.py",
-      "source_tools/receive_workbook_measurements.mjs"
+      "source_tools/receive_workbook_measurements.mjs",
+      "measurement_workspace/WINDOWS_LONG_PATH_SUCCESSOR.md"
     ],
     "predecessors": {
       "AGENTS.md": [
@@ -1398,8 +1535,7 @@
       ],
       "MEASUREMENT_COLLECTION_WORKING.md": [
         "d12447ff7f893a6c572174d1899f27fee478b527a923099d22514acdf2d5051d",
-        "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d",
-        "d08d5e283bd7925e080bd08a047b8b83335d989f831743197c92544f0d301dd0"
+        "a441978ac78da6fe9b2831030ac523a4bb3e0060b12967c2b19df91bf404448d"
       ],
       "MEASUREMENT_LARGE_FILES.md": [
         "c2ed11ce53d5ce09bd1e36e0d8bac04834057c8e14058d490eaa1fc402aaab52",
@@ -1417,11 +1553,12 @@
         "7f98a811d03ffba1fa1f5b7f574c0cbe7b092c74be3de19b61f3d71d53f1bd7a",
         "12dc4f8f34746959738b22867aa3af443fa65a388ff1ba7b3436294671eb967c",
         "9250d830320c70f88bcfc09ca5441981366c48046bb62e221d7ef0d00abebcfd",
-        "21fb84d41642a04f1c2c3d8794bc8b30f78a3d351f859b4938111264335b92b8"
+        "21fb84d41642a04f1c2c3d8794bc8b30f78a3d351f859b4938111264335b92b8",
+        "1dacbdc762cde9e6719279349ea4b9427741825c5ab0030a7add66d51580d501",
+        "54c02fa47712f0e5ff277eddb68f77a44d46aa1ee73427edbf59a705e196b88f"
       ],
       "measurement_workspace/ATOMIC_SNAPSHOT.md": [
-        "2fee4765c26299edd3be0c43c7f560bf9b70dbb724eee38857bbeea52cce655e",
-        "218fa461e7e7dbb4061c79dd05a9d1ceb91079e6862d583d0514cf0c0e128a4c"
+        "2fee4765c26299edd3be0c43c7f560bf9b70dbb724eee38857bbeea52cce655e"
       ],
       "measurement_workspace/CHIQUES_NUTRIENT_SOURCES.md": [
         "0429b2aa22a9349aa481b1389ad96353ac6d097a9a5f1f3f41227fc78eefe5bf"
@@ -1430,8 +1567,7 @@
         "9e62ebe1c3bb0311d24cd97f92da28329326b9846d7f2c1df70bef40d8cdf3b3"
       ],
       "measurement_workspace/DAILY_FLOW_STUDIES.md": [
-        "704c4a9e16948a9f5ad57ca87fab9ef95c937c388cd3041fc62784f79f28b52c",
-        "dccc1493ca1ce16699aa24baa204cbf29ec57ee3b126928ab34dd43c07bf35b0"
+        "704c4a9e16948a9f5ad57ca87fab9ef95c937c388cd3041fc62784f79f28b52c"
       ],
       "measurement_workspace/DAILY_FLOW_UI.md": [
         "598f4c07cfdaa4d7a735bffca805158626016895e38cdca5aa9e7be8b0d4930b"
@@ -1449,8 +1585,7 @@
         "ff7e65d209b6ff45b96984ea1af8c4a0936b4bb5158b8fe46e9361ed873fe9d4"
       ],
       "measurement_workspace/GUIDED_INTAKE.md": [
-        "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35",
-        "32b1d1605c1734932df162394970ab7b5491a618f3cc72ae81330392c6f77af8"
+        "4fedf035be54e89f3f795a1310cc31eed45825577670aaa58c32b6c2e56b3f35"
       ],
       "measurement_workspace/INTAKE_COMPARISON.md": [
         "55b8c48f917fb56d64a3b8b1bdb9e45b4e394ab42a3c23e19bb839e9a86240ad"
@@ -1496,25 +1631,21 @@
       ],
       "measurement_workspace/SOURCE_HANDBACK.md": [
         "8722d8da1ef7406a2f345941227aefc3ebeda011ae81d3620d05c80f889be682",
-        "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39",
-        "307efafb343e4c969f6adaf9df91b6b184a0cbf25395499403b3ad04240b86cc"
+        "946736b70c4f1da6084732c4130db5884a3a58ad23ef725e55ab305100dc2a39"
       ],
       "measurement_workspace/SOURCE_HANDBACK_BROWSER.md": [
         "d239ceb84bee136b4f39858b6b52441783db311713e5b75e8bddc3698b2ea3a8",
-        "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2",
-        "3e10f811e2e68a300ae1badf87d784b784cf157fba81f016826684c1d9de8386"
+        "8c09ee3f5720d16cff8cfed86fde6baeae28fe1c5da287dc7bbe8fde85de1ee2"
       ],
       "measurement_workspace/SOURCE_RECONCILIATION.md": [
-        "9181f8c3ccc050dd216d2a93d4a1c9846c4b99ec620c70379eb8a73ec2e59a3a",
-        "71466ae7584023b896647b5cc13d6f2692f7c0c87f3de1fa7c0dc97b671c081c"
+        "9181f8c3ccc050dd216d2a93d4a1c9846c4b99ec620c70379eb8a73ec2e59a3a"
       ],
       "measurement_workspace/__init__.py": [
         "4952e0eec7fa862a4603ae7612b02661dfc97aa20a5910229fad70bade543332"
       ],
       "measurement_workspace/chemistry.py": [
         "b1ca7aa1df11ebdb2a8f498ba448064bcb35192f6bc5b2b34447297bb523673a",
-        "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef",
-        "22cdcd2e8b8d781edb93d794f3cb2c2be453f3ead72fada3a835cbb13ffa79bf"
+        "896083e15789debc1fcd2fea2fe26f8a60ae0588b6229c67444bc75020acd4ef"
       ],
       "measurement_workspace/engine/benchmark_reports.mjs": [
         "09947f61e240696abf43d41617814dd92f10aa45f75f62e0bfdb55ce7c4eb643"
@@ -1529,8 +1660,7 @@
         "9d9ff7ab3d6ccb5a00f06b11d0f6cb209640c27749c750dc8f4b8cb15e0e1199"
       ],
       "measurement_workspace/engine/characteristics.mjs": [
-        "e5cf7c2cd06edbc35548604de86a5c4ce131728e84f10b9d0044c3ed8085865b",
-        "a8cb9af87d6e2e4a101ad12beaf01a20a65133700d3b576d66e5290925a01488"
+        "e5cf7c2cd06edbc35548604de86a5c4ce131728e84f10b9d0044c3ed8085865b"
       ],
       "measurement_workspace/engine/chiques_nutrient_cli.mjs": [
         "6fd63e7544862ee5a9e62078227369e5b86f535bfc9632dd6da18554c5cf7de9"
@@ -1566,12 +1696,10 @@
         "d431c5351e25ecdc71a3bac160f2c61c42fc84bd0718f7d9c079ec72361ed9c6"
       ],
       "measurement_workspace/engine/collection_zip.mjs": [
-        "adaafa1a90bed1218168b53dac5bfc7e6f11813bdac389b2ffd8cab5ad009d5a",
-        "0405ca98275c2b39b4a8f53f62dc587360cb06fb72dda046ddb568daf147372c"
+        "adaafa1a90bed1218168b53dac5bfc7e6f11813bdac389b2ffd8cab5ad009d5a"
       ],
       "measurement_workspace/engine/collections.mjs": [
-        "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e",
-        "4ec5122ee3fc25e3b4a4ff3b5a8e85b5f42c3772bf653b0b0c8dedeeb49b9a87"
+        "4be6736b90f8c1ec15b1394b6e2b0da9eba81a144feff2ddf007eed619fc885e"
       ],
       "measurement_workspace/engine/eco_handover.mjs": [
         "952b44fc25b2a39851ed0115dedba581cd6a0d619443d7a8be42c66e9476d0b2"
@@ -1583,29 +1711,24 @@
         "54937b9ab989f1b6113c44169b7c46640614592285f4f97e42652e2f03ad18a9"
       ],
       "measurement_workspace/engine/flow_bundles.mjs": [
-        "7064b72e812a8e09b0f7043665e918c9403d47ac91feb6d3ac7dd5be1d91ffb6",
-        "422b9d75a1ecd97ffe953da8daacb2d32234cbac95cda9e2ee3d17dd8bf6c525"
+        "7064b72e812a8e09b0f7043665e918c9403d47ac91feb6d3ac7dd5be1d91ffb6"
       ],
       "measurement_workspace/engine/flow_comparison.mjs": [
-        "54cad6cb5990134685442188faa0dc21f210b8bed09451cd6ce27aa2d8da2f56",
-        "4c181dcf7cae38f1e4bd54491adee82dbf686a1bfe7708c8cf1bfc4626d5b77b"
+        "54cad6cb5990134685442188faa0dc21f210b8bed09451cd6ce27aa2d8da2f56"
       ],
       "measurement_workspace/engine/flow_editions.mjs": [
         "474eab98f78356e3a803b551e1383314e9e1a8b94b35ddf0855a87a78db747a5"
       ],
       "measurement_workspace/engine/flow_load_comparison.mjs": [
-        "2a146a8fcbcae8d552727010670964811fcee9f9b0c6734a7886d9a161d345ea",
-        "34eed1b0f4880c65796291d309b5f722725702b89f7b6444fc2c5b76d0342853"
+        "2a146a8fcbcae8d552727010670964811fcee9f9b0c6734a7886d9a161d345ea"
       ],
       "measurement_workspace/engine/flow_loads.mjs": [
         "fb2428a978a79a8f4907a28a88a5404eed204a44f6a3615c964b1ce951931f15",
-        "3571295aa55f6156e1d07fa1e87b0622d5130b677db742cf61d0ba51b0c8d7ce",
-        "c04d0d2993884330417c6faafe35e1c5b3ff2bd7d683dcc22ecee7f5c5d69865"
+        "3571295aa55f6156e1d07fa1e87b0622d5130b677db742cf61d0ba51b0c8d7ce"
       ],
       "measurement_workspace/engine/flow_reports.mjs": [
         "a4323d34a7377060e874b37f7bf488428eda49eda6623e09e5dfd719b7fafac0",
-        "d8437e94929afb2d7bdefc1ce86f46b0cecf36cffa94499a0235ec6a8c7dadda",
-        "ed439016338b3b157a0b1f1b38251f23eac10b9b7c53b96ad1f266cbc503d6b6"
+        "d8437e94929afb2d7bdefc1ce86f46b0cecf36cffa94499a0235ec6a8c7dadda"
       ],
       "measurement_workspace/engine/flow_results.mjs": [
         "4f68b36f146e54f3739ef2dbee32485b5027268e8b7be695ac8e3da30bc69f3b"
@@ -1614,8 +1737,7 @@
         "1300dbce60a30ee5c5dcf0399cc81dceec01f97d242e28506ea35d226b2676a7"
       ],
       "measurement_workspace/engine/flow_wqp_loads.mjs": [
-        "932317c3f0df3549c1980169ce5ea6926445652c509b936f6e0d337a686a45a5",
-        "840f438bfe2eabb4c9cb27fe5a8028c86b78a659c6aa2e94abde1ddfa0dcefbb"
+        "932317c3f0df3549c1980169ce5ea6926445652c509b936f6e0d337a686a45a5"
       ],
       "measurement_workspace/engine/handover_archive.py": [
         "95dfe338d56e8499a4ad57b37d45369853e2d2a7509bd034e7d5214a8882d795"
@@ -1635,20 +1757,17 @@
         "5a1ccec5c05d1cb643d5af4d81ef299e921b1b4728cc16a03a32a48e513710b5",
         "4ae49198aeae5018853dad963ea819301b62ef5daaff980d7760f557d8a8d01c",
         "496e869866da01f8b073493054360eeae32d9a0b1745e72d5ab0f7671bc53f3b",
-        "2edacc47842d36dc2630b4e805d781b062a815f2b3c0a55aaa124156f43c5710",
-        "1980dfa2fe17781ba13e99f1bdfd4277daf4415375eb6a2808ac6a5bc01a87db"
+        "2edacc47842d36dc2630b4e805d781b062a815f2b3c0a55aaa124156f43c5710"
       ],
       "measurement_workspace/engine/intake-comparison-receiving.mjs": [
         "7ec7fef90ad26b66aceff137cf6a7c75d6028ff597504e4cabdd60145e77024b"
       ],
       "measurement_workspace/engine/intake-receiving.mjs": [
-        "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2",
-        "1a5f9aaa3888709cea03d1fb5ae9872ffeba94a7738e9ab1a37ac71613a319f8"
+        "e3310a8956847ce529d18503a07baa098151bbcb7b50eef3d46541556a2180f2"
       ],
       "measurement_workspace/engine/intake.mjs": [
         "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a",
-        "b7930eea0b7980d5668889fa9ada87a206d166804ed72463e596aaac4bde450b",
-        "45f21a92ba58865ab71feac1326f215bc245fadc0e3be681f8db92faac81e794"
+        "b7930eea0b7980d5668889fa9ada87a206d166804ed72463e596aaac4bde450b"
       ],
       "measurement_workspace/engine/intake_comparison.mjs": [
         "54f117e78cc0f53af46a1fb629df3577beee9b3586f96d1bbf4b9042d514794a"
@@ -1661,8 +1780,7 @@
       ],
       "measurement_workspace/engine/large_cli.mjs": [
         "d64245d07e20feb65b6099a5ebc407060fa5a9547a1d8a6c4cdf3f2ad8299762",
-        "9b3a49e8ae9a93ce7cebc853dc0c682d3c314e6b6052093dce6e114d447db8bf",
-        "fc29abd7de01a25ceba0042548e34caeb840d3a57b356fe1a0a4146970fbd9a5"
+        "9b3a49e8ae9a93ce7cebc853dc0c682d3c314e6b6052093dce6e114d447db8bf"
       ],
       "measurement_workspace/engine/large_collections.mjs": [
         "875a79757175064d68ea2d2e03db6f99b02ac3fea8211fb72a2af8ff7a27e00a"
@@ -1670,19 +1788,16 @@
       "measurement_workspace/engine/large_delivery.mjs": [
         "f48f15c1682af0f6c439b5f866e8dbc91ac8b09d60d8379caf660037ea61f90c",
         "60075b257d2ad2414116b959079378d8d402c927765012fe540c7390409cabfe",
-        "cc4b520482905c59d9302adb03e7caac2a6fcbfab3ad557ef5598f0b12899ebe",
-        "fef7a7b9a8efe4f7637dcb232afcc29908c36ff4cf379350e3650981be2fa2c4"
+        "cc4b520482905c59d9302adb03e7caac2a6fcbfab3ad557ef5598f0b12899ebe"
       ],
       "measurement_workspace/engine/large_http.mjs": [
         "7ae6567de4aa8ce2fce5454fee7a331a62f040449e1b9201da31ebfb80f02e54",
-        "92e0a739d6524d14195690f0951cfca7b3c5ac1bf28b1ee03779c802dad42318",
-        "001f3da92784c9fc0c4360e35e7f5c84064f85c72a3428a2eb0b5505a80cf7af"
+        "92e0a739d6524d14195690f0951cfca7b3c5ac1bf28b1ee03779c802dad42318"
       ],
       "measurement_workspace/engine/large_intake.mjs": [
         "b90a3fdd248ee079b50593d6f3543376f222b178f8d0e94c06148e1867254eb7",
         "34e7518208949bba903b7fac72e93c61f01c95c42a393be8b6e265c917e0d706",
-        "fef1d0540005f843722591c5b0da650545f251e1d529327332b4c7cd2656d0be",
-        "a64ab3f2ebac1a6cac9ccec6dd7815bfd51476fe502c8d3f34887adb834def26"
+        "fef1d0540005f843722591c5b0da650545f251e1d529327332b4c7cd2656d0be"
       ],
       "measurement_workspace/engine/large_io.mjs": [
         "331208c794eee0b45008f18598f7d426359a079c6ccf34a10d12302fb265d523"
@@ -1695,8 +1810,7 @@
       ],
       "measurement_workspace/engine/normalise.mjs": [
         "27b978c27b3db0e27865e4b3a046be5451acce514348ee25eb372ab0cebfb0b5",
-        "9f09e095af09c3d1b18becdf2a5655ceae49902b13e41f86b1a054c33afb9875",
-        "29c76f3147cda502ab12661767abb84c742ea5434062825e310c0ef02d032d80"
+        "9f09e095af09c3d1b18becdf2a5655ceae49902b13e41f86b1a054c33afb9875"
       ],
       "measurement_workspace/engine/observation-edition-receiving.mjs": [
         "36581f6442320c0f3628f6adc6fdb2bc839d1d84f31300285892cdbb00c3078a"
@@ -1708,13 +1822,11 @@
         "6e5bf1bb14b2b3baad048eb2b1bd93c56d43aab333b9728799d00d7f8006e33b"
       ],
       "measurement_workspace/engine/providers.mjs": [
-        "b6cc24dbadce5f8b1bc4ac1eb2a8b86b146f6fc04d5b060b1096b05fd7204b8e",
-        "b0e69af0fdef3708159e8bb5cc42630060c81593a64621c3393632cbc40b371b"
+        "b6cc24dbadce5f8b1bc4ac1eb2a8b86b146f6fc04d5b060b1096b05fd7204b8e"
       ],
       "measurement_workspace/engine/reconciliation-receiving.mjs": [
         "f058b76b21b52651f1fce85736c210fc0d0b1213423f2f9ae8cdeb4730d230b1",
-        "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9",
-        "45f7091f13d45683362962c605f78c2fd5026201adb9a3eb30e06864d2ab5f04"
+        "039911d32da1b0422e3f74389b81c8d0a335432d39c4db156da835b789e7d7c9"
       ],
       "measurement_workspace/engine/reconciliation_cli.mjs": [
         "84f28a12db782be3398d7e534c96d43675cccbf5d6949e753b496872b0e9e69b"
@@ -1726,8 +1838,7 @@
         "3c95ea1dd7a66d93c09359e3e5510a64f06dac93676be666a8e083b2d4277543"
       ],
       "measurement_workspace/engine/returned_review_reports.mjs": [
-        "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40",
-        "b66e08538849638a340fd4a2b334e8316e2473909332469b476b278b0cc1b5d3"
+        "9748999764b696c18c8408543491173d08b3c5047707b43f69f8b60592c00c40"
       ],
       "measurement_workspace/engine/returned_reviews.mjs": [
         "1a4ec5d181f96828e71e53f9c1b37614339b4e293a13be38cfddd891f7200eea"
@@ -1755,8 +1866,7 @@
       ],
       "measurement_workspace/engine/source_handback.mjs": [
         "698946f6bdc505296d9a891d161efdeb1a3942e675a1868abbda7e80ca68a962",
-        "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd",
-        "7c7fb777aea899a035303c6ab57c4c7e6ea6cea313d1192266cf2aad8eff285f"
+        "edf7eff2c1fe20c9b4d0a5fa4efb2f857e8987290a1138236c23b40a38fbb4bd"
       ],
       "measurement_workspace/engine/source_handback_cli.mjs": [
         "0f56facc55e6e9b4d5f7455a87c2dd0dcdd2e644f543058d08192838301ae27d"
@@ -1797,15 +1907,13 @@
         "8c3d173100c3f9f14db0de62a71c8a507cb94d402ca1ddec2fa335fc1a58055f",
         "d5414ec5fd900f4e7e44d878f887bbcc4982b2860302ad303c9ee81eecee3cc6",
         "5d4a617293f38fe8c58cd5a703243b85b9dd27aa01a8e665f1642c7bf4349d48",
-        "22378c641fc742ee4d340d56e77daae6473da7537fb8f62ad01877dc51447287",
-        "5f8943af96e650d5712744e163f3f5d38f78c3db43083b822826613cbefc6acb"
+        "22378c641fc742ee4d340d56e77daae6473da7537fb8f62ad01877dc51447287"
       ],
       "measurement_workspace/extension.py": [
         "5a0c67271d01b4b32e3ca97c637b8d2adf71da97d288a442272fd98acfb57ef6",
         "f908251ff9615924e44a92a1de36cda9c81da59ea4c11decdfdf2cc283ef941d",
         "5c349c157d0de20fa2598820d59baf31389ad5d88d4b2e5112ca5a800473caea",
-        "1226a739459185ee212bd66056389489970f3f246bbe17532deba8a60b907902",
-        "1009d476229f1cb34cef53b43eb1e9784a70c25cd73d5f35eba035a5624698df"
+        "1226a739459185ee212bd66056389489970f3f246bbe17532deba8a60b907902"
       ],
       "measurement_workspace/large_context.py": [
         "0d9cb79443768f48e04bc879a8beaf2bcf0324d29322ed31a96cedfe2e2f52c2"
@@ -1893,8 +2001,7 @@
       "measurement_workspace/web/chemistry.mjs": [
         "b53448e5c62827bf4c8f58b5f0cb237d9ee6bf86f48d7a871100c7286003edb5",
         "e4619ad2cb16afb7b87e9e787fb34c722e0422ee50d1d3fb125f9883ff32beda",
-        "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9",
-        "70eb51e65ce68c4250789f7d0b44e789b9f79219172718f65bcd377c814d73ed"
+        "62a675a6d886d061487e48f38e3c6b16f97c4ffba353af337d914899010819b9"
       ],
       "measurement_workspace/web/chiques_nutrients.mjs": [
         "3e13880b80db8eada003b8bb53f678b9c2d77aad7f454a99eefd050b7df5c767"
@@ -1931,16 +2038,13 @@
         "d98bc3f5194407beb5c14fc7bb3d7ab80fa02facfa61116accd23635f174d685",
         "28da657655db9de08416d68362212651d3eb203e11ddcaa46456eb199df7a87f",
         "e0d1720593fa811d052ba4a38d4102ca37c001d6bb3375b56e725ad773f0c306",
-        "e3d4b8ae2741300c6780b522ffc8bd6bb57912543c8662b519b5e51f79c7302c",
-        "ac186e07789896c066409f8f9bd9a756db2f6638cf36c901a7cdb5c7a862f91a"
+        "e3d4b8ae2741300c6780b522ffc8bd6bb57912543c8662b519b5e51f79c7302c"
       ],
       "measurement_workspace/web/flow_editions.css": [
-        "9a5f279697e6be5b6266a8653a6c8f6a423eb9bee4311ff3914b32f37d0c6e38",
-        "2518f7a55d2899d93a998ec844caa4e5beb731f60ef07596aee2ccc985763edf"
+        "9a5f279697e6be5b6266a8653a6c8f6a423eb9bee4311ff3914b32f37d0c6e38"
       ],
       "measurement_workspace/web/flow_editions.mjs": [
-        "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e",
-        "1ee41493de73dfa9403cbd91f138778b677cb93157ba83b82354291a557c67d9"
+        "689462902ff3c180baed40b522e74570dea89906eba13ac4a966c074ea99144e"
       ],
       "measurement_workspace/web/flow_load_comparison_ui.mjs": [
         "33885ebff5a9b69dffd7d7a8dbf29ce3dcf574b5d4483d565fd0c569b3fea278"
@@ -1948,22 +2052,19 @@
       "measurement_workspace/web/flow_loads_ui.mjs": [
         "0b180232689c38d41bd77f7944b45be0cd2d41610381fe9f9d4d8a2310de047e",
         "4f7f3962808b2236bf34852683140f56f6e9f1b38b5e1fa4113ef0b0c70307e3",
-        "3b89f94c0f9fba1196babd8b97d18c9c536fd87a5a209676ba9f21ed2b849a9b",
-        "efff71505037b8da04b5cf7578bf110d2ebf88aa897df0568759e4d5910fd39d"
+        "3b89f94c0f9fba1196babd8b97d18c9c536fd87a5a209676ba9f21ed2b849a9b"
       ],
       "measurement_workspace/web/intake.mjs": [
         "02ab47a9bf7b7dca747a064ad7159a41b86d050f692e12e3704aff4d9af4aecf",
         "eeae911c9e7f75998978ab8d0bddb6749b4c81673dae8ee429bd4425f1ec58eb",
-        "9cfeb6c29bee0e861ac6303b6c2d69235c0795a9466e34acec429e8346d10bc0",
-        "5f82993ea6d6d5967c4b99d2031e0e82e76a7d03865c7e5eba10470e693c1121"
+        "9cfeb6c29bee0e861ac6303b6c2d69235c0795a9466e34acec429e8346d10bc0"
       ],
       "measurement_workspace/web/intake_comparison.mjs": [
         "a206d5d27fc05d93818d5fcf42a5d8643a5e7f2da50283dabec361549bdcd567"
       ],
       "measurement_workspace/web/large_files.mjs": [
         "e26b5472953158c8a5c06fe078772a64cf789e37c534053988e7bc5c43a2cd54",
-        "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12",
-        "2bf84752ffd753a98ab0027076349dba97254c9cb0950fcbbdce584ba88acf0b"
+        "9635f72bc095efd3cd27617a70c2d1e22c08ea721f6358f9a34394a9dddeeb12"
       ],
       "measurement_workspace/web/observation_editions.css": [
         "25aba1eec576e631afe05a1017d8d6204c8d5eecc154abdd1b7364d8065af166"
@@ -1976,13 +2077,11 @@
       ],
       "measurement_workspace/web/results.mjs": [
         "becf274973d7ae6f529bcd284c55425c972c9ba96b5c90f88f763743f1085d89",
-        "3648be3440bd7615c9cd271ac824fd1ccfffc1d919ae363a5113c77cbbb9746b",
-        "c1ff2a8ba93994683fcdbfb747d21c9b29a287f8199a97080ddfa7690302b06d"
+        "3648be3440bd7615c9cd271ac824fd1ccfffc1d919ae363a5113c77cbbb9746b"
       ],
       "measurement_workspace/web/returned_reviews.mjs": [
         "4510c8da9720c3fa3e9b71b202c8b383674cb22cd79ed23b58c918902242afbd",
-        "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374",
-        "758103dabb6062634b7cb8c55ff66236297d2fcb064aa705b9368f422003931e"
+        "72af1876b27bf8f6ca248e4e85380a248b8425a77a6ec38f56715c96a4c16374"
       ],
       "measurement_workspace/web/sediment.mjs": [
         "e6771c8e1dc2ec48dd86b481dcadd1c7a03bee35a0b1a0a8671412a5d87e9b64"
@@ -1995,8 +2094,7 @@
       ],
       "measurement_workspace/web/source_handback.mjs": [
         "5699ccfb2c392927a5385c8ae8f78434e41f0ac274a2267cff1968780dc7431b",
-        "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f",
-        "e66f656dc6f8e851d5d64602480a4595f36f44cdcc010f5d7ac6dd7e39838d1f"
+        "79d939c471010c53ecb3407d97c1a437ff559bd1fa301b19ddfbc500c982e58f"
       ],
       "measurement_workspace/web/source_reconciliation.css": [
         "4e2f08e75ec8eb676ec1309df96562453e7c2967b87d39fb8f8021d8f3f677c9"
@@ -2010,8 +2108,7 @@
         "813f90ac8a6a661f76ef0a3514fe7a781b17267203fa272acc06b37f05b24856",
         "2d65d43b394d96482aae53c506891552d3ee24dd9ebf926670f12a24ba0fdf36",
         "1ab1079adbe979b3bff352458d632f0a5ad3eba52a7b376f22e1d3bffe2e6220",
-        "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0",
-        "d91324b26dab37fb8f0e41fc7b551dc46f0ad3dadce8aa3708b8e5f4cfa21b54"
+        "55479cfae4a111c3974acff0f4a8be31b77d3ba173dee38b948b22fac9d4c2a0"
       ],
       "measurement_workspace/web/workspace.js": [
         "e29054f855bc5da1d2c13707364e72a34cd574f42c9dde359bb7be5a6b354dd1",
@@ -2021,17 +2118,14 @@
         "19ad95139b181e31289e6dc76d827d0ad81cfb247715133cb82ed6bda39bfca4",
         "67e1d6a1d1ae5fb29ebab0bafa2b045cb722a0cda58f49d32b7f29e1fa6b3026",
         "6508d5fd5e6e4bcc5e71ee4bd2100271334cedac17ad3e6571daafb3fd16edb3",
-        "60fb137ea2b407c93e463b44dde0b471899a6318ae77e0a183c487282c09db8f",
-        "2def3ff095bc93f896653cc6fb51c2e6c5dde11fe382ef26f5c8a1fe54828012"
+        "60fb137ea2b407c93e463b44dde0b471899a6318ae77e0a183c487282c09db8f"
       ],
       "model/MEASUREMENTS_PORTABLE.md": [
-        "c3382d75b8fe90719ada3eaf82014a4b3589a08a4d645534b0d6d6b6ab22abd2",
-        "d3d21072dce0e4ed2fc548c704cf83e8b40a39d14da4c77458affcb26efd8ebe"
+        "c3382d75b8fe90719ada3eaf82014a4b3589a08a4d645534b0d6d6b6ab22abd2"
       ],
       "model/portable_databases.py": [
         "524213ab29dbb32377ed260eda309342bedca8ee880dd6edc63fd51269b611b5",
-        "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871",
-        "cef958863d57ea3c196413fb14fcee4411a5d40681b06caad27c593e676b1ca2"
+        "b15b5c7a26cbb39d686ec746d96f7ca51e33a96a60f35218983edd7cd5f61871"
       ],
       "source_data/wqp_eight_20261013/sources.json": [
         "e2a566cad4d08ff4f2c61aae6ca44a097bf0eecb8a86f94b5cde2fa18c96b76a"
@@ -2058,8 +2152,7 @@
         "1392dd8a10e8b60f44b270cbc2bc7108fb8bac4fc6f1727e58e0ec83548ede06"
       ],
       "source_tools/WQP_OFFICIAL_EDITION.md": [
-        "3eef87cd33d5baa7fd944d95e43c6134e11380a96c6efe487f7a3c8535b46c11",
-        "6a5e27b274380d859e06ab50d8c924046cdefb4f64775f73e9af5743f02aabc9"
+        "3eef87cd33d5baa7fd944d95e43c6134e11380a96c6efe487f7a3c8535b46c11"
       ],
       "source_tools/capture_wqp_edition.py": [
         "72aca089811176b08f08f8119670dc4bf2c13753b71fb4a6fd8cd6ca0c5637df"
@@ -2068,22 +2161,19 @@
         "36e97e36715936646a3273a984aa3f6b8039568f160365646f73b6df8b374fd6"
       ],
       "source_tools/flow_editions.mjs": [
-        "dcbbb98d9a5ac7238203d4477f4ce405c7aa484ab1e2abe690b4582b0b95987b",
-        "899cd5e848b49e6f3387a847a749abefcdb9f4471993868764ba5d6991b1b4d6"
+        "dcbbb98d9a5ac7238203d4477f4ce405c7aa484ab1e2abe690b4582b0b95987b"
       ],
       "source_tools/flow_load_comparisons.mjs": [
         "07e00254fce2107da6629e83e594f9ba32bdce326940f3febdc65523874a9a1e"
       ],
       "source_tools/observed_loads.cjs": [
-        "77bdbb75929383c7b491d639180f18c43c8ab4f9ae8a672837d8465aee3249ff",
-        "89bbd274d5efb333855a2e79ab254928818813c721d7fe4e7354af22ae8f65b7"
+        "77bdbb75929383c7b491d639180f18c43c8ab4f9ae8a672837d8465aee3249ff"
       ],
       "source_tools/prepare_observed_loads.mjs": [
         "b8dbd908ab44a7adf16536981e5e75a6695edd90bcaf2666ac3bd42589b9e464"
       ],
       "source_tools/prepare_wqp_measurement_collection.mjs": [
-        "39b427912f7f0cd011e264fbd71f58a11ccb3243ced1b363808f09980b1a56b8",
-        "2f06d7fe32e08fdbb05daa6f499625425461821c513ca9c982050b5df5c2b8f1"
+        "39b427912f7f0cd011e264fbd71f58a11ccb3243ced1b363808f09980b1a56b8"
       ],
       "source_tools/print_measurement_return.py": [
         "395f43610cdf838a4c64926091ee49025ecada3c7b2ece3a078f9de586b388b4"
@@ -2099,10 +2189,45 @@
       ],
       "operator/web/collection_folder.mjs": [
         "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55"
+      ],
+      "operator/install_measurements.py": [
+        "2a0c8a0c56fb835bd0b7f42ea8a10ad074130153830ce3b9724a5ba43a3a8f44"
+      ],
+      "measurement_workspace/RUNTIME.md": [
+        "3905430251b26f40559d451354ce107d8e46ff7cfdbd215840936d0ddec1359c",
+        "977d1670e9d933cf4855a17e1634f85eb6c107898f66ca179c29ec00d0ffff1e"
+      ],
+      "integration/component_fragments/measurement-chemistry.json": [
+        "8480905256a2b4bc182e4019c9d8150300864df8db98b8ff03077b4855d6dfc4",
+        "2bb250ea95b472e508eaabb1a0b88f786c6140ad7537bdae07214f56610c0a49"
+      ],
+      "measurement_workspace/TEMPORAL_ANALYSIS.md": [
+        "d83ea1ea9b694991873bbd64e89ea90abdd7653ebf10b7b9f4d242282b2e0dba"
+      ],
+      "measurement_workspace/install_platform.py": [
+        "a59df34132ca59da6f792f0eac13ebca092d87b0b10f307e253491d87bdffe56"
+      ],
+      "measurement_workspace/temporal_analysis.py": [
+        "d905faf907855f3df860f9f24496195c348ce3647daa07175470dce96f349b63"
+      ],
+      "measurement_workspace/temporal_report.html": [
+        "53a9f5dae50676bb616bea0b6f9520c773014ea6e772d428f0661ac6d876d652"
+      ],
+      "measurement_workspace/temporal_workspace.py": [
+        "2f64fb061c10b4a8f57929295e886c7d8816735bcf5bfbc1355ac13bce6fd4b7"
+      ],
+      "measurement_workspace/engine/file_platform.py": [
+        "2c4c2d94fb58f4b31789e72fbb966b9c41fe9ed58a73b724bbd4d056ebb923d0"
+      ],
+      "model/windows_fs.py": [
+        "5f968b8c7248a8dae36f4a13b1c9edb3c85bca14abc1b1dd5a81c3b4022aae36"
+      ],
+      "measurement_workspace/node_runtime.py": [
+        "29cb85dd792d6280e6f686a942cfc195117ac64bdadabf337017154423965c9c"
       ]
     },
     "authority": "Use the current cumulative installation inventory when supplied; retain the explicit full source selection for a standalone-only release.",
     "entry": "measurement_workspace/engine/cli.mjs",
-    "runtime": "Node >=22.16 and original Python helpers; authenticated scientific Workspace operations use the registered application."
+    "runtime": "The same selected native Node >=22.16 (MEASUREMENTS_NODE, Python sibling or PATH) with exercised built-in SQLite/backup/exact64/JSON/DEFLATE/CRC32. Original Python scientific environment and registered host retain their existing ownership."
   }
 }

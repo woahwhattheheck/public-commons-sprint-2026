@@ -60,6 +60,8 @@ def _source(closure, choice, expected_source):
     recipe = closure.read(entry["body"]["object"])
     if recipe.get("schema") != observed_context.SCHEMA:
         raise ValueError("The original scientific report document has another schema.")
+    members, original_names = observed_context.member_namespace(entry, recipe, members)
+    source_edition = observed_context.EDITION + ("+original-manifest-names-v1" if original_names else "")
     for item in recipe.get("inputs", []):
         name = _relative(item["path"])
         original = members.get(name)
@@ -75,7 +77,7 @@ def _source(closure, choice, expected_source):
         # Earlier archives retain the ordered source bytes without later-added
         # editable producer records. Reopen precisely that captured dependency set.
         return {
-            "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
+            "schema": "upstate.observed-report-binding/v1", "edition": source_edition,
             "source_collection_id": collection_id, "source_id": entry["id"],
             "body_sha256": entry["body"]["sha256"],
             "member_sha256": {name: members[name]["sha256"] for name in sorted(members)},
@@ -124,7 +126,7 @@ def _source(closure, choice, expected_source):
     from . import terrain_conditioning_study_transfer
     terrain_conditioning_study_transfer.include_source(closure, collection_id, entry)
     return {
-        "schema": "upstate.observed-report-binding/v1", "edition": observed_context.EDITION,
+        "schema": "upstate.observed-report-binding/v1", "edition": source_edition,
         "source_collection_id": collection_id, "source_id": entry["id"],
         "body_sha256": entry["body"]["sha256"],
         "member_sha256": {name: members[name]["sha256"] for name in sorted(members)},
@@ -170,8 +172,11 @@ def include(closure, key, record):
         raise ValueError("The saved scientific report changed its ordered source roster.")
     bindings = [_source(closure, choice, source) for choice, source in zip(choices, sources)]
     binding = observed_context._binding([{"binding": item} for item in bindings])
-    if identity.get("binding") != binding or selection.get("observed_context_binding") != binding:
+    captured_binding = identity.get("binding")
+    if (selection.get("observed_context_binding") != captured_binding
+            or not observed_context.same_retained_binding(binding, captured_binding)):
         raise ValueError("The scientific report source bindings differ from the saved edition.")
+    binding = deepcopy(captured_binding)
     files = record.get("files")
     if not isinstance(files, dict) or not files:
         raise ValueError("The saved scientific report has no retained output files.")

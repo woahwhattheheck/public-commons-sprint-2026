@@ -89,7 +89,14 @@ export function createMeasuredObservations(capabilities){
     const nativeHost=document.createElement('section');outer.append(nativeHost);
     nativeObservations=mountNativeObservations(nativeHost,{request:async(action,payload={})=>{
       const {value,guard}=await send('/api/measurements/native-observations','/native-observations/'+action,action==='prepare'?'POST':'GET',{action,...payload});guard();return value;
-    }});
+    },...(typeof capabilities.openItem==='function'?{openObservation:async observationId=>{
+      requireActive();
+      if(!/^[a-f0-9]{64}$/.test(observationId))throw Error('Select the exact retained observation.');
+      return capabilities.openItem('observations',observationId);
+    }}:{}),...(typeof capabilities.openDesk==='function'&&Array.isArray(getState?.()?.temporal_analyses)?{openMonitoring:async selection=>{
+      requireActive();
+      return capabilities.openDesk('temporal-analysis','openForObservation',{workspace_key:boundWorkspace,...selection});
+    }}:{})});
     const collectionHost=document.createElement('section');outer.append(collectionHost);
     collections=mountCollectionPanel(collectionHost,{request,refresh,workspaceKey:benchmarkKey(boundWorkspace,boundPerson),initialSession:collectionMemory.get(benchmarkKey(boundWorkspace,boundPerson))||null});
     const returnedHost=document.createElement('section');outer.append(returnedHost);

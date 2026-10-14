@@ -1,6 +1,7 @@
 /** Publish a complete standalone file without exposing a partial destination. */
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import {syncDirectory} from './file_platform.mjs';
 export async function publishExactFile(destination,data){
  const body=Buffer.from(data),target=path.resolve(destination);
  const directory=await fs.mkdtemp(path.join(path.dirname(target),'.flow-export-')),temporary=path.join(directory,'complete');
@@ -15,6 +16,7 @@ export async function publishExactFile(destination,data){
    const existing=await fs.readFile(target);
    if(!existing.equals(body))throw Error('Existing output contains a different file: '+target);
   }
+  syncDirectory(path.dirname(target));
  }finally{
   await fs.unlink(temporary).catch(()=>{});
   await fs.rmdir(directory).catch(()=>{});

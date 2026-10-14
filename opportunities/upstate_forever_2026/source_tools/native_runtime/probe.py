@@ -42,6 +42,9 @@ def selected_source(application):
 def identity():
     return {"python": platform.python_version(), "implementation": platform.python_implementation(),
             "cache_tag": sys.implementation.cache_tag, "soabi": sysconfig.get_config_var("SOABI"),
+            # Windows CPython publishes EXT_SUFFIX rather than SOABI. Retain
+            # both original values so the selected runtime can be checked.
+            "extension_suffix": sysconfig.get_config_var("EXT_SUFFIX"),
             "system": platform.system(), "machine": platform.machine(),
             "libc": list(platform.libc_ver()), "prefix": sys.prefix,
             "executable": sys.executable}

@@ -1,41 +1,10 @@
 # Owner-directed rendered-product inspection
 
 <!-- ecosystem-current-product-handoff-7bf6:begin -->
-## Current product direction for this assignment
+## Current Windows and Mac implementation
 
-Owner direction version: `2026-10-13.4`. Onward copy: `CB54-current-product-direction-v2`. Read the shared application brief, `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md`, landed at [86453994c05e0e7e2413c2ad4d0fc7a899ea06db](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/86453994c05e0e7e2413c2ad4d0fc7a899ea06db/opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md). Original owner transport: [sales message 1791887422.395359](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791887422395359). This is the current assignment addendum, not a replacement controller or a new canonical brief.
+Read opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md version `2026-10-14.1` and its complete approved59-action list. Complete one native Windows x64/macOS Intel/macOS Apple Silicon workbench with shared application/data, all seven original workspaces,82 retained runs and reliable real opening routes. Full scientific startup and the existing operation/session lifecycle remain required. Final usable private delivery goes to Bryce at brycembusiness2@gmail.com. Earlier pre-call, code-only and installed-Python notes below are historical and are superseded for this release. Preserve actual visual use, active owners and focused validation.
 
-### Exact owner instructions
-
-Latest direct instruction, October 13, 10:46 a.m. Eastern:
-
-Complete as much of the existing Eco science application as possible before the scheduled call, using the existing fleet and complementary workers where useful.
-
-Execute the prepared simulated model.
-
-Deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time.
-
-Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
-
-Continue active work while checking progress.
-
-### Apply to the existing work
-
-Tim/Ecosystem already publishes GIS, watershed/environmental modeling, data analysis, map/report publishing and natural-capital decision-support work. Do not assume a tools/capacity gap or pitch generic GIS as novel. Build a concrete production workshare he can compare with his existing workflow. The prime retains scientific direction, method choices, review and the client relationship.
-
-Center the demonstration on THIS Upper Savannah RFP: actual geographic/source shapes, a 30 m grid, the upstream model domain distinct from the South Carolina reporting mask and utility focus, clearly simulated realistic inputs, and native InVEST NDR/SDR baseline, restoration and matched control. Produce meaningful comparisons, maps and a report, with editable parameters/source editions and export/cold reopen. Annual nitrogen and phosphorus are kg/year and sediment is tonnes/year reaching streams. Keep loads distinct from concentrations and stream delivery distinct from intake delivery.
-
-Actual simulated-model execution and the connected usable product are the hard priority. Runtime/source existence or another plan is not the run. Preserve already-running jobs and one writer per Workspace. Use the existing equipped runtime or provision an isolated actual execution environment when needed under the existing execution ownership. Root explicitly owns actual execution; other builds continue. Existing completed runs and artifacts feed their current downstream work rather than being rerun for this propagation.
-
-Make relevance and speed visible through what Tim can USE: choose inputs/assumptions → run → inspect differences → revise → hand over work his team can continue. Show actual produced artifacts and real elapsed history. Do not invent timings or guarantee a reaction. Avoid stock screens, decorative pitches and demo-only theatre.
-
-Open, LOOK at and USE the final product and ALL attachments as the recipient. Fix obvious defects. Use natural generative TTS/media when media is used, and actual application recordings rather than generated screens pretending execution. Watch/listen to the final export. Keep building and fixing; do not substitute review/test theatre for hard implementation. The already accepted rendered-product instruction below or in the application instruction files remains unchanged.
-
-### Carry the direction onward without interrupting production
-
-At the next safe message boundary, carry this complete update and the shared brief into relevant current Ecosystem, product, model, report and presentation child/provider/cloud assignments and onward handoffs. Persist it in the current work order or startup/receiving guide and include its exact version/path with the next substantive result. Use the [existing Ecosystem Sprint Integration workstream](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791724121853269), retaining current owners and original application/Workspace/run identities. Do not stop active calculations, restart held/deleted tasks, spawn another controller or ask Bryce to relay.
-
-There is no bid/prime-yes gate or arbitrary product/feature cap. Bryce's direct 10:46 a.m. renewal supersedes the earlier 10 a.m. cutoff; finish the existing unfinished Eco work before his call from its actual retained state. Existing focused validation, no private GitHub/Actions, lab attribution, source/copyright, contact, meeting and spend controls remain. Keep actual engineering assignments moving. Do not rerun accepted policy patches or reviews as a substitute for delivery.
 <!-- ecosystem-current-product-handoff-7bf6:end -->
 
 Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
@@ -47,7 +16,7 @@ The Ecosystem product requires plain industrial design: readable tables, clear h
 
 Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
 
-Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. For Ecosystem Sciences, read `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4`. Bryce renewed the existing work at October 13, 2026, 10:46 a.m. Eastern to finish as much as possible before his call, superseding the earlier 10 a.m. cutoff. Preserve active workers, completed scientific outputs and all other standing controls.
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners and active calculations. For Ecosystem Sciences, read opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md version `2026-10-14.1` and implement its complete approved Windows/Mac release and reliable opening routes. Preserve original outputs and use the actual delivered product.
 
 Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
 

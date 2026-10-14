@@ -37,6 +37,8 @@
         "integration/component_fragments/workbench-startup-guide.json",
         "operator/README.md",
         "source_tools/Open_Workbench.sh",
+        "source_tools/Open_Workbench.cmd",
+        "source_tools/open_workbench_windows.py",
         "source_tools/prepare_recipient_opening.py",
         "source_tools/WORKBENCH_OPENING_RECEIVING.md",
         "source_tools/Open_Workbench_WSL.cmd",

@@ -31,6 +31,15 @@ Inspect original worksheets and values, select explicit identifiers, labels, rol
 The preview tables retain every original value in a keyboard-focusable horizontal scroll region. Compact screen rows preserve the complete source URI; printed rows wrap. Scientific selections, request identities and completed native results are unchanged.
 
 
+
+## Existing Windows receiving course
+
+Use original Windows7256, the same populated source-intake Workspace and retained inspection385c. Refresh its completed result and open the new readable report; do not create a new inspection to generate it. Open the previously saved context edition2672b932ba3314a898f649fcc0c77d63dad84b2e575b8ea91b671370e2911c4f and inspect its actual reviewed ID/label, role, unit, period and reference.
+
+View the ordinary app and report at its actual desktop width and390px. Operate the original preview table with keyboard scrolling, open the technical appendix, download the complete HTML and reopen it offline, open the original workbook in its normal viewer, then cold-reopen the same Workspace. Observe pending/failed states only where present in the actual operation. Return the first visible defect or native exception for immediate source repair. Root personally views real screenshots and the actual outgoing files before calling the product ready.
+
+Current owner direction is opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md version2026-10-13.5: continue the original native modeled case and useful working application, preserving active work, actual source selections and completed outputs. All attachments must be opened, looked at and used in their ordinary viewer at actual presentation/narrow widths; source review or merely taking screenshots does not replace actual operation. Keep plain industrial presentation, TokenJunkieLabs attribution, no paid Actions/private Git, existing contact controls and the current receiving ownership. This receiving does not launch another scientific solve.
+
 ## Saved original worksheet reuse
 
 Saved CONTEXT and MEASUREMENTS tables now reopen through their original native worksheet inspection. They are not passed to the CSV reader. The saved source screen receives its original sheet, header row, reading options, source format, column labels, physical row numbers, preamble and preview values. Duplicate or blank headers remain distinct through original column-position labels; retained extra cells remain present. Formula/cached-value choice and original encoding/delimiter are preserved. Source meaning and the byte-identical original workbook remain in the existing source record and download.

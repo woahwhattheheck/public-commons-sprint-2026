@@ -11,6 +11,7 @@ import argparse
 from collections import Counter
 from copy import deepcopy
 import csv
+import hashlib
 import html
 import io
 import json
@@ -1223,14 +1224,14 @@ def _html(analysis):
 main{max-width:1280px;margin:auto;padding:28px}h1{font-size:1.8rem;line-height:1.2}h2{font-size:1.3rem;margin-top:2rem;padding-top:.5rem;border-top:1px solid #bbb}h3{font-size:1rem;margin:1.2rem 0 .5rem}
 p{max-width:95ch}a{color:#202124;text-underline-offset:2px}code{overflow-wrap:anywhere;font-size:.88em}
 .table-scroll{max-width:100%;overflow:auto;border:1px solid #bfc3c7;border-radius:3px;margin:.5rem 0 1rem}
-.table-scroll:focus{outline:3px solid #444;outline-offset:2px}table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}table.wide{min-width:980px}
-th,td{padding:.55rem .65rem;border-bottom:1px solid #d7d9dc;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#f1f2f3;font-weight:600}tr:last-child td{border-bottom:0}
+.table-scroll:focus{outline:3px solid #444;outline-offset:2px}table{border-collapse:collapse;width:100%;min-width:36rem;font-variant-numeric:tabular-nums}table.wide{min-width:70rem}
+th,td{min-width:7.5rem;padding:.55rem .65rem;border-bottom:1px solid #d7d9dc;text-align:left;vertical-align:top;overflow-wrap:break-word;word-break:normal}th{background:#f1f2f3;font-weight:600}tr:last-child td{border-bottom:0}td a{overflow-wrap:anywhere}
 .numeric{white-space:nowrap}.muted{color:#555}.notice{border-left:3px solid #737b83;padding:.5rem 1rem;background:#f6f7f8}
 .compact{margin:0;padding-left:1.2rem}.compact li{margin:.15rem 0}details{margin:1rem 0}summary{cursor:pointer;font-weight:600}
 pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.4 ui-monospace,monospace;background:#f5f6f7;padding:1rem}
 nav{display:flex;flex-wrap:wrap;gap:.6rem 1.1rem;margin:1rem 0}section{margin-bottom:1.1rem}
 @media(max-width:600px){main{padding:16px}h1{font-size:1.5rem}th,td{padding:.45rem}.table-scroll{margin-right:0}}
-@media print{main{max-width:none;padding:0}body{font-size:9pt}nav{display:none}.table-scroll{overflow:visible;border:0}table.wide{min-width:0}th,td{padding:4px}tr{break-inside:avoid}a{color:inherit}details{break-inside:avoid}}
+@media print{main{max-width:none;padding:0}body{font-size:9pt}nav{display:none}.table-scroll{overflow:visible;border:0}table,table.wide{min-width:0}th,td{min-width:0;padding:4px;overflow-wrap:anywhere}tr{break-inside:avoid}a{color:inherit}details{break-inside:avoid}}
 </style></head><body><main>''',
         '<h1>' + esc(request["title"]) + '</h1>',
         '<p>' + esc(request["purpose"]) + '</p>',
@@ -1610,6 +1611,29 @@ def save(workspace, selection, *, retained_analysis=None):
             "selected_ids": plan["selected_ids"], "union_summary": plan["summary"]}
 
 
+def _report_presentation(analysis, reference):
+    """Render the retained decision without changing its original saved report."""
+    body = _html(deepcopy(analysis))
+    marker = b'<nav aria-label="Report files">'
+    if body.count(marker) != 1:
+        raise ValueError("The maintained decision report navigation differs")
+    links = (marker + b'<a href="../index.html">Conservation portfolio and maps</a>'
+             b'<a href="index.html">Original saved decision report</a>')
+    body = body.replace(marker, links, 1)
+    presentation = {
+        "schema": "upstate.conservation-decision-presentation/v1",
+        "analysis_id": analysis["id"], "study_id": analysis["input"]["study_id"],
+        "implementation_sha256": file_digest(Path(__file__).resolve()),
+        "original_report": deepcopy(reference["files"]["report"]),
+        "report": {"path": "optimization/index-readable.html",
+                   "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest()},
+        "original_entrypoint": "optimization/index.html",
+        "entrypoint": "optimization/index-readable.html",
+        "interpretation": "Current presentation of the same retained analysis; original decision, scientific quantities and original report remain unchanged.",
+    }
+    return body, presentation
+
+
 def export(workspace, plan_id):
     """Export the original plan packet plus decision analysis and editable geography."""
     from . import conservation_decision_geography
@@ -1622,11 +1646,13 @@ def export(workspace, plan_id):
         raise ValueError("The analysis file identities differ from the saved plan")
     original = conservation.export_packet(workspace, plan["study_id"], plan["id"])
     path = verify_file(workspace.root, original)
+    report_body, presentation = _report_presentation(result["analysis"], reference)
     selection = {
         "version": VERSION, "plan_id": plan["id"], "study_id": plan["study_id"],
         "analysis_id": reference["analysis_id"], "analysis_files": reference["files"],
         "original_packet": {key: original[key] for key in ("path", "bytes", "sha256")},
         "decision_geography": conservation_decision_geography.implementation(),
+        "report_presentation": presentation,
     }
     key = digest(selection)
     directory = workspace.root / "conservation-exports" / key
@@ -1656,6 +1682,18 @@ def export(workspace, plan_id):
                               "joint-cells.csv": "joint-cells.csv", "joint-portfolios.csv": "joint-portfolios.csv",
                               "joint-candidates.csv": "joint-candidates.csv"}[name]
                     output.write(verify_file(workspace.root, item), "optimization/" + member)
+                output.writestr(presentation["entrypoint"], report_body)
+                output.writestr("optimization/PRESENTATION.json", canonical(presentation) + b"\n")
+                output.writestr("optimization/README.md", (
+                    "# Conservation decision\n\n"
+                    "Open [the readable decision report](index-readable.html). "
+                    "It presents this saved analysis with the current report layout.\n\n"
+                    "The [original report](index.html), [analysis JSON](analysis.json) "
+                    "and [complete candidate table](candidates.csv) retain the saved decision. "
+                    "The [portfolio and maps](../index.html) and "
+                    "[editable decision geography](geography/README.md) are included.\n\n"
+                    "Presentation identity and both report references are in PRESENTATION.json.\n"
+                ).encode("utf-8"))
                 for item in geography["files"]:
                     member_path = verify_file(geography_directory, item)
                     output.write(member_path, "optimization/geography/" + item["path"])
@@ -1663,6 +1701,7 @@ def export(workspace, plan_id):
                 output.writestr("optimization/REFERENCE.json", canonical({
                     "plan_id": plan["id"], "study_id": plan["study_id"],
                     "analysis": reference, "original_packet": original,
+                    "report_presentation": presentation,
                     "decision_geography": {
                         "entrypoint": "geography/README.md", "directory": "geography/",
                         "identity": geography["identity"], "files": geography["files"],
@@ -1677,7 +1716,9 @@ def export(workspace, plan_id):
             "kind": "conservation_decision_packet", "selection": selection,
             "plan_id": plan["id"], "study_id": plan["study_id"],
             "analysis_id": reference["analysis_id"], "created_at": now(),
-            "entrypoint": "index.html", "decision_entrypoint": "optimization/index.html",
+            "entrypoint": "index.html", "decision_entrypoint": presentation["entrypoint"],
+            "original_decision_entrypoint": presentation["original_entrypoint"],
+            "report_presentation": presentation,
             "decision_geography": "optimization/geography/decision-geography.gpkg",
             "decision_geography_files": geography["files"],
         }

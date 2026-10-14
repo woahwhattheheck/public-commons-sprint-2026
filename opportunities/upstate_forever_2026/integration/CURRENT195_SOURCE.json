@@ -1,0 +1,1018 @@
+{
+  "schema": "tjlabs.eco-current-source-composition/v1",
+  "operation": "ECO-CURRENT195-NATIVE-SOURCE-PUBLICATION-20261014",
+  "base_commit": "b900023e2d0e684e3279ede48ccb6009667dc72e",
+  "original_selected_files": 195,
+  "original_base_application": {
+    "bytes": 171556693,
+    "sha256": "8e739e73986dcd391f083cf81d588010519f28ff29eb060946d2c8cce6a8ab7d"
+  },
+  "original_bank": {
+    "bytes": 21197165,
+    "sha256": "02ce4e167ab663654f1d74d41e44d43454b095e2d2efb2e96a060533fd9ce9da"
+  },
+  "composition_notes": [
+    "Publishes the selected application bodies in their maintained source paths.",
+    "Preserves newer main model/study_transfer.py unreadable-source row handling and captured_at fallback.",
+    "Selects complete portable probe with actual EXT_SUFFIX, retaining raw SOABI and scientific source checks.",
+    "Updates current direction and consumed instruction pointers to approved59 actions.",
+    "Keeps active platform source owners; subsequent coherent runtime/session/receiver changes compose on this source."
+  ],
+  "files": [
+    {
+      "path": "opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md",
+      "bytes": 14306,
+      "sha256": "0cf8f6c134f6af6dba1d310bb290df7bdbc82f1aef6b81e592d05d916e271305"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/MEASUREMENT_LARGE_FILES_SOURCE.json",
+      "bytes": 97757,
+      "sha256": "b7af73b57322cd34b704d996b6d812df679eb22346b0f621e05f4b77cf6af4f9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/SCIENTIFIC_CATALOG.md",
+      "bytes": 13029,
+      "sha256": "6c27c740eb204a92451369ab440aa91012cef06753df6928005db62b0badc8cf"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/checks/client_source_mapping_check.mjs",
+      "bytes": 3072,
+      "sha256": "ff3a0f3378c7c9359d0e0fb428a0cfa0f8e97dcc5f93700a76747ff517d14271"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/engine.py",
+      "bytes": 17421,
+      "sha256": "ccfcf59cb7eb439e04d0e1d3349c50f493feaa132a0a747970ddea8b40a9c6f9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/profiling.py",
+      "bytes": 26160,
+      "sha256": "0e1e53ada0a92f347efe599a58fb39fdabd4b53497668c46dd8340ac1a488544"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/provider.py",
+      "bytes": 51220,
+      "sha256": "aca56e134d70790f6eaaae97164cfdef48ec962fc0156cc7e598fe7dae445ebc"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/report.py",
+      "bytes": 15391,
+      "sha256": "5c65bfecf88b447524610844d06cd6e2c7fb6acb0261e80713a3f13261f8d223"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/schemas.py",
+      "bytes": 2551,
+      "sha256": "3b1cd19fa8dd951fd3a5e83c5687d7181f7dc3af9e9ef2070d5af370d61bbd42"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/study_transfer.py",
+      "bytes": 40606,
+      "sha256": "b65c1ef29111d9a3e0691910c591de81b09b41b7d4331f76dc33e2a93dc96bf2"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/eco_intelligence/upstate.py",
+      "bytes": 58107,
+      "sha256": "96c5d55869926f1003413727d419de263c5b08d4d58c23215dfd5be55d36b7d7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/install_intelligence.py",
+      "bytes": 2674,
+      "sha256": "bab8bfcd3c8e3fde60f7ff66f7108c6bf1dafeadfdd3c64c9b6217ebf58273e8"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/install_intelligence_operator.py",
+      "bytes": 26435,
+      "sha256": "08bd3460391b1f64c99b96084ab5599db94992a5fa5bf617e565b0e0d7a6e131"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/install_measurement_large_files.py",
+      "bytes": 14890,
+      "sha256": "7c72d30117c326466f423284cb73d0f4acc29da69ac11bb4c7038cd2c06c7830"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/NATIVE_HTTPS_CONNECTOR.md",
+      "bytes": 18595,
+      "sha256": "7a12fbf90d16f536a8b009fd3495819397b593fee04fa0406a941bbfc04c890b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/REMOTE_BROWSER_TRANSPORT.md",
+      "bytes": 7267,
+      "sha256": "53270be0477d182b65755ea887f5e9f3a61211a91ea4709254471334a6852258"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/WORKBENCH_HTTPS_OPENING.md",
+      "bytes": 8753,
+      "sha256": "8b37d26c83d6ad134344ad1a3c433c6af21f9bf701fe7c651561d80d82982a08"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/WORKBENCH_HTTPS_ORIGIN.md",
+      "bytes": 5198,
+      "sha256": "3a280c455ccb7d48ba0ed0a047a817f4e0dbbefdd6b9ad16b1a357f4c52e5fc6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/measurement-chemistry.json",
+      "bytes": 2020,
+      "sha256": "458bd013766b1152a1245f41f0069f2510d1df217404e9e1cc2acf5ef25f1840"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/native-https-connector.json",
+      "bytes": 422,
+      "sha256": "1f6ecaa4290fb0f82ff6524ab727734449842ab6db598da4bd01f04ec479d764"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/native-runtime-capsule.json",
+      "bytes": 996,
+      "sha256": "96298cff6ba0059c8f435c1ba5791782f99df86d4b08631293a2a831df379e7c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/native-runtime-invocation.json",
+      "bytes": 544,
+      "sha256": "ffeb51822eb8f9c56e113428d5faf64b42bc6b352620433e936f374191c0f363"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/recipient-workbench-opening.json",
+      "bytes": 947,
+      "sha256": "9c8b1ff6a58b5c7f763c60b5668748f59f191ec33c80ca7d05e49dba41478dfe"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/remote-browser-transport.json",
+      "bytes": 512,
+      "sha256": "c74b0caef77ce647fcabbaf5f99e479e483897b4126ed627fb4fe4998b065161"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/sampling-design-comparison.json",
+      "bytes": 451,
+      "sha256": "20d6516d1598f59f26a66f543db5842153123c41f2a2db7c9e64a220bbba9bbc"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/temporal-analysis.json",
+      "bytes": 1316,
+      "sha256": "b42518ebd44dcf579720ec4077d1ce8afce7cba9321302cedbce6965a12fff27"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/workbench-advertised-origin.json",
+      "bytes": 627,
+      "sha256": "df75e15c676125278ebb4eec212fc2e09eac04eebdd5d60049e915b2bd7a6a52"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/workbench-https-opening.json",
+      "bytes": 674,
+      "sha256": "27601f794a9f7e091b4abff0263db3d97e516b6c8fa3360927090ceda7abf977"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/component_fragments/workbench-startup-guide.json",
+      "bytes": 1898,
+      "sha256": "067674b6fea40786c86421436479a33d6bb117320b37cedfdb91e337aa4c11e0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/integration/measurements/INSTALLATION.json",
+      "bytes": 149583,
+      "sha256": "f18911f255aeed2af57b4a34df9912089031c6b85d2e262774f2c3bc26f19624"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/NATIVE_OBSERVATION_SELECTION.md",
+      "bytes": 9574,
+      "sha256": "31039aa841ed0e36522b0054b40346bae407b5fb13960847dff590ced28c472c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/RUNTIME.md",
+      "bytes": 10904,
+      "sha256": "3918f43e8c248f1195d2c3dd81dba5a0ab39eb28ad92cea2efa3aab98b437bc6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/TEMPORAL_ANALYSIS.md",
+      "bytes": 17604,
+      "sha256": "87c576e5befa73833e30871053326da550a9836766d1936afcd709fedda2b925"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/TEMPORAL_COMPARISON.md",
+      "bytes": 10563,
+      "sha256": "b1b766c836376c909e042eea995e622768d17156987abfc32ba93aeaa00b93a8"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/WINDOWS_FILE_WORKFLOW.md",
+      "bytes": 8607,
+      "sha256": "fa30b4ea885f0d01f92eb6565d6254f924abe8aac4c7dd273190af557d73ecd3"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/WINDOWS_LONG_PATH_SUCCESSOR.md",
+      "bytes": 4884,
+      "sha256": "ee910f4ee6a761046168ffd8cbfc8816c211f70ea9e073f52f3f3b624083d6c6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/benchmark_workspace.mjs",
+      "bytes": 27315,
+      "sha256": "4172a85dfc85d47680e2ce76a890df7f8e80679e0fa82e4f0c097f3cd392f9be"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrient_cli.mjs",
+      "bytes": 3990,
+      "sha256": "915660b03a15ae2eb20a1931dda6bf0ed36837e0d160ed1f3afa9a2f8f0145cd"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrient_workspace.mjs",
+      "bytes": 5028,
+      "sha256": "921f80e6c51d9eb396a48ef3698bb5b75f1d871a1d3d021e06d82a3a179f48f0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/chiques_nutrients.mjs",
+      "bytes": 17933,
+      "sha256": "299716c171d93f6fe62b62a246e10b7f9fc1a248d26e3b146f11eb1d21c86bfb"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/collections.mjs",
+      "bytes": 17073,
+      "sha256": "2c2b8d2ae67c114671b482c6ae16c7994f9297b10586732d9f57d12ae64c74cd"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/eco_handover.mjs",
+      "bytes": 25398,
+      "sha256": "0244b2b0b00f250ef584ce38d428d15337f1455d4f6a2a82a7a07c9f1d77f8f6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/file_platform.mjs",
+      "bytes": 1570,
+      "sha256": "b26f1f4439095bb741383c962438a49156268519519189de59f808e8afe254cd"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/file_platform.py",
+      "bytes": 2419,
+      "sha256": "f3909573a5c119e169a62338ed18ebcf2843a6716870cddb38f08340fbf1d1b2"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/file_product.mjs",
+      "bytes": 1017,
+      "sha256": "05d2f8d7f3b0433b33ad705607baa8e833cc01a6c90702c5ff8d678d8ac99a68"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/handover_archive.py",
+      "bytes": 6185,
+      "sha256": "e931de5d3acffa8460a4c9ad7398cf2927548b5982734aece9e02e444bd8e48f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake-comparison-receiving.mjs",
+      "bytes": 11012,
+      "sha256": "83d6184fd2e1054591a69091e271141fd72009953d05af4924dbe731f4a7fc63"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake.mjs",
+      "bytes": 20771,
+      "sha256": "864f99f9b7ef4a106d8acb7ac2fa757021a19fa73f7b72fb96f2c2510e2aff50"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/intake_comparison.mjs",
+      "bytes": 6838,
+      "sha256": "6f8037838e33a8d2fc37ebbb545d89c4b0f196c9ed4e8d934e806a29c5f1397e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_archive.py",
+      "bytes": 7438,
+      "sha256": "8548482299c701bc04461c01cc4ba7746a8402bdfbe1bf5b5612b0b3236603fa"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_delivery.mjs",
+      "bytes": 32702,
+      "sha256": "fb6544512c93917033b31f374bd2be9276a4d563613dbed3a7f299b469b9e823"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/large_intake.mjs",
+      "bytes": 27152,
+      "sha256": "cd27095d822770c1acb823fdda6029f09762158cb5e097ca99000eb4221a5d59"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/native_observations.mjs",
+      "bytes": 3848,
+      "sha256": "05f0fc5af26400dcd716ec8b0a7d29556b0adb1b905eaefdbb3590e055133c42"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/normalise.mjs",
+      "bytes": 25256,
+      "sha256": "71790f9402d2dddb3c76d6f0bffca8cffaf7315ba386c6b5b48988b2e1c193dd"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/parse.mjs",
+      "bytes": 4341,
+      "sha256": "1b5316acd6bf865b39929753a17c06a2b867277190541f88bca92b065c752e88"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/sediment_workspace.mjs",
+      "bytes": 31137,
+      "sha256": "e4ae2d6af7fa6022cb5bd19c4e8a1e433d880e6fb8a8bf64ec1c2b5c1c74e55a"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback.mjs",
+      "bytes": 32443,
+      "sha256": "b4515381419217fd86386c43f565979b02203f20a04bfa1cc07f92f2c8c54c8f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_handback_core.mjs",
+      "bytes": 11553,
+      "sha256": "e5ba37d04bf407532103d0a717666d50220e04bd15945ba4e82d0cd786c2b36b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_lineage.mjs",
+      "bytes": 9343,
+      "sha256": "e2be6ccdcce15178ba9516cf44f8462bd1253cbcbcd812400ecbe3acb563ed01"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/source_workbook_returns.mjs",
+      "bytes": 9772,
+      "sha256": "0fe11794cfaca5a6a3554518ffad47bfd5d313cacedbfe3ae5db63c3614425ff"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/stream_csv.mjs",
+      "bytes": 2949,
+      "sha256": "0be1ca01d3309324b2c0bd1d9c660a95d05ccc042a6eb82e03d44cb3145fb5b7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/engine/workspace.mjs",
+      "bytes": 24587,
+      "sha256": "1b0571971af602cc79defd9280122ae2dc0464ca0e4d61301d771e4434990575"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/install_platform.py",
+      "bytes": 3550,
+      "sha256": "ee476bb36e2d95a36f5b7c3242cda58835cebb7f1cf6034c8569351063629eb1"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/node_runtime.py",
+      "bytes": 7345,
+      "sha256": "bdfd204162031b862d2821a7f8ed38d297e6b3d7ad27dade17af45c4ffb81b03"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/operator.py",
+      "bytes": 15926,
+      "sha256": "a4e4ae580d86a757c6dc988fe9bf916aca6257d6f0a9eb12595591ebbee7c015"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/temporal_analysis.py",
+      "bytes": 42660,
+      "sha256": "6969f7d4b8cbfe14ce791d1f3c0254ba85b16a0fb6c8ec7fa7f8b344a57c4b2c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/temporal_comparison.py",
+      "bytes": 28476,
+      "sha256": "d1aefda3fd278ed89f06d92d3e77ac4b777fca7ebbfa7044d640a96fd24cefc2"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/temporal_report.html",
+      "bytes": 29320,
+      "sha256": "8c7b571539ae4184949ea20f57800141d225b4d6dc3594bc6ad3c8f1ec39123b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/temporal_transfer.py",
+      "bytes": 5233,
+      "sha256": "8a9f754c676e82951e2fb6e67492ea3418cb6f34ea95b425d9b440f88aa8890e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/temporal_workspace.py",
+      "bytes": 16595,
+      "sha256": "c5fdc9db1b181e26faf87b0e85efb695276545e036137d4f29b9b903f437de67"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/measurement_workspace/web/intake.mjs",
+      "bytes": 29676,
+      "sha256": "96fdeb3d1a56eb005c26946f5722373083b83efe4a4ed431f0faf7c9f8ff8537"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/client_measurement_sources.py",
+      "bytes": 11477,
+      "sha256": "8b09959f9116ff7d9d3a1fdc213436c3c2bc373c90df941f9897fe02695c5bed"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/client_source_files.py",
+      "bytes": 22510,
+      "sha256": "b8e571677adb653f50a90f00dd847994d4f147573ed4cbb66987ac4a8db68e54"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/client_source_inspection_report.py",
+      "bytes": 27984,
+      "sha256": "10a0aa42150d8f43f8c7945f042dc8e5edf9330b0482ae76a606bbf1ee714618"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/client_source_recipe_portable.py",
+      "bytes": 29733,
+      "sha256": "4d223c0b03ec50128056f4be7329db87689f6d1e5f601e138735fd97f7be2c28"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/common.py",
+      "bytes": 15066,
+      "sha256": "145d79fa0a15badb70c3248ef60029d7b34e852d8db9bdfa29c71b96f760be1c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/conservation_optimization.py",
+      "bytes": 107842,
+      "sha256": "ae1b06329c4ef140250e32e2014f35c07b4b522f1440fac72eb91ed97aedf3cf"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/disturbance_report.html",
+      "bytes": 27314,
+      "sha256": "bfec5daad8cbfd3ae6912d5f245d9e17433c350fbf8a84bfa8ce29ad26a71b1c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/monitoring_campaign.py",
+      "bytes": 9541,
+      "sha256": "f13c16a899403251ef330f11640906a20e5f2466bfd52f9424e1a3166dab81d9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/monitoring_recommendations.py",
+      "bytes": 55414,
+      "sha256": "8f7b22751c78cf2781e92285cefebc759f5901736fac49e548943434a3ed5011"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/monitoring_sampling_comparison.py",
+      "bytes": 16480,
+      "sha256": "0031fa9cf6bfa0c400b8f5e1102116ea8448dbd5828fdf2ba9f952f0fde7c456"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/native_execution.py",
+      "bytes": 27876,
+      "sha256": "cdfb119d9547fa408ee6cc0eb28d74344d342b97112e35ae9a692c6ea1360ffc"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/observed_context.py",
+      "bytes": 26890,
+      "sha256": "8052e7f9c20ff519df8732119c4cfa4222ee40d1dcb607542649400c265bfc7f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/observed_report_render.py",
+      "bytes": 17955,
+      "sha256": "bbf1619278dca65c712a570c311cdbf83e8e6d67330c392ee4627993bfcd29f7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/paired_ensemble/ensemble_store.py",
+      "bytes": 7919,
+      "sha256": "2ebb4db3aa932e3fcd504c0949edb1fa3cbdfa93ba489eb0c586af2335eb38c9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/parameter_views.py",
+      "bytes": 11136,
+      "sha256": "eac14b19597c63d97b45baf2eb3733b24f511e1ad346a146db7397e7ed54ff1a"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/portable.py",
+      "bytes": 67875,
+      "sha256": "cdb697bfb11948451ba70374b1364788c1fc6859c0c09f23305fd8c0c04eca07"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/portable_databases.py",
+      "bytes": 8351,
+      "sha256": "fe667593b909f2979c5cd8c2e8bbe7a7d9971f8a62796a5a5360e933ade94576"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/retained_download.py",
+      "bytes": 22897,
+      "sha256": "d50ad6397320482a5a0679b0d996df7be2edb0ff05ed8f376903b1fef55b309e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/reuse.py",
+      "bytes": 9290,
+      "sha256": "1d4524f7d1f5133f2c5bbf7a076af36efa67298c73dfe8004b58398cc91b944c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/robust_decisions/SOURCE_MANIFEST.json",
+      "bytes": 4365,
+      "sha256": "8ca880018f5e857e3f7de2453845d2a6bf75c6b82f38b2223c58f002b7e9495d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/robust_decisions/eco_robust/operations.py",
+      "bytes": 7811,
+      "sha256": "8c18949edc2b71744760180a5a78680ff59b77824b0772a6c6815cbdef282e14"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/scenario_mask_sources.py",
+      "bytes": 3162,
+      "sha256": "b82ac984e2b27dc17a2516174b38541eaca1715715237b5450e6d4c0594b87e6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/scientific_report.py",
+      "bytes": 85035,
+      "sha256": "444f36f3df4c2ecc7ab8d77d4d9aab4020ad96f6f37011f387466cfc55424955"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/scientific_report_capture.py",
+      "bytes": 15705,
+      "sha256": "07b249bbe5727f267227a9d4a895b3ad1d5c44a10e14e781dc38ea0451236616"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/scientific_report_editions.py",
+      "bytes": 12919,
+      "sha256": "3b1989c0174314a6392e30d0d10dbbc8ad1e89a33ef23c2832aed1404dfcebb4"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/scientific_report_study_transfer.py",
+      "bytes": 16760,
+      "sha256": "1648e6a759df083e8c5e04f1f9bd430d6ad45655345e4369f5688f4723119356"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/staged_transport.py",
+      "bytes": 23690,
+      "sha256": "81d352123f9ceff2e646d718eb8dd089bf678b0a7f1d3a161b2ab10ce25d0fd3"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/study_transfer.py",
+      "bytes": 87928,
+      "sha256": "d51d1402c7be3248565882d49f22a1179998f8da22a123ca9341e8b5c2d2bb46"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/verified_files.py",
+      "bytes": 7294,
+      "sha256": "5922edfcec6d687f98963256425f0cb04cd356864efbf2aae6fcc4923b9c90b7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/windows_fs.py",
+      "bytes": 6862,
+      "sha256": "7bf6bf9095f4bc1823099d79b8bdad835f2808d8d407b0d165c6771d77422880"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/model/workspace.py",
+      "bytes": 28079,
+      "sha256": "2cfac44a7d724560481a24ceb109b35be4ff3e467c74a9078698ee237a9157c4"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/CLIENT_SOURCE_INTAKE.md",
+      "bytes": 18061,
+      "sha256": "bd85d7d36239913da8c2c252d29ab75cb0d484b647a4b9791e6e847b7991efb9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/CONSERVATION_REPORT_PRESENTATION.md",
+      "bytes": 17939,
+      "sha256": "aeceefc23e898b70fd5a20a2414fdc1e5cc96518bbc326bf82fda51b236af593"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/INPUT_LINEAGE.md",
+      "bytes": 18616,
+      "sha256": "bacf5d18b055ad9d06429efc04006ec5a0e3f41d5c7237603cfbc84b77fed048"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/MEASUREMENTS_INSTALLATION.md",
+      "bytes": 17471,
+      "sha256": "0cbdc256d11b4b456637716939e5c735f99238639611acb1de14c9cc476661b8"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/README.md",
+      "bytes": 22613,
+      "sha256": "eaa022f3ef0bc2be10b4803d1e362b9aee02d291b1692e3cc841743a1f1638a9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/STARTUP_GUIDE.md",
+      "bytes": 20531,
+      "sha256": "2e259716b3a849708a634677882caeb9904df8d4e6bda451e0b16e26cec5c9be"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/WORKBENCH_API.md",
+      "bytes": 33902,
+      "sha256": "6f319e3e366cdd0ecf782b1990244e13b97a53eb1806249ceab07a85e8db2b11"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/WORKBOOK_MEASUREMENTS.md",
+      "bytes": 12316,
+      "sha256": "5d13466d0cb82612e2255908c77ee11f209703bf386d900d7ecdc06623f424ee"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/client_measurement_sources.py",
+      "bytes": 19983,
+      "sha256": "42b86a1ef750bbf2bfcbbb2c4d9ca4c74963fcd37e87fce9c8cf62b2b88425c3"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/client_source_intake.py",
+      "bytes": 24667,
+      "sha256": "70466ba29e06e304f2f34e41e88cdb83c2a0a372e291a68b8ae3a9957c680660"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/client-source-intake.json",
+      "bytes": 1964,
+      "sha256": "77c577192ef20057c0301854c9fdab9583641198ed5218652d3d7e69a1d6331f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/investigations.json",
+      "bytes": 5178,
+      "sha256": "84cb08c9c76ad5318fb8ce5cd3cd59f81bbe529ed562478e3979a2c931ff264b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/monitoring-recommendations.json",
+      "bytes": 1900,
+      "sha256": "8ed1733ffb3a1fe43cc305f851a8160035ee35dda1cd5536b99c251eb7494f41"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/remote-transport.json",
+      "bytes": 183,
+      "sha256": "b1fecf0c9703fdaec6f58fea8c3f1ca99b92dfdd90d0753726dde0165e5ad0de"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/scientific-inspection.json",
+      "bytes": 265,
+      "sha256": "b6f419d1e4289473c0aae0efe0e614ad73966ab5c14e3cb11b686bb22f5179ba"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/temporal-analysis.json",
+      "bytes": 2647,
+      "sha256": "69d5307a409910ea6eb8696df597ca493311ffc1ea13a11e17a679d823f879db"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/extensions/workbench-api.json",
+      "bytes": 593,
+      "sha256": "9594fa842f32fb6c6f3aa4f4a228c3876decc9c6e813782acde379494e4b77e6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/install_measurements.py",
+      "bytes": 13062,
+      "sha256": "b8159ddec5873a014bbc26803b4b4eaf6842562f40cbbe3cc5c2deeda4d49e3b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/intelligence.py",
+      "bytes": 51672,
+      "sha256": "7337d86645c9ffb8da520b5a0823ca942e2303700041ecdbd399194360a6cec3"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/intelligence_diagnostic_entry.py",
+      "bytes": 14073,
+      "sha256": "9b914716d18cddd8c911b72ccb26424c7ec2413b335c96a7c39dd1aa5f877718"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/intelligence_lineage.py",
+      "bytes": 8609,
+      "sha256": "a67d1df7e59de07a628b291a18c318001176f2d69358de5a5babaaacef829ec0"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/monitoring_recommendations.py",
+      "bytes": 11279,
+      "sha256": "4f9ac3989d38f8f4d28186b0cbff0b4d2f5a8c1670f1f687ae80b10bcb515476"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/origin_policy.py",
+      "bytes": 4280,
+      "sha256": "0c624fbe80362bcbcc055cdea011c8cd501f8ea6ebe3827afc9dd1621214f959"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/science_catalog.py",
+      "bytes": 24513,
+      "sha256": "8fb8efaaa75aae54e7afa726bde3a628603c66e429da681b0011d4ca8c974bf5"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/server.py",
+      "bytes": 98576,
+      "sha256": "a755e24edcc2edd67f7b8618f919351e89b50aa764c3c6010ad789a6c02f0f4b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/temporal_analysis_provider.py",
+      "bytes": 13596,
+      "sha256": "f3da4e3cf7baeb4a6b237845d11b4d98ab304e762294982ba9ec88e121306172"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/app.mjs",
+      "bytes": 181700,
+      "sha256": "3a57e23d727fcfd2ccf5d99abc59405b9997d57dea0eb16f428799a0c6fb8256"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/client_measurement_sources.mjs",
+      "bytes": 15800,
+      "sha256": "c903f4cd5845f836ef2254ded07aaeba16d5e25b066feb311e972ea7eca5aca5"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/client_source_intake.css",
+      "bytes": 4030,
+      "sha256": "42259b7df1219eaca411559ff7d23c6eaae38c6ae12e7567f2253a632c8d0b34"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/client_source_intake.mjs",
+      "bytes": 63315,
+      "sha256": "f2ca000523cafa3b041c16bdb432e0fbbff0e53602bbd5d469cd87bb8180a91f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/client_source_mapping.mjs",
+      "bytes": 6848,
+      "sha256": "5419be173999a141ba82679a340b7600c49144c927d775235f1d477e044fd3f8"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/community.mjs",
+      "bytes": 111885,
+      "sha256": "083fd70acdedc8446c6375c41b88608088abd4bb7f6109575bda8afa83498cf7"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/community_report_handover.mjs",
+      "bytes": 12281,
+      "sha256": "a9979ecc3739d808e4d1848c8be33e9a0dc691a5fadc9049ae22f6306cb813d9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/community_revisions.mjs",
+      "bytes": 20634,
+      "sha256": "3f4639f7301b3420070e6a67fc85b78ec1488f8b9ef2f7b0461e5d42535ffa8d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/disturbance_studies.css",
+      "bytes": 2189,
+      "sha256": "2e8267fd5bc2611e953fd01a1c82aa72252660d28786f9c2007b3165456ad815"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/disturbance_studies.mjs",
+      "bytes": 20235,
+      "sha256": "40e4fd2c472d3007f1ac5016626934cd31aec6270889a6d1bfb10a4f58f4fe75"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/ensemble_received_studies.mjs",
+      "bytes": 5140,
+      "sha256": "d92ff96ee1dda6530a5efa8a9a3f8287766888ac7363f0ad8a67a1030e80fbb3"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/extensions/study_transfer.mjs",
+      "bytes": 59790,
+      "sha256": "fc177bdaac67a2e56cdcfdada9b38a123fcdae1e0c9d963664b4ac4750a59265"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/gauge_received_studies.mjs",
+      "bytes": 6589,
+      "sha256": "02a8969971eb49d028539bbc6bde9e39df1b62f25d0d5883290355277a831dee"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/index.html",
+      "bytes": 5305,
+      "sha256": "903eaead195c29ce301759dd149baae3fecb15c4203b084ad21dbdaafe514416"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/investigation_lineage.mjs",
+      "bytes": 14557,
+      "sha256": "f3ba230434a11a7016a608c199effa4f944c3e1d6ec536d7d32b7100d1254032"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/investigations.mjs",
+      "bytes": 90239,
+      "sha256": "d38f2fba30171b8645122a63f2e0375f1c90759719676736933895dd7465095c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/measured_native_observations.mjs",
+      "bytes": 10940,
+      "sha256": "35a7a70bbbdb616f3219ed22d4d109be07fc84c57a1174b752a7eee45fc278dd"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/measured_observations_extension.mjs",
+      "bytes": 13891,
+      "sha256": "a0d83269b7dfc74a8353095b1a4ea9568e4a409d423000b19898140a49082e13"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/monitoring_recommendations.mjs",
+      "bytes": 87868,
+      "sha256": "5156bec32999f5e145be70f7d4f234d44b15af11057dbb6dcaef019f6382c855"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/monitoring_sampling_comparison.mjs",
+      "bytes": 7227,
+      "sha256": "bc705c13ae52e497c0f8db23a9544fe8842b7bdf30e265eaeed0933f02b977f6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/remote_transport.mjs",
+      "bytes": 16680,
+      "sha256": "fc57071d9a7a422c227ac9cb183b2baeefe0c38472989ef9119ebc06a957721c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/scenario_input_review.mjs",
+      "bytes": 7552,
+      "sha256": "6bf58501f2118772469aca56fc4f157530173aadabd37c4d4702fcff67726c47"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/scientific_inspection.mjs",
+      "bytes": 30461,
+      "sha256": "6d35a6ddbbbb672b8b7735aa54c84c4f858fad7490388c74c38327c21a7c9d5e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/source_inspection_summary.mjs",
+      "bytes": 13166,
+      "sha256": "cb0aaca98719e6bd9e33c697c5eb87aab976423efb72a8f390030c50229e7fdf"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/startup_guide.css",
+      "bytes": 2419,
+      "sha256": "0c8e63e06ab7c6ca0d002fa111947cff966eaa00422aa52d3cc26180f0417f15"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/startup_guide.mjs",
+      "bytes": 14860,
+      "sha256": "7a1ffcb8704b768885fce17383c40cce189e011224320d1b4307b7da7f09a297"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/style.css",
+      "bytes": 28279,
+      "sha256": "6339bcac35b0e4ceb163b4fe5ed462b325670951e3301f7ff04f9c2f8e085d4e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/temporal_analysis.css",
+      "bytes": 2634,
+      "sha256": "182019a4afb29ab1ae6660a947a695483cb835030a4a45898d72cccd5d44c65b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/temporal_analysis.mjs",
+      "bytes": 28657,
+      "sha256": "e655eca1c234178809bd4060558a6b2b4c30511ea6aeacafbd2591bb3ba85bc6"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/web/temporal_comparison.mjs",
+      "bytes": 14772,
+      "sha256": "03e576ba22dcd7a01dd8510ce08b692859b7889bd90d5329efdc2bd9c72cbcbf"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/workbench_api.py",
+      "bytes": 11772,
+      "sha256": "2f6e4b0de0758b47747078e3156bf22a8282bfe2461ffc7d8f6034fbb03d9df5"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/operator/workbench_client.py",
+      "bytes": 26120,
+      "sha256": "3dd8d14659999eabd6557ea8d679a456ddeb963b413346ed0d90539ac26ba878"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/receiving/eco_intelligence/receive_input_lineage.mjs",
+      "bytes": 10611,
+      "sha256": "c2890796c77698d7d99b0d84d3eabb08e4d68931ee2d39363117f4312cc70c74"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/receiving/eco_intelligence/receive_input_lineage.py",
+      "bytes": 9853,
+      "sha256": "054f8d643b0ec20271c7109bc75cba09de4ab05fb494015923e771444c48fd84"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/requirements-intelligence.txt",
+      "bytes": 247,
+      "sha256": "561df37cbe5658556c987ba39479a843aeda129541fc80200adc67762ac7e8e5"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/science_catalog_delivery.py",
+      "bytes": 33924,
+      "sha256": "00e8f44ab2ddb81daf9c9f7b8d8734ae8719fce72dfd2f2be8c7bef6b6da807b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source/NATIVE_OBSERVATIONS_SAMPLING.md",
+      "bytes": 29752,
+      "sha256": "0d3b752d91962968fecef39fe6fa8be7fb097771965aed5b354b714da27ec085"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source/install_robust_workbench.py",
+      "bytes": 184334,
+      "sha256": "192a48f1e693519d9ee917ffc4c58053d74ff9c5a172e74d8518f7514ba4311d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/CLIENT_SOURCE_INSPECTION_REPORT.md",
+      "bytes": 8503,
+      "sha256": "c8b32b6538cdd42ca568d0e71d5540175d1a1ee714ea8f8fc1e9b66e28ba005b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/NATIVE_INVOCATION.md",
+      "bytes": 5190,
+      "sha256": "ed985409105ba693ce439187bcf2ef3dd2919330d7f1a366803997a581ece7f1"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/NATIVE_RUNTIME.md",
+      "bytes": 15659,
+      "sha256": "6ad172c1916957dbdaf4b38429c6c36daa473e4d7effa77061177c830b82ef71"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/OPEN_RECEIVED_WORKBENCH.md",
+      "bytes": 12496,
+      "sha256": "2acf3b7e64c613a5aee08c51b3383a2aa70d455a91d156e179c68620671ee8e9"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/Open_Workbench.cmd",
+      "bytes": 2159,
+      "sha256": "8db71f5571f8b0822ec748d7fd5a21736f942e6c7e12c26de9fbc143e1994f0e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/Open_Workbench.sh",
+      "bytes": 4703,
+      "sha256": "5c6017224d2786799b9bacff1ea9105641bc4cc50d7cfd36cb56f73892488136"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/Open_Workbench_WSL.cmd",
+      "bytes": 1707,
+      "sha256": "7673b122ec7bf124bb7a476e9fe4eba7175face7bbd1040831d12883639a9261"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/SAVED_SOURCE_REFERENCE_RECEIVING.md",
+      "bytes": 7782,
+      "sha256": "0908f230979ccf6f6b16fcad6e6e8acb33ff8caf645270da3096467dace89d68"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/WORKBENCH_OPENING_RECEIVING.md",
+      "bytes": 28744,
+      "sha256": "b581f4109ebf4d0cae72350dba47f93e8245c7565042fbeffae4856e56cf31ab"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/eco_native_connector.py",
+      "bytes": 51786,
+      "sha256": "eae15cb3d83704ae8d76bfa6f1b2ab3ce45f4cfc2043aa1351b7f1df18d93d93"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/exercise_temporal_comparison.py",
+      "bytes": 4641,
+      "sha256": "1dcbc5caf394e7d79f8b98e2093012ec93e7d8d30f63943dff69648a565d36cf"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/native_runtime/__init__.py",
+      "bytes": 116,
+      "sha256": "b61db01945acd670583bd334de317380727efc99b5649d6579d70b52f067f09d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/native_runtime/__main__.py",
+      "bytes": 7333,
+      "sha256": "c9c795e3022dd10c789522241a393c771f850248faa801370455b37ec51ff5db"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/native_runtime/capsule.py",
+      "bytes": 37970,
+      "sha256": "7e083b536416a164e6d4aa29565a8a577bb7e0348e8e257901be294275e62e6f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/native_runtime/invocation.py",
+      "bytes": 4833,
+      "sha256": "0783d7f993514fec997d88e9ec3c6fc51aae342d1185f687e1b451f86bd7f8b1"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/native_runtime/probe.py",
+      "bytes": 8806,
+      "sha256": "e9d15eaca92a7cd1ca0fdfbd7ea4d7580857cbd6724ce0d3c1fdcf322b693a67"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/native_runtime/transport.py",
+      "bytes": 12735,
+      "sha256": "a076aad40876d307ca5eddc49b2f17d156efa4531c729b96bfc31b6166ea294c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/open_received_study.py",
+      "bytes": 340,
+      "sha256": "9c6bc8e9b218fc1aea6be6e0d449148584647d9f27eb95909552c394189adb0f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/open_windows_browser.py",
+      "bytes": 1668,
+      "sha256": "ab113c3d3df3fea4807a66080b3d5b3e7a8f0ede1a1e28fa7a54d633acc8d87b"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/open_workbench_windows.py",
+      "bytes": 5698,
+      "sha256": "1a32dcc8bc8251a164a31b77e2057cf26eb6c78959d53a84da39ac42d722f03f"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/open_workbench_wsl.sh",
+      "bytes": 471,
+      "sha256": "9314879e4289a9af7f860209bede0ceebb9bc3efed1b505e33b3d138f52212fb"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/prepare_recipient_opening.py",
+      "bytes": 5455,
+      "sha256": "309bb04680b6ace0cad80d3f9af0f3c9cb719bb693fe970f57f63aa04c3e079c"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/receive_native_runtime.py",
+      "bytes": 17771,
+      "sha256": "01c0ab5d2fd173244afbb25f11ed9bba3498774097ec6910a1e501859c712764"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/receive_saved_source_reference.py",
+      "bytes": 25588,
+      "sha256": "b6daad2960cf4b909a2aecd524b2530a9a213ab67ab46eb18790ded55db30a36"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/receive_workbook_measurements.mjs",
+      "bytes": 12460,
+      "sha256": "04da744a6dbf476f38fc4d6306732477c3b39ad0034bcb846789885546ae1326"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/workbench_session.py",
+      "bytes": 30650,
+      "sha256": "98cde0040217e3f0c5078d11b7a644f6c8be1c4d8367d5477ad71e1bdad37e6d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/source_tools/workbench_transport.py",
+      "bytes": 17210,
+      "sha256": "c617576a93c3a60659143b2e5e106714d0b9387e3918487e3f1019ae73f93631"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/tests/test_native_runtime_workflows.py",
+      "bytes": 14521,
+      "sha256": "869ee3919ada42da44769811e4c7c5ddafc2ec112ea92a7c7f5e71d017f2a81d"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/tests/test_workbench_session.py",
+      "bytes": 9160,
+      "sha256": "0966c305c01b8c48c3ef3d2bbad8071533de92d54cff52c5fabdeb3003fe296a"
+    },
+    {
+      "path": "AGENTS.md",
+      "bytes": 8075,
+      "sha256": "332d04f049016c859d53f543473be1f95e8ce0c6de6090f0333eba93d209dc11"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/AGENTS.md",
+      "bytes": 8139,
+      "sha256": "511ff86d641c46897494fb4c456dcc8987d833b216bacead7f7a5a631be8e398"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/CLAUDE.md",
+      "bytes": 8353,
+      "sha256": "67423c4f4740e622b45731e383aa0aad6f452d32613c3a127e8aeafed91e6b1e"
+    },
+    {
+      "path": "opportunities/upstate_forever_2026/GEMINI.md",
+      "bytes": 8353,
+      "sha256": "67423c4f4740e622b45731e383aa0aad6f452d32613c3a127e8aeafed91e6b1e"
+    }
+  ]
+}

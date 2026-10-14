@@ -59,7 +59,7 @@ TOOLS=[tool('inspect','Compute complete-population evidence from tenant-register
 def project(value, limit=3000):
     serialized=dumps(value)
     if len(serialized)<=limit: return value
-    return {'id':value.get('id'), 'complete_characters':len(serialized), 'page':serialized[:limit],
+    return {'id':value.get('id') if isinstance(value,dict) else None, 'complete_characters':len(serialized), 'page':serialized[:limit],
             'next_offset':limit,'note':'Transport page, not statistical sampling. Use evidence_page for subsequent original characters.'}
 
 def inventory_page(evidence, offset=0):
@@ -79,6 +79,29 @@ def inventory_page(evidence, offset=0):
             'offset':offset,'next_offset':end if end<len(rows) else None,'total_references':len(rows),
             'note':'Reference transport page. Full original inventory and scientific records remain retained; inspect a selected reference before making findings.'}
 
+def reviewed_source_result(evidence):
+    """Scope transport context while retaining both original JSON result schemas."""
+    result = evidence.get('result')
+    if not isinstance(result, dict):
+        return result
+    value_key = {'structured_json': 'data', 'json': 'value'}.get(result.get('format'))
+    data = result.get(value_key) if value_key else None
+    if not isinstance(data, dict) or data.get('schema') != 'upstate.client-source-selection/v1':
+        return result
+    native = next(iter(evidence.get('sources', [])), {}).get('metadata', {}).get('source', {})
+    choice = native.get('client_source', {}).get('selection', {})
+    fi, pi = choice.get('file_index'), choice.get('part_index')
+    if type(fi) is not int or fi < 0 or type(pi) is not int or pi < 0:
+        return result
+    originals = data.get('originals', [])
+    return {**result, value_key: {**data,
+        'selections': [row for row in data.get('selections', [])
+                       if row.get('file_index') == fi and row.get('part_index') == pi],
+        'originals': originals[fi:fi + 1]},
+        'transport_scope': {'original_file_index': fi, 'original_part_index': pi,
+            'note': 'Selected original file/worksheet context. The complete unchanged review document remains in this evidence object.'}}
+
+
 def evidence_context(evidence, limit=3000):
     operation=evidence.get('operation',{})
     if operation.get('operation')=='inventory':return inventory_page(evidence)
@@ -96,17 +119,7 @@ def evidence_context(evidence, limit=3000):
         item['meaning']=meaning;sources.append(item)
     # The original complete evidence is stored before projection. Literal row
     # pages are separate from complete-population statistical profiles.
-    result=evidence.get('result')
-    if isinstance(result,dict) and result.get('format')=='structured_json' and result.get('data',{}).get('schema')=='upstate.client-source-selection/v1':
-        native=next(iter(evidence.get('sources',[])),{}).get('metadata',{}).get('source',{})
-        choice=native.get('client_source',{}).get('selection',{})
-        data=result['data'];fi,pi=choice.get('file_index'),choice.get('part_index')
-        if type(fi) is int and type(pi) is int:
-            originals=data.get('originals',[])
-            result={**result,'data':{**data,'selections':[row for row in data.get('selections',[])
-                if row.get('file_index')==fi and row.get('part_index')==pi],
-                'originals':originals[fi:fi+1]},'transport_scope':{'original_file_index':fi,'original_part_index':pi,
-                'note':'Selected original file/worksheet context. The complete unchanged review document remains in this evidence object.'}}
+    result=reviewed_source_result(evidence)
     compact={'id':evidence['id'],'operation':operation,'sources':sources,'result':result,
              'complete_evidence_available':'Use evidence_page with this ID for every original metadata/result character.'}
     if len(dumps(compact))<=limit:return compact
@@ -175,9 +188,13 @@ def focused_context(base, initial_results):
     for request, value in initial_results:
         item={'id':value['id'],'operation':request.operation}
         if request.ref is not None: item['ref']=request.ref.model_dump(exclude_none=True)
-        result=value.get('result',{})
+        result=reviewed_source_result(value) or {}
         if request.operation=='table_rows': item['literal_record_page']=project(result,1200)
-        elif result.get('format')=='structured_json': item['reviewed_source_metadata']=project(result.get('data'),1600)
+        elif result.get('format') in {'structured_json','json'}:
+            value_key = 'data' if result['format'] == 'structured_json' else 'value'
+            item['reviewed_source_metadata']=project(result.get(value_key),1600)
+            if result.get('transport_scope') is not None:
+                item['transport_scope']=result['transport_scope']
         evidence.append(item)
     return [*base,{'role':'assistant','content':dumps({'retained_original_evidence':evidence,
         'full_original_context':'Every complete original result and metadata object remains available through evidence_page. Qualifier meanings require the supplied dictionary.'})}]

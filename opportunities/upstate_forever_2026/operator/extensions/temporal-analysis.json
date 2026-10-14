@@ -1,0 +1,129 @@
+{
+  "schema": "upstate.operator-extension/v1",
+  "id": "temporal-analysis",
+  "title": "Monitoring change",
+  "version": "1.2.0",
+  "order": 47,
+  "assets": [
+    "temporal_analysis.mjs",
+    "temporal_analysis.css",
+    "temporal_comparison.mjs"
+  ],
+  "backend": {
+    "module": "temporal_analysis_provider",
+    "factory": {
+      "handler": "TemporalAnalysisProvider",
+      "args": [
+        "operator",
+        "fault"
+      ]
+    },
+    "actions": [
+      "temporal.analysis.build",
+      "temporal.analysis.receive",
+      "temporal.analysis.observations",
+      "temporal.comparison.build",
+      "temporal.comparison.receive"
+    ],
+    "invoke": {
+      "handler": "invoke",
+      "args": [
+        "task"
+      ]
+    },
+    "routes": [
+      {
+        "methods": [
+          "GET",
+          "POST"
+        ],
+        "path": "/api/temporal-analysis/catalog",
+        "operation": "catalog",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/temporal-analysis/edition",
+        "operation": "edition",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/temporal-analysis/observation",
+        "operation": "observation",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/temporal-analysis/comparison",
+        "operation": "comparison",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      }
+    ],
+    "state": {
+      "key": "temporal_analyses",
+      "handler": "state",
+      "args": [
+        "workspace_key"
+      ]
+    },
+    "decorate_task": {
+      "handler": "decorate_task",
+      "args": [
+        "task"
+      ]
+    }
+  },
+  "client": {
+    "module": "/web/temporal_analysis.mjs",
+    "factory": "createTemporalAnalysis",
+    "requires": [
+      "api",
+      "getState",
+      "getWorkspace",
+      "refresh",
+      "toast",
+      "showTask",
+      "navigate"
+    ],
+    "styles": [
+      "/web/temporal_analysis.css"
+    ],
+    "view": {
+      "id": "temporal-analysis",
+      "title": "Monitoring change",
+      "after": "published-studies"
+    },
+    "lifecycle": {
+      "mount": "mount",
+      "update": "update",
+      "detach": "detach"
+    }
+  }
+}

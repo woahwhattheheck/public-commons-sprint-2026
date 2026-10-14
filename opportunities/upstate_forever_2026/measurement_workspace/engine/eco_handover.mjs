@@ -12,6 +12,7 @@ import {listCollections,readEdition} from './collections.mjs';
 import {resultSourceSelection} from './result_handback.mjs';
 import {hash,stable} from './normalise.mjs';
 import {InputError} from './parse.mjs';
+import {syncDirectory as syncDir} from './file_platform.mjs';
 import {CHUNK,identifier,safePath,readJSON,fileDigest,fileChunks,copyVerified,withDirectoryLock,atomicJSON} from './large_io.mjs';
 
 export const HANDOVER_SCHEMA='upper-savannah-measurements-handover/v1';
@@ -23,7 +24,6 @@ const fail=(message,status=400)=>{throw new InputError(message,status);};
 const need=(condition,message,status=400)=>{if(!condition)fail(message,status);};
 const helper=name=>fileURLToPath(new URL(name,import.meta.url));
 function python(name,...args){return JSON.parse(execFileSync(process.env.MEASUREMENTS_PYTHON||'python3',[helper(name),...args],{encoding:'utf8',maxBuffer:64*1024*1024,stdio:['ignore','pipe','pipe']}));}
-function syncDir(directory){const fd=fs.openSync(directory,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}}
 function durableDir(directory){
  directory=path.resolve(directory);
  if(fs.existsSync(directory)){const st=fs.lstatSync(directory);need(st.isDirectory()&&!st.isSymbolicLink(),'Use an ordinary handover directory');syncDir(directory);syncDir(path.dirname(directory));return;}
@@ -31,7 +31,7 @@ function durableDir(directory){
 }
 function publish(file,bytes){
  bytes=Buffer.from(bytes);durableDir(path.dirname(file));
- if(fs.existsSync(file)){need(fs.lstatSync(file).isFile()&&!fs.lstatSync(file).isSymbolicLink()&&fs.readFileSync(file).equals(bytes),'Retained handover file differs',409);const fd=fs.openSync(file,'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}syncDir(path.dirname(file));return;}
+ if(fs.existsSync(file)){need(fs.lstatSync(file).isFile()&&!fs.lstatSync(file).isSymbolicLink()&&fs.readFileSync(file).equals(bytes),'Retained handover file differs',409);const fd=fs.openSync(file,process.platform==='win32'?'r+':'r');try{fs.fsyncSync(fd);}finally{fs.closeSync(fd);}syncDir(path.dirname(file));return;}
  const temporary=file+'.'+randomUUID()+'.pending';let fd;
  try{fd=fs.openSync(temporary,'wx',0o600);fs.writeFileSync(fd,bytes);fs.fsyncSync(fd);fs.closeSync(fd);fd=undefined;
   try{fs.linkSync(temporary,file);}catch(error){if(error.code!=='EEXIST'||!fs.readFileSync(file).equals(bytes))throw error;}syncDir(path.dirname(file));

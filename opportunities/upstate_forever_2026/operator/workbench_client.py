@@ -326,6 +326,34 @@ class WorkbenchClient:
 def readable(value):
     if isinstance(value, dict) and "action" in value and "state" in value:
         lines = [f"Operation: {value['action']}", f"State: {value['state']}", f"Task: {value.get('id', '')}"]
+        if value.get("action") == "intelligence.ask":
+            progress = value.get("provider_wait")
+            if isinstance(progress, dict):
+                message = progress.get("message")
+                phase = progress.get("phase")
+                if isinstance(message, str) and message:
+                    lines.append("Assistant: " + message)
+                elif isinstance(phase, str) and phase:
+                    lines.append("Assistant: " + phase.replace("_", " "))
+                turn, maximum = progress.get("round"), progress.get("max_rounds")
+                if type(turn) is int and type(maximum) is int and 0 < turn <= maximum:
+                    lines.append(f"Provider round: {turn} of {maximum}")
+                attempt = progress.get("attempt")
+                if type(attempt) is int and attempt > 0:
+                    lines.append(f"Provider attempt: {attempt}")
+                elapsed = progress.get("elapsed_seconds")
+                if type(elapsed) in (int, float) and 0 <= elapsed < float("inf"):
+                    lines.append(f"Elapsed in phase: {elapsed:.1f}s")
+                status = progress.get("http_status")
+                if type(status) is int and 100 <= status <= 599:
+                    lines.append(f"Provider HTTP status: {status}")
+                retry_after = progress.get("retry_after_seconds")
+                if type(retry_after) in (int, float) and 0 <= retry_after < float("inf"):
+                    lines.append(f"Provider retry interval: {retry_after:g}s")
+            if value.get("cancel_requested") and value.get("state") in ACTIVE:
+                lines.append("Cancellation: requested; waiting for the task to finish stopping.")
+            elif value.get("state") == "cancelled":
+                lines.append("Cancellation: stopped; the original question is retained.")
         result = value.get("result") or {}
         if result.get("title"):
             lines.append("Result: " + str(result["title"]))

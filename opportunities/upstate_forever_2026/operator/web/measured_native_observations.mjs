@@ -3,7 +3,7 @@ const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const copy=v=>JSON.parse(JSON.stringify(v));
 const num=v=>Number(v??0).toLocaleString();
 function download(name,value){const a=document.createElement('a'),u=URL.createObjectURL(new Blob([JSON.stringify(value,null,2)+'\n'],{type:'application/json'}));a.href=u;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),10000);}
-export function mountNativeObservations(host,{request,openMonitoring}={}){
+export function mountNativeObservations(host,{request,openMonitoring,openObservation}={}){
  if(!(host instanceof Element)||typeof request!=='function')throw TypeError('Use the original native Measurements host');
  const controller=new AbortController(),signal=controller.signal;
  let dead=false,busy=false,catalogue={imports:[],handoffs:[]},selection={import_id:'',title:'',value_policy:'retained-canonical-context'},preview=null,saved=null;
@@ -28,7 +28,7 @@ export function mountNativeObservations(host,{request,openMonitoring}={}){
  }
  function renderSaved(){
   const box=host.querySelector('[data-native-saved]');if(!box)return;if(!saved){box.innerHTML='';return;}
-  box.innerHTML='<h3>'+esc(saved.title)+'</h3><p>'+num(saved.observation.rows)+' original occurrences retained in native observations; '+num(saved.observation.admitted_count)+' admitted annual loads.</p><p>Open Monitoring change and select this title under <strong>Analyze your imported measurements</strong>. Its exact native observation ID is retained below. The original temporal calculation remains a separate explicit operation.</p><div class="mw-buttons">'+(typeof openMonitoring==='function'?'<button type="button" data-native-act="monitoring">Open Monitoring change</button>':'')+'<button type="button" data-native-act="export">Complete original source and native observation JSON</button><button type="button" data-native-act="selection">Download original temporal interpretation</button></div><details><summary>Retained native identities and interpretation</summary><pre>'+esc(JSON.stringify(saved,null,2))+'</pre></details>';controls();
+  box.innerHTML='<h3>'+esc(saved.title)+'</h3><p>'+num(saved.observation.rows)+' original occurrences retained in native observations; '+num(saved.observation.admitted_count)+' admitted annual loads.</p><p>'+(typeof openMonitoring==='function'?'Open this exact saved observation in Monitoring change, review its original interpretation and current analysis filters, then explicitly start the calculation.':'Open Monitoring change and select this title under <strong>Analyze your imported measurements</strong>. Its exact native observation ID is retained below.')+'</p><div class="mw-buttons">'+(typeof openMonitoring==='function'?'<button type="button" data-native-act="monitoring">Review this observation in Monitoring change</button>':'')+(typeof openObservation==='function'?'<button type="button" data-native-act="observation">Review original observation and exports</button>':'')+'<button type="button" data-native-act="export">Complete original source and native observation JSON</button><button type="button" data-native-act="selection">Download original temporal interpretation</button></div><details><summary>Retained native identities and interpretation</summary><pre>'+esc(JSON.stringify(saved,null,2))+'</pre></details>';controls();
  }
  host.addEventListener('change',e=>{if(e.target.name==='source'){capture();const item=catalogue.imports.find(r=>r.id===selection.import_id);selection.title=item?.label||'';const title=host.querySelector('[name=title]');if(title)title.value=selection.title;changed();}},{signal});
  host.addEventListener('input',e=>{if(e.target.name==='title')changed();},{signal});
@@ -48,7 +48,15 @@ export function mountNativeObservations(host,{request,openMonitoring}={}){
    if(act==='export'){const r=await request('export',{id:saved.id});if(dead)return;download('measurement-native-context-'+saved.id.slice(0,12)+'.json',r);}
    if(act==='selection')download('monitoring-original-interpretation.json',saved.temporal_selection);
    if(act==='preview-json')download('measurement-native-preview.json',preview);
-   if(act==='monitoring')openMonitoring();
+   if(act==='observation'){
+    if(!saved?.observation_id||saved.observation_id!==saved.observation?.id||!/^[a-f0-9]{64}$/.test(saved.observation_id))throw Error('The retained handoff observation identity is incomplete.');
+    if(typeof openObservation!=='function')throw Error('The original observation review is unavailable in this host.');
+    await openObservation(saved.observation_id);
+   }
+   if(act==='monitoring'){
+    if(!saved?.observation_id||saved.observation_id!==saved.observation?.id||saved.observation_id!==saved.temporal_selection?.observation_id)throw Error('The retained handoff observation identity is incomplete.');
+    await openMonitoring(copy(saved.temporal_selection));
+   }
   });
  },{signal});
  render();task(async()=>{await refresh();if(dead)return;render();message('Choose an original Measurements import, inspect its mapping, then retain native context explicitly.');});

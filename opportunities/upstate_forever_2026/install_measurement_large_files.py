@@ -3,7 +3,6 @@
 from __future__ import annotations
 import argparse
 import ast
-import fcntl
 import hashlib
 import json
 import os
@@ -23,7 +22,7 @@ def digest(data):
 
 def member(root, name):
     if (not isinstance(name, str) or not name or "\\" in name
-            or name.startswith("/") or any(x in {"", ".", ".."} for x in name.split("/"))):
+            or ":" in name or name.startswith("/") or any(x in {"", ".", ".."} for x in name.split("/"))):
         raise ValueError("Expected an application-relative source member")
     target = root / name
     if not target.resolve().is_relative_to(root.resolve()):
@@ -121,7 +120,9 @@ def select_sources(source):
     return inventory, rows, bodies, approved, authority, raw
 
 
-def atomic(path, data):
+def atomic(path, data, *, platform=None):
+    if platform is not None and platform.windows is not None:
+        return platform.replace_windows(path, data)
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = None
     try:
@@ -160,11 +161,27 @@ def install(application, source_root=None, *, standalone=False, dry_run=False):
     if source == root or source.is_relative_to(root):
         raise ValueError("Stage the complete source outside the receiving application")
     inventory, rows, bodies, approved, authority, manifest_raw = select_sources(source)
+    if "measurement_workspace/node_runtime.py" not in bodies:
+        raise ValueError("Retain the complete Measurements runtime selection source.")
+    import types
+    runtime_path = member(source, "measurement_workspace/node_runtime.py")
+    runtime_module = types.ModuleType("_upstate_measurements_node_runtime")
+    runtime_module.__file__ = str(runtime_path)
+    exec(compile(bodies["measurement_workspace/node_runtime.py"],
+                 str(runtime_path), "exec"), runtime_module.__dict__)
+    runtime = runtime_module.inspect_node()
+    platform_relative = "measurement_workspace/install_platform.py"
+    if platform_relative not in bodies:
+        raise ValueError("Retain the complete Measurements installer platform source.")
+    platform_module = types.ModuleType("_upstate_measurements_install_platform")
+    platform_module.__file__ = str(member(source, platform_relative))
+    exec(compile(bodies[platform_relative], platform_module.__file__, "exec"),
+         platform_module.__dict__)
+    install_files = platform_module.InstallerFiles(bodies, source)
     lockpath = member(root, LOCK)
     lockpath.parent.mkdir(parents=True, exist_ok=True)
-    # The registered installer uses this same path and POSIX lease.
-    with lockpath.open("a+") as lock:
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    # Both installers retain the same original platform lease through rollback.
+    with install_files.held(lockpath):
         previous_raw = read(root, MANIFEST, optional=True)
         previous = json.loads(previous_raw) if previous_raw is not None else {}
         if previous and previous.get("format") != inventory["format"]:
@@ -211,7 +228,7 @@ def install(application, source_root=None, *, standalone=False, dry_run=False):
         result = {
             "format": "upper-savannah-measurement-large-install/v1", "version": VERSION,
             "application": str(root), "standalone": True, "dry_run": dry_run,
-            "source_inventory": authority, "source_files": len(bodies),
+            "source_inventory": authority, "source_files": len(bodies), "runtime": runtime,
             "created": sorted(n for n in prepared if before[n] is None),
             "upgraded": sorted(n for n in prepared if before[n] is not None),
             "reused": sorted(reused), "preserved": [],
@@ -229,7 +246,7 @@ def install(application, source_root=None, *, standalone=False, dry_run=False):
             backup = member(saved, "before/" + name)
             prior = read(saved, "before/" + name, optional=True)
             if prior is None:
-                atomic(backup, old)
+                atomic(backup, old, platform=install_files)
             elif prior != old:
                 selected = prepared.get(name, bodies.get(name, manifest_body))
                 if old != selected:
@@ -246,9 +263,10 @@ def install(application, source_root=None, *, standalone=False, dry_run=False):
                 if read(root, name, optional=True) != before[name]:
                     raise ValueError("Source changed during installation: " + name)
                 committed.append(name)
-                atomic(target, prepared[name])
+                atomic(target, prepared[name], platform=install_files)
             result["state"] = "installed"
-            atomic(member(saved, "installation.json"), (json.dumps(result, indent=2) + "\n").encode("utf-8"))
+            atomic(member(saved, "installation.json"), (json.dumps(result, indent=2) + "\n").encode("utf-8"),
+                   platform=install_files)
             return result
         except BaseException as failure:
             conflicts = []
@@ -264,7 +282,7 @@ def install(application, source_root=None, *, standalone=False, dry_run=False):
                     if before[name] is None:
                         target.unlink()
                     else:
-                        atomic(target, before[name])
+                        atomic(target, before[name], platform=install_files)
                 except (OSError, ValueError):
                     conflicts.append(name)
             if conflicts:

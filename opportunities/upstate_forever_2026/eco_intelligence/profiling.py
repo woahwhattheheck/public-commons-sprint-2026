@@ -125,7 +125,15 @@ def reviewed_records(path: Path, reading: dict) -> Iterator[dict[str, Any]]:
                 from .common import public_metadata
                 original_fields = headers(values)
                 if original_fields != retained and public_metadata(original_fields) != retained:
-                    raise IntelligenceError('The original table header differs from its retained inspection.', 409)
+                    # Earlier retained previews used stored Excel header values.
+                    # Reconcile only an exact legacy spelling from this verified
+                    # worksheet; preserve its saved column keys for later joins.
+                    stored = record.get('stored_values')
+                    stored_fields = headers(stored) if isinstance(stored, (list, tuple)) else None
+                    if (stored_fields is None or
+                            (stored_fields != retained and public_metadata(stored_fields) != retained)):
+                        raise IntelligenceError('The original table header differs from its retained inspection.', 409)
+                    original_fields = stored_fields
                 # Registry metadata sanitizes URL-like labels. Recover their exact
                 # original spelling from the verified file for scientific results.
                 reading['fields'] = original_fields
@@ -145,6 +153,11 @@ def reviewed_records(path: Path, reading: dict) -> Iterator[dict[str, Any]]:
                     key: record['cell_metadata'][index]
                     for index, key in enumerate(reading['column_keys'])
                     if index < len(record['cell_metadata'])}
+            if 'stored_values' in record:
+                position['stored_values'] = {
+                    key: scalar(record['stored_values'][index])
+                    for index, key in enumerate(reading['column_keys'])
+                    if index < len(record['stored_values'])}
             yield {'cells': cells, 'source_row': position}
         if not found_header:
             raise IntelligenceError('The selected original header row is absent.', 409)
@@ -184,7 +197,7 @@ def table_page(path: Path, offset: int, limit: int, reading: dict | None = None)
             'offset': offset, 'rows': page, 'complete_page': True,
             'next_offset': offset + len(page) if more else None,
             **({'selected_reading': reading, 'original_rows': positions} if reviewed else {}),
-            'interpretation': 'Original literal cells and reviewed source positions. Excel cell type and number_format are retained where available; displayed identifier formatting requires the explicit retained Measurements projection. This page is not a statistical sample or a substituted numeric measurement.'}
+            'interpretation': 'Original literal cells and reviewed source positions. Excel integer identifiers with all-zero formats retain displayed leading zeros; original_rows preserves stored_values, cell type and number_format where available. Other number formats do not round or convert stored quantities. This page is not a statistical sample or a substituted numeric measurement.'}
 
 
 def rows(path: Path, reading: dict | None = None) -> Iterator[dict[str, Any]]:

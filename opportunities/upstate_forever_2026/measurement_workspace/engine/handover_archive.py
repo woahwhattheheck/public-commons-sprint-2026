@@ -4,14 +4,13 @@ from __future__ import annotations
 import argparse, hashlib, json, os, shutil, stat, tempfile, zipfile
 from pathlib import Path
 from large_archive import CHUNK, relative, digest
+from file_platform import sync_directory
 
 FORMAT = 'upper-savannah-measurements-handover-files/v1'
 MANIFEST = 'HANDOVER_MANIFEST.json'
 
 def sync(directory):
-    fd = os.open(directory, os.O_RDONLY)
-    try: os.fsync(fd)
-    finally: os.close(fd)
+    return sync_directory(directory)
 
 def mkdir(directory):
     directory = Path(directory).absolute()
@@ -50,7 +49,7 @@ def pack(source, output):
                 if digest(source / row['path']) != {k: row[k] for k in ('bytes', 'sha256')}:
                     raise ValueError('Original member changed during packaging')
             z.writestr(MANIFEST, json.dumps(manifest, ensure_ascii=False, separators=(',', ':')) + '\n')
-        with temporary.open('rb') as f: os.fsync(f.fileno())
+        with temporary.open('r+b') as f: os.fsync(f.fileno())
         os.link(temporary, output); sync(output.parent)
     finally: temporary.unlink(missing_ok=True)
     return {'manifest': manifest, **digest(output)}

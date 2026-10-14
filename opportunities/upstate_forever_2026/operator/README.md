@@ -1,3 +1,7 @@
+## Current Windows and Mac implementation
+
+Read CURRENT_OWNER_DIRECTION.md version `2026-10-14.1` and its complete approved59-action list. Complete one native Windows x64/macOS Intel/macOS Apple Silicon workbench with shared application/data, all seven original workspaces,82 retained runs and reliable real opening routes. Full scientific startup and the existing operation/session lifecycle remain required. Final usable private delivery goes to Bryce at brycembusiness2@gmail.com. Earlier pre-call, code-only and installed-Python notes below are historical and are superseded for this release. Preserve actual visual use, active owners and focused validation.
+
 # Upper Savannah scientific operator
 
 This operator connects the original scientific workspace to a local browser. It covers source intake, parameter profiles, model grids, explicit land-cover scenarios, native NDR/SDR runs, observed-load comparisons, seven-map delivery, full backup and receiving.
@@ -135,17 +139,35 @@ Raster cell size follows the original land-cover reference. Spatial land-cover l
 Open **Manage team access** in the sidebar to assign administrators and project viewers/analysts. The complete operating and receiving guide is [TEAM_ACCESS.md](TEAM_ACCESS.md). Keep the operator-state directory outside application source and every scientific workspace.
 
 
+## First opening and recipient handover
+
+Use **Quick guide** in the top bar for the four short cards beside the actual workspace, original-source, native-run and working-handover controls. Dismissal is saved in this browser for the current person and original project; the control reopens the guidance. Scientific selections, original values and model methods remain available in the ordinary desks.
+
+The complete Linux receiving package can include `Open_Workbench.sh` beside its original `application/`, `workspace/` and supplied `runtime/`. The producing assembly uses `source_tools/prepare_recipient_opening.py` to copy that exact maintained wrapper. It delegates to `source_tools/open_received_study.py` and its existing authenticated session reuse. The complete Win32-compatible application can include primary `Open_Workbench.cmd` with `--include-windows`; it uses the installed Windows Python 3.12 and the same maintained session helper in `--plain` mode. An optional `Open_Workbench_WSL.cmd` remains separate and is supplied only for verified existing WSL recipients. See `source_tools/WORKBENCH_OPENING_RECEIVING.md` and `source_tools/OPEN_RECEIVED_WORKBENCH.md` for the same original receiving course.
+
 ## Current owner work order carried with this operating guide
 
-The complete maintained brief below is `../CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.3`, original Git body `8cd1c1f3d371a2fb75471813844e31f489aa8272`. Read the complete application `AGENTS.md` with this guide; its standing rendered-product and all-attachment instruction travels with the application. Keep active computations on their original process and adopt source updates at their ordinary finished source boundary.
+The complete maintained brief below is `../CURRENT_OWNER_DIRECTION.md`, version `2026-10-13.4`, original Git body `bf68e73cc2819cfc807c40d3015644f3b8699e38`. Read the complete application `AGENTS.md` with this guide. Current direct owner guidance of October 13 at 21:19–21:20 UTC requests the entire working application and at most four short dismissible UI cards beside the actual controls. The producing worker must open, operate and personally view the actual outgoing application and every attachment at desktop and narrow widths. Keep active computations on their original process and adopt source updates at their ordinary finished source boundary. Private source and method custody and the owner's prohibition on paid Cloudflare hosting remain in force.
 
 # Current owner direction: Ecosystem Sciences demonstration
 
-Version: `2026-10-13.3`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build without arbitrary feature/scenario caps. Preserve today's cutoff: **October 13, 2026, 10:00 a.m. Eastern / 14:00 UTC**. Do not pause work or extend the sprint.
+Version: `2026-10-13.4`. Owner: Bryce / TokenJunkieLabs. Direction for the Upper Savannah application, demonstration, presentation and work orders. Continue the broad build and finish as much of the existing Eco science application as possible before Bryce's call. Bryce renewed this work directly at **October 13, 2026, 10:46 a.m. Eastern / 14:46 UTC**, after the earlier 10 a.m. preservation checkpoint. Resume the existing unfinished work from its actual saved state and preserve completed outputs, active processes and original implementation ownership.
 
-## Current project instructions
+## Direct owner instructions
 
-Execute the prepared simulated model and deliver a relevant, usable application and presentation that demonstrate the actual work and elapsed delivery time. Continue active work while checking progress. Carry the current demonstration, presentation and Ecosystem instructions through the existing coordination surfaces and onward to participating workers.
+Latest direct instruction, October 13 at 10:46 a.m. Eastern:
+
+> Get as much of eco science done with the fleet as possible before my call. Try to get it finished its possible im throwing shit ton of agents just get it done
+
+This current instruction supersedes the earlier 10 a.m. Eco work cutoff. Prior cutoff records remain historical evidence. Coordinate at the existing Eco thread, reconcile actual issued handles, complete unfinished integration and native receiving, and publish usable durable handoffs in the existing application. Preserve the distinction between the sender's completed runs and the runs actually included in a received Study. Existing workers keep their current operations; additional workers clear complementary blockers. The recorded call remains unchanged; this direction schedules no meeting or automation and authorizes no client message.
+
+> do the simulated model
+
+> just make sure that what we put infront of him is something he would need and want and he will be blown away how relevant it is to him and how he wants it,a nd also the speed we produced it
+
+> just checking dont pause anythi g
+
+> and make sure wherever the fleet is coordinating in slack or github or wherever on this demo / presentation / ecosystem gets that update toand passes it along to other agents because the feed may be moving fast
 
 ## Build for an experienced scientific practice
 
@@ -175,6 +197,6 @@ If producing video, record the actual working application and use available natu
 
 ## Carry this direction with the work
 
-Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.3` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
+Pass this complete brief into every current child, provider and cloud work order and handoff. Include its durable path and version `2026-10-13.4` with the next result. Relay it at the actual coordination surface and onward to participating workers; fast feeds can bury an update. Acknowledgment alone is not delivery.
 
 Preserve active compute and existing implementation ownership. Do not force worker restarts, drop an active run or create a new controller. Keep lab attribution, source/copyright, incident and contact controls, personal-meeting approval, no private GitHub/Actions, no llama.cpp and focused internal validation. No new approval gate or broad test sweep is authorized.

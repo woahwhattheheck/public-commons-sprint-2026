@@ -26,7 +26,15 @@
         "integration/measurements/INSTALLATION.json",
         "operator/MEASUREMENTS_INSTALLATION.md",
         "CURRENT_OWNER_DIRECTION.md",
-        "measurement_workspace/observation_edition_source.py"
+        "measurement_workspace/observation_edition_source.py",
+        "measurement_workspace/node_runtime.py",
+        "measurement_workspace/RUNTIME.md",
+        "measurement_workspace/install_platform.py",
+        "model/windows_fs.py",
+        "measurement_workspace/engine/file_platform.mjs",
+        "measurement_workspace/engine/file_platform.py",
+        "measurement_workspace/WINDOWS_FILE_WORKFLOW.md",
+        "measurement_workspace/WINDOWS_LONG_PATH_SUCCESSOR.md"
       ],
       "requires": [
         "measurement-collections",

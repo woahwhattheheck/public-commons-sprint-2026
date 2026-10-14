@@ -119,7 +119,8 @@ def _load(workspace, capture_id, *, verify=True, bind=True):
         previous = seen.setdefault(name, descriptor)
         if previous != descriptor:
             raise ValueError("Captured report roles disagree about an original file.")
-    if bind and observed_context.bind(workspace, identity["selection"]) != identity["binding"]:
+    if bind and not observed_context.same_retained_binding(
+            observed_context.bind(workspace, identity["selection"]), identity["binding"]):
         raise ValueError("The original captured report sources changed.")
     return {"directory": directory, "capture_id": capture_id, "capture": capture,
             "capture_text": capture_text, "capture_file": captured,

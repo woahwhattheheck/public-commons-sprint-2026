@@ -50,6 +50,22 @@ def environment(prefix=None, offline=False):
         prefix = Path(prefix)
         env["PATH"] = str(prefix / "bin") + os.pathsep + env.get("PATH", "")
         env["CONDA_PREFIX"] = str(prefix)
+        # The received Measurements Node uses this qualified runtime's C++/GCC
+        # libraries after relocation, including through the ordinary opener.
+        if (sys.platform == "linux" and (prefix / "bin" / "node").is_file()
+                and (prefix / "lib").is_dir()):
+            libraries = str(prefix / "lib")
+            inherited = env.get("LD_LIBRARY_PATH", "")
+            env["LD_LIBRARY_PATH"] = libraries + (os.pathsep + inherited if inherited else "")
+        # Preserve explicit trust configuration while relocating the supplied CA bundle.
+        certificates = prefix / "ssl/cert.pem"
+        if "SSL_CERT_FILE" not in env and certificates.is_file():
+            import ssl
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            context.load_verify_locations(cafile=str(certificates))
+            if not context.cert_store_stats()["x509_ca"]:
+                raise ValueError("The supplied relocated trust store contains no certificate authorities.")
+            env["SSL_CERT_FILE"] = str(certificates)
     return env
 
 
