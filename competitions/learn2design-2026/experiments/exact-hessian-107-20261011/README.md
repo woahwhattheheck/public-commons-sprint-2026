@@ -158,3 +158,12 @@ source selections. The existing operator runs nine-cell development and thirty-c
 broad public phases with a fresh original Objective per cell. The same guide covers
 whole topology partitions, actual result recovery, full-budget continuation and
 packaging the exact selected mode through `release_selected.py`.
+
+## Compare directly with the original096 incumbent
+
+The complete [incumbent comparison course](incumbent-comparison/README.md)
+adds the exact original096 source and genuine measured requirements to the
+existing selector. Twelve-cell development and forty-cell broad phases pair
+all three recovery modes with096 on fresh original Objectives. Four complete
+selected ZIPs, original v7 source/history bindings, current-validator commands
+and the twenty-cell full-budget incumbent continuation are included.

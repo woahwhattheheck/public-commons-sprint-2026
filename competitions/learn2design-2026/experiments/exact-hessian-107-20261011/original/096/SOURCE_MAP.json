@@ -1,0 +1,213 @@
+{
+  "schema": "commons.source-map/v1",
+  "operation": "L2D-INCUMBENT096-NATIVE-COMPARISON-20261014",
+  "carrier_commit": "bd563a855fe5b5d2b52e6f4820acb3e435f8b953",
+  "origin_directory": "competitions/learn2design-2026/experiments/sol-budgeted-restarts-20261011",
+  "origin_manifest": {
+    "path": "SOURCE-MANIFEST.json",
+    "bytes": 2289,
+    "sha256": "d6a30617eef369e83616d14fcdacc1e8a548e5bb2bb9708e6ed578670a95863e"
+  },
+  "source": {
+    "path": "submission.py",
+    "bytes": 6722,
+    "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+  },
+  "requirements": {
+    "path": "requirements.txt",
+    "bytes": 42,
+    "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+  },
+  "retained_v7": {
+    "original_zip": {
+      "slack_file": "F0C90E363N2",
+      "base64_carrier": "F0C8WUQRGJF",
+      "bytes": 47238,
+      "sha256": "11214c66481a4a4bcf6c4a25804b094855c01378b6e78c23cb06b5864c5ef8eb",
+      "kernel_id": 138115140,
+      "explicit_version": 7
+    },
+    "members": [
+      {
+        "path": "original/096/retained-v7/materialized-sources.json",
+        "bytes": 1447,
+        "sha256": "ccb1617b87230762fa40f66782488c84ce53040c23ca16aeeeaafdd27b2496f4"
+      },
+      {
+        "path": "original/096/retained-v7/environment.json",
+        "bytes": 636,
+        "sha256": "c916fa0bd1a5fe2b878dfc20be361757aeec55cf59fbf2d6403c01fb8d50fd06"
+      },
+      {
+        "path": "original/096/retained-v7/096_t10_s42_180s.json",
+        "bytes": 12446,
+        "sha256": "b34dbc950bdec5169ec2570efdb7cacab462020ab19c7f0874653e0f1b9ada85"
+      },
+      {
+        "path": "original/096/retained-v7/096_t11_s42_180s.json",
+        "bytes": 11972,
+        "sha256": "c83f5eb349185df90fe6d487efdb253c9ee1435bcd517f924116a24f1e6dd66c"
+      },
+      {
+        "path": "original/096/retained-v7/096_t12_s42_180s.json",
+        "bytes": 11532,
+        "sha256": "9369ad18b16631c7c6a85c497be609bea52968befabb76f132a93789a0b6d533"
+      }
+    ],
+    "actual_cells": [
+      {
+        "original_member": "results099pairs/096_t10_s42_180s.json",
+        "report_sha256": "b34dbc950bdec5169ec2570efdb7cacab462020ab19c7f0874653e0f1b9ada85",
+        "cell": {
+          "algorithm_seed": 42,
+          "max_time_s": 180,
+          "population_size_override": null,
+          "problem": "UIFOProblem",
+          "save_tokens": [
+            "batched_loss",
+            "is_feasible",
+            "batched_is_feasible",
+            "sensitivity_loss",
+            "batched_sensitivity_loss"
+          ],
+          "topology_seed": 10
+        },
+        "candidate_before": {
+          "bytes": 6722,
+          "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f",
+          "path": "submission096.py",
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "candidate_after": {
+          "bytes": 6722,
+          "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f",
+          "path": "submission096.py",
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "runner": {
+          "bytes": 18510,
+          "git_blob_sha1": "a16a2d62f71c61fcbdfb229d52f47baf9b95b547",
+          "path": "/kaggle/working/run_public_uifo.py",
+          "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+        },
+        "algorithm_str": "tjlabs_staged_trust_portfolio_096",
+        "constructor_adapter": null,
+        "requirements": {
+          "bytes": 42,
+          "git_blob_sha1": "7243ff0bc7a3bd0fc9d62761963fd53ecd7eaab2",
+          "path": "requirements.txt",
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null
+      },
+      {
+        "original_member": "results099pairs/096_t11_s42_180s.json",
+        "report_sha256": "c83f5eb349185df90fe6d487efdb253c9ee1435bcd517f924116a24f1e6dd66c",
+        "cell": {
+          "algorithm_seed": 42,
+          "max_time_s": 180,
+          "population_size_override": null,
+          "problem": "UIFOProblem",
+          "save_tokens": [
+            "batched_loss",
+            "is_feasible",
+            "batched_is_feasible",
+            "sensitivity_loss",
+            "batched_sensitivity_loss"
+          ],
+          "topology_seed": 11
+        },
+        "candidate_before": {
+          "bytes": 6722,
+          "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f",
+          "path": "submission096.py",
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "candidate_after": {
+          "bytes": 6722,
+          "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f",
+          "path": "submission096.py",
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "runner": {
+          "bytes": 18510,
+          "git_blob_sha1": "a16a2d62f71c61fcbdfb229d52f47baf9b95b547",
+          "path": "/kaggle/working/run_public_uifo.py",
+          "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+        },
+        "algorithm_str": "tjlabs_staged_trust_portfolio_096",
+        "constructor_adapter": null,
+        "requirements": {
+          "bytes": 42,
+          "git_blob_sha1": "7243ff0bc7a3bd0fc9d62761963fd53ecd7eaab2",
+          "path": "requirements.txt",
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null
+      },
+      {
+        "original_member": "results099pairs/096_t12_s42_180s.json",
+        "report_sha256": "9369ad18b16631c7c6a85c497be609bea52968befabb76f132a93789a0b6d533",
+        "cell": {
+          "algorithm_seed": 42,
+          "max_time_s": 180,
+          "population_size_override": null,
+          "problem": "UIFOProblem",
+          "save_tokens": [
+            "batched_loss",
+            "is_feasible",
+            "batched_is_feasible",
+            "sensitivity_loss",
+            "batched_sensitivity_loss"
+          ],
+          "topology_seed": 12
+        },
+        "candidate_before": {
+          "bytes": 6722,
+          "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f",
+          "path": "submission096.py",
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "candidate_after": {
+          "bytes": 6722,
+          "git_blob_sha1": "430862ec6b3d3b069ffb9d0259b1bf0ba942959f",
+          "path": "submission096.py",
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "runner": {
+          "bytes": 18510,
+          "git_blob_sha1": "a16a2d62f71c61fcbdfb229d52f47baf9b95b547",
+          "path": "/kaggle/working/run_public_uifo.py",
+          "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+        },
+        "algorithm_str": "tjlabs_staged_trust_portfolio_096",
+        "constructor_adapter": null,
+        "requirements": {
+          "bytes": 42,
+          "git_blob_sha1": "7243ff0bc7a3bd0fc9d62761963fd53ecd7eaab2",
+          "path": "requirements.txt",
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null
+      }
+    ]
+  },
+  "native_invocation": {
+    "source_id": "096",
+    "optimize_kwargs": {},
+    "diagnostic_expectations": [
+      {
+        "path": [
+          "algorithm_str"
+        ],
+        "equals": "tjlabs_staged_trust_portfolio_096"
+      }
+    ],
+    "population_size_override": null
+  },
+  "dependency_interpretation": "Keep original requirements exactly. Native comparisons run in the same equipped environment; current actual Optax/JAX/dfbench versions and device settings are captured per run. Original v7 environment records Optax0.2.8. The official evaluator supplies its fixed core package versions.",
+  "comparison_policy": "Original v7 histories remain original evidence; they are not relabelled as new source-bound phase reports."
+}

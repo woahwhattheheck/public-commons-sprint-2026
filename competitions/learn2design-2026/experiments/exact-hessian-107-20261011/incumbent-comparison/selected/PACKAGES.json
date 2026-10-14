@@ -1,0 +1,150 @@
+{
+  "schema": "tjlabs.l2d.selected-source-packages/v1",
+  "operation": "L2D-INCUMBENT096-NATIVE-COMPARISON-20261014",
+  "source_manifest_sha256": "d309868d053fa83df3d8aeb3f0871e508228a33f14308840cf003bb243215a1e",
+  "packages": [
+    {
+      "filename": "099-prefeasible-off-regional-selected.zip",
+      "bytes": 8620,
+      "sha256": "5a50e784ac140b32b0aa9cf4dcc309c0fa014f0f1af6e10a3c042201d187b8ae",
+      "source_id": "099-prefeasible-off-regional",
+      "arm_sha256": "a28ee2e123471a18fb48f2d2f756faf6e5680969af437f5cd99c9ee1d9a3dd4f",
+      "members": [
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 21232,
+          "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 27,
+          "sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a"
+        },
+        {
+          "path": "submission.py",
+          "bytes": 1470,
+          "sha256": "ab3d3dde2d63aec50135c9f54a3fc244ae0e5016062266671e22334fa7763771"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 2362,
+          "sha256": "baf2621737a7ebd01d6f2fc39f420d862ab712902d2680d7e79e3efdd1a05c89"
+        }
+      ]
+    },
+    {
+      "filename": "099-prefeasible-restart-regional-selected.zip",
+      "bytes": 8620,
+      "sha256": "289bc53b757ebe244f0cc83af3df0d86766e4736dd1193e51c2010d50d65dea8",
+      "source_id": "099-prefeasible-restart-regional",
+      "arm_sha256": "6e131e2702403a31c241d53221f4abc8b4e74326a31e220267b0af5f578f3b0c",
+      "members": [
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 21232,
+          "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 27,
+          "sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a"
+        },
+        {
+          "path": "submission.py",
+          "bytes": 1478,
+          "sha256": "b5328d68cc2812dfbc2c3efd6ea9ab5074ae8a1e7033674064817e3d7c78b120"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 2374,
+          "sha256": "054f804d626ba88b67befa78c1d814b54f1acb3a68f3572cdb9ef884474b4e3b"
+        }
+      ]
+    },
+    {
+      "filename": "099-prefeasible-restart-penalty-regional-selected.zip",
+      "bytes": 8639,
+      "sha256": "3d1e2a974716924e1ea96f5356335c4c2a0fcf5d690f10ce8a673992aeee886a",
+      "source_id": "099-prefeasible-restart-penalty-regional",
+      "arm_sha256": "5d8b4f63b54b96815348858c19f41ba73a9b2bbfc3522a8fef6185222b2cf205",
+      "members": [
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 21232,
+          "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 27,
+          "sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a"
+        },
+        {
+          "path": "submission.py",
+          "bytes": 1494,
+          "sha256": "855f556c270c410ff7494f5c2577793355eaf79db576ee909e697873d26cb4ea"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 2398,
+          "sha256": "e23baae51ff21d6a693f6cb3e80b52fd5a8d9892ba28643a210918bd30cde04c"
+        }
+      ]
+    },
+    {
+      "filename": "096-selected.zip",
+      "bytes": 4886,
+      "sha256": "dd37acb8a1f80142bf725336e8fd677ff062e939d35d1b257b44dae38873b387",
+      "source_id": "096",
+      "arm_sha256": "8f7e95f6fdc60327b0aca253328146c3ffe8bc7e77e059ad1cde81650745f6ce",
+      "members": [
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 42,
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        {
+          "path": "submission.py",
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 1941,
+          "sha256": "a52fe4b56651a7a6673a2cb26562058f59ba52df3e18111fe47d1839f9598e15"
+        }
+      ]
+    }
+  ],
+  "generation": "V8 retained UZIP encoder with exact entrypoint and payload composition from unchanged release_selected.py. All four ZIPs were reopened and all twenty members matched their original payload bytes.",
+  "native_receiving": "Use the current official static validator on each actual ZIP and the original source-bound native phases. The maintained packager attaches actual completed phase outputs to its external release report.",
+  "previous_packages": {
+    "source_commit": "bd563a855fe5b5d2b52e6f4820acb3e435f8b953",
+    "path": "../../prefeasible-recovery-regional/selected/PACKAGES.json",
+    "retained_unchanged": true
+  }
+}

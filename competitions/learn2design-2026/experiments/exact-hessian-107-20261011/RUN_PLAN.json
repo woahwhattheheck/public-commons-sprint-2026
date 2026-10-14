@@ -225,6 +225,11 @@
         "prefeasible_max_restarts": 4,
         "prefeasible_budget_fraction": 0.5
       }
+    },
+    {
+      "id": "096",
+      "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+      "optimize_kwargs": {}
     }
   ],
   "common_objective": {
@@ -488,6 +493,55 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Thirty paired native UIFO cells covering every mode on ten public topologies. Whole topology partitions retain all three methods; native feasibility, all failures, same-runtime comparisons and complete panel denominators remain authoritative."
+    },
+    {
+      "id": "prefeasible-incumbent-development",
+      "baseline": "096",
+      "candidates": [
+        "096",
+        "099-prefeasible-off-regional",
+        "099-prefeasible-restart-regional",
+        "099-prefeasible-restart-penalty-regional"
+      ],
+      "public_topology_seeds": [
+        10,
+        11,
+        12
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "container_cap_seconds": 16200,
+      "purpose": "Twelve source-bound fresh native UIFO cells compare unchanged measured096 default configuration with all three exact regional pre-feasibility modes. Retained v7 records supply original source/configuration evidence and remain distinct from this matched four-arm campaign."
+    },
+    {
+      "id": "prefeasible-incumbent-broad-public",
+      "baseline": "096",
+      "candidates": [
+        "096",
+        "099-prefeasible-off-regional",
+        "099-prefeasible-restart-regional",
+        "099-prefeasible-restart-penalty-regional"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Forty paired native UIFO cells with unchanged096 as explicit incumbent baseline and all three recovery modes on ten public topologies. Whole topology groups preserve all four arms per worker; complete outcomes and same-runtime cohorts control selection."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
@@ -511,6 +565,10 @@
     "batch_corpus_cpu_cells": 20,
     "mapped_batch_gpu_cells": 20,
     "anchor_state_development_cells": 6,
-    "anchor_state_broad_cells": 20
+    "anchor_state_broad_cells": 20,
+    "prefeasible_development_cells": 9,
+    "prefeasible_broad_cells": 30,
+    "prefeasible_incumbent_development_cells": 12,
+    "prefeasible_incumbent_broad_cells": 40
   }
 }

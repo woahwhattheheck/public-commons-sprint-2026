@@ -158,6 +158,12 @@ comparison; it does not automatically promote a mode to the counted entry.
 
 ## Complete prepared source packages
 
+These original three packages retain the source manifest published at
+`bd563a855fe5b5d2b52e6f4820acb3e435f8b953`. The subsequent
+[incumbent comparison](../incumbent-comparison/README.md) provides four current
+packages, including the exact096 control, with their own retained manifest.
+
+
 These three complete ZIPs already contain the exact selected entrypoint, retained
 candidate, requirements, license and source declaration:
 

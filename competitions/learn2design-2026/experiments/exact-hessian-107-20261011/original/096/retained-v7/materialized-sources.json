@@ -1,0 +1,44 @@
+[
+  {
+    "path": "submission.py",
+    "bytes": 20934,
+    "sha256": "bbc4ff9cbe669783b19c60ce6161c0060e4c97a614e411baeb227951790a6f04",
+    "provenance": "delivery (accepted candidate084 \u2014 reference only)"
+  },
+  {
+    "path": "submission096.py",
+    "bytes": 6722,
+    "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+    "provenance": "Opus096 V1+predictive-stop \u2014 runs in 3 pair legs"
+  },
+  {
+    "path": "submission099.py",
+    "bytes": 15794,
+    "sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96",
+    "provenance": "Opus099 feasibility-anchored portfolio \u2014 runs in 3 pair legs"
+  },
+  {
+    "path": "core.py",
+    "bytes": 10747,
+    "sha256": "2ee2286420373f1a4c874814de0964887aa8533a3bcd16be6112a07655956b70",
+    "provenance": "baseline-extract V1 policy module \u2014 reference only"
+  },
+  {
+    "path": "run_public_uifo.py",
+    "bytes": 18510,
+    "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08",
+    "provenance": "delivery runner c0306334 (real public Objective)"
+  },
+  {
+    "path": "requirements.txt",
+    "bytes": 42,
+    "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+    "provenance": "delivery pinned deps"
+  },
+  {
+    "path": "README.md",
+    "bytes": 2796,
+    "sha256": "74cd5e0745385a4ad299c7ea1ee67e4fd7643663e4a99939379ea46eb010bc8b",
+    "provenance": "delivery candidate notes"
+  }
+]

@@ -656,6 +656,28 @@
           }
         ]
       }
+    },
+    {
+      "id": "096",
+      "class": "StagedTrustPortfolio096",
+      "submission": "original/096/submission.py",
+      "submission_bytes": 6722,
+      "submission_sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+      "requirements": "original/096/requirements.txt",
+      "requirements_sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+      "source_owner": "Original096 source and original42-byte requirements from existing sol-budgeted-restarts carrier; both verified against original v7 materialized source identities.",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {},
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "algorithm_str"
+            ],
+            "equals": "tjlabs_staged_trust_portfolio_096"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -765,6 +787,18 @@
       "recovery_condition": "No finite usable feasible optimizer point retained; an aux-feasible result with nonfinite loss or gradient does not disable recovery.",
       "performance": "Measured results come from these exact arms in a fresh native phase. Retained v7 histories belong to their original 096/099 sources.",
       "organizer_commit": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70"
+    },
+    "incumbent096_comparison": {
+      "operation": "L2D-INCUMBENT096-NATIVE-COMPARISON-20261014",
+      "original_source_sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+      "original_requirements_sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+      "original_source_preserved": true,
+      "original_requirements_preserved": true,
+      "original_archive_sha256": "11214c66481a4a4bcf6c4a25804b094855c01378b6e78c23cb06b5864c5ef8eb",
+      "source_map": "original/096/SOURCE_MAP.json",
+      "guide": "incumbent-comparison/README.md",
+      "measured_configuration": "Original096 defaults, random seed42, no population override; source/native histories retain actual v7 context.",
+      "new_comparison": "Fresh source-bound twelve-cell180s and forty-cell600s phases; current original Objective physics/runtime capture and complete panel retention."
     }
   }
 }
