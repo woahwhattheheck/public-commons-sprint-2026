@@ -6,13 +6,56 @@ include every revision, result and its exact original input.
 """
 from __future__ import annotations
 import json
+import os
 import sqlite3
 import uuid
 from datetime import datetime, timezone
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
+from urllib.parse import quote
 from contextlib import contextmanager
 from .schema import Study
 from .engine import canonical_hash
+
+
+def native_path(path):
+    """Use the workbench's native paths, retaining the standalone CLI route."""
+    try:
+        from model.portable_fs import native_path as shared_path
+    except ModuleNotFoundError as error:
+        if error.name not in {"model", "model.portable_fs"}:
+            raise
+        path = Path(path)
+        if os.name == "nt":
+            value = os.path.abspath(path)
+            if not value.startswith("\\\\?\\"):
+                value = ("\\\\?\\UNC\\" + value[2:] if value.startswith("\\\\")
+                         else "\\\\?\\" + value)
+            return Path(value)
+        return path
+    return shared_path(path)
+
+
+def database_uri(path, mode="ro"):
+    """Keep live writes, read-only delivery and archive snapshots on one VFS.
+
+    Use ordinary SQLite locking, including committed WAL transactions. Encoding
+    a native Windows filename as the URI path avoids a UNC server being treated
+    as an unsupported URI authority; win32-longpath retains deep native paths.
+    """
+    if mode not in {"ro", "rwc"}:
+        raise ValueError("Choose read-only or createable Decision database access")
+    path = native_path(path).absolute()
+    try:
+        from model.portable_databases import _database_uri as shared_uri
+    except ModuleNotFoundError as error:
+        if error.name not in {"model", "model.portable_databases"}:
+            raise
+        # The separately installed eco_robust package has no model package.
+        # Retain the same filename/VFS contract without requiring the workbench.
+        if isinstance(path, PureWindowsPath):
+            return "file:" + quote(str(path), safe="") + "?mode=" + mode + "&vfs=win32-longpath"
+        return path.as_uri() + "?mode=" + mode
+    return shared_uri(path, mode)
 
 
 def now():
@@ -29,7 +72,7 @@ class Conflict(ValueError):
 
 class Store:
     def __init__(self, workspace):
-        self.root = Path(workspace).resolve()
+        self.root = native_path(workspace).resolve()
         self.root.mkdir(parents=True, exist_ok=True)
         self.path = self.root / "robust_decisions.sqlite3"
         with self.connect() as db:
@@ -43,11 +86,11 @@ class Store:
 
     @contextmanager
     def connect(self):
-        db = sqlite3.connect(self.path, timeout=30)
-        db.row_factory = sqlite3.Row
-        db.execute("PRAGMA journal_mode=WAL")
-        db.execute("PRAGMA busy_timeout=30000")
+        db = sqlite3.connect(database_uri(self.path, "rwc"), uri=True, timeout=30)
         try:
+            db.row_factory = sqlite3.Row
+            db.execute("PRAGMA journal_mode=WAL")
+            db.execute("PRAGMA busy_timeout=30000")
             yield db
             db.commit()
         except BaseException:
