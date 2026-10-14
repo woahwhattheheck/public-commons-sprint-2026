@@ -6,16 +6,20 @@ profiles, reviews, coefficient tables and workbook sources remain unchanged.
 from __future__ import annotations
 from copy import deepcopy
 import csv
+import hashlib
 import html
 import io
 import json
 import os
 from pathlib import Path
+import stat
 
 from . import profile_editions
 from . import profile_workbook_xml as workbook_xml
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
-                     held, identifier, now, read_json, relative_file, verify_file)
+                     held, identifier, now, read_json, relative_file, verify_file,
+                     _fd_stat, _path_stat, _native_fs_path)
+from .portable_fs import open_file as _open_native_file
 from .model_selection import selected
 
 SCHEMA = "upstate.profile-workbook-return/v1"
@@ -111,20 +115,35 @@ def _selection(value, *, require_preview=False):
     return result
 
 
-def _read_exact(path, body):
-    path = Path(path)
-    before = path.stat()
-    _need(path.is_file() and before.st_size == body["bytes"] and before.st_size <= workbook_xml.h.MAX_EXPANDED,
+def _read_exact(path, body, *, digest_only=False):
+    """Receive original file bytes under the same native platform identity."""
+    path = _native_fs_path(path)
+    before = _path_stat(path)
+    size = body["bytes"]
+    _need(stat.S_ISREG(before.st_mode) and before.st_size == size
+          and size <= workbook_xml.h.MAX_EXPANDED,
           "The complete original file is missing or exceeds its retained size.")
-    with path.open("rb") as stream:
-        opened = os.fstat(stream.fileno())
-        raw = stream.read(body["bytes"] + 1)
-        after_fd = os.fstat(stream.fileno())
-    after = path.stat()
-    def identity(st):
-        return st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns, st.st_ctime_ns
-    _need(identity(before) == identity(opened) == identity(after_fd) == identity(after) and
-          len(raw) == body["bytes"] and workbook_xml.h.sha(raw) == body["sha256"],
+    with os.fdopen(_open_native_file(path, os.O_RDONLY), "rb") as stream:
+        opened = _fd_stat(stream.fileno())
+        if digest_only:
+            checksum, count = hashlib.sha256(), 0
+            for block in iter(lambda: stream.read(1024 * 1024), b""):
+                checksum.update(block)
+                count += len(block)
+            raw = None
+        else:
+            raw = stream.read(size + 1)
+            count = len(raw)
+            checksum = hashlib.sha256(raw)
+        after_fd = _fd_stat(stream.fileno())
+    after = _path_stat(path)
+    def identity(value):
+        return (value.st_dev, value.st_ino, value.st_size,
+                value.st_mtime_ns, value.st_ctime_ns)
+    _need(stat.S_ISREG(opened.st_mode) and
+          identity(before) == identity(opened) ==
+          identity(after_fd) == identity(after) and
+          count == size and checksum.hexdigest() == body["sha256"],
           "The original source bytes changed while they were read.")
     return raw
 
@@ -241,7 +260,7 @@ def _source_ancestry(ws, current):
         entry = next((x for x in collection["entries"] if x["id"] == source_id), None)
         _need(entry is not None and entry["body"]["sha256"] == expected, "Original profile source ancestry is absent or changed.")
         path, native_entry = ws.source_file(collection_id, source_id)
-        _read_exact(path, native_entry["body"])
+        _read_exact(path, native_entry["body"], digest_only=True)
         visited[key] = expected
         entries.append(entry)
         record = {"source_collection_id": collection_id, "source_id": source_id, "sha256": expected,
@@ -555,7 +574,8 @@ def create(ws, value, *, operation_id=None, context=None):
                 implementation = {}
                 for name, path in _implementation():
                     target = directory / "files" / "implementation" / name
-                    atomic_bytes(target, path.read_bytes(), immutable=True)
+                    source_body = describe_file(path.parent, path)
+                    atomic_bytes(target, _read_exact(path, source_body), immutable=True)
                     implementation[name] = describe_file(ws.root, target)
                 intent = {"schema": SCHEMA, "project_id": ws.project["id"], "id": directory.name,
                           "operation_id": operation_id, "request": request, "request_sha256": request_sha,
@@ -589,7 +609,11 @@ def create(ws, value, *, operation_id=None, context=None):
             write_json("package_review", "workbook-members.json", package_review)
             write_json("selection", "return-selection.json", request)
             profile_path = ws.root / "profiles" / (request["profile_id"] + ".json")
-            write("profile", "saved-profile.json", profile_path.read_bytes(), "application/json")
+            profile_body = describe_file(ws.root, profile_path)
+            _need(profile_body["sha256"] == selected_profile["profile_sha256"],
+                  "Original saved profile differs from the selected edition.")
+            write("profile", "saved-profile.json",
+                  _read_exact(profile_path, profile_body), "application/json")
             selected_profile = profile(ws, request["profile_id"])
             table_path, entry = ws.source_file(selected_profile["profile"]["source_collection_id"],
                                                selected_profile["profile"]["biophysical_source_id"])
