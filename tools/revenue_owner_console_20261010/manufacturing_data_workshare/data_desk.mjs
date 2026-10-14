@@ -73,6 +73,7 @@ function validateDesk(value){
   return {...clone(s),workspace,comparison:validateComparison(s.comparison)};
  };
  const result={...clone(value),current:verify(value.current)};
+ if(value.recovery!==undefined){if(!Array.isArray(value.recovery))throw Error('Retained browser recovery must be a complete list.');const ids=new Set();for(const row of value.recovery){if(!row||typeof row.id!=='string'||ids.has(row.id)||typeof row.at!=='string'||typeof row.reason!=='string'||typeof row.raw!=='string'||row.sha256!==core.sha256(row.raw))throw Error('A retained browser original is incomplete or changed.');ids.add(row.id);if(row.kind!==undefined&&!['original','browser-snapshot'].includes(row.kind))throw Error('Unknown browser recovery representation.');if(row.kind==='browser-snapshot'&&(!Array.isArray(row.recoveryRefs)||row.recoveryRefs.some(hash=>typeof hash!=='string'||!/^[a-f0-9]{64}$/.test(hash))))throw Error('Browser snapshot recovery references are incomplete.');}const hashes=new Set(value.recovery.map(row=>row.sha256));for(const row of value.recovery)if((row.recoveryRefs||[]).some(hash=>!hashes.has(hash)))throw Error('A retained browser snapshot references an absent complete original.');}
  for(const kind of ['history','incoming']){
   const ids=new Set();
   result[kind]=value[kind].map(row=>{if(!row||typeof row.id!=='string'||ids.has(row.id)||typeof row.reason!=='string')throw Error('A retained desk edition has an invalid identity.');ids.add(row.id);return {...clone(row),state:verify(row.state)};});
@@ -90,19 +91,148 @@ export function mountDataReadinessDesk(root,config={}){
  let storage=config.storage;
  if(storage===undefined){try{storage=globalThis.localStorage;}catch(error){storage=null;storageWarning='Browser storage is unavailable. Download the working file to retain all edits.';}}
  const $=id=>root.querySelector('#'+id);
- let retainedBrowserSource=null;try{const saved=storage?.getItem(storageKey);if(saved){retainedBrowserSource=saved;desk=validateDesk(JSON.parse(saved));}}catch(error){desk.rejectedBrowserSource=retainedBrowserSource;storageWarning='The browser copy could not be opened. The original copy remains in browser storage. Open a saved working file, or continue this new desk and save it separately. '+error.message;}
+ const journalId=uid(),journalPrefix=storageKey+':journal:',journalKey=journalPrefix+journalId;
+ let baseBrowserRaw=null,storageConflict=false,independentDraft=false,lastJournalRaw=null,recoveryChoices=[];
+ function retainRecoveryEntry(entry){
+  desk.recovery??=[];
+  const existing=desk.recovery.find(row=>row.sha256===entry.sha256&&row.raw===entry.raw&&(row.kind||'original')===(entry.kind||'original'));
+  if(existing){
+   if(existing.kind==='browser-snapshot'&&entry.kind==='browser-snapshot')existing.recoveryRefs=[...new Set([...(existing.recoveryRefs||[]),...(entry.recoveryRefs||[])])].filter(hash=>hash!==existing.sha256);
+   return existing;
+  }
+  const row=clone(entry);if(desk.recovery.some(value=>value.id===row.id))row.id=uid();
+  desk.recovery.push(row);return row;
+ }
+ function rememberRecovery(raw,reason,browserDerived=false){
+  if(typeof raw!=='string'||!raw)return;
+  let snapshot=raw,refs=[],kind='original';
+  if(browserDerived){
+   try{
+    const value=validateDesk(JSON.parse(raw));
+    for(const row of value.recovery||[])retainRecoveryEntry(row);
+    refs=[...new Set((value.recovery||[]).map(row=>row.sha256))];
+    // Keep browser snapshots flat. Their complete prior archive is referenced
+    // by content, never recursively embedded inside every new snapshot.
+    const body=clone(value);delete body.recovery;
+    snapshot=JSON.stringify(body);kind='browser-snapshot';
+   }catch{
+    // An unreadable original remains exact and can still be downloaded.
+   }
+  }
+  const digest=core.sha256(snapshot);
+  retainRecoveryEntry({id:uid(),at:now(),reason,sha256:digest,raw:snapshot,kind,
+   ...(kind==='browser-snapshot'?{recoveryRefs:refs.filter(hash=>hash!==digest)}:{})});
+ }
+ function completeRecoveryRaw(row){
+  if(row.kind!=='browser-snapshot')return row.raw;
+  const value=JSON.parse(row.raw),needed=new Set(),queue=[...(row.recoveryRefs||[])],entries=[];
+  while(queue.length){
+   const digest=queue.shift();if(needed.has(digest)||digest===row.sha256)continue;needed.add(digest);
+   const retained=(desk.recovery||[]).find(item=>item.sha256===digest&&item.kind==='browser-snapshot')||(desk.recovery||[]).find(item=>item.sha256===digest);
+   if(!retained)throw Error('A complete browser recovery reference is missing. Download the full current working file.');
+   entries.push(clone(retained));queue.push(...(retained.recoveryRefs||[]));
+  }
+  value.recovery=entries;return JSON.stringify(value);
+ }
+ let retainedBrowserSource=null;
+ try{
+  const saved=storage?.getItem(storageKey)??null;baseBrowserRaw=saved;
+  if(saved){retainedBrowserSource=saved;desk=validateDesk(JSON.parse(saved));}
+ }catch(error){
+  desk.rejectedBrowserSource=retainedBrowserSource;rememberRecovery(retainedBrowserSource,'Original browser copy could not be opened');
+  storageConflict=true;independentDraft=true;
+  storageWarning='The original browser copy remains untouched. This independent draft retains its original text for recovery. '+error.message;
+ }
  const current=()=>desk.current;
  const metadata=()=>({requestId:uid(),expectedRevision:current().workspace.revision,actor:current().actor.trim()||'Operator',at:now()});
- function persist(){try{storage?.setItem(storageKey,JSON.stringify(desk));storageWarning=storage?'':'This browser has no storage. Download the complete working file to retain your edits.';}catch(error){storageWarning='Browser storage did not retain the latest edits. The complete work remains open; download the working file now. '+error.message;}}
- function flushPersist(){if(persistTimer!==null){clearTimeout(persistTimer);persistTimer=null;}persist();const target=$('desk-storage');if(target){target.hidden=!storageWarning;target.textContent=storageWarning;}}
- function changed(deferred=false){if(deferred){if(persistTimer!==null)clearTimeout(persistTimer);persistTimer=setTimeout(()=>{persistTimer=null;if(alive)flushPersist();},250);}else flushPersist();}
+ function writeJournal(){
+  if(!storage)return false;
+  const raw=JSON.stringify(desk),signature=JSON.stringify([raw,baseBrowserRaw,independentDraft]);if(signature===lastJournalRaw)return true;
+  storage.setItem(journalKey,JSON.stringify({schema:'manufacturing-data-draft-journal.v1',id:journalId,at:now(),storageKey,baseSHA256:baseBrowserRaw===null?null:core.sha256(baseBrowserRaw),independent:independentDraft,deskSHA256:core.sha256(raw),desk}));
+  lastJournalRaw=signature;return true;
+ }
+ function persist(){
+  if(!storage){storageWarning='This browser has no storage. Download the complete working file to retain your edits.';return false;}
+  try{
+   // Keep an independent full page draft before attempting the shared-key save.
+   writeJournal();
+   const latest=storage.getItem(storageKey)??null,raw=JSON.stringify(desk);
+   if(!independentDraft&&latest!==baseBrowserRaw&&latest!==raw){
+    rememberRecovery(latest,'Different complete browser copy observed before save',true);
+    storageConflict=true;writeJournal();
+   }
+   if(independentDraft||storageConflict){
+    storageWarning=independentDraft?'Independent browser draft saved. The current browser copy is unchanged.':'Another page saved a different complete desk. Your complete draft is saved separately; choose how to continue below.';
+    return false;
+   }
+   storage.setItem(storageKey,raw);
+   const observed=storage.getItem(storageKey)??null;
+   if(observed!==raw){rememberRecovery(observed,'Concurrent browser save observed after publication',true);storageConflict=true;writeJournal();storageWarning='A concurrent page saved another desk. Both page drafts remain available below.';}
+   else{baseBrowserRaw=raw;storageWarning='';return true;}
+  }catch(error){storageWarning='Browser storage did not retain the latest edits. The complete work remains open; download the working file now. '+error.message;}
+  return false;
+ }
+ function refreshRecoveryChoices(){
+  const rows=[];
+  if(storage){
+   try{
+    const latest=storage.getItem(storageKey);if(latest!==null)rows.push({key:'HEAD',kind:'browser',raw:latest,label:'Current browser copy',at:'',id:'HEAD'});
+    if(typeof storage.key==='function'&&Number.isSafeInteger(storage.length)){
+     const keys=[];for(let i=0;i<storage.length;i++){const key=storage.key(i);if(typeof key==='string'&&key.startsWith(journalPrefix)&&key!==journalKey)keys.push(key);}
+     for(const key of keys){
+      const raw=storage.getItem(key);if(!raw)continue;
+      try{
+       const journal=JSON.parse(raw),body=JSON.stringify(journal.desk);
+       if(journal.schema!=='manufacturing-data-draft-journal.v1'||journal.storageKey!==storageKey||journal.deskSHA256!==core.sha256(body))throw Error('Draft digest differs');
+       rows.push({key,kind:'journal',raw:body,label:'Page draft '+journal.id,at:journal.at||'',id:journal.id});
+      }catch(error){rows.push({key,kind:'unreadable',raw,label:'Unopened page draft — download original',at:'',id:key});}
+     }
+    }
+   }catch(error){storageWarning='Browser recovery could not be listed. Current work stays open. '+error.message;}
+  }
+  for(const row of desk.recovery||[])rows.push({key:'RETAINED:'+row.id,kind:'retained',raw:row.raw,retained:row,label:row.reason,at:row.at,id:row.id});
+  recoveryChoices=rows;
+ }
+ function renderRecovery(){
+  refreshRecoveryChoices();
+  const root=$('desk-recovery');if(!root)return;
+  root.innerHTML='<h2>Browser copies and recovery</h2><p>'+esc(independentDraft?'This page is an independent saved draft.':storageConflict?'A different saved desk needs your selection.':'This page saves to the current browser copy.')+'</p><p>Each open page keeps its own complete draft. Opening or staging another copy preserves the complete displaced editor, sources, comparisons and prior desks.</p><div class="toolbar"><button data-action="browser-refresh" data-work-action>Refresh saved copies</button><button data-action="browser-independent" data-work-action>Continue as independent draft</button><button data-action="browser-use-head" data-work-action>Open current browser copy</button><button data-action="browser-publish" data-work-action>Use this draft as current browser copy</button></div>'+recoveryChoices.map((row,index)=>'<div class="readonly"><p>'+esc(row.label)+(row.at?' · '+esc(row.at):'')+'</p><div class="toolbar">'+(row.kind==='unreadable'?'':'<button data-action="browser-stage" data-recovery="'+index+'" data-work-action>Stage complete copy beside current work</button>')+'<button data-action="browser-download" data-recovery="'+index+'" data-work-action>Download complete retained copy</button></div></div>').join('');
+  const warning=$('desk-storage');if(warning){warning.hidden=!storageWarning;warning.textContent=storageWarning;}
+  root.querySelectorAll('[data-work-action]').forEach(el=>el.disabled=busy);
+ }
+ function stageDesk(raw,name,browserDerived=false){
+  const incoming=validateDesk(JSON.parse(raw.replace(/^\uFEFF/,''))),at=now();
+  rememberRecovery(raw,'Complete original opened from '+name,browserDerived);
+  const entries=[{id:uid(),at,reason:'Opened '+name,state:incoming.current},...incoming.incoming,...incoming.history];
+  for(const row of entries)desk.incoming.push({...row,id:uid(),reason:'From '+name+': '+row.reason});
+ }
+ function openBrowserHead(){
+  if(!storage)throw Error('Browser storage is unavailable; open a downloaded working file instead.');
+  const raw=storage.getItem(storageKey);if(raw===null)throw Error('No saved current browser copy exists.');
+  const incoming=validateDesk(JSON.parse(raw)),prior=JSON.stringify(desk);
+  rememberRecovery(prior,'Complete current draft before opening the browser copy',true);
+  rememberRecovery(raw,'Complete browser copy selected by the operator',true);
+  retainCurrent('Prior desk before opening current browser copy');
+  for(const row of [...incoming.incoming,...incoming.history])desk.incoming.push({...clone(row),id:uid(),reason:'From selected browser copy: '+row.reason});
+  desk.current=clone(incoming.current);baseBrowserRaw=raw;storageConflict=false;independentDraft=false;epoch++;issuePage=0;tablePage=0;comparisonPage=0;
+  changed();status('Opened the current browser copy; the complete displaced draft and its sources remain retained.');
+ }
+ function publishBrowserDraft(){
+  if(!storage)throw Error('Browser storage is unavailable; download the complete working file.');
+  const latest=storage.getItem(storageKey)??null;
+  rememberRecovery(latest,'Complete browser predecessor before deliberately publishing this draft',true);
+  baseBrowserRaw=latest;storageConflict=false;independentDraft=false;const published=changed();
+  status(published?'This complete draft is the current browser copy; its displaced predecessor is retained.':storageConflict?'The browser copy changed again; both complete drafts remain retained.':'The browser did not retain this publication. Download the complete working file before closing.',!published);
+ }
+ function flushPersist(){if(persistTimer!==null){clearTimeout(persistTimer);persistTimer=null;}const published=persist();renderRecovery();const target=$('desk-storage');if(target){target.hidden=!storageWarning;target.textContent=storageWarning;}return published;}
+ function changed(deferred=false){if(deferred){if(persistTimer!==null)clearTimeout(persistTimer);persistTimer=setTimeout(()=>{persistTimer=null;if(alive)flushPersist();},250);}else return flushPersist();}
  function status(text,error=false){notice=text;const el=$('desk-status');if(el){el.textContent=text;el.className=error?'error':'';}}
  async function action(task){
   if(!alive||busy)return;busy=true;const token=epoch;renderBusy();
   try{await task(()=>alive&&epoch===token);}catch(error){if(alive&&epoch===token)status(error.message||String(error),true);}
   finally{if(alive){busy=false;render();}}
  }
- function renderBusy(){root.querySelectorAll('[data-work-action]').forEach(el=>el.disabled=busy);}
+ function renderBusy(){root.querySelectorAll('[data-work-action],input,select,textarea').forEach(el=>el.disabled=busy);}
  function setWorkspace(workspace,message){current().workspace=workspace;current().selectedPending='';issuePage=0;tablePage=0;changed();status(message);}
  function retainCurrent(reason){desk.history.push({id:uid(),at:now(),reason,state:clone(current())});}
  function sourcePreview(p){const workspace=current().workspace,mapping=JSON.stringify(p.columns);if(previewCache?.source===p&&previewCache.workspace===workspace&&previewCache.mapping===mapping)return previewCache.value;const value=core.stageImport(workspace,{id:p.id,kind:p.kind,name:p.name,csv:p.csv,delimiter:p.delimiter,columns:p.columns,at:p.at});previewCache={source:p,workspace,mapping,value};return value;}
@@ -197,8 +327,8 @@ export function mountDataReadinessDesk(root,config={}){
  function render(){
   if(!alive)return;
   const value=report();
-  root.innerHTML='<header><p class="muted">TOKENJUNKIE LABS · MANUFACTURING DATA PREPARATION</p><h1>'+esc(current().workspace.label||config.title)+'</h1><p>'+esc(config.introduction||'Review item, assembly, inventory and purchase-order sources before an implementation handover.')+'</p></header><div id="desk-status" role="status">'+esc(notice)+'</div><p id="desk-storage" class="warn" '+(!storageWarning?'hidden':'')+'>'+esc(storageWarning)+'</p><div class="toolbar"><button data-action="save" class="primary" data-work-action>Download complete working file</button><label class="no-print">Open complete working file<input id="desk-open" type="file" accept=".json,application/json" data-work-action></label><button data-action="report" data-work-action>Download full readiness report</button><button data-action="handover" data-work-action>Download data handover JSON</button></div><section class="panel">'+summary(value)+'<div class="grid"><label>Reviewed by<input id="desk-actor" value="'+esc(current().actor)+'" placeholder="Name or team"></label><label>Working notes<textarea id="desk-notes">'+esc(current().notes)+'</textarea></label></div></section><section class="panel">'+renderPending()+'</section><section class="panel"><h2>Explicit unit mappings</h2><p class="muted">Use approved conversions only. A missing conversion remains an exception. Unit decisions are retained with their review.</p><details><summary>Unit mapping format</summary><pre id="desk-unit-help">'+esc(config.unitHelp||'Enter the documented unit mapping array. Leave [] when no conversion is approved.')+'</pre></details><label>Complete approved mapping array<textarea id="desk-units" spellcheck="false">'+esc(current().unitText)+'</textarea></label><button data-action="units" data-work-action>Apply these unit mappings</button></section><section class="panel">'+renderIssues(value)+'</section><section class="panel">'+renderTables(value)+'</section><section class="panel">'+renderComparison()+'</section><section class="panel">'+renderHistory(value)+'</section><footer><p class="muted">Quantities and decisions come from the retained source files. Review target-system rules and physical stock with the implementation lead. This desk prepares files; it does not write to an ERP or change inventory.</p></footer>';
-  renderBusy();
+  root.innerHTML='<header><p class="muted">TOKENJUNKIE LABS · MANUFACTURING DATA PREPARATION</p><h1>'+esc(current().workspace.label||config.title)+'</h1><p>'+esc(config.introduction||'Review item, assembly, inventory and purchase-order sources before an implementation handover.')+'</p></header><div id="desk-status" role="status">'+esc(notice)+'</div><p id="desk-storage" class="warn" '+(!storageWarning?'hidden':'')+'>'+esc(storageWarning)+'</p><div class="toolbar"><button data-action="save" class="primary" data-work-action>Download complete working file</button><label class="no-print">Open complete working file<input id="desk-open" type="file" accept=".json,application/json" data-work-action></label><button data-action="report" data-work-action>Download full readiness report</button><button data-action="handover" data-work-action>Download data handover JSON</button></div><section class="panel" id="desk-recovery"></section><section class="panel">'+summary(value)+'<div class="grid"><label>Reviewed by<input id="desk-actor" value="'+esc(current().actor)+'" placeholder="Name or team"></label><label>Working notes<textarea id="desk-notes">'+esc(current().notes)+'</textarea></label></div></section><section class="panel">'+renderPending()+'</section><section class="panel"><h2>Explicit unit mappings</h2><p class="muted">Use approved conversions only. A missing conversion remains an exception. Unit decisions are retained with their review.</p><details><summary>Unit mapping format</summary><pre id="desk-unit-help">'+esc(config.unitHelp||'Enter the documented unit mapping array. Leave [] when no conversion is approved.')+'</pre></details><label>Complete approved mapping array<textarea id="desk-units" spellcheck="false">'+esc(current().unitText)+'</textarea></label><button data-action="units" data-work-action>Apply these unit mappings</button></section><section class="panel">'+renderIssues(value)+'</section><section class="panel">'+renderTables(value)+'</section><section class="panel">'+renderComparison()+'</section><section class="panel">'+renderHistory(value)+'</section><footer><p class="muted">Quantities and decisions come from the retained source files. Review target-system rules and physical stock with the implementation lead. This desk prepares files; it does not write to an ERP or change inventory.</p></footer>';
+  renderRecovery();renderBusy();
  }
  function getSource(id){return retainedSources(report()).find(x=>x.id===id);}
  root.addEventListener('input',event=>{
@@ -229,9 +359,7 @@ export function mountDataReadinessDesk(root,config={}){
   else if(target.id==='desk-open')action(async isCurrent=>{
    const file=target.files?.[0];if(!file)return;if(file.size>MAX_SESSION)throw Error('Choose a complete working file no larger than 128 MiB.');
    const raw=await readUTF8File(file,MAX_SESSION);if(!isCurrent())return;if(bytes(raw)>MAX_SESSION)throw Error('The decoded working file exceeds 128 MiB.');
-   const incoming=validateDesk(JSON.parse(raw.replace(/^\uFEFF/,''))),at=now();
-   const entries=[{id:uid(),at,reason:'Opened '+file.name,state:incoming.current},...incoming.incoming,...incoming.history];
-   for(const row of entries)desk.incoming.push({...row,id:uid(),reason:'From '+file.name+': '+row.reason});
+   stageDesk(raw,file.name);
    changed();status('The complete incoming desk is retained below. Choose Open this desk to adopt it; current work stays selected.');
   });
   else if(target.id==='desk-comparison-baseline'||target.id==='desk-comparison-target'){comparisonState()[target.id.endsWith('baseline')?'baselineId':'targetId']=target.value;comparisonPage=0;changed();render();}
@@ -248,7 +376,17 @@ export function mountDataReadinessDesk(root,config={}){
   const target=event.target.closest('[data-action]');if(!target||!root.contains(target)||target.disabled)return;
   const op=target.dataset.action;
   action(async()=>{
-   if(op==='comparison-retain')retainComparison(core.exportWorkspace(current().workspace),current().workspace.label+' · revision '+current().workspace.revision);
+   if(op==='browser-refresh')renderRecovery();
+   else if(op==='browser-independent'){independentDraft=true;storageConflict=false;changed();status('Independent complete draft retained; other pages keep their current browser copy.');}
+   else if(op==='browser-use-head')openBrowserHead();
+   else if(op==='browser-publish')publishBrowserDraft();
+   else if(op==='browser-stage'||op==='browser-download'){
+    const row=recoveryChoices[Number(target.dataset.recovery)];if(!row)throw Error('Refresh and choose an existing complete browser copy.');
+    const retainedRaw=row.retained?completeRecoveryRaw(row.retained):row.raw;
+    if(op==='browser-download')saveFile('retained-browser-copy.json',retainedRaw);
+    else{stageDesk(retainedRaw,row.label,true);changed();status('The complete browser copy is staged beside current work. Choose Open this desk below when ready.');}
+   }
+   else if(op==='comparison-retain')retainComparison(core.exportWorkspace(current().workspace),current().workspace.label+' · revision '+current().workspace.revision);
    else if(op==='comparison-original'){const row=comparisonState().records.find(x=>x.id===target.dataset.edition);if(!row)throw Error('Choose a retained comparison source.');saveFile(row.name.endsWith('.json')?row.name:row.name+'.json',row.raw);}
    else if(op==='comparison-prev')comparisonPage=Math.max(0,comparisonPage-1);
    else if(op==='comparison-next')comparisonPage++;
@@ -297,6 +435,15 @@ export function mountDataReadinessDesk(root,config={}){
   });
  });
  const view=root.ownerDocument?.defaultView;
+ const onStorage=event=>{
+  if(!alive||event.storageArea&&event.storageArea!==storage)return;
+  if(event.key===storageKey){
+   if(event.newValue!==baseBrowserRaw&&!independentDraft){storageConflict=true;storageWarning='Another page saved a different desk. Your current editor remains selected and its complete draft is retained.';try{writeJournal();}catch(error){storageWarning+=' Download the working file: '+error.message;}}
+   renderRecovery();
+  }else if(typeof event.key==='string'&&event.key.startsWith(journalPrefix))renderRecovery();
+ };
+ view?.addEventListener('storage',onStorage);
+
  const onPageHide=()=>{if(alive)flushPersist();};view?.addEventListener('pagehide',onPageHide);
- render();return {getState:()=>clone(desk),download:()=>saveFile('manufacturing-working.json',stringify(desk)),dispose(){if(persistTimer!==null)flushPersist();alive=false;epoch++;view?.removeEventListener('pagehide',onPageHide);root.replaceChildren();}};
+ render();return {getState:()=>clone(desk),download:()=>saveFile('manufacturing-working.json',stringify(desk)),dispose(){if(persistTimer!==null)flushPersist();alive=false;epoch++;view?.removeEventListener('pagehide',onPageHide);view?.removeEventListener('storage',onStorage);root.replaceChildren();}};
 }

@@ -76,7 +76,7 @@ const result = await runDataReadinessCourse({
 
 The runner uses separate browser contexts and closes only those contexts. It leaves the caller's browser open. It loads the exact supplied HTML with `setContent`, requires no public server, blocks HTTP(S) requests inside its own contexts, and changes no browser policy. Use the installed source/browser versions already accepted by the original receiver. Do not create another customer case, competing process request or paid browser run.
 
-Retain the same complete input and output paths after interruption. Each attempt receives its own child directory, preserving earlier downloads and images. This extended course uses `source-comparison-receiving.json`; it leaves any earlier baseline-only `receiving.json` and its completed outputs unchanged. Thus a previously completed baseline course can continue through the new comparison journey in the same original operation without treating its old result as completion of new work. The new journal binds the complete input digest, including both source files and both modules. A completed invocation verifies all retained output file identities and returns the same result. The original receiver remains the sole executor; this helper does not schedule work or claim an external host.
+Retain the same complete input and output paths after interruption. Each attempt receives its own child directory, preserving earlier downloads and images. This extended course uses `browser-recovery-receiving.json`; it leaves any earlier baseline-only `receiving.json` and its completed outputs unchanged. Thus a previously completed baseline course can continue through the new comparison journey in the same original operation without treating its old result as completion of new work. The new journal binds the complete input digest, including both source files and both modules. A completed invocation verifies all retained output file identities and returns the same result. The original receiver remains the sole executor; this helper does not schedule work or claim an external host.
 
 ## The actual user workflow
 
@@ -108,7 +108,7 @@ Outputs include:
 - complete comparison working files with recorded review history and unfinished notes;
 - the clearly named legacy-filter compatibility copy and its recovered complete working file;
 - actual desktop and 390-pixel screenshots;
-- `source-comparison-receiving.json` with exact input, output, viewport, source-pair outcome and original operation identities; any historical `receiving.json` remains unchanged.
+- `browser-recovery-receiving.json` with exact input, output, viewport, source-pair outcome and original operation identities; any historical `receiving.json` remains unchanged.
 
 The helper uses the source's actual controls and original browser download events. It measures horizontal document overflow. It does not claim that creating screenshots means a producing peer has viewed them.
 
@@ -129,3 +129,29 @@ Every message to a warm lead requires Bryce’s approval for that exact proposed
 Pass this instruction into delegated and resumed work. Preserve existing owner controls, original operations, customer contact ownership, source/credential boundaries, no private GitHub publication, no GitHub Actions, no llama.cpp, stopped-work cutoffs and current contact holds. This instruction creates no watchers, hooks, restarts, approval queue or new publication authority.
 
 Return full original screenshot files and the actual outputs to the existing private customer case. The producing peers must open and view the returned images and delivered files, then repair the first concrete visual or functional issue in this same source edition. Keep the complete working records and original operation intact.
+
+## Complete browser copy recovery
+
+The same `runDataReadinessCourse` now serves the exact selected desk bytes on one ephemeral `127.0.0.1` origin. It opens two pages in one existing-browser context, using the browser's real shared localStorage. Only that literal desk URL is allowed in this context; the course creates no public host or additional browser controller.
+
+After opening the complete original source-comparison working file, the first operator saves a narrative. The second operator edits its earlier copy. The course verifies that the first shared head remains intact and that the second complete editor is separately journaled, including the original comparison sources, recorded reviews and unfinished notes. It continues the second draft independently, opens the current shared head while retaining the displaced full editor, and exercises a second stale edit.
+
+Deliberate publication must retain its complete predecessor in the flat recovery archive. A third page stages the actual second-page journal through the recovery panel and reopens the displaced independent editor. Six alternating real edits and explicit publications must preserve all preceding operator narratives, original source bodies and comparison state without recursively embedding earlier archives. The actual saved byte sizes are returned in `browser-10-actual-repeated-publication-sizes.json`. A fresh independent browser context then imports the complete recovered working file and reopens the exact editor.
+
+The course records `complete_browser_drafts_recovered` with the actual outcomes. All original source/comparison operations remain earlier in the same course. Its current result is `browser-recovery-receiving.json`; prior `receiving.json` and `source-comparison-receiving.json` records remain untouched.
+
+## Additional authored assembly example
+
+The original revision-9 receiving workspace and its exact paired successor remain required. To also operate the complete supplier-authored nested-assembly example, add this optional exact file identity to the existing private input:
+
+```json
+"authoredExample": {
+  "path": "/absolute/path/authored-assembly-operating-example.json",
+  "bytes": 121761,
+  "sha256": "494e8154283678ea42a5f3f584bbfcb349ef97918f53e5b8c6353dbc0897320e"
+}
+```
+
+This is an additional authored example, separate from the original revision-9 native fixture and any customer's operational data. The complete bank has nineteen files and binds the unchanged core. The course retains every original member and opens the initial complete desk with four sources and nine source errors. It records the two original BOM-cycle and purchase-order review notes through the normal controls, applies the explicit `cm → m` factor `0.01`, and verifies six errors remain. It imports and selects each of the four corrected original CSV files through the actual mapping workflow.
+
+The operated result must retain all eight original source editions, both earlier review decisions and the exact canonical values and derived quantities. Its revision is 11 and the source checker reports zero errors. The course exports the actual initial-to-corrected comparison and complete readiness report, renders the populated desk and report at both widths, then reopens the complete working file in an independent context. All actual source, output and operation identities are returned in the original result. The producing peer still opens and LOOKs at the returned images and complete outgoing files.
