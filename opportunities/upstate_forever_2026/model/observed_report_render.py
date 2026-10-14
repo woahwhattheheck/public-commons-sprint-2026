@@ -4,10 +4,11 @@ from __future__ import annotations
 import hashlib
 import os
 from pathlib import Path
-import tempfile
+import uuid
 from .common import (atomic_json, describe_file, digest, held,
                      file_digest, read_json, relative_file, verify_file)
 from . import portable, observed_context, scientific_report
+from . import portable_fs as _fs
 from .workspace import Workspace
 
 
@@ -22,10 +23,12 @@ def _rendering_paths():
              "model/scientific_report_odt.py": Path(scientific_report.__file__).with_name("scientific_report_odt.py"),
              "model/scientific_report_workbook.py": Path(scientific_report.__file__).with_name("scientific_report_workbook.py"),
              "model/scientific_figures.py": Path(scientific_report.__file__).with_name("scientific_figures.py"),
-             "model/observed_context.py": Path(observed_context.__file__)}
+             "model/observed_context.py": Path(observed_context.__file__),
+             "model/portable_fs.py": Path(_fs.__file__),
+             "model/windows_fs.py": Path(_fs.__file__).with_name("windows_fs.py")}
     # Bind every installed optional drawing implementation used by new previews.
-    # Older applications keep their original four-source contract; saved previews
-    # retain their existing exact source map and completed report identities.
+    # Saved previews retain their existing exact source map and completed report
+    # identities; new editions also retain their filesystem implementation.
     for name in ("scientific_map_figures.py", "scientific_tables.py"):
         renderer = Path(scientific_report.__file__).with_name(name)
         if renderer.is_file():
@@ -35,46 +38,59 @@ def _rendering_paths():
 
 def _rendering_sources():
     """Bind the installed rendering code for each newly reviewed report edition."""
-    return {name: {"bytes": path.stat().st_size, "sha256": file_digest(path)}
+    return {name: {"bytes": _fs.path_stat(path).st_size, "sha256": file_digest(path)}
             for name, path in sorted(_rendering_paths().items())}
 
 
 def _retain_original(source, target, descriptor):
-    """Publish an original companion in bounded chunks without replacing it."""
-    source, target = Path(source), Path(target)
-    expected = {**descriptor, "path": target.name}
+    """Publish original bytes through a pinned parent without requiring hard links."""
+    source, target = _fs.native_path(source), _fs.native_path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
-    if target.exists():
-        verify_file(target.parent, expected)
-        return
-    fd, temporary_name = tempfile.mkstemp(prefix=".observed-source-", dir=target.parent)
-    temporary = Path(temporary_name)
-    try:
-        count, checksum = 0, hashlib.sha256()
-        with os.fdopen(fd, "wb") as outgoing, source.open("rb") as incoming:
-            while chunk := incoming.read(1024 * 1024):
-                count += len(chunk)
-                if count > descriptor["bytes"]:
-                    raise ValueError("An original report companion grew during retention")
-                checksum.update(chunk)
-                outgoing.write(chunk)
-            outgoing.flush()
-            os.fsync(outgoing.fileno())
-        if count != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
-            raise ValueError("An original report companion changed during retention")
+    with _fs.parent_directory(target.parent, target.name) as (parent, name):
+        def verify_retained():
+            count, checksum = 0, hashlib.sha256()
+            with os.fdopen(parent.open(name, os.O_RDONLY), "rb") as incoming:
+                while chunk := incoming.read(1024 * 1024):
+                    count += len(chunk)
+                    if count > descriptor["bytes"]:
+                        raise ValueError("The retained original report companion differs")
+                    checksum.update(chunk)
+            if count != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
+                raise ValueError("The retained original report companion differs")
+
         try:
-            os.link(temporary, target)
-        except FileExistsError:
-            verify_file(target.parent, expected)
-        if os.name != "nt":
-            directory_fd = os.open(target.parent, os.O_RDONLY)
+            verify_retained()
+        except FileNotFoundError:
+            pass
+        else:
+            return
+        temporary = ".observed-source-" + uuid.uuid4().hex
+        fd = parent.open(temporary, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        try:
+            count, checksum = 0, hashlib.sha256()
+            with os.fdopen(fd, "wb") as outgoing:
+                with os.fdopen(_fs.open_file(source, os.O_RDONLY), "rb") as incoming:
+                    while chunk := incoming.read(1024 * 1024):
+                        count += len(chunk)
+                        if count > descriptor["bytes"]:
+                            raise ValueError("An original report companion grew during retention")
+                        checksum.update(chunk)
+                        outgoing.write(chunk)
+                outgoing.flush()
+                os.fsync(outgoing.fileno())
+            if count != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
+                raise ValueError("An original report companion changed during retention")
             try:
-                os.fsync(directory_fd)
-            finally:
-                os.close(directory_fd)
-        verify_file(target.parent, expected)
-    finally:
-        temporary.unlink(missing_ok=True)
+                parent.publish(temporary, name)
+            except FileExistsError:
+                pass  # A concurrent publication must match the same original.
+            verify_retained()
+            parent.sync()
+        finally:
+            try:
+                parent.unlink(temporary)
+            except FileNotFoundError:
+                pass
 
 
 def prepare(workspace, choices, *, title=None, contact=None, manifest_paths=None):
