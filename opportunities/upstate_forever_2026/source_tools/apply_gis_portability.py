@@ -2,10 +2,11 @@
 
 Usage: python -B source_tools/apply_gis_portability.py APPLICATION
        python -B source_tools/apply_gis_portability.py APPLICATION --output gis_project.py
+       python -B source_tools/apply_gis_portability.py APPLICATION --workspace
 
 The full scientific implementation is retained byte-for-byte outside the named
 filesystem callers. This is an authoring/assembly tool, not a runtime patch or
-import hook. The emitted gis_project.py is the ordinary complete production file.
+import hook. The emitted files are ordinary complete production sources.
 """
 from __future__ import annotations
 
@@ -37,6 +38,10 @@ def _portable():
 
 
 '''
+ORIGINAL_RECORD = '''def record(root: Path, path: Path) -> dict:
+    return {"path": path.relative_to(root).as_posix(), "bytes": path.stat().st_size,
+            "sha256": sha256(path)}
+'''
 FUNCTIONS = {
     "save": '''def save(path: Path, value: Any) -> None:
     _portable().save(path, canonical(value) + b"\\n")
@@ -52,6 +57,12 @@ FUNCTIONS = {
     if exists and not p.is_file():
         raise FileNotFoundError("Missing retained file: " + name)
     return p
+''',
+    "record": '''def record(root: Path, path: Path) -> dict:
+    root = _portable().native_path(root)
+    path = _portable().native_path(path)
+    return {"path": path.relative_to(root).as_posix(), "bytes": path.stat().st_size,
+            "sha256": sha256(path)}
 ''',
     "locked": '''@contextlib.contextmanager
 def locked(path: Path):
@@ -100,11 +111,27 @@ def replace_inside(source, name, old, new, count=1):
     return "".join(lines[:start]) + body.replace(old, new) + "".join(lines[end:])
 
 
+def join_inside(source, name, old, new):
+    """Accept the same already-applied join without replacing advancing source."""
+    lines = source.splitlines(keepends=True)
+    start, end = function_range(source, name)
+    body = "".join(lines[start:end])
+    if body.count(new) == 1:
+        return source
+    return replace_inside(source, name, old, new)
+
+
 def compose(original):
     source = original.decode("utf-8")
     if MARKER in source:
+        start, end = function_range(source, "record")
+        current = "".join(source.splitlines(keepends=True)[start:end]).rstrip("\r\n")
+        if current == ORIGINAL_RECORD.rstrip("\n"):
+            source = replace_function(source, "record", FUNCTIONS["record"])
+        elif current != FUNCTIONS["record"].rstrip("\n"):
+            raise ValueError("The maintained GIS record function advanced; reconcile its native path join.")
         compile(source, "gis_project.py", "exec")
-        return original
+        return source.encode("utf-8")
     if git_blob(original) != PREIMAGE:
         raise ValueError("GIS source advanced: expected " + PREIMAGE + ", received " + git_blob(original)
                          + ". Reconcile that complete source before applying this authoring join.")
@@ -144,6 +171,39 @@ def compose(original):
     return source.encode("utf-8")
 
 
+def compose_workspace(original):
+    """Join only native path boundaries; keep original source/adoption arithmetic."""
+    source = original.decode("utf-8")
+    source = join_inside(source, "_artifact",
+        'path.relative_to(workspace.root).as_posix()',
+        'path.relative_to(gis._portable().native_path(workspace.root)).as_posix()')
+    source = join_inside(source, "_raster_companions",
+        '    primary = gis.local(workspace.root, item["path"])',
+        '    native_root = gis._portable().native_path(workspace.root)\n'
+        '    primary = gis.local(native_root, item["path"])')
+    source = join_inside(source, "_raster_companions",
+        '            p = Path(filename).resolve(strict=True)',
+        '            p = gis._portable().native_path(Path(filename).resolve(strict=True))')
+    source = join_inside(source, "_raster_companions",
+        'if not p.is_relative_to(workspace.root):',
+        'if not p.is_relative_to(native_root):')
+    source = join_inside(source, "_raster_companions",
+        'result.append(gis.record(workspace.root, p))',
+        'result.append(gis.record(native_root, p))')
+    source = join_inside(source, "adopt_sources",
+        "    root=parent/'project';project=gis.load(root/'project.json')",
+        "    parent=gis._portable().native_path(parent)\n"
+        "    root=parent/'project';project=gis.load(root/'project.json')")
+    source = join_inside(source, "adopt_sources",
+        '                        p=Path(filename).resolve(strict=True)',
+        '                        p=gis._portable().native_path(Path(filename).resolve(strict=True))')
+    source = join_inside(source, "adopt_sources",
+        "            context_root = root if context_root is None else context_root",
+        "            context_root = gis._portable().native_path(root if context_root is None else context_root)")
+    compile(source, "gis_workspace.py", "exec")
+    return source.encode("utf-8")
+
+
 def write_complete(path, body, mode):
     path.parent.mkdir(parents=True, exist_ok=True)
     pending = path.with_name(".gis-source-" + uuid.uuid4().hex)
@@ -161,23 +221,41 @@ def write_complete(path, body, mode):
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("application", type=Path)
-    parser.add_argument("--output", type=Path, help="Emit the complete file separately instead of updating APPLICATION")
+    parser.add_argument("--output", type=Path, help="Emit the complete core separately instead of updating APPLICATION")
+    parser.add_argument("--workspace", action="store_true", help="Also compose the existing Workspace source/adoption boundaries in place")
     parser.add_argument("--check", action="store_true", help="Compose and compile in memory without writing")
     args = parser.parse_args(argv)
+    if args.workspace and args.output:
+        parser.error("--workspace updates the two existing application sources; omit --output")
     try:
         application = args.application.expanduser().resolve(strict=True)
-        path = application / "model" / "gis_project.py"
-        if path.is_symlink():
-            raise ValueError("Select the original regular GIS source file")
-        original = path.read_bytes()
-        completed = compose(original)
-        destination = args.output.expanduser().resolve() if args.output else path
-        if not args.check and (completed != original or destination != path):
-            write_complete(destination, completed, stat.S_IMODE(path.stat().st_mode))
-        print(json.dumps({"source": str(path), "destination": str(destination),
-                          "before_git_blob": git_blob(original), "git_blob": git_blob(completed),
-                          "bytes": len(completed), "sha256": hashlib.sha256(completed).hexdigest(),
-                          "changed": completed != original, "written": not args.check}, indent=2))
+        plans = []
+        targets = [(application / "model" / "gis_project.py", compose)]
+        if args.workspace:
+            targets.append((application / "model" / "gis_workspace.py", compose_workspace))
+        # Compose and compile both complete bodies before changing either source.
+        for path, composer in targets:
+            if path.is_symlink():
+                raise ValueError("Select the original regular GIS source file")
+            original = path.read_bytes()
+            completed = composer(original)
+            destination = args.output.expanduser().resolve() if args.output else path
+            plans.append((path, destination, original, completed, stat.S_IMODE(path.stat().st_mode)))
+        for path, destination, original, completed, mode in plans:
+            if path.read_bytes() != original:
+                raise ValueError("The GIS source advanced while its complete replacement was prepared: " + str(path))
+        results = []
+        for path, destination, original, completed, mode in plans:
+            if not args.check and (completed != original or destination != path):
+                write_complete(destination, completed, mode)
+            results.append({"source": str(path), "destination": str(destination),
+                            "before_git_blob": git_blob(original), "git_blob": git_blob(completed),
+                            "bytes": len(completed), "sha256": hashlib.sha256(completed).hexdigest(),
+                            "changed": completed != original, "written": not args.check})
+        result = results[0]
+        if args.workspace:
+            result["workspace"] = results[1]
+        print(json.dumps(result, indent=2))
         return 0
     except (OSError, ValueError, SyntaxError, UnicodeError) as error:
         print(str(error), file=sys.stderr)
