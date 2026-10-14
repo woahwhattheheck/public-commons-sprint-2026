@@ -55,6 +55,9 @@ name. Interrupted/failed build and merge staging directories remain available
 for the current or a replacement cloud worker. ZIP contents keep relative paths
 and executable mode bits. Integrate the payload into the same application root;
 do not move `NATIVE_HELPERS.json` into `source_tools` or rename its platform keys.
+Executables and licenses live together in
+`source_tools/native_helper_binaries/`, which the existing native portable
+application export retains. Keep that directory in the original application.
 
 `exercise` runs both actual host-target executables using the original binary
 protocols, Unicode input/output paths, exact traversal and minimum-L1 results.
