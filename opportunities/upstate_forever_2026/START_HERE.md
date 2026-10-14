@@ -8,7 +8,32 @@ The workbench joins original source intake, projected model grids, native InVEST
 
 This directory is the application source. Keep project workspaces in separate directories so an application update can reopen the existing study.
 
-## Start the application
+## Open the delivered Windows/Mac collection
+
+For the complete portable release, extract the entire ZIP first. In its root folder,
+double-click **Open_Workbench.cmd** on Windows x64 or **Open_Workbench.command** on
+Mac Intel / Apple Silicon. Keep the launcher terminal open. It prepares the matching
+bundled runtime, starts or reuses the original session, and opens the ready workbench.
+A separate Python, Node, compiler or GIS installation is not part of normal desktop opening.
+
+Open **START_HERE.html** beside those root launchers for platform instructions, the
+actual included-study list, first-use progress, own-file intake, closing, moved-folder
+reopening and backup/restore. The collection opens into **Tim — Own data** and keeps
+the supplied original studies separately selectable. Use the root launcher after a
+browser address expires; a saved URL or this documentation does not start a server.
+
+**API_QUICKSTART.html** beside the launchers documents the current-session reader:
+`application/source_tools/collection_opening/session_api.py`. It reuses the existing
+private session and retained Workspace identity without assuming a port or putting
+a session capability in a command. The application/source installation instructions
+below are for development and independently managed environments, not recipient setup.
+
+The final collection assembler generates these root guides from its actual
+`STUDIES.json` using `source_tools/collection_opening/build_guides.py`. See
+[source_tools/COLLECTION_GUIDANCE.md](source_tools/COLLECTION_GUIDANCE.md) for the
+complete source and root-file join. Keep the existing source and runtime selections.
+
+## Developer environment and source installation
 
 Use an existing Linux GIS environment with InVEST 3.20.0, or create the environment described by the included file:
 

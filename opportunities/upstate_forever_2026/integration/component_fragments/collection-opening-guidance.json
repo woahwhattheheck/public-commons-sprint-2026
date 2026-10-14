@@ -1,0 +1,22 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "collection-opening-guidance",
+  "source_reference": "ECO-OPENING-GUIDANCE-D42/1.1.0/2026-10-14",
+  "components": {
+    "collection-opening-guidance": {
+      "paths": [
+        "source_tools/collection_opening/build_guides.py",
+        "source_tools/collection_opening/session_api.py",
+        "source_tools/COLLECTION_GUIDANCE.md",
+        "integration/component_fragments/collection-opening-guidance.json"
+      ],
+      "requires": [
+        "recipient-workbench-opening"
+      ],
+      "retained_only": []
+    }
+  },
+  "required_components": [
+    "collection-opening-guidance"
+  ]
+}
