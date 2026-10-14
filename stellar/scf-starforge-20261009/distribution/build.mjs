@@ -8,6 +8,7 @@ import { openGitSource, MAX_SOURCE_FILE_BYTES, MAX_SOURCE_BYTES } from './git-so
 import { browserAssetDeclarations, createBrowserAssetIndex } from './browser-assets.mjs';
 import { productPackageMetadata } from './product-package.mjs';
 import { validateManagedSourceManifest, MAX_MANAGED_SOURCE_BYTES } from './managed-source.mjs';
+import { validatePinnedSourceManifest, validatePinnedSourceFiles, MAX_PINNED_SOURCE_BYTES } from './pinned-source.mjs';
 import { distributionPath, contributionDirectory, contributionPaths, composeDistribution } from './specification.mjs';
 import { sourceSelectionDirectory, sourceSelectionPath, validateSourceSelection,
   selectedContributionPaths, requireSourceSelectionMatch } from './source-selection.mjs';
@@ -231,11 +232,24 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
       managedPaths.add(member.path);
     }
   }
+  // Exact source-owned pins select their original files; never rewrite an inventory.
+  const pinnedPaths = new Set(), pinnedSources = [];
+  for (const path of spec.pinnedSourceManifests ?? []) {
+    const entry = byPath.get(path);
+    if (!entry) throw new TypeError('Missing pinned source manifest: ' + path);
+    const bytes = source.readFiles([entry]).get(path);
+    if (bytes.length > MAX_PINNED_SOURCE_BYTES)
+      throw new RangeError('Pinned source manifest exceeds its byte limit: ' + path);
+    const inventory = validatePinnedSourceManifest(JSON.parse(
+      new TextDecoder('utf-8', {fatal:true, ignoreBOM:true}).decode(bytes)), path);
+    pinnedSources.push(inventory); pinnedPaths.add(path);
+    for (const member of inventory.entries) pinnedPaths.add(member.path);
+  }
   const required = [...Object.values(spec.commands), ...Object.values(product.bin), product.readme,
     ...valuesDeep(spec.exports).filter(path => path.startsWith('./source/')).map(path => path.slice(9)),
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {})];
-  const explicitSources = new Set(spec.supportFiles);
-  const explicitRuntime = new Set([...managedPaths, ...spec.supportFiles, ...specificationPaths,
+  const explicitSources = new Set([...spec.supportFiles, ...pinnedPaths]);
+  const explicitRuntime = new Set([...managedPaths, ...pinnedPaths, ...spec.supportFiles, ...specificationPaths,
     ...Object.values(spec.applicationProviders ?? {}), ...Object.values(spec.merchantProviders ?? {}),
     ...(recipe ? [...required, ...Object.values(spec.runtimePackageManifests ?? {}),
       ...(spec.browserAssets ?? []).flatMap(entry => [entry.server, entry.manifest])] : [])]);
@@ -258,7 +272,7 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   for (const root of spec.components)
     if (!selected.some(item => item.path.startsWith(root + '/'))) throw new TypeError('Missing component: ' + root);
   const names = new Set(selected.map(item => item.path));
-  for (const path of [...required, ...managedPaths, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
+  for (const path of [...required, ...managedPaths, ...pinnedPaths, ...spec.supportFiles, ...specificationPaths, ...Object.values(spec.runtimePackageManifests ?? {})])
     if (!names.has(path)) throw new TypeError('Missing packaged entry: ' + path);
   const sources = new Map();
   const readSource = path => sources.get(path) ?? source.readFiles([byPath.get(path)]).get(path);
@@ -407,6 +421,13 @@ export async function buildDistribution({ repository = fileURLToPath(new URL('..
   const discovered = [...names].filter(path => !initialNames.has(path)).map(path => byPath.get(path));
   selected.splice(0, selected.length, ...initialSelected, ...discovered);
   loadSources(discovered);
+  // Verify the final same-tree bytes before opening or mutating an output stage.
+  for (const inventory of pinnedSources) validatePinnedSourceFiles(inventory, path => {
+    const bytes = sources.get(path), entry = byPath.get(path);
+    return bytes && names.has(path) && entry ? {
+      bytes:bytes.length, sha256:digest(bytes), gitBlob:entry.blob,
+    } : undefined;
+  });
   // Runtime drivers follow the exact source commit, including new production
   // dependencies such as the PostgreSQL cursor. Development fixtures stay out.
   const runtimeDependencies = Object.create(null), runtimePackageSources = {};
