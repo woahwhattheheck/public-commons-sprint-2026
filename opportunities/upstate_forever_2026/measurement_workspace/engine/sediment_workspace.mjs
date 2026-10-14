@@ -1,6 +1,6 @@
 /** Source-bound sediment studies in the original Measurements exports/events owner. */
 import {hash,stable,parseSource} from './normalise.mjs';
-import {InputError} from './parse.mjs';
+import {InputError,SOURCE_LINE_EDITION,sourceLineEndings} from './parse.mjs';
 import {verifySedimentReferenceImport} from '../reference/sediment-reference.mjs';
 import {buildSedimentPairs,buildSedimentPredictionInput,sedimentObservationCatalogue} from './sediment_pairs.mjs';
 import {fitSedimentSurrogate,predictSedimentSurrogate} from './sediment_surrogate.mjs';
@@ -41,6 +41,7 @@ function originalSource(workspace,id){
 }
 function summaryOf(parsed){
  const value={rows:parsed.rows.length,rejectedCount:parsed.rejected.length,stationCount:new Set(parsed.rows.map(x=>x.row.stationId||x.row.id)).size,censored:parsed.rows.filter(x=>x.row.censor&&x.row.censor!=='none').length,parameters:{},issues:{}};
+ if(parsed.kind!=='usgs-daily'&&parsed.lineEndings==='physical')value.sourceLineEdition=SOURCE_LINE_EDITION;
  for(const {row}of parsed.rows){if(row.parameter)value.parameters[row.parameter]=(value.parameters[row.parameter]||0)+1;for(const issue of row.issues||[])value.issues[issue]=(value.issues[issue]||0)+1;}return value;
 }
 function reconstructSources(sources,definition){
@@ -50,7 +51,7 @@ function reconstructSources(sources,definition){
  for(const source of sources){
   if(!source||!allowed.has(source.id)||!['wqp','usgs-daily'].includes(source.kind)||typeof source.content!=='string'||hash(source.content)!==source.sha)fail('Original sediment source bytes differ');
   if(source.origin?.adapter==='upstate.usgs-07144100-calibration-intake/v1')verifySedimentReferenceImport({kind:source.kind,text:source.content,mapping:source.mapping,origin:source.origin});
-  const parsed=parseSource({kind:source.kind,text:source.content,mapping:source.mapping});
+  const parsed=parseSource({kind:source.kind,text:source.content,mapping:source.mapping,lineEndings:sourceLineEndings(source.summary)});
   if(hash(stable([source.kind,source.sha,parsed.mapping]))!==source.id||stable(parsed.mapping)!==stable(source.mapping))fail('Original source mapping or import identity differs');
   if(stable(parsed.rejected)!==stable(source.rejected)||stable(summaryOf(parsed))!==stable(source.summary))fail('Retain complete original source parsing and rejected rows');
   for(const page of source.origin?.pages||[])if(typeof page.text!=='string'||hash(page.text)!==page.sha)fail('Original acquired source page differs');

@@ -45,16 +45,22 @@ function selectedGroups(project,view){
   const summary=typeof source.summary==='string'?JSON.parse(source.summary):source.summary;
   const imported=parseCSV(source.content,{lineEndings:sourceLineEndings(summary)});
   need(returned.sha256===source.sha&&imported.rejected.length===0&&
-   stable(returned.headers)===stable(imported.headers)&&
-   imported.rows.length===lineage.rows.length&&returned.rows.length===imported.rows.length,
+   stable(returned.headers)===stable(imported.headers)&&imported.rows.length===lineage.rows.length,
    'The complete returned worksheet differs from its original imported source.');
-  const table=returnedTable(returned),byLine=new Map();
-  need(table.rows.length===imported.rows.length,'Keep every complete returned worksheet row.');
+  const table=returnedTable(returned),nativeByLine=new Map(),byLine=new Map();
+  need(table.rows.length===returned.rows.length&&
+   returned.rows.filter(row=>row.values.some(value=>value!=='')).length===imported.rows.length,
+   'Keep every complete returned worksheet row.');
+  for(const [index,row] of returned.rows.entries()){
+   need(Number.isSafeInteger(row.line)&&row.line>0&&!nativeByLine.has(row.line),
+    'A returned source line is invalid or repeated.');
+   nativeByLine.set(row.line,{source:row,values:table.rows[index]});
+  }
   for(const [index,row] of imported.rows.entries()){
-   const native=returned.rows[index],values=imported.headers.map(header=>row.raw[header]);
-   need(native.line===row.line&&stable(native.values)===stable(values),
+   const entry=nativeByLine.get(row.line),values=imported.headers.map(header=>row.raw[header]);
+   need(entry&&stable(entry.source.values)===stable(values),
     'A returned row differs from its exact original cells or stored source position.');
-   byLine.set(lineage.rows[index].line,{source:native,values:table.rows[index]});
+   byLine.set(lineage.rows[index].line,entry);
   }
   const metaHeaders=['Original workbook','Original worksheet','Original worksheet row','Original line start','Original line end',
    'Preparation','Preparation edition','Native source','Native measurements revision'];

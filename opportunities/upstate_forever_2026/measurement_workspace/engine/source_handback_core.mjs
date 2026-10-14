@@ -1,19 +1,20 @@
 /** Original-shaped returns from one native Measurements snapshot. No scientific writes. */
-import {InputError} from './parse.mjs';
+import {InputError,sourceLineEndings} from './parse.mjs';
 export const HANDBACK_FORMAT='upper-savannah-source-handback/v1';
 const clone=v=>JSON.parse(JSON.stringify(v));
 const need=(v,m)=>{if(!v)throw new InputError(m,409);};
 const parsed=v=>typeof v==='string'?JSON.parse(v):v;
 const list=(v,name)=>{if(!Array.isArray(v)||v.some(x=>typeof x!=='string'||!x)||new Set(v).size!==v.length)throw new InputError('Choose distinct '+name);return v;};
 /** Keep original heading strings, logical records, blank rows and physical row starts. */
-export function originalCsvRows(text){
+export function originalCsvRows(text,{lineEndings='physical'}={}){
+ if(!['physical','legacy'].includes(lineEndings))throw new InputError('Unknown CSV source-line interpretation');
  if(typeof text!=='string')throw new InputError('An original CSV must be retained as complete text');
  const original=text;text=text.replace(/^\uFEFF/,'');
  let value='',row=[],quoted=false,closed=false,line=1,start=1;const rows=[];
  function field(){row.push(value);value='';closed=false;}
  function end(){field();rows.push({line:start,values:row});row=[];start=line+1;}
  for(let i=0;i<text.length;i++){const ch=text[i];
-  if(quoted){if(ch==='"'){if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}}else{value+=ch;if(ch==='\r'||(ch==='\n'&&text[i-1]!=='\r'))line++;}}
+  if(quoted){if(ch==='"'){if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}}else{value+=ch;if(lineEndings==='legacy'?ch==='\n':ch==='\r'||(ch==='\n'&&text[i-1]!=='\r'))line++;}}
   else if(ch===',')field();
   else if(ch==='\r'||ch==='\n'){end();if(ch==='\r'&&text[i+1]==='\n')i++;line++;}
   else if(closed)throw new InputError('Unexpected original CSV text after closing quote at line '+line);
@@ -63,7 +64,7 @@ export function buildSourceHandback(snapshot,input={}){
    const doc=JSON.parse(source.content);need(Array.isArray(doc.features),'Retain original USGS daily features');
    headers=['Original feature JSON'];items=doc.features.map((feature,i)=>({line:i+1,values:[JSON.stringify(feature)],feature:clone(feature)}));
    parsedSource={headerLine:null,leadingBlankRows:[],bom:source.content.startsWith('\uFEFF')};
-  }else{parsedSource=originalCsvRows(source.content);headers=parsedSource.headers;items=parsedSource.rows;}
+  }else{parsedSource=originalCsvRows(source.content,{lineEndings:sourceLineEndings(parsed(source.summary))});headers=parsedSource.headers;items=parsedSource.rows;}
   const mapping=parsed(source.mapping),counts={rows:items.length,linkedRows:0,linkedRecords:0,rejectedRows:0,blankRows:0,stationRows:0,unmatchedRows:0,eligibleRecords:0};
   const consumed=new Set(),rows=items.map(item=>{
    const key=id+':'+item.line,ids=links.get(key)||[];if(ids.length)consumed.add(key);
