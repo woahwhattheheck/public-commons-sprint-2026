@@ -3747,6 +3747,27 @@ ALLOWED = ALLOWED | frozenset({
 # Retain the authoring source shipped in the complete native GIS packet.
 ALLOWED = ALLOWED | frozenset({"source_tools/apply_gis_portability.py"})
 
+# Full native continuation of the ORIGINAL archive, Study, source response and
+# scientific fieldwork receivers. These remain optional source admissions; the
+# existing REQUIRED set, source predecessor checks and scientific semantics stay
+# exactly as published. Include complete original guides/component sources so
+# the canonical application's recipient can reopen these existing workflows.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/archive_delta.py",
+    "source_tools/archive_delta_view.py",
+    "docs/INCREMENTAL_STUDY_DELIVERY.md",
+    "integration/component_fragments/archive-delta.json",
+    "source_tools/receive_study_set.py",
+    "source_tools/RECEIVE_STUDY_SET.md",
+    "source_tools/source_response_reuse.py",
+    "source_tools/SOURCE_ACQUISITION_CONTINUATION.md",
+    "source_tools/receive_original_study.py",
+    "source_tools/receive_scientific_fieldwork.py",
+    "docs/SCIENTIFIC_FIELDWORK_COURSE.md",
+    "integration/component_fragments/scientific-fieldwork-course.json",
+})
+
+
 
 if __name__ == "__main__":
     main()
