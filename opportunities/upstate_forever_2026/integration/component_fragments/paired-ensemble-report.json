@@ -7,6 +7,7 @@
       "paths": [
         "model/paired_ensemble/__init__.py",
         "model/paired_ensemble/ensemble_cli.py",
+        "model/paired_ensemble/ensemble_source_receiving.py",
         "model/paired_ensemble/ensemble_report_source.py",
         "model/paired_ensemble/ensemble_report_cli.py",
         "model/paired_ensemble/ensemble_store.py",

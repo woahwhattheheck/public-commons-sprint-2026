@@ -11,6 +11,10 @@ customer data is not a software packaging dependency.
 
 Keep these application-relative files together:
 
+- `model/paired_ensemble/__init__.py`
+- `model/paired_ensemble/ensemble_cli.py`
+- `model/paired_ensemble/ensemble_report_cli.py`
+- `model/paired_ensemble/ensemble_source_receiving.py`
 - `model/paired_ensemble/ensemble_store.py`
 - `model/paired_ensemble/ensemble_portable.py`
 - `model/paired_ensemble/ensemble_report_source.py`
@@ -68,7 +72,8 @@ not rerun the original scientific models.
 ## Operate an original completed result
 
 Use the installed application Python and an already complete paired product. Keep
-all output destinations outside the source product. The existing CLI is unchanged:
+all output destinations outside the source product. The existing result commands
+retain their arguments and archive format:
 
 ```sh
 python -B -m model.paired_ensemble.ensemble_cli export --project ORIGINAL_PRODUCT --out NEW_RESULT.zip
@@ -118,10 +123,10 @@ assert checked["ensemble_id"] == captured["ensemble_id"]
 The complete captured directory contains `sources.json`, the original report-source
 recipe, unrounded scientific summary, every declared original quantitative/report
 file, and its implementation sources. Use the normal source-collection importer
-with that `sources.json`, including its complete companions. Keep the archive's
-relative directories intact when receiving it with the existing source-archive
-workflow. This source archive and an ensemble-result archive have different
-manifests and should be opened with their corresponding existing workflow.
+with that `sources.json`, including its complete companions. The direct receiving
+command below preserves the archive's complete relative directories. This source
+archive and an ensemble-result archive have different manifests and are received
+by their corresponding command; neither is reinterpreted as the other format.
 
 New captures retain and fingerprint four implementation files: the report producer,
 its storage implementation, `portable_fs.py` and `windows_fs.py`. Their fingerprints
@@ -135,12 +140,70 @@ returns the same completed source. Re-exporting to a matching existing source ZI
 checks its complete inventory and original bytes before returning `reused=True`.
 A duplicate, altered or incompatible archive is rejected and remains untouched.
 
+## Direct source receiving, independent import and composition
+
+The existing scientific-source CLI now carries the archive all the way back into
+an ordinary Workspace. It uses the unchanged source record and importer rather
+than requiring a manual unzip or rebuilding the original ensemble in the receiver.
+Run these commands from the installed application directory, quoting real paths:
+
+```sh
+python -B -m model.paired_ensemble.ensemble_report_cli capture --project ORIGINAL_PRODUCT --out CAPTURES --zip PAIRED_SOURCE.zip
+python -B -m model.paired_ensemble.ensemble_report_cli receive --archive PAIRED_SOURCE.zip --out "Received science"
+python -B -m model.paired_ensemble.ensemble_report_cli inspect --source "Received science"
+python -B -m model.paired_ensemble.ensemble_report_cli import --workspace EXISTING_WORKSPACE --source "Received science"
+python -B -m model.paired_ensemble.ensemble_report_cli render-source --workspace EXISTING_WORKSPACE --source "Received science" --out NEW_REPORT
+```
+
+`receive` requires a new output directory and publishes only after every original
+member, full record, scientific recipe and source companion is verified. The
+optional `--max-bytes` is an explicit uncompressed receiving allowance, including
+the original source record. It is not a compression-ratio or fixed project-size
+limit. Existing destinations are preserved, including when the same source is
+received again; use `inspect` on the saved directory or choose a new one.
+
+Close any open report, move the complete received directory, then use its new path
+with `inspect`, `import` or `render-source`. `import` delegates to the existing
+`Workspace.import_sources` and `Workspace.source_file` methods, checks the returned
+recipe and complete companion identities, and returns the local `source_choice`.
+It does not change the received source. The destination Workspace must already
+exist and may be different from the original producer's Workspace. The returned
+`project_id` identifies the local importer; `original_project_id` retains the
+producer's identity. The original scientific recipe and its project, ensemble,
+profile, source and producing-model identities are not rewritten.
+
+`render-source` uses that local source choice with the existing
+`observed_report_render.prepare` and `render` composer. Optional `--title` changes
+only the newly composed report's presentation title. The existing `prepare` and
+`render --ensemble-id ...` commands remain available for ensembles already held
+inside the selected Workspace.
+
+## Bootstrap-only transport
+
+Package import and saved-result transport no longer eagerly import the numerical
+engine. The public `from model.paired_ensemble import EnsembleWorkspace` interface
+still loads the original class when requested. The lightweight operations are:
+
+- Result CLI: `inspect`, `export`, `receive`, and help.
+- Scientific-source CLI: `capture`, `inspect`, `export`, `receive`, and help.
+
+These operations use standard-library Python and the shared filesystem modules.
+They can run with `python -B -S -m ...` from the installed application directory,
+with third-party site packages disabled. They carry the existing original TIFF,
+PNG, CSV, JSON and source bytes without opening rasters or rerunning models.
+Analysis, report regeneration, Workspace import and new document composition still
+use the installed application dependencies. Missing dependencies in a requested
+heavy operation are reported through the CLI's JSON error response, not by an
+unconditional numerical import before command parsing.
+
 ## Practical release check
 
 Exercise the course on the actual retained product without rerunning InVEST:
 result export, independent receive, moved-folder report opening, scientific-source
-capture and source export, and ordinary repeat/reuse behavior. Compare the original
-stored identities, summaries and member hashes. On a suitable development volume,
+capture and source export, direct source receive, independent Workspace import and
+ordinary repeat/reuse behavior. Compare the original stored identities, summaries
+and member hashes. Run transport with site packages disabled, then render the
+received source using the installed application. On a suitable development volume,
 also exercise the shared verified-copy path when hard-link creation is unavailable.
 The existing report controls and original download links should be clicked once.
 
