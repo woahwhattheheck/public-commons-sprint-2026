@@ -19,8 +19,9 @@ from .reach_chemistry.inference import observation_key
 from .scientific_figures import _validate_figure
 
 VERSION = 1
-EDITION = "native-chemistry-scientific-source-v2"
-READABLE_EDITIONS = {"native-chemistry-scientific-source-v1", EDITION}
+EDITION = "native-chemistry-scientific-source-v3"
+READABLE_EDITIONS = {"native-chemistry-scientific-source-v1",
+                     "native-chemistry-scientific-source-v2", EDITION}
 KIND = "chemistry-report-sources"
 DIRECTORY = "chemistry-report-source-exports"
 SOURCE_ID = "native-chemistry-report"
@@ -244,22 +245,87 @@ def _svg(figure):
     return "".join(parts).encode("utf-8")
 
 
+def _display_value(value):
+    """Presentation only: keep original structured values in the complete CSV.
+
+    Keys and source-supplied labels are literal, including case-sensitive species
+    and parameter IDs. Numeric leaves keep the existing scientific formatter.
+    Lists retain their order and nested list positions are explicit.
+    """
+    if isinstance(value, dict):
+        return "\n".join(str(key) + ": " + _display_value(child)
+                         for key, child in value.items()) or "Empty object"
+    if isinstance(value, (list, tuple)):
+        if not value:
+            return "Empty list"
+        if any(isinstance(child, (dict, list, tuple)) for child in value):
+            return "\n".join(str(index) + ". " + _display_value(child)
+                             for index, child in enumerate(value, 1))
+        return "; ".join(_text(child) for child in value)
+    return _text(value)
+
+
+def _display_items(label, value):
+    """Give nested retained settings separate, page-splittable table rows.
+
+    Field paths and one-based sequence positions make matrix order and nested
+    records readable without changing, averaging or reconstructing any value.
+    Each scalar-list row is bounded so a large native matrix or cohort cannot
+    turn into a single PDF cell taller than a page.
+    """
+    if isinstance(value, dict) and value:
+        for key, child in value.items():
+            yield from _display_items(label + " / " + str(key), child)
+    elif isinstance(value, (list, tuple)) and value:
+        if any(isinstance(child, (dict, list, tuple)) for child in value):
+            for index, child in enumerate(value, 1):
+                yield from _display_items(label + " [" + str(index) + "]", child)
+        else:
+            chunk, start, chars = [], 1, 0
+            for index, child in enumerate(value, 1):
+                text = _text(child)
+                if chunk and (len(chunk) == 8 or chars + len(text) > 240):
+                    yield [label + " [" + str(start) + ":" + str(index - 1)
+                           + "]", "; ".join(chunk)]
+                    chunk, start, chars = [], index, 0
+                chunk.append(text)
+                chars += len(text) + 2
+            suffix = (" [" + str(start) + ":" + str(len(value)) + "]"
+                      if start != 1 or len(value) > 8 else "")
+            yield [label + suffix, "; ".join(chunk)]
+    else:
+        yield [label, _display_value(value)]
+
+
 def _sections(project, result, request, report, add):
     """Readable original-result sections, with complete CSV for every displayed table."""
     sections = []
-    def table_section(key, title, note, rows, fields):
+    def table_section(key, title, note, rows, fields, *, display_rows=None):
         rows = list(rows)
         member = "tables/" + key + ".csv"
+        # The original CSV schema, row ordering and values remain unchanged.
         add(member, _csv(fields, rows))
-        shown = rows[:20]
-        sections.append([title, [note,
-            "Showing %s of %s retained rows. The complete table is linked below." % (len(shown), len(rows)),
-            {"kind": "table", "columns": [label for field, label in fields],
-             "rows": [[_text(row.get(field)) for field, label in fields] for row in shown]},
+        if display_rows is None:
+            shown = [[_display_value(row.get(field)) for field, label in fields]
+                     for row in rows[:20]]
+            count_note = ("Showing %s of %s retained rows. The complete table is linked below."
+                          % (len(shown), len(rows)))
+        else:
+            expanded = list(display_rows)
+            shown = expanded[:80]
+            count_note = ("Showing %s of %s detail rows from %s retained items. "
+                          "Field paths and list positions preserve the original structure. "
+                          "The complete original table is linked below."
+                          % (len(shown), len(expanded), len(rows)))
+        sections.append([title, [note, count_note,
+            {"kind": "table", "columns": [label for field, label in fields], "rows": shown},
             {"kind": "links", "items": [{"title": "Complete " + title.lower(), "path": member}]}]])
     def items(key, title, note, values):
+        values = list(values)
         table_section(key, title, note, [{"item": k, "value": v} for k, v in values],
-                      [("item", "Item"), ("value", "Retained value")])
+                      [("item", "Item"), ("value", "Retained value")],
+                      display_rows=(row for label, value in values
+                                    for row in _display_items(label, value)))
 
     source_stamp = report["selection"]["source_stamp"]
     info = report["summary"]
@@ -276,6 +342,16 @@ def _sections(project, result, request, report, add):
            ("Recorded solver elapsed seconds", info.get("recorded_solver_elapsed_seconds")),
            ("Original project provenance", project.raw.get("provenance")),
            ("Original source references", source_stamp["source_refs"])])
+    identity_section = sections.pop()
+    identity_section[0] = "Appendix: original analysis identity and source records"
+    items("study-overview", "Study and interpretation",
+          "Read the selected completed analysis below. Original numerical results, inputs, "
+          "units and conserved bases remain in the linked source files. Full run and "
+          "document identities are retained in the appendix.",
+          [("Project", project.title), ("Analysis", info["mode"]),
+           ("Species", project.ns), ("Reaches", project.nr),
+           ("Model duration (days)", project.end_day),
+           ("Original project provenance", project.raw.get("provenance"))])
     table_section("species", "Original species and conserved bases",
                   "Concentrations in mg basis/L and masses in kg basis refer to the declared conserved "
                   "quantity, for example elemental N rather than ammonium molecular mass.",
@@ -452,6 +528,7 @@ def _sections(project, result, request, report, add):
     table_section("exchange", "Original bidirectional exchange", "Original each-direction water exchange.",
                   project.raw.get("exchanges", []), [("id", "ID"), ("a", "Reach A"), ("b", "Reach B"),
                   ("m3_day", "Each direction m3/day"), ("provenance", "Source")])
+    sections.append(identity_section)
     sections.append(["Read and reuse the original scientific report", [
         "The complete readable original report, its exact saved native inputs/results, and editable "
         "Chemistry project accompany this source. All original numerical results remain unchanged.",
