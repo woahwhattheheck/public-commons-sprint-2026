@@ -7,6 +7,8 @@ import os
 from pathlib import Path, PurePosixPath
 import shutil
 import stat
+import sys
+import unicodedata
 import tempfile
 import zipfile
 from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifier,
@@ -18,6 +20,7 @@ from .portable_implementation import locked_implementation, verify_implementatio
 from .portable_parameter_studies import verify_parameter_studies
 from . import joint_parameter_study_transfer as joint_transfer
 from . import client_source_recipe_portable as recipe_transfer
+from .portable_fs import publish_file as _publish_file, publish_directory as _publish_directory
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -153,18 +156,23 @@ def member_name(value):
 
 
 def validate_receiving_names(names):
-    """Reject Windows destination aliases before extracting any original member."""
-    if os.name != "nt":
+    """Reject case/Unicode destination aliases before receiving original bytes.
+
+    Callers may include explicit directories as well as their children. File /
+    directory conflicts are checked separately for the file-only workspace ZIP.
+    Original spellings stay in the manifest; no member is silently renamed.
+    """
+    if os.name != "nt" and sys.platform != "darwin":
         return
     seen = {}
     for name in names:
         parts = member_name(name).parts
         for length in range(1, len(parts) + 1):
             prefix = "/".join(parts[:length])
-            folded = prefix.casefold()
+            folded = unicodedata.normalize("NFC", prefix).casefold()
             previous = seen.setdefault(folded, prefix)
             if previous != prefix:
-                raise ValueError("Archive members alias the same Windows destination: "
+                raise ValueError("Archive members alias the same receiving destination: "
                                  + previous + " / " + prefix)
 
 
@@ -324,8 +332,9 @@ def _retain_received_archive(archive_source, destination, before, sha256):
                 os.link(source_path, target)
             except OSError as error:
                 import errno
-                if error.errno not in {errno.EXDEV, errno.EPERM, errno.EACCES,
-                                       errno.EOPNOTSUPP, errno.ENOSYS}:
+                if (error.errno not in {errno.EXDEV, errno.EPERM, errno.EACCES,
+                                        errno.EOPNOTSUPP, errno.ENOSYS}
+                        and getattr(error, "winerror", None) not in (1, 17, 50)):
                     raise
             else:
                 linked = _identity(target)[:4] == before[:4]
@@ -352,6 +361,34 @@ def _retain_received_archive(archive_source, destination, before, sha256):
     return {"path": relative, "bytes": before[2], "sha256": sha256}
 
 
+def _retain_delivery_file(source, target, expected):
+    """Register original delivery bytes on volumes with or without hard links.
+
+    The source is an already extracted, verified archive member. Publication is
+    create-only; another file at the destination is reused only when its actual
+    original bytes match. The shared publisher supplies the verified-copy route.
+    """
+    source, target = _native_fs_path(source), _native_fs_path(target)
+    before = _identity(source)
+    if before[2] != expected["bytes"]:
+        raise ValueError("Received delivery source changed length: " + str(source))
+    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        _publish_file(source, target)
+    except FileExistsError:
+        # Retained review assets may already occupy their ordinary workspace
+        # paths. Preserve those members rather than replacing them.
+        pass
+    actual = _identity(target)
+    after = _identity(source)
+    if after[:4] != before[:4]:
+        raise ValueError("Received delivery source changed while registering: " + str(source))
+    if (actual[2] != expected["bytes"]
+            or file_digest(target) != expected["sha256"]):
+        raise ValueError("Received delivery artifact conflicts with retained work: " + str(target))
+    _sync_directory(target.parent)
+
+
 def _register_received_delivery(manifest, destination, working_archive=None):
     """Register the verified snapshot where the original operator lists deliveries."""
     delivery = manifest.get("delivery") or {}
@@ -372,25 +409,12 @@ def _register_received_delivery(manifest, destination, working_archive=None):
         relative = member_name(item["path"]).as_posix()
         source = Path(destination) / "delivery" / relative
         target = directory.joinpath(*member_name(relative).parts)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            if target.is_symlink() or (target.stat().st_size != item["bytes"]
-                                      or file_digest(target) != item["sha256"]):
-                raise ValueError("Received delivery artifact conflicts with retained work: " + relative)
-        else:
-            # Both trees live on the receiving filesystem; a link retains one data copy.
-            os.link(source, target)
+        _retain_delivery_file(source, target, item)
     if working_archive is not None:
         record = {**record, "files": {**record["files"], "working_archive": working_archive}}
         source = Path(destination) / "delivery" / working_archive["path"]
         target = directory.joinpath(*member_name(working_archive["path"]).parts)
-        target.parent.mkdir(parents=True, exist_ok=True)
-        if target.exists():
-            if target.is_symlink() or (target.stat().st_size != working_archive["bytes"]
-                                      or file_digest(target) != working_archive["sha256"]):
-                raise ValueError("Received working archive conflicts with retained work")
-        else:
-            os.link(source, target)
+        _retain_delivery_file(source, target, working_archive)
     if working_archive is not None:
         from .received_delivery_navigation import build as build_received_navigation
         record = build_received_navigation(directory, record, working_archive)
@@ -693,7 +717,7 @@ def backup(workspace, destination, *, include_intermediates=True, include_delive
                       "joint_parameter_studies": joint_parameter_studies,
                       "client_source_recipes": client_source_recipes}
             # Publish without replacing an unrelated archive created meanwhile.
-            os.link(pending, destination)
+            _publish_file(pending, destination)
             pending.unlink()
             _sync_directory(destination.parent)
         return result
@@ -733,6 +757,11 @@ def _inspect_archive(archive, *, verify):
     validate_receiving_names(names)
     if len(names) != len(set(names)) or "ARCHIVE.json" not in names:
         raise ValueError("Archive has duplicate names or lacks its original manifest")
+    file_names = set(names)
+    for name in names:
+        parts = member_name(name).parts
+        if any("/".join(parts[:index]) in file_names for index in range(1, len(parts))):
+            raise ValueError("Archive member is both a file and a directory: " + name)
     for entry in entries:
         member_name(entry.filename)
         mode = entry.external_attr >> 16
@@ -1200,10 +1229,12 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         # Directory rename is final publication; the staging directory is owned.
         if destination.exists():
             raise ValueError("Receiving destination appeared during capture")
-        os.rename(pending, destination)
+        _publish_directory(pending, destination)
         pending = None
-        _sync_directory(destination.parent)
         return result
     finally:
         if pending is not None:
-            shutil.rmtree(pending)
+            # A completed create-only rename can be followed by a directory
+            # flush error. Preserve that original error and the published tree.
+            with contextlib.suppress(FileNotFoundError):
+                shutil.rmtree(pending)

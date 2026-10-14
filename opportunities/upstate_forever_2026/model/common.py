@@ -16,6 +16,7 @@ import shutil
 import stat
 import tempfile
 from .verified_files import source_identity, verified_operation
+from .portable_fs import publish_file as _publish_file
 if os.name == "nt":
     from .windows_fs import no_follow_open, sync_directory as _windows_sync_directory, replace as _windows_replace, fd_stat as _windows_fd_stat, path_stat as _windows_path_stat, native_path as _windows_native_path
 
@@ -110,11 +111,24 @@ def file_digest(path):
             h.update(b)
     return h.hexdigest()
 
+def _immutable_contents_equal(path, data):
+    descriptor = _open_original(path, os.O_RDONLY | _NOFOLLOW | _NONBLOCK)
+    with os.fdopen(descriptor, "rb") as source:
+        before = _fd_stat(source.fileno())
+        if not stat.S_ISREG(before.st_mode):
+            raise ValueError("Immutable project item is not a regular file: " + str(path))
+        equal = before.st_size == len(data) and source.read(len(data) + 1) == data
+        after = _fd_stat(source.fileno())
+        if _file_state(before) != _file_state(after):
+            raise ValueError("Immutable project item changed while reading: " + str(path))
+        return equal
+
+
 def atomic_bytes(path, data, *, immutable=False):
     path = _native_fs_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if immutable and path.exists():
-        if path.read_bytes() != data:
+        if not _immutable_contents_equal(path, data):
             raise ValueError("Immutable project item differs: " + str(path))
         return
     pending = None
@@ -126,9 +140,9 @@ def atomic_bytes(path, data, *, immutable=False):
             os.fsync(f.fileno())
         if immutable:
             try:
-                os.link(pending, path)
+                _publish_file(pending, path)
             except FileExistsError:
-                if path.read_bytes() != data:
+                if not _immutable_contents_equal(path, data):
                     raise ValueError("Concurrent immutable item differs: " + str(path))
             pending.unlink()
             pending = None
@@ -247,10 +261,10 @@ def _retained_object_matches(path, checksum, size, *, verified_state=None):
 @verified_operation
 def retain_file(project, source, expected_sha256=None):
     """Retain one independent input copy, reusing banked bytes and interrupted intake."""
-    source = Path(source).resolve(strict=True)
+    source = _native_fs_path(source).resolve(strict=True)
     if not source.is_file():
         raise ValueError("Source is not a regular file")
-    directory = Path(project) / "objects"
+    directory = _native_fs_path(project) / "objects"
     directory.mkdir(parents=True, exist_ok=True)
     expected = identifier(expected_sha256) if expected_sha256 is not None else None
     pending = None
@@ -318,7 +332,7 @@ def retain_file(project, source, expected_sha256=None):
                 if _file_state(_fd_stat(src.fileno())) != source_state:
                     raise ValueError("Original input changed during intake")
                 try:
-                    os.link(pending, destination)
+                    _publish_file(pending, destination)
                 except FileExistsError:
                     # Preserve a complete concurrent publication or atomically
                     # repair a damaged regular object with this verified copy.
