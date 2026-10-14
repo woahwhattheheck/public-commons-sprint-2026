@@ -20,26 +20,26 @@
     "workspace_interface_browser3": "c2a7df2f0fdd6c1b7b4ef8aa47f392f757941a7d",
     "installation2": "aaaac9ad8c1133003645e06e6fc4ab55d70451d3",
     "native_course1": "16418a90b9497a78a7d174c797da309c2b11f39d",
-    "retained_workspace_continuation": "7b174e58e5b29052907085c1b3e685d6a51ca862"
+    "retained_workspace_continuation": "1e501124c7ed9d766a3f009d4830f64336817a3c"
   },
   "archive": {
     "path": "Forms_Workspace_Source.zip",
-    "bytes": 343230,
-    "sha256": "6054ee7ec6f7ee0bf9d461a684c5da2fbf210ed85b3859515c52ddebbcd08d32"
+    "bytes": 343864,
+    "sha256": "5edb57e1efed1edb3179c33faf1d57bca3cc510c73bb220e3c1ee126ce85643e"
   },
   "manifest": {
     "path": "SOURCE_SELECTION.json",
     "bytes": 11304,
-    "sha256": "316e9fb8d3390517141368ae002f2a1d8c9bdd7200bb6072aa237bb8c3c8aa01"
+    "sha256": "aa8796fd761f75d7c53107c4360c7c7f08c73b1c36c7f4066f2d327acea929e6"
   },
   "guide": {
     "path": "README.md",
-    "bytes": 22140,
-    "sha256": "dae12b3529530f04ae067e8466ac1f89abca53b52f36afc8673a6e5de45dfe20"
+    "bytes": 22345,
+    "sha256": "68333de5a16a7f0c9fdcf00267abe8964ac33ecfc6a4d0e8b62926d6abcdcb7f"
   },
   "product_files": 42,
   "archive_files": 42,
-  "source_bytes": 1298011,
+  "source_bytes": 1300320,
   "runtime": {
     "native": "Linux; existing Python 3.11+ and SQLite; standard library",
     "browser": "Existing Node, explicit installed Playwright module and Chromium; no installation"
@@ -103,6 +103,7 @@
     "changed_source_members": 6,
     "archive_all_42_members_inflated_crc_sha_checked": true,
     "workspace_inline_javascript_parses": true,
+    "upload_browser_exact_error_discriminator_exercised": true,
     "native_receiving": "Original A/B/C complete; maintained source adoption and original pending browser continuation assigned to the same native receiver.",
     "actual_visual_review": "Actual predecessor390-pixel defects corrected in source; final desktop/narrow receiving remains with original native owner."
   },
