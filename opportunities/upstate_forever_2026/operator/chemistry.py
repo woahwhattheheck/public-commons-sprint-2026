@@ -4,6 +4,7 @@ from copy import deepcopy
 import html
 from model import chemistry_reports, chemistry_report_source, receiving_water_chemistry
 from model.common import verify_file
+from model.portable_fs import native_path
 from model.chemistry import Chemistry, ACTIONS, invoke
 from model.common import digest
 READS = {'catalog', 'case', 'run', 'page', 'report', 'report-source', 'water-source', 'water-preparation'}
@@ -55,7 +56,7 @@ class ChemistryOperations:
         elif operation == 'report':
             value = chemistry_reports.inspect(m.ws, payload['report_id'])
             original = verify_file(m.ws.root, value['report']).read_text(encoding='utf-8')
-            directory = m.ws.root / chemistry_reports.FOLDER / value['id']
+            directory = native_path(m.ws.root / chemistry_reports.FOLDER / value['id']).resolve(strict=True)
             for item in value['artifacts']:
                 path = verify_file(m.ws.root, item)
                 relative = path.relative_to(directory).as_posix()
