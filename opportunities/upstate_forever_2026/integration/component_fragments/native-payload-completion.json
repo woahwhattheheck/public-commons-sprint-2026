@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "native-payload-completion",
-  "source_reference": "ECO-PORT-PAYLOAD-LINK-A9E1/1.0.1 + ECO-NATIVE-PACK-RECOVERY-C72E/1.0.0 + ECO-WINDOWS-PACK-CLOUD-W64/1.0.0 + ECO-NATIVE-CACHE-ORIGIN-X64/1.0.0",
+  "source_reference": "ECO-PORT-PAYLOAD-LINK-A9E1/1.0.1 + ECO-NATIVE-PACK-RECOVERY-C72E/1.0.0 + ECO-WINDOWS-PACK-CLOUD-W64/1.0.0 + ECO-NATIVE-CACHE-ORIGIN-X64/1.0.0 + ECO-NATIVE-RUNTIME-D104/2026-10-14",
   "components": {
     "native-payload-completion": {
       "paths": [
@@ -13,6 +13,9 @@
         "source_tools/NATIVE_PAYLOAD_COMPLETION.md",
         "source_tools/WINDOWS_CLOUD_PACKING.md",
         "source_tools/CONDA_CACHE_PACKING.md",
+        "source_tools/native_runtime/conda_cache.py",
+        "source_tools/native_runtime/macos_bundle.py",
+        "source_tools/NATIVE_CONDA_ACQUISITION.md",
         "integration/component_fragments/native-payload-completion.json"
       ],
       "requires": [],

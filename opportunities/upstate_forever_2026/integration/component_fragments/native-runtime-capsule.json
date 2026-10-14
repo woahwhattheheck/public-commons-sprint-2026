@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "native-runtime-capsule",
-  "source_reference": "ASTRA-NATIVE13/1.0.0/2026-10-13",
+  "source_reference": "ASTRA-NATIVE13/1.0.0/2026-10-13 + ECO-NATIVE-RUNTIME-D104/2026-10-14",
   "components": {
     "native-runtime-capsule": {
       "paths": [
@@ -12,6 +12,8 @@
         "source_tools/native_runtime/transport.py",
         "source_tools/NATIVE_RUNTIME.md",
         "tests/test_native_runtime_workflows.py",
+        "source_tools/native_runtime/platform_runtime.py",
+        "source_tools/NATIVE_RUNTIME_PORTABILITY.md",
         "integration/component_fragments/native-runtime-capsule.json"
       ],
       "requires": [],
