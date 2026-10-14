@@ -298,7 +298,7 @@ def _raster(before_root, before, after_root, after, folder):
                         om, nm = np.ma.getmaskarray(old), np.ma.getmaskarray(new)
                         of, nf = np.isfinite(old.data), np.isfinite(new.data)
                         ov, nv = (~om)&of, (~nm)&nf
-                        common, added, removed = ov&nv, (~ov)&(~nv)
+                        common, added, removed = ov&nv, (~ov)&nv, ov&(~nv)
                         counts["common_valid"] += int(common.sum())
                         counts["added_valid"] += int(added.sum())
                         counts["removed_valid"] += int(removed.sum())
