@@ -17,6 +17,101 @@ export function originalRowsTable(value,mode='displayed'){
    columns.map((f,i)=>'<td>'+cell(shown[i],i<shown.length)+(Array.isArray(row.stored_cells)?'<details><summary>Cell meaning</summary><dl><dt>Selected-reader value</dt><dd>'+cell(row.cells[i],i<row.cells.length)+'</dd><dt>Stored value</dt><dd>'+cell(row.stored_cells[i],i<row.stored_cells.length)+'</dd><dt>Number format</dt><dd>'+esc(row.number_formats?.[i]??'Not supplied')+'</dd><dt>Native type</dt><dd>'+esc(row.cell_metadata?.[i]?.data_type??'Not supplied')+'</dd></dl></details>':'')+'</td>').join('')+'</tr>';
  }).join('')+'</tbody></table></div>';
 }
+/** Operate the same complete export without keeping every parsed row in memory. */
+function mountOfflineOriginalTable(){
+ const q=selector=>document.querySelector(selector);
+ const lines=q('#source-rows').textContent.trim().split('\n').filter(Boolean);
+ const fields=JSON.parse(q('#source-fields').textContent);
+ const pager=()=>document.querySelectorAll('[data-offline-page]');
+ let start=0,matching=null,pageSize=100,generation=0,busy=false;
+ const count=()=>matching===null?lines.length:matching.length;
+ const sourceIndex=index=>matching===null?index:matching[index];
+ const status=q('#status'),error=q('#offline-error');
+ function controls(){
+  for(const button of pager()){
+   const previous=button.dataset.offlinePage==='previous';
+   button.disabled=busy||(previous?start===0:start+pageSize>=count());
+   button.textContent=(previous?'Previous ':'Next ')+pageSize;
+  }
+  q('#page-size').disabled=busy;
+  for(const node of q('#jump').elements)node.disabled=busy||!count();
+  q('#cancel-search').hidden=!busy;
+  q('#table').setAttribute('aria-busy',String(busy));
+ }
+ function draw(note=''){
+  const size=count();
+  start=Math.min(start,Math.max(0,Math.floor((size-1)/pageSize)*pageSize));
+  const page=[];
+  for(let i=start;i<Math.min(size,start+pageSize);i++)page.push(JSON.parse(lines[sourceIndex(i)]));
+  q('#table').innerHTML=originalRowsTable({rows:page,fields},q('#mode').value);
+  status.textContent=size+' matching original records of '+lines.length+'; showing '+(page.length?start+1:0)+'–'+(start+page.length)+'.'+(note?' '+note:'');
+  q('#bottom-status').textContent=page.length?'Showing '+(start+1)+'–'+(start+page.length)+' of '+size+'.':'No matching original records.';
+  controls();
+ }
+ async function search(event){
+  event.preventDefault();
+  const request=++generation,text=q('#query').value,sensitive=q('#case').checked;
+  const needle=sensitive?text:text.toLowerCase();
+  error.textContent='';
+  if(!needle){busy=false;matching=null;start=0;draw();return;}
+  busy=true;controls();status.textContent='Searching every original record…';
+  const found=[];
+  let yieldAfter=performance.now()+12;
+  try{
+   for(let i=0;i<lines.length;i++){
+    if(request!==generation)return;
+    // Only the current original row is decoded; matches retain integer positions.
+    const row=JSON.parse(lines[i]);
+    if(row.search_values.some(value=>(sensitive?value:value.toLowerCase()).includes(needle)))found.push(i);
+    if(performance.now()>=yieldAfter){
+     status.textContent='Searched '+(i+1)+' of '+lines.length+' original records; '+found.length+' matches so far.';
+     await new Promise(resolve=>setTimeout(resolve,0));
+     yieldAfter=performance.now()+12;
+    }
+   }
+   if(request!==generation)return;
+   matching=found;start=0;busy=false;draw();
+  }catch(failure){
+   if(request!==generation)return;
+   busy=false;draw('The previous complete result remains visible.');
+   error.textContent='An original record could not be read. Keep the complete original file and JSONL export, then create a fresh HTML export.';
+  }
+ }
+ q('#search').addEventListener('submit',event=>{void search(event);});
+ q('#cancel-search').addEventListener('click',()=>{
+  generation++;busy=false;draw('Search canceled. The previous complete result is retained.');
+ });
+ for(const button of pager())button.addEventListener('click',()=>{
+  if(busy)return;
+  start=button.dataset.offlinePage==='previous'?Math.max(0,start-pageSize):start+pageSize;
+  draw();
+ });
+ q('#page-size').addEventListener('change',()=>{
+  const selected=Number(q('#page-size').value);
+  if(![50,100,250].includes(selected))return;
+  pageSize=selected;start=Math.floor(start/pageSize)*pageSize;draw();
+ });
+ q('#mode').addEventListener('change',()=>{if(!busy)draw();});
+ q('#jump').addEventListener('submit',event=>{
+  event.preventDefault();if(busy||!count())return;
+  const target=Number(q('#original-row').value);
+  if(!Number.isSafeInteger(target)||target<1){error.textContent='Choose a positive original row number.';return;}
+  error.textContent='';
+  // Search the retained original row positions, never a reconstructed heading.
+  let left=0,right=count();
+  while(left<right){const middle=Math.floor((left+right)/2);const row=JSON.parse(lines[sourceIndex(middle)]).row;
+   if(row<target)left=middle+1;else right=middle;}
+  const position=Math.min(left,count()-1),actual=JSON.parse(lines[sourceIndex(position)]).row;
+  start=Math.floor(position/pageSize)*pageSize;
+  draw(actual===target?'Original row '+target+' is on this page.':(actual>target?'Next matching original row: ':'Last matching original row: ')+actual+'.');
+  const region=q('#table .ci-original-grid');if(region)region.focus({preventScroll:true});
+ });
+ try{draw();}catch(failure){
+  error.textContent='This HTML export is incomplete. Keep the complete original file and create a fresh export.';
+  busy=false;controls();
+ }
+}
+
 export function createOriginalTableReader(host){
  let active=null,serial=0;
  const valid=state=>active===state&&state.dialog.isConnected&&host.getWorkspace()===state.workspace;
