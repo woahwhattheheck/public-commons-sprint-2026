@@ -14,7 +14,11 @@ The operation creates a named preparation, without importing observations or run
 
 The Measurements preparation displays the original filename, worksheet, source collection and source ID, selected header/encoding/formula mode, and complete row accounting. Sample tables show original worksheet rows or delimited-file line ranges alongside native CSV line numbers.
 
-Map source columns using the existing guided intake controls. Review the original units, fractions, dates, time zones and scientific interpretation. Save the mapping and select **Review mapped measurements**. The original normalizer supplies accepted and rejected counts and scientific values. Confirm that exact saved preview before **Import reviewed source**.
+Map source columns using the existing guided intake controls. Review the original units, fractions, dates, time zones and scientific interpretation. New Chemistry / WQP preparations select **Reported values and detection limits (current)**, the maintained `wqp-detection-conditions/v2` interpretation. A U-qualified number remains the original reported value; it does not become a detection bound unless the source supplies an explicit comparator or a matching declared limit. An absent bound remains unresolved and visible for review. Unqualified numeric results retain their normal reading.
+
+Saved and received preparations keep their original interpretation, including earlier unpinned editions. Reopening a saved preparation or making a full-history copy does not change that choice. The **Scientific interpretation** control shows the selected edition; an explicit change is retained in the new mapping edition and native source identity. Review the original source before choosing the compatibility interpretation.
+
+Save the mapping and select **Review mapped measurements**. The original normalizer supplies accepted and rejected counts and scientific values. Confirm that exact saved preview before **Import reviewed source**.
 
 Replaying an already accepted original request recovers its saved preparation or import. It does not apply a current draft to an earlier receipt. Native preparation editions and scientific import identities retain their original semantics.
 
