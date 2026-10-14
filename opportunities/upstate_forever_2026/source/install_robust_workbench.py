@@ -1589,6 +1589,26 @@ ALLOWED = ALLOWED | frozenset({
     "source_tools/native_runtime/payload_closure.py",
 })
 
+# Complete published collection opening, runtime receiving and helper producer.
+ALLOWED = ALLOWED | frozenset({
+    "checks/received_runtime_portability.py",
+    "docs/NATIVE_RUNTIME_RECEIVING.md",
+    "integration/component_fragments/native-helper-producer.json",
+    "source_tools/NATIVE_HELPER_PRODUCER.md",
+    "source_tools/build_native_helper_bundle.py",
+    "source_tools/collection_opening/OPEN.sh",
+    "source_tools/collection_opening/OPENING_COMPONENT.json",
+    "source_tools/collection_opening/Open_Native_Collection.sh",
+    "source_tools/collection_opening/Open_Workbench.cmd",
+    "source_tools/collection_opening/Open_Workbench.command",
+    "source_tools/collection_opening/Open_Workbench.ps1",
+    "source_tools/collection_opening/README.md",
+    "source_tools/collection_opening/apply_to_collection.py",
+    "source_tools/collection_opening/open_collection.py",
+    "source_tools/collection_opening/open_native_collection.py",
+    "source_tools/collection_opening/prepare_runtime_dependencies.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
