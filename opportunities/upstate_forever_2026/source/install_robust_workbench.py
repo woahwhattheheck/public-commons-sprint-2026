@@ -1644,6 +1644,15 @@ ALLOWED = ALLOWED | frozenset({
     "integration/component_fragments/macos-runtime-closure.json",
 })
 
+# Complete current portable report, intake and private source receiving callers.
+ALLOWED = ALLOWED | frozenset({
+    "model/community_report_handover.py",
+    "model/field_report_recovery.py",
+    "operator/community_archive_inputs.py",
+    "operator/customer_spatial_receiving.py",
+    "source_tools/operator_source_intake.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
