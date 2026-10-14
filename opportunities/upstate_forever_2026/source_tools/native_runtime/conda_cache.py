@@ -17,6 +17,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
 import time
 from urllib.error import HTTPError, URLError
@@ -558,6 +559,133 @@ def acquire(args):
                 "parts": manifest["parts"]}
 
 
+def prepare_cache(selection_path, archives, destination, build_tools, *,
+                  max_unpacked_bytes=8 * 1024**3):
+    """Join the original complete selection to the existing N29 cache receiver.
+
+    This is a Linux build-side operation. Target installation, post-link scripts
+    and target programs remain with the original environment producer. Only the
+    existing host zstd decoder is executed while receiving package contents.
+    """
+    import types
+
+    if sys.platform != "linux" or sys.version_info < (3, 12):
+        raise AcquisitionError("Prepare the original package cache with Linux Python 3.12+")
+    if (not isinstance(max_unpacked_bytes, int) or isinstance(max_unpacked_bytes, bool)
+            or max_unpacked_bytes <= 0):
+        raise AcquisitionError("The unpacked-package byte limit must be positive")
+    source = Path(selection_path).resolve(strict=True)
+    selection = json.loads(source.read_text(encoding="utf-8"))
+    if selection.get("schema") != SCHEMA:
+        raise AcquisitionError("Use the original selection.json or selected-plan.json")
+    target = selection.get("target")
+    subdir = TARGETS.get(target)
+    if subdir is None or subdir != selection.get("subdir"):
+        raise AcquisitionError("Invalid native package-cache target")
+    selected = selection.get("packages")
+    if not isinstance(selected, list) or not selected:
+        raise AcquisitionError("The original complete selected package list is required")
+    if not archives:
+        raise AcquisitionError("Supply the existing received package archive directory")
+    roots = [Path(root).resolve(strict=True) for root in archives]
+    if any(not root.is_dir() for root in roots):
+        raise AcquisitionError("Package archive roots must be directories")
+    packages = []
+    names = set()
+    for row in selected:
+        # A selected-plan has publisher identities before acquisition; a final
+        # selection additionally has measured bytes/SHA256/MD5. Validate both.
+        normalized = package_record({**row, "fn": row["filename"],
+            "size": row.get("expected_bytes", row.get("bytes")),
+            **row["publisher"]}, subdir)
+        if row.get("cache_path") != normalized["cache_path"]:
+            raise AcquisitionError("Changed selected archive path: " + row["filename"])
+        if normalized["name"].casefold() in names:
+            raise AcquisitionError("The selection repeats a package name")
+        names.add(normalized["name"].casefold())
+        packages.append({**normalized, **{k: row[k] for k in ("bytes", "sha256", "md5") if k in row}})
+
+    sdk = Path(build_tools).resolve(strict=True)
+    extractor = sdk / "extract_package_cache.py"
+    if extractor.is_symlink() or not extractor.is_file():
+        raise AcquisitionError("Use the existing N29 build-tools directory containing extract_package_cache.py")
+    body = extractor.read_bytes()
+    # Loading from source avoids bytecode writes to the shared, read-only SDK.
+    receiver = types.ModuleType("ecosystem_original_package_receiver")
+    receiver.__file__ = str(extractor)
+    exec(compile(body, str(extractor), "exec"), receiver.__dict__)
+    for name in ("record_identity", "zstd_program", "receive_one"):
+        if not callable(getattr(receiver, name, None)):
+            raise AcquisitionError("The existing build toolkit lacks " + name)
+
+    # Resolve and check EVERY selected archive before creating any cache entry.
+    # This accepts the acquisition receiver's nested pkgs/<subdir> layout and
+    # existing flat solver caches without copying or flattening them by hand.
+    prepared = []
+    missing = []
+    for package in packages:
+        found = None
+        for root in roots:
+            candidates = (root / package["filename"], root / package["subdir"] / package["filename"],
+                          root / package["cache_path"])
+            for candidate in dict.fromkeys(candidates):
+                measured = matches(candidate, package)
+                if measured:
+                    found = (candidate, measured)
+                    break
+            if found:
+                break
+        if found is None:
+            missing.append(package["filename"])
+            continue
+        archive, measured = found
+        record = {**package, **measured, "fn": package["filename"], "size": measured["bytes"]}
+        identity = receiver.record_identity(record, subdir)
+        prepared.append((archive, record, identity))
+    if missing:
+        raise AcquisitionError("Original selected archives missing or changed: " + ", ".join(missing))
+    if len({identity["stem"].casefold() for _, _, identity in prepared}) != len(prepared):
+        raise AcquisitionError("The selected package cache names collide")
+    zstd = receiver.zstd_program(None)
+    request = {"schema": "upstate.native-conda-prepared-cache/v1", "target": target,
+               "selection_sha256": hashlib.sha256(canonical(selection)).hexdigest(),
+               "extractor_sha256": hashlib.sha256(body).hexdigest(),
+               "packages": [identity for _, _, identity in prepared]}
+    cache_path = Path(destination).absolute()
+    if cache_path.is_symlink():
+        raise AcquisitionError("The original package-cache root must not be a symlink")
+    with locked(cache_path) as cache:
+        cache = cache.resolve(strict=True)
+        request_path = cache / "cache-request.json"
+        if request_path.exists() and json.loads(request_path.read_text()) != request:
+            raise AcquisitionError("This package cache belongs to a different original selection or extractor")
+        write_json(request_path, request)
+        outputs = []
+        for archive, record, identity in prepared:
+            output = receiver.receive_one(record, identity, archive.parent, cache, zstd, max_unpacked_bytes)
+            outputs.append(output)
+            write_json(cache / "cache-progress.json", {**request,
+                "completed": len(outputs), "total": len(prepared),
+                "packages": [{k: v for k, v in result.items() if k not in ("cache_directory", "archive")}
+                             for result in outputs]})
+            print(json.dumps({"prepared_package": identity["filename"], "reused": output["reused"],
+                              "completed": len(outputs), "total": len(prepared)}), flush=True)
+        # The cache itself is the packer's input: its immediate child directories
+        # contain original info/index.json, paths.json and repodata records.
+        # Keep durable locators relative so this whole cache may move between hosts.
+        inventory = {**request, "packages": [{**identity,
+            "cache_directory": identity["stem"], "archive": identity["filename"]}
+            for _, _, identity in prepared]}
+        write_json(cache / "packing-cache.json", inventory)
+        lines = ["@EXPLICIT"] + [(cache / record["filename"]).as_uri() + "#" + record["md5"]
+                                  for _, record, _ in prepared]
+        atomic_bytes(cache / "local-explicit.txt", ("\n".join(lines) + "\n").encode("utf-8"))
+        return {"state": "prepared", "target": target, "packages": len(outputs),
+                "reused_packages": sum(bool(output["reused"]) for output in outputs),
+                "packing_cache": str(cache), "explicit": str(cache / "local-explicit.txt"),
+                "inventory": str(cache / "packing-cache.json")}
+
+
 def receive(args):
     manifest_path = Path(args.manifest).resolve(strict=True)
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -622,8 +750,14 @@ def receive(args):
         lines = ["@EXPLICIT"] + [(destination / p["cache_path"]).as_uri() + "#" + p["md5"]
                                   for p in selection["packages"]]
         atomic_bytes(destination / "local-explicit.txt", ("\n".join(lines) + "\n").encode())
-        return {"state": "received", "target": selection["target"], "packages": len(packages),
-                "package_cache": str(destination / "pkgs"), "explicit": str(destination / "local-explicit.txt")}
+        result = {"state": "received", "target": selection["target"], "packages": len(packages),
+                  "package_cache": str(destination / "pkgs"), "explicit": str(destination / "local-explicit.txt")}
+    if getattr(args, "prepare_cache", False):
+        prepared = prepare_cache(retained, [destination], destination / "extracted-cache",
+                                 args.build_tools, max_unpacked_bytes=args.max_unpacked_bytes)
+        result.update(packing_cache=prepared["packing_cache"], packing_inventory=prepared["inventory"],
+                      packing_explicit=prepared["explicit"], reused_packages=prepared["reused_packages"])
+    return result
 
 
 def parser():
@@ -643,16 +777,36 @@ def parser():
     command = commands.add_parser("receive", help="receive complete original packages and write a local explicit lock")
     command.add_argument("--manifest", required=True, type=Path)
     command.add_argument("--destination", required=True, type=Path)
+    command.add_argument("--prepare-cache", action="store_true",
+                         help="continue through the existing N29 extractor into a packer-ready original cache")
+    command.add_argument("--build-tools", type=Path, help="existing extracted N29 build-tools directory")
+    command.add_argument("--max-unpacked-bytes", type=int, default=8 * 1024**3)
+    command = commands.add_parser("prepare-cache", help="prepare an existing complete acquired selection for the original prefix packer")
+    command.add_argument("--selection", required=True, type=Path, help="original selection.json or selected-plan.json")
+    command.add_argument("--archives", action="append", required=True, type=Path,
+                         help="existing flat or nested received archives; may be repeated")
+    command.add_argument("--destination", required=True, type=Path)
+    command.add_argument("--build-tools", required=True, type=Path, help="existing extracted N29 build-tools directory")
+    command.add_argument("--max-unpacked-bytes", type=int, default=8 * 1024**3)
     return root
 
 
 def main(argv=None):
     args = parser().parse_args(argv)
     try:
-        result = acquire(args) if args.command == "acquire" else receive(args)
+        if args.command == "acquire":
+            result = acquire(args)
+        elif args.command == "prepare-cache":
+            result = prepare_cache(args.selection, args.archives, args.destination, args.build_tools,
+                                   max_unpacked_bytes=args.max_unpacked_bytes)
+        else:
+            if args.prepare_cache and args.build_tools is None:
+                raise AcquisitionError("receive --prepare-cache requires the existing --build-tools directory")
+            result = receive(args)
         print(json.dumps(result, indent=2, ensure_ascii=False, allow_nan=False), flush=True)
         return 0
-    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile) as error:
+    except (OSError, ValueError, KeyError, TypeError, zipfile.BadZipFile,
+            tarfile.TarError, subprocess.SubprocessError) as error:
         print(json.dumps({"state": "failed", "error": str(error)}), file=sys.stderr)
         return 2
 

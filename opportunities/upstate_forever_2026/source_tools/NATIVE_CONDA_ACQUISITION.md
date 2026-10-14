@@ -129,3 +129,87 @@ One focused cache-transfer course covered all 15 requested package names with on
 Publisher references:
 - https://docs.conda.io/projects/conda/en/stable/user-guide/tasks/manage-environments.html
 - https://mamba.readthedocs.io/en/latest/user_guide/micromamba.html
+
+## Continue directly into the original extracted package cache
+
+`receive` retains compressed archives under `pkgs/<subdir>/`. Those are native
+installer inputs, not the extracted package directories expected by the
+origin-preserving packer's `--package-cache`. The maintained continuation now
+connects these two stages using the **existing N29 build toolkit**, without a
+second implementation of its package decoder or running target programs.
+
+On the healthy Linux receiving host, use the same complete transfer manifest:
+
+```sh
+python -B source_tools/native_runtime/conda_cache.py receive \
+  --manifest /received/windows-transfer/parts.json \
+  --destination /work/windows-original-packages \
+  --prepare-cache --build-tools /tools/Ecosystem_Native_Build_Tools_N29
+```
+
+The result keeps the existing `package_cache` and `explicit` fields for raw
+archives, and adds `packing_cache`, `packing_inventory`, and `packing_explicit`.
+Pass **`packing_cache`** directly to the existing `prefix_pack.py
+--package-cache` option. Its immediate children are the original package
+folders, with `info/index.json`, original `info/paths.json` placeholders,
+licenses, data and native libraries. The same unchanged N29 receiver writes the
+ordinary cache-side `info/repodata_record.json` and retains each original archive.
+
+For bytes already acquired by the existing producer, the transfer need not be
+repeated. Both `selection.json` and the original `selected-plan.json` work:
+
+```sh
+python -B source_tools/native_runtime/conda_cache.py prepare-cache \
+  --selection /work/windows-acquisition/selection.json \
+  --archives /work/windows-acquisition \
+  --archives /existing/read-only-solver-cache \
+  --destination /work/windows-packing-cache \
+  --build-tools /tools/Ecosystem_Native_Build_Tools_N29
+```
+
+Use the corresponding retained Mac target selection with the same command.
+Each `--archives` directory may be a flat solver cache, the `pkgs` directory,
+or the complete receiving directory. The command resolves the entire selected
+set and checks every archive before creating an extracted cache. A missing
+package produces the full missing-name list so an existing acquisition can
+return just those original bytes. It does not rerun a solve or download files.
+
+The returned `packing_cache` joins the original and completed prefixes already
+owned by the platform producer:
+
+```sh
+python /tools/Ecosystem_Native_Build_Tools_N29/run.py \
+  --application /work/application \
+  --script source_tools/native_runtime/prefix_pack.py -- \
+  /work/original-prefix /work/completed-prefix /work/native-runtime.tar.gz \
+  --target windows-x86_64 --format tar.gz --archive-root runtime \
+  --package-cache /work/windows-packing-cache
+```
+
+This uses the current W64/X64 writer selected by the application. Linking,
+noarch entry-point generation and package post-link actions still belong to the
+existing environment producer; extracted package folders are not themselves a
+linked Python environment.
+
+### Interrupted receiving, reuse and physical moves
+
+The extraction cache has one nonblocking operation lock plus the existing
+per-package locks. Each finished package is committed separately by N29;
+`cache-progress.json` records progress and `packing-cache.json` is published
+after the entire selected set is prepared. Repeating the same command reuses
+unchanged packages. A crash after raw receiving therefore resumes extraction
+without another download, solve or target execution.
+
+Request identity binds the full original selection and the actual extractor
+source, but not host-local archive or SDK paths. After physically moving the
+raw input and the extracted cache, run the same `prepare-cache` command with
+their new paths. The package inventory remains relative and byte-identical;
+the local explicit lock is refreshed with file URIs for the current location.
+A changed package, unrelated cache directory or different original selection
+is preserved and reported rather than overwritten.
+
+This build-side continuation requires Linux Python 3.12 or newer and the
+already-received N29 toolkit. Its original checked Linux compression tool is
+used directly. The default `acquire` and `receive` paths, existing transfer
+format, platform solves and target runtime writers are unchanged. The optional
+`--max-unpacked-bytes` retains the existing per-package expansion bound.
