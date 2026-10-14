@@ -18,6 +18,32 @@ class Engine:
         self.calibration = calibration
         self.gateway = gateway
 
+    def selected_table(self, tenant, path, source):
+        record=source.get('metadata',{}).get('source',{})
+        if record.get('kind')!='table' or not isinstance(record.get('client_source'),dict):
+            if path.suffix.lower() in {'.xlsx','.xlsm'}:
+                raise IntelligenceError('Choose and save the original worksheet and header row before inspecting this workbook.',409)
+            return None
+        if record.get('field_projection'):
+            return None
+        client=record['client_source']
+        if source['sha256']!=client.get('source_sha256') or record.get('body',{}).get('sha256')!=source['sha256']:
+            # A reviewed-selection companion is JSON metadata, not the table itself.
+            if path.suffix.lower() not in {'.xlsx','.xlsm','.csv','.tsv','.txt'}: return None
+            raise IntelligenceError('The table belongs to another original file.',409)
+        owner=getattr(self.repo,'owner',None)
+        if owner is None or not hasattr(owner,'operator'):
+            raise IntelligenceError('Restore the original Workspace worksheet inspection before reading this table.',409)
+        from model.client_source_inspection_report import retained_table_preview
+        try:
+            preview=retained_table_preview(owner.operator.ws(tenant),record)
+        except (ValueError,KeyError,FileNotFoundError) as error:
+            raise IntelligenceError('Restore the exact original table, worksheet and reviewed reading options.',409) from error
+        if preview is None:
+            raise IntelligenceError('Choose the original table worksheet before reading its rows.',409)
+        return {name:preview.get(name) for name in ('original_fields','original_worksheet',
+            'original_header_row','reading_options','source_format')}
+
     def inspect(self, tenant: str, sid: str, request: Inspect) -> dict:
         op = request.operation
         sources = []
@@ -41,11 +67,12 @@ class Engine:
                         result={'format':'structured_json','data':public_metadata(json.load(retained)),
                                 'interpretation':'Original registered JSON values; keys and meanings are supplied by the source.'}
                 else:
-                    result = public_metadata(profile(path))
+                    result = public_metadata(profile(path,self.selected_table(tenant,path,source)))
             elif op == 'table_rows':
                 page = []
                 more = False
-                for index, row in enumerate(original_table_rows(path)):
+                selected_table=self.selected_table(tenant,path,source)
+                for index, row in enumerate(original_table_rows(path,selected_table)):
                     if index < request.offset:
                         continue
                     if len(page) == request.limit:
@@ -56,6 +83,7 @@ class Engine:
                           'offset': request.offset, 'rows': page,
                           'next_offset': request.offset + len(page) if more else None,
                           'complete_page': True,
+                          **(selected_table or {}),
                           'interpretation': 'Original literal cells, including identifiers and censoring. This page is not a statistical sample or a substituted numeric measurement.'}
             else:
                 if request.other is None:
