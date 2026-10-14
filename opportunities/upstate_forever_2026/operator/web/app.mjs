@@ -1,5 +1,6 @@
 // ES-SUPERVISION-20261012
 import {operatorFetch} from './remote_transport.mjs';
+import {attachWorkbenchLinks,workbenchConnection,initialWorkbenchView,currentWorkbenchURL,requestedWorkbenchView} from './workbench_links.mjs';
 import {attachNativeJobs} from './jobs.mjs';
 import {attachStartupGuide} from './startup_guide.mjs';
 import {attachWorkspaceFinder} from './workspace_finder.mjs';
@@ -115,7 +116,9 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
   const headers={Authorization:'Bearer '+capability,...(workspace?{'X-Workspace':workspace}:{})};
   if(body!==undefined)headers['Content-Type']='application/json';
   if(filename)headers['X-Upload-Filename']=encodeURIComponent(filename);
-  const response=await operatorFetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal},capability);
+  let response;
+  try{response=await operatorFetch(path,{method,headers,body:raw??(body===undefined?undefined:JSON.stringify(body)),credentials:'same-origin',signal},capability);}
+  catch(error){if(!signal?.aborted)workbenchConnection(false);throw error;}
   const text=await response.text();
   if(epoch!==connectionEpoch)throw Error('The connection changed while this request was running.');
   let value;try{value=JSON.parse(text);}catch{
@@ -123,6 +126,7 @@ async function api(path,{method='GET',body,raw,filename,signal}={}){
     error.code='RESPONSE_INVALID';error.status=response.status;throw error;
   }
   if(!response.ok){const error=new Error(value.error?.message||'HTTP '+response.status);error.code=value.error?.code;error.status=response.status;throw error;}
+  workbenchConnection(true);
   return value;
 }
 const endpoint = (path, values={}) => path+'?'+new URLSearchParams({...(workspace?{workspace}:{}),...values});
@@ -1738,7 +1742,7 @@ form.addEventListener('submit',async event=>{
 formDialog.addEventListener('cancel',event=>{if(formContext?.busy)event.preventDefault();else formContext=null;});
 detailDialog.addEventListener('close',()=>{if(detailDialog.open||itemRequest!==detailRequest)return;itemRequest++;deliveryInspection.detach();detailContext=null;});
 $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.target.value).catch(globalError));
-window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested).catch(globalError);});
+window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){const requested=requestedWorkbenchView(location);sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/'+(requested?'?view='+encodeURIComponent(requested):''));location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested).catch(globalError);});
 window.addEventListener('online',()=>refresh({force:true}));
 function showConnection(message='Open your private access link or paste it below.'){
  const remoteSession=capability==='eco-edge-session';
@@ -1758,23 +1762,26 @@ function showConnection(message='Open your private access link or paste it below
   $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><p>Sign in again to continue with your saved workspaces.</p><form action="/_eco/login" method="get"><button type="submit">Sign in to workbench</button></form></div>';
   return;
  }
- $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><form id="team-connect-form"><label for="team-access-link">Private access link</label><input id="team-access-link" type="password" required autocomplete="off"><button type="submit">Connect</button></form></div>';
+ $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><p>Open the extracted workbench folder and double-click its Windows or Mac launcher for the current private link.</p><form id="team-connect-form"><label for="team-access-link">Private access link</label><input id="team-access-link" type="password" required autocomplete="off"><button type="submit">Connect</button></form></div>';
+ workbenchConnection(false);
  $('#team-connect-form').addEventListener('submit',event=>{
-   event.preventDefault();const supplied=$('#team-access-link').value.trim();let selected;
-   try{selected=new URL(supplied,location.origin).hash;selected=new URLSearchParams(selected.slice(1)).get('token');}catch{}
-   if(!selected){globalError(Error('Paste the complete private access link supplied by your administrator.'));return;}
-   sessionStorage.setItem(keyName,selected);location.replace('/');location.reload();
+   event.preventDefault();
+   try{
+    const destination=currentWorkbenchURL($('#team-access-link').value,{currentOrigin:location.origin,view:initialWorkbenchView});
+    $('#team-access-link').value='';location.replace(destination);
+   }catch(error){globalError(error);}
  });
 }
 $('#team-sign-out').addEventListener('click',async()=>{
  try{await api('/api/logout',{method:'POST',body:{}});}catch{}
  finally{showConnection(capability==='eco-edge-session'?'Signed out of the secure workbench.':'Signed out. Open a current private access link to reconnect.');}
 });
+attachWorkbenchLinks({onRetry:()=>refresh({force:true})});
 if(capability){
  try{
   const session=await api('/api/session',{method:'POST',body:{}});teamPerson=session.person;
   if(!session.workspaces.some(row=>row.id===workspace))workspace=session.default_workspace;
-  try{await extensions.load();const requested=location.hash.slice(1);if(extensions.hasView(requested))view=requested;}catch(error){toast('Additional desks: '+error.message);}
+  try{await extensions.load();const requested=initialWorkbenchView||location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))view=requested;}catch(error){toast('Additional desks: '+error.message);}
   await refresh({force:true});
  }catch(error){showConnection(error.message);}
 }else showConnection();

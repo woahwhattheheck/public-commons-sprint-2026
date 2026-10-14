@@ -1620,6 +1620,18 @@ ALLOWED = ALLOWED | frozenset({
     "tests/test_native_runtime_platforms.py",
 })
 
+# Complete stale-address recovery and portable opening help cohort.
+ALLOWED = ALLOWED | frozenset({
+    "operator/workbench_links.py",
+    "operator/web/workbench_links.mjs",
+    "operator/web/workbench_links.css",
+    "operator/web/workbench_recovery_sw.mjs",
+    "operator/web/workbench_reopen.html",
+    "WORKBENCH_LINKS.md",
+    "integration/component_fragments/workbench-links.json",
+    "source_tools/apply_workbench_links.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
