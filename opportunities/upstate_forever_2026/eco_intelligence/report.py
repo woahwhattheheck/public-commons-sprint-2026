@@ -66,7 +66,7 @@ def _table(headers, rows) -> str:
     return ('<div class="table-scroll"><table><thead><tr>'
             + ''.join('<th scope="col">'+html.escape(str(x))+'</th>' for x in headers)
             + '</tr></thead><tbody>'
-            + ''.join('<tr>'+''.join('<td>'+html.escape('—' if x is None else str(x))+'</td>' for x in row)+'</tr>' for row in rows)
+            + ''.join('<tr>'+''.join('<td>'+html.escape('-' if x is None else str(x))+'</td>' for x in row)+'</tr>' for row in rows)
             + '</tbody></table></div>')
 
 
@@ -159,6 +159,27 @@ def _event_title(event: dict) -> str:
         event['kind'], event['kind'].replace('_', ' ').title())
 
 
+def _table_scope(evidence, source):
+    metadata=source.get('metadata',{});record=metadata.get('source',{})
+    native=record.get('client_source',{}).get('inspection',{})
+    worksheet=record.get('sheet',evidence.get('result',{}).get('original_worksheet'))
+    header=evidence.get('result',{}).get('original_header_row')
+    if header is None: header=native.get('part',{}).get('header_row')
+    if header is None: header=native.get('options',{}).get('header_row')
+    # Raw original and reviewed views can have distinct registry IDs while
+    # retaining this identical physical file. Workbook parts never share scope.
+    return (metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'),
+            record.get('body',{}).get('filename'),worksheet,header)
+
+
+def _declared_column_roles(record):
+    fields=record.get('original_fields',[])
+    labels={field.get('id'):field.get('label') for field in fields}
+    choice=record.get('client_source',{}).get('selection',{})
+    return {labels[choice[field]]:role for field,role in [('identifier_field','Identifier'),('label_field','Label')]
+            if choice.get(field) in labels and isinstance(labels[choice[field]],str)}
+
+
 def report(session: dict) -> str:
     events = [event for event in session['events'] if event['kind'] in {'question', 'answer', 'request_error'} | _RECOVERY_KINDS]
     # The latest retained outcome remains current, including a later provider
@@ -179,6 +200,7 @@ def report(session: dict) -> str:
                             +html.escape(original)+'</pre></details></section>')
     original_orders={}
     column_roles={}
+    role_candidates={}
     for evidence in session['evidence']:
         for source in evidence.get('sources',[]):
             metadata=source.get('metadata',{});record=metadata.get('source',{})
@@ -186,24 +208,20 @@ def report(session: dict) -> str:
             if fields and all(isinstance(field.get('index'),int) and isinstance(field.get('label'),str) for field in fields):
                 labels=[field['label'] for field in sorted(fields,key=lambda field:field['index'])]
                 if len(set(labels))==len(labels):
-                    key=(metadata.get('source_binding',{}).get('collection_id'),metadata.get('source_binding',{}).get('source_id'),record.get('body',{}).get('sha256'))
+                    key=_table_scope(evidence,source)
                     original_orders[key]=labels
-                    identifiers={field.get('id'):field['label'] for field in fields}
-                    selections=[record.get('client_source',{}).get('selection',{})]
-                    if evidence.get('result',{}).get('format')=='structured_json':
-                        own=record.get('client_source',{}).get('selection',{})
-                        selections.extend(value for value in evidence.get('result',{}).get('data',{}).get('selections',[])
-                            if all(value.get(name)==own.get(name) for name in ('file_index','part_index')))
-                    for selection in selections:
-                        for field,role in [('identifier_field','Identifier'),('label_field','Label')]:
-                            label=identifiers.get(selection.get(field))
-                            if label: column_roles.setdefault(key,{})[label]=role
+                    if record.get('client_source',{}).get('selection'):
+                        role_candidates.setdefault(key,[]).append(_declared_column_roles(record))
+    for key,candidates in role_candidates.items():
+        if candidates and all(value==candidates[0] for value in candidates):
+            column_roles[key]=candidates[0]
     order = {'table_rows': 0, 'profile': 1, 'inventory': 2}
     for evidence in sorted(session['evidence'], key=lambda e: order.get(e.get('operation', {}).get('operation'), 3)):
         source=next(iter(evidence.get('sources',[])),{})
         metadata=source.get('metadata',{});record=metadata.get('source',{})
-        key=(metadata.get('source_binding',{}).get('collection_id'),metadata.get('source_binding',{}).get('source_id'),record.get('body',{}).get('sha256'))
-        sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key),column_roles.get(key))+'</section>')
+        key=_table_scope(evidence,source)
+        declared_roles=_declared_column_roles(record) if record.get('client_source',{}).get('selection') else column_roles.get(key)
+        sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key),declared_roles)+'</section>')
     for plan in session['plans']:
         sections.append('<section><h2>Guided action · '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')
     history = []
