@@ -10,7 +10,7 @@ from .common import IntelligenceError, digest, public_metadata, now
 from .repository import Repository
 from .store import Store
 from .schemas import Inspect, Action
-from .profiling import profile, compare_rasters, pair_tables
+from .profiling import profile, rows as original_table_rows, compare_rasters, pair_tables
 
 class Engine:
     def __init__(self, repository: Repository, store: Store, native_app=None, calibration=None, gateway=None):
@@ -37,6 +37,21 @@ class Engine:
             sources.append(source)
             if op == 'profile':
                 result = public_metadata(profile(path))
+            elif op == 'table_rows':
+                page = []
+                more = False
+                for index, row in enumerate(original_table_rows(path)):
+                    if index < request.offset:
+                        continue
+                    if len(page) == request.limit:
+                        more = True
+                        break
+                    page.append(row)
+                result = {'format': 'table_rows', 'population': 'original row page',
+                          'offset': request.offset, 'rows': page,
+                          'next_offset': request.offset + len(page) if more else None,
+                          'complete_page': True,
+                          'interpretation': 'Original literal cells, including identifiers and censoring. This page is not a statistical sample or a substituted numeric measurement.'}
             else:
                 if request.other is None:
                     raise IntelligenceError('Select a second registered input.')

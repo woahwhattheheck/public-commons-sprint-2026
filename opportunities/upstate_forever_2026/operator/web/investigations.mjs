@@ -925,7 +925,8 @@ export function attachInvestigations(host) {
   const ask=el('form',null,'intelligence-form');ask.append(field('Question','question','textarea'));const askButton=el('button','Investigate');askButton.type='submit';askButton.dataset.submit='true';ask.append(askButton);
   ask.addEventListener('submit',e=>{e.preventDefault();try{const sid=client.requireSession();let question=nodes.question.value.trim();if(!question)throw Error('Enter a question.');
    if(question.length>24000)throw Error('Shorten the question to fit the original investigation request.');
-   client.queue('intelligence.ask',{session_id:sid,question}).catch(failure);}catch(error){failure(error);}});assistant.append(ask);
+   const focus=selected&&['dataset','artifact','job','ensemble'].includes(selected.kind)?clone(selected):null;
+   client.queue('intelligence.ask',{session_id:sid,question,...(focus?{focus_ref:focus}:{})}).catch(failure);}catch(error){failure(error);}});assistant.append(ask);
   const actions=section('actions','Guided original operations');actions.append(field('Operation','actionKind','select'));nodes.actionKind.addEventListener('change',()=>{rememberField({target:nodes.actionKind});if(latest)renderActionFields(latest);});
   nodes.method=el('p',null,'intelligence-muted');actions.append(nodes.method);
   nodes.collectionFields=el('div');nodes.collectionFields.append(el('h3','Files in this collection'));nodes.collection=el('div',null,'intelligence-checks');nodes.collectionFields.append(nodes.collection);
