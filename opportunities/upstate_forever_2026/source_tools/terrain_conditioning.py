@@ -115,25 +115,30 @@ def flood_python(elevation,valid,seeds,progress=None):
 def flood(elevation,valid,seeds,folder,*,engine='auto',progress=None):
     """Use an original compiled helper where available; portable Python otherwise."""
     if engine not in {'auto','cpp','python'}:raise ValueError('Unknown terrain engine')
-    helper=Path(__file__).with_name('terrain_flood.cpp')
-    compiler=shutil.which('g++') or shutil.which('clang++')
-    if engine=='python' or (engine=='auto' and (not compiler or not helper.is_file())):
+    if engine=='python':
         return flood_python(elevation,valid,seeds,progress),'python-priority-flood'
-    if not compiler or not helper.is_file():raise RuntimeError('The selected compiled terrain engine requires its retained C++ source and a C++17 compiler')
-    cache=Path(folder)/'engine';cache.mkdir(parents=True,exist_ok=True)
-    runtime=digest({'source':file_digest(helper),'platform':platform.system(),'machine':platform.machine(),'byteorder':sys.byteorder,'compiler':compiler})
-    exe=cache/('priority-flood-'+runtime[:20]+('.exe' if os.name=='nt' else ''))
-    with held(cache/'.compile.lock'):
-        if not exe.exists():
-            pending=exe.with_suffix('.partial')
-            proc=subprocess.run([compiler,'-O3','-std=c++17',str(helper),'-o',str(pending)],capture_output=True,text=True)
-            if proc.returncode:raise RuntimeError('Terrain helper compilation failed: '+proc.stderr[-4000:])
-            os.replace(pending,exe)
+    from source_tools.native_helpers import bundled_executable
+    exe=bundled_executable('terrain_flood')
+    helper=Path(__file__).with_name('terrain_flood.cpp')
+    cache=Path(folder).resolve()/'engine';cache.mkdir(parents=True,exist_ok=True)
+    if exe is None:
+        compiler=shutil.which('g++') or shutil.which('clang++')
+        if engine=='auto' and (not compiler or not helper.is_file()):
+            return flood_python(elevation,valid,seeds,progress),'python-priority-flood'
+        if not compiler or not helper.is_file():raise RuntimeError('The selected compiled terrain engine requires its bundled helper or retained C++ source and a C++17 compiler')
+        runtime=digest({'source':file_digest(helper),'platform':platform.system(),'machine':platform.machine(),'byteorder':sys.byteorder,'compiler':compiler})
+        exe=cache/('priority-flood-'+runtime[:20]+('.exe' if os.name=='nt' else ''))
+        with held(cache/'.compile.lock'):
+            if not exe.exists():
+                pending=exe.with_suffix('.partial')
+                proc=subprocess.run([compiler,*(['-municode'] if os.name=='nt' else []),'-O3','-std=c++17',str(helper),'-o',str(pending)],capture_output=True,text=True)
+                if proc.returncode:raise RuntimeError('Terrain helper compilation failed: '+proc.stderr[-4000:])
+                os.replace(pending,exe)
     with tempfile.TemporaryDirectory(prefix='flood-',dir=cache) as td:
         td=Path(td)
         np.asarray(elevation,dtype='=f8').tofile(td/'z.bin');np.asarray(valid,dtype='u1').tofile(td/'valid.bin');np.asarray(seeds,dtype='u1').tofile(td/'seeds.bin')
-        command=[str(exe),str(elevation.shape[1]),str(elevation.shape[0]),str(td/'z.bin'),str(td/'valid.bin'),str(td/'seeds.bin'),str(td/'out.bin')]
-        proc=subprocess.Popen(command,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        command=[str(exe.resolve()),str(elevation.shape[1]),str(elevation.shape[0]),'z.bin','valid.bin','seeds.bin','out.bin']
+        proc=subprocess.Popen(command,cwd=td,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
         errors=[]
         try:
             for line in proc.stderr:
