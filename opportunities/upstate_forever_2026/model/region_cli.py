@@ -9,13 +9,14 @@ import sys
 import tempfile
 
 from .common import file_digest
+from .portable_fs import native_path, publish_file, sync_directory
 from .spatial import SpatialReview
 from .spatial_regions import SpatialRegions, csv_exports
 from .workspace import Workspace
 
 
 def _write(path, data):
-    path = Path(path)
+    path = native_path(path)
     if path.is_symlink():
         raise ValueError("Choose an original export path, not a file alias")
     if path.exists():
@@ -29,17 +30,25 @@ def _write(path, data):
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
-        # Publish without replacing a file created concurrently.
-        os.link(temporary, path)
+        # Preserve create-only publication on NTFS, APFS and volumes without
+        # hard links. A concurrent retry may already have published these bytes.
+        try:
+            publish_file(temporary, path)
+        except FileExistsError:
+            if path.is_symlink() or not path.is_file() or path.read_bytes() != data:
+                raise ValueError("A concurrent region export differs: " + str(path))
+        if path.is_symlink() or path.read_bytes() != data:
+            raise ValueError("The published region export differs: " + str(path))
+        sync_directory(path.parent)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
 
 
 def export(workspace, result, directory):
-    folder = Path(directory).expanduser().resolve()
+    folder = native_path(Path(directory).expanduser().resolve())
     folder.mkdir(parents=True, exist_ok=True)
-    original = workspace.root / "spatial-regions" / (result["id"] + ".json")
+    original = native_path(workspace.root / "spatial-regions" / (result["id"] + ".json"))
     bodies = {result["id"] + ".json": original.read_bytes(),
               **{name: content.encode("utf-8") for name, content in csv_exports(result).items()}}
     # Inspect all existing destinations before publishing any new members.
