@@ -1,4 +1,4 @@
-"""Supervise original Workspace runs and reconnect the same owned Linux worker."""
+"""Supervise original Workspace runs and reconnect the same owned native worker."""
 from __future__ import annotations
 import contextlib
 import datetime as dt
@@ -17,6 +17,10 @@ from model.verified_files import verified_operation
 from model.native_worker import SCHEMA, identity_matches, process_identity, signal_owned
 from model.native_execution import (process_failure, record_process_interruption,
                                     resource_status, storage_exhausted)
+
+from model.native_supervision import (PROTOCOL, StopProgress, bound_record, cancellation_state,
+                                      reconcile_start, refresh_execution,
+                                      worker_lease_held)
 
 APPLICATION = Path(__file__).resolve().parents[1]
 
@@ -166,12 +170,9 @@ class NativeJobs:
         if not candidates:
             return None
         _, directory, request = max(candidates, key=lambda value: value[0])
-        identity_record = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
-        if identity_record.get("request_sha256") not in (None, request["request_sha256"]):
-            raise NativeJobError("NATIVE_WORKER_CHANGED", "The original worker receipt changed.")
-        return {"directory": directory, "request": request,
-                "identity": identity_record.get("identity"),
-                "worker": identity_record, "run": run, "workspace": ws}
+        return refresh_execution({"directory": directory, "request": request,
+                                  "identity": None, "worker": {},
+                                  "run": run, "workspace": ws})
 
     @staticmethod
     def _alive(execution):
@@ -183,7 +184,7 @@ class NativeJobs:
         record = {"schema": "upstate.native-stop/v1", "execution_id": request["execution_id"],
                   "request_sha256": request["request_sha256"],
                   "task_id": request["task_id"], "requested_at": now()}
-        old = _read(directory / "stop.json")
+        old = bound_record(directory, "stop.json", request)
         if old and (old.get("execution_id"), old.get("request_sha256")) == (
                 request["execution_id"], request["request_sha256"]):
             return old
@@ -218,9 +219,7 @@ class NativeJobs:
     def _new(self, task, ws, run):
         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
                         "model/native.py", "model/workspace.py", "model/common.py",
-                        "model/verified_files.py")
-        if os.name == "nt":
-            source_paths += ("model/windows_process.py", "model/windows_fs.py")
+                        "model/verified_files.py", "model/native_supervision.py")
         if "reuse_source_run_ids" in task["payload"]:
             source_paths += ("model/stage_cache.py", "model/native_equivalence.py",
                              "model/native_arguments.py", "model/reuse.py",
@@ -228,8 +227,12 @@ class NativeJobs:
         if task["payload"].get("climate_forcing_context") is not None:
             source_paths += ("model/climate_forcing.py", "model/forcing_sources.py",
                              "model/native_versions.py", "model/model_selection.py")
+        if sys.platform == "darwin":
+            source_paths += ("model/macos_process.py",)
+        if os.name == "nt":
+            source_paths += ("model/windows_process.py", "model/windows_fs.py")
         source = {name: file_digest(APPLICATION / name) for name in source_paths}
-        request = {"schema": SCHEMA, "task_id": task["id"],
+        request = {"schema": SCHEMA, "supervision_protocol": PROTOCOL, "task_id": task["id"],
                    "operation_id": task["operation_id"], "attempt": len(task["attempts"]),
                    "project_id": ws.project["id"], "workspace": str(ws.root),
                    "run_id": run["id"], "selection": run["selection"],
@@ -270,14 +273,18 @@ class NativeJobs:
                        "--request", str(directory / "request.json")]
             if os.name == "nt":
                 from model.windows_process import spawn
-                process = spawn(command, cwd=APPLICATION, env=environment,
-                                stdin=subprocess.DEVNULL, stdout=output, stderr=subprocess.STDOUT,
-                                custody_fds=tuple(task.get("_native_custody_fds", ())),
-                                execution_id=request["execution_id"], request_sha256=request["request_sha256"])
+                process = spawn(
+                    command, cwd=APPLICATION, env=environment, stdin=subprocess.DEVNULL,
+                    stdout=output, stderr=subprocess.STDOUT,
+                    custody_fds=tuple(task.get("_native_custody_fds", ())),
+                    execution_id=request["execution_id"],
+                    request_sha256=request["request_sha256"])
             else:
-                process = subprocess.Popen(command, cwd=APPLICATION, env=environment, stdin=subprocess.DEVNULL,
-                                           stdout=output, stderr=subprocess.STDOUT, close_fds=True, start_new_session=True,
-                                           pass_fds=tuple(task.get("_native_custody_fds", ())))
+                process = subprocess.Popen(
+                    command, cwd=APPLICATION, env=environment, stdin=subprocess.DEVNULL,
+                    stdout=output, stderr=subprocess.STDOUT, close_fds=True,
+                    start_new_session=True,
+                    pass_fds=tuple(task.get("_native_custody_fds", ())))
         identity = process.identity() if os.name == "nt" else process_identity(process.pid)
         launch = {"schema": "upstate.native-launch/v1", "execution_id": request["execution_id"],
                   "request_sha256": request["request_sha256"], "started_at": now(),
@@ -398,7 +405,8 @@ class NativeJobs:
 
     def _wait_for_exit(self, execution, process):
         """Drain the exact owned process before its inherited lease is reacquired."""
-        while (process.poll() is None if process else self._alive(execution)):
+        while (process.poll() is None if process else
+               self._alive(execution) or worker_lease_held(execution["directory"])):
             if self.operator.closing:
                 error = NativeJobDetached(
                     "NATIVE_DETACHED",
@@ -414,7 +422,12 @@ class NativeJobs:
     def _completed_exit(self, execution, process, complete):
         """Keep a completed result while stopping one signaled native attempt."""
         returncode = self._wait_for_exit(execution, process)
-        if type(returncode) is not int or returncode >= 0:
+        interrupted = type(returncode) is int and returncode < 0
+        if os.name == "nt":
+            from model.windows_process import exit_status
+            observed = exit_status(returncode)
+            interrupted = bool(observed and observed.get("abnormal_terminal_status"))
+        if not interrupted:
             # A reconnected completed worker has no locally observed exit code.
             # A later explicit retry verifies and reuses its original result.
             self._record_exit(execution, "complete", returncode=returncode)
@@ -504,28 +517,26 @@ class NativeJobs:
 
     def _monitor(self, execution, process):
         directory, request = execution["directory"], execution["request"]
-        stop_started = None
-        signals_sent = set()
+        stop_progress = StopProgress()
         while True:
             complete = self._complete(execution)
             if complete:
                 return self._completed_exit(execution, process, complete)
-            worker = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
-            if worker.get("identity"):
-                execution["identity"] = worker["identity"]
+            refresh_execution(execution)
+            worker = execution["worker"]
             returncode = process.poll() if process else None
             alive = (returncode is None) if process else self._alive(execution)
-            stop = _read(directory / "stop.json")
+            if not process and not alive:
+                registration = reconcile_start(execution, identity_matches)
+                alive = registration in {"registered", "registering"}
+            stop = bound_record(directory, "stop.json", request)
             selected_stop = bool(stop and stop.get("execution_id") == request["execution_id"]
                                  and stop.get("request_sha256") == request["request_sha256"])
             if selected_stop and alive:
-                if stop_started is None:
-                    stop_started = time.monotonic()
-                elapsed = time.monotonic() - stop_started
-                sig = getattr(signal, "SIGKILL", 9) if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
-                if sig not in signals_sent and self._alive(execution):
-                    signals_sent.add(sig)
-                    # Identity and session membership are checked before every signal.
+                sig = stop_progress.signal(stop)
+                if self._alive(execution):
+                    # The original stop age survives reopen. Successful delivery
+                    # is shared with the worker; unsuccessful sends are retried.
                     with contextlib.suppress(ProcessLookupError):
                         signal_owned(directory, execution["identity"], request["execution_id"],
                                      request["request_sha256"], sig)
@@ -628,6 +639,9 @@ class NativeJobs:
 
     @staticmethod
     def _resources(identity):
+        if sys.platform == "darwin":
+            from model.macos_process import process_resources
+            return process_resources(identity)
         if not identity or not identity_matches(identity):
             return {}
         values = {}
@@ -690,16 +704,17 @@ class NativeJobs:
         if not execution:
             return value
         request, directory = execution["request"], execution["directory"]
-        heartbeat = _read(directory / "heartbeat.json") or {}
-        finished = _read(directory / "finished.json") or {}
-        supervision = _read(directory / "supervision.json") or {}
-        stop = _read(directory / "stop.json")
+        heartbeat = bound_record(directory, "heartbeat.json", request, digest_required=False) or {}
+        finished = bound_record(directory, "finished.json", request) or {}
+        supervision = bound_record(directory, "supervision.json", request) or {}
+        stop = bound_record(directory, "stop.json", request)
         value.update(execution_id=request["execution_id"], created_at=request["created_at"],
                      alive=self._alive(execution), worker=execution["worker"],
                      heartbeat_at=heartbeat.get("at"),
                      elapsed_seconds=finished.get("elapsed_seconds", heartbeat.get("elapsed_seconds")),
                      stop_requested=value["stop_requested"] or bool(stop),
                      stop_requested_at=(stop or {}).get("requested_at"),
+                     cancellation=cancellation_state(directory, request, stop),
                      reconnected=_read(directory / "reconnected.json"),
                      supervision=supervision, failure=_read(directory / "failure.json"),
                      resources=self._resources(execution.get("identity")),

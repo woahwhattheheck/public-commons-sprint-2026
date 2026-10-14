@@ -1,4 +1,4 @@
-"""Run one original Workspace calculation in a recoverable Linux process."""
+"""Run one original Workspace calculation in a recoverable owned process."""
 from __future__ import annotations
 import argparse
 import contextlib
@@ -13,8 +13,8 @@ import traceback
 
 from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
 from .native_execution import resource_status
-if os.name == "nt":
-    from . import windows_process as _windows_process
+from .native_supervision import (StopProgress, bound_record, dispatch_signal,
+                                 startup_abandoned)
 
 SCHEMA = "upstate.native-worker-request/v1"
 
@@ -22,7 +22,11 @@ SCHEMA = "upstate.native-worker-request/v1"
 def process_identity(pid=None):
     """Identity survives reconnect and rejects a recycled PID or namespace."""
     if os.name == "nt":
-        return _windows_process.process_identity(pid)
+        from .windows_process import process_identity as windows_identity
+        return windows_identity(pid)
+    if sys.platform == "darwin":
+        from .macos_process import process_identity as macos_identity
+        return macos_identity(pid)
     pid = os.getpid() if pid is None else int(pid)
     row = Path("/proc") / str(pid)
     try:
@@ -39,7 +43,11 @@ def process_identity(pid=None):
 
 def identity_matches(expected):
     if os.name == "nt":
-        return _windows_process.identity_matches(expected)
+        from .windows_process import identity_matches as windows_matches
+        return windows_matches(expected)
+    if sys.platform == "darwin":
+        from .macos_process import identity_matches as macos_matches
+        return macos_matches(expected)
     current = process_identity(expected.get("pid", -1))
     return bool(current and all(current.get(k) == expected.get(k)
                                 for k in ("pid", "start_ticks", "boot_id", "process_group", "command_sha256"))
@@ -47,20 +55,18 @@ def identity_matches(expected):
 
 
 def signal_owned(directory, identity, execution_id, request_sha256, signum):
-    """Share signal receipts between a connected supervisor and its detached worker."""
-    directory = Path(directory)
-    with held(directory / ".stop.lock"):
-        receipt = directory / ("signal-" + str(int(signum)) + ".json")
-        if receipt.exists() or not identity_matches(identity):
-            return False
-        atomic_json(receipt, {"execution_id": execution_id,
-                             "request_sha256": request_sha256,
-                             "signal_requested": int(signum), "at": now(),
-                             "identity": identity}, immutable=True)
+    """Share retryable stop delivery between the supervisor and its original worker."""
+    def send(current, number):
         if os.name == "nt":
-            return _windows_process.signal_owned(identity, signum)
-        os.killpg(identity["process_group"], signum)
+            from .windows_process import signal_owned as platform_signal
+            return platform_signal(current, number)
+        if not identity_matches(current):
+            return False
+        os.killpg(current["process_group"], number)
         return True
+
+    return dispatch_signal(directory, identity, execution_id, request_sha256, signum,
+                           identity_matches=identity_matches, dispatch=send)
 
 
 class NativeStop(BaseException):
@@ -149,10 +155,11 @@ def run_request(request_path):
 
     stopped = threading.Event()
     if os.name == "nt":
-        _windows_process.adopt_worker(execution_id, request["request_sha256"])
+        from .windows_process import adopt_worker
+        adopt_worker(execution_id, request["request_sha256"])
     identity = process_identity()
     if not identity or identity["process_group"] != os.getpid():
-        raise ValueError("The native worker needs its own platform process group")
+        raise ValueError("The native worker needs its own process group")
     started = time.monotonic()
     worker = {"schema": "upstate.native-worker/v1", "execution_id": execution_id,
               "run_id": run_id, "task_id": request["task_id"],
@@ -166,42 +173,44 @@ def run_request(request_path):
     signal.signal(signal.SIGINT, interrupt)
     signal.signal(signal.SIGTERM, interrupt)
     if os.name == "nt":
-        _windows_process.start_stop_bridge()
+        from .windows_process import start_stop_bridge
+        start_stop_bridge()
 
     def heartbeat():
-        first_stop = None
-        sent = set()
+        stop_progress = StopProgress()
+        stop_acknowledged = False
         while not stopped.is_set():
             with contextlib.suppress(OSError):
                 atomic_json(directory / "heartbeat.json", {
                     "schema": "upstate.native-heartbeat/v1", "execution_id": execution_id,
                     "at": now(), "elapsed_seconds": time.monotonic() - started,
+                    "request_sha256": request["request_sha256"],
                     "identity": identity, "resources": resource_status()})
-            stop_path = directory / "stop.json"
-            if stop_path.exists():
-                try:
-                    stop = read_json(stop_path)
-                    selected = (stop.get("execution_id") == execution_id
-                                and stop.get("request_sha256") == request["request_sha256"])
-                except (OSError, ValueError):
-                    selected = False
-                if selected:
-                    if first_stop is None:
-                        first_stop = time.monotonic()
-                        with contextlib.suppress(OSError):
-                            atomic_json(directory / "stop-acknowledged.json", {
-                                "execution_id": execution_id, "at": now(),
-                                "request_sha256": request["request_sha256"]})
-                    elapsed = time.monotonic() - first_stop
-                    stage = getattr(signal, "SIGKILL", 9) if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
-                    if stage not in sent:
-                        sent.add(stage)
-                        # This process owns the fresh session and every signaled child.
-                        with contextlib.suppress(ProcessLookupError):
-                            signal_owned(directory, identity, execution_id, request["request_sha256"], stage)
+            try:
+                stop = bound_record(directory, "stop.json", request)
+            except (OSError, ValueError):
+                # Preserve the live calculation and its heartbeat. The operator
+                # reads the same original receipt and displays its exact fault.
+                stop = None
+            if stop is not None:
+                if not stop_acknowledged:
+                    with contextlib.suppress(OSError):
+                        atomic_json(directory / "stop-acknowledged.json", {
+                            "execution_id": execution_id, "at": now(),
+                            "request_sha256": request["request_sha256"]})
+                        stop_acknowledged = True
+                stage = stop_progress.signal(stop)
+                # Confirmed sends are deduplicated across both original writers;
+                # failed attempts remain retryable after reconnect.
+                with contextlib.suppress(ProcessLookupError):
+                    signal_owned(directory, identity, execution_id,
+                                 request["request_sha256"], stage)
             stopped.wait(1)
 
     with held(directory / ".worker.lock", blocking=False):
+        if startup_abandoned(directory, request):
+            print("Original launcher ended before registration; retained task is available to resume.", flush=True)
+            return 130
         atomic_json(directory / "worker.json", worker, immutable=True)
         ticker = threading.Thread(target=heartbeat, name="native-worker-heartbeat", daemon=True)
         try:
