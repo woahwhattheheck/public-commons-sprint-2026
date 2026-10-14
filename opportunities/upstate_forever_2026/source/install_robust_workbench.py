@@ -1670,6 +1670,14 @@ ALLOWED = ALLOWED | frozenset({
     "integration/component_fragments/resource-observation-portability.json",
 })
 
+# Complete published offline Node dependencies and native HTTPS receiving.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/build_node_payloads.py",
+    "packaging/NODE_DEPENDENCIES.md",
+    "integration/component_fragments/offline-node-dependencies.json",
+    "integration/NATIVE_HTTPS_CONNECTOR_PORTABILITY.md",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
@@ -3672,6 +3680,24 @@ def main(argv=None):
     args = parser.parse_args(argv)
     print(json.dumps(run(args.application, args.packet, dry_run=args.dry_run),
                      indent=2, sort_keys=True))
+
+
+# Complete published Investigations and paired-report portability cohorts.
+# Optional source admission only; REQUIRED and predecessor checks stay unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "eco_intelligence/install_upstate.py",
+    "eco_intelligence/UPSTATE_BINDING.md",
+    "operator/web/investigations.css",
+    "model/paired_ensemble/__init__.py",
+    "model/paired_ensemble/ensemble_cli.py",
+    "model/paired_ensemble/ensemble_report.py",
+    "model/paired_ensemble/ensemble_report_cli.py",
+    "model/paired_ensemble/ensemble_report_source.py",
+    "model/paired_ensemble/ensemble_rasters.py",
+    "model/paired_ensemble/ensemble_source_receiving.py",
+    "integration/component_fragments/paired-ensemble-report.json",
+    "docs/PAIRED_ENSEMBLE_PORTABILITY.md",
+})
 
 
 if __name__ == "__main__":
