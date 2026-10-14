@@ -270,27 +270,30 @@ def report_sections(summary):
     sections = []
     for (kind, units, signed), items in groups.items():
         mass_units = items[0]["quantities"]["annual_mass_units"]
-        rows, directions = [], []
+        rows, distributions, directions = [], [], []
         for item in items:
             q, v = item["quantities"], item["quantities"]["values"]
             pct = {p["percentile"]: p["value"] for p in v["percentiles"]}
             rows.append([_label(item), _number(q["support"]["valid_area_ha"]),
                          _number(q["annual_mass"]) if mass_units else "Not a mass", 
-                         _number(v["minimum"]), _number(pct[50]), _number(pct[95]), _number(v["maximum"])])
+                         _number(pct[50]), _number(pct[95])])
+            distributions.append([_label(item), _number(v["minimum"]), _number(v["maximum"]), _number(v["mean"])])
             if signed:
-                directions.append([_label(item), *[_number(q["directions"][sign]["area_ha"])
-                                                   for sign in ("negative", "zero", "positive")],
+                directions.append([_label(item), " / ".join(_number(q["directions"][sign]["area_ha"])
+                                                   for sign in ("negative", "zero", "positive")),
                                    _number(q["directions"]["negative"].get("annual_mass")),
                                    _number(q["directions"]["positive"].get("annual_mass"))])
         blocks = list(dict.fromkeys(item["support"] for item in items))
         blocks += ["Alternative minus baseline: negative values indicate lower annual export." if signed else
                    "Original retained cell values. Each summary uses this dataset's valid footprint.",
-                   {"kind": "table", "columns": ["Map / scenario", "Valid ha", "Annual change" if signed else "Annual export", "Minimum", "Median", "95th percentile", "Maximum"],
+                   {"kind": "table", "columns": ["Map / scenario", "Valid ha", "Annual change" if signed else "Annual export", "Median", "95th percentile"],
                     "rows": rows, "caption": "Cell values: " + _unit(units) + ". " +
                     ("Annual mass: " + _unit(mass_units) + ". " if mass_units else "Priority scores have no annual mass total. ") +
-                    "Full-resolution pixels, including zeros; each row uses its own valid support."}]
+                    "Full-resolution pixels, including zeros; each row uses its own valid support."},
+                   {"kind": "table", "columns": ["Map / scenario", "Minimum", "Maximum", "Mean"],
+                    "rows": distributions, "caption": "Original full-resolution cell values, in " + _unit(units) + "."}]
         if signed:
-            blocks.append({"kind": "table", "columns": ["Map / scenario", "Decrease ha", "Unchanged ha", "Increase ha", "Negative mass", "Positive mass"],
+            blocks.append({"kind": "table", "columns": ["Map / scenario", "Decrease / unchanged / increase ha", "Negative mass", "Positive mass"],
                            "rows": directions, "caption": "Signed contributions on the same difference-raster support, in " + _unit(mass_units) + "."})
         blocks += [METHOD, "Complete numeric values, original run IDs, support definitions and raster SHA-256 values accompany this report in maps/map-quantities.csv and .json. Summary " + summary["id"] + "."]
         sections.append(("Map quantities: " + kind.replace("_", " "), blocks))
