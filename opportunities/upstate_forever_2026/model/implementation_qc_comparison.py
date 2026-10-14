@@ -192,7 +192,7 @@ def sections(value):
 def render_html(value):
     esc = lambda item: html.escape("" if item is None else str(item))
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
-        "<title>" + esc(value["title"]) + "</title><style>body{max-width:1400px;margin:24px auto;padding:0 18px;color:#171717;background:#fff;font:15px/1.5 system-ui,sans-serif}h1{font-size:26px}h2{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}.scroll{overflow:auto}th{background:#eee}button,a{color:inherit}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media print{button{display:none}.scroll{overflow:visible}thead{display:table-header-group}tr{break-inside:avoid}body{margin:0;padding:0}}</style><body>",
+        "<title>" + esc(value["title"]) + "</title><style>body{max-width:1400px;margin:24px auto;padding:0 18px;color:#171717;background:#fff;font:15px/1.5 system-ui,sans-serif}h1{font-size:26px}h2{font-size:20px}table{border-collapse:collapse;width:100%;font-size:12px}th,td{border:1px solid #999;padding:7px;text-align:left;vertical-align:top;overflow-wrap:anywhere}.scroll{max-width:100%;overflow:auto}th{background:#eee;overflow-wrap:normal}button,a{color:inherit}pre{white-space:pre-wrap;overflow-wrap:anywhere}@media(max-width:620px){.scroll table{min-width:960px}.scroll th,.scroll td{min-width:96px}}@media print{button{display:none}.scroll{overflow:visible}.scroll table,.scroll th,.scroll td{min-width:0}thead{display:table-header-group}tr{break-inside:avoid}body{margin:0;padding:0}}</style><body>",
         "<h1>" + esc(value["title"]) + "</h1><button onclick=\"window.print()\">Print complete comparison</button>"]
     for heading, blocks in sections(value):
         parts.append("<h2>" + esc(heading) + "</h2>")
@@ -200,7 +200,7 @@ def render_html(value):
             if isinstance(block, str):
                 parts.append("<p>" + esc(block) + "</p>")
             elif block["kind"] == "table":
-                parts.append('<div class="scroll"><table><thead><tr>' + "".join("<th>" + esc(c) + "</th>" for c in block["columns"]) + "</tr></thead><tbody>")
+                parts.append('<div class="scroll" tabindex="0" role="region" aria-label="' + esc(heading) + ' table"><table><thead><tr>' + "".join("<th>" + esc(c) + "</th>" for c in block["columns"]) + "</tr></thead><tbody>")
                 for row in block["rows"]:
                     parts.append("<tr>" + "".join("<td>" + esc(c) + "</td>" for c in row) + "</tr>")
                 parts.append("</tbody></table></div>")
@@ -325,34 +325,8 @@ def scientific_source(workspace, plan_id, comparison_report_id):
     return {**current, "report_source": choice, "delivery_selection": selection}
 
 def export(workspace, plan_id, comparison_report_id, destination):
-    current = inspect(workspace, plan_id, comparison_report_id)
-    root = Path(workspace.root)
-    path = Path(destination).expanduser().absolute()
-    if path.resolve().is_relative_to(root.resolve()):
-        raise ImplementationError("Save comparison exports outside the original Workspace.")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        if path.is_symlink() or not path.is_file():
-            raise ImplementationError("The comparison archive must be an ordinary file.")
-        qc._verify_archive(path, current["files"])
-        return {"path": str(path), "bytes": path.stat().st_size, "sha256": file_digest(path),
-                "comparison_report_id": comparison_report_id, "reused": True}
-    fd, pending = tempfile.mkstemp(prefix=".qc-comparison-export-", dir=path.parent)
-    os.close(fd)
-    pending = Path(pending)
-    try:
-        with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for item in current["files"]:
-                source = root / item["path"]
-                if describe_file(root, source) != item:
-                    raise ImplementationError("The retained comparison source changed.")
-                archive.write(source, source.name)
-        qc._verify_archive(pending, current["files"])
-        try:
-            os.link(pending, path)
-        except FileExistsError:
-            qc._verify_archive(path, current["files"])
-        return {"path": str(path), "bytes": path.stat().st_size, "sha256": file_digest(path),
-                "comparison_report_id": comparison_report_id}
-    finally:
-        pending.unlink(missing_ok=True)
+    inspected = inspect(workspace, plan_id, comparison_report_id)
+    return {**qc._export_archive(workspace, inspected["files"], destination,
+                                label="comparison", prefix=".qc-comparison-export-"),
+            "comparison_report_id": comparison_report_id}
+
