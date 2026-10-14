@@ -2,27 +2,61 @@
 from __future__ import annotations
 import argparse
 import json
+import os
+import sqlite3
 import sys
+import tempfile
 from pathlib import Path
 from .schema import Study
 from .engine import solve, frontier
 from .native import from_experiment
 from .operations import DecisionWorkspace
+from .store import native_path
 
 
 def read(path):
-    return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    return json.loads(native_path(path).read_text(encoding="utf-8-sig"))
+
+
+def write_output(text, output):
+    """Publish complete UTF-8 reports and projects through the native writer."""
+    path = native_path(output)
+    data = text.encode("utf-8")
+    try:
+        from model.common import atomic_bytes
+    except ModuleNotFoundError as error:
+        if error.name not in {"model", "model.common"}:
+            raise
+    else:
+        atomic_bytes(path, data)
+        return
+    # Preserve the separately installed eco_robust CLI without a model package.
+    # The live workbench always uses its shared platform publication above.
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".decision-", delete=False) as handle:
+            temporary = Path(handle.name)
+            handle.write(data)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(temporary, path)
+        temporary = None
+        if os.name != "nt":
+            descriptor = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+            try:
+                os.fsync(descriptor)
+            finally:
+                os.close(descriptor)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
 
 
 def emit(value, output=None):
     text = json.dumps(value, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
     if output:
-        # Atomic replacement of the explicitly supplied output path.
-        import os, tempfile
-        path = Path(output); path.parent.mkdir(parents=True, exist_ok=True)
-        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as handle:
-            temporary = Path(handle.name); handle.write(text); handle.flush(); os.fsync(handle.fileno())
-        temporary.replace(path)
+        write_output(text, output)
     else:
         sys.stdout.write(text)
 
@@ -70,7 +104,7 @@ def main(argv=None):
         if args.command == "report":
             from .reports import html_report, csv_report
             value = (html_report if args.format == "html" else csv_report)(read(args.study), read(args.result))
-            Path(args.output).write_text(value, encoding="utf-8")
+            write_output(value, args.output)
             return 0
         if args.command in ("diagnostic-preview", "prepare-diagnostic"):
             from model.workspace import Workspace
@@ -107,7 +141,7 @@ def main(argv=None):
                 value = ws.solve(args.study_id, current["revision"], args.objective, time_limit=args.time_limit)
         emit(value, args.output)
         return 0
-    except (ValueError, KeyError, OSError) as exc:
+    except (ValueError, KeyError, OSError, sqlite3.Error) as exc:
         print(json.dumps({"error": str(exc), "type": type(exc).__name__}), file=sys.stderr)
         return 2
 

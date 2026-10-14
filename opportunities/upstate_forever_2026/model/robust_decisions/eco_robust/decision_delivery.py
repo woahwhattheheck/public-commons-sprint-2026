@@ -23,6 +23,7 @@ from .engine import canonical_hash
 from .integration import selection_packet
 from .reports import html_report, csv_report
 from .schema import Study
+from .store import database_uri, native_path
 
 SCHEMA = "upstate.decision-delivery/v1"
 SOURCE_CONTRACTS = {"ES-EXP-2319/landcover-metrics", "ES26/diagnostic-common-support/v1"}
@@ -52,10 +53,11 @@ def _json(value):
 
 
 def _database(workspace):
-    path = workspace.root / "robust_decisions" / "robust_decisions.sqlite3"
+    root = native_path(workspace.root).resolve()
+    path = root / "robust_decisions" / "robust_decisions.sqlite3"
     if not path.is_file() or path.is_symlink():
         raise ValueError("Restore the original saved Decision database in this workspace")
-    path.resolve().relative_to(workspace.root.resolve())
+    path.resolve().relative_to(root)
     return path
 
 
@@ -63,7 +65,7 @@ def _load(workspace, study_id, run_id, *, project=False):
     """Read a single SQLite snapshot without Store construction or migration."""
     _id(study_id, "study"); _id(run_id, "run")
     path = _database(workspace)
-    with closing(sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)) as db:
+    with closing(sqlite3.connect(database_uri(path, "ro"), uri=True, timeout=30)) as db:
         db.row_factory = sqlite3.Row
         db.execute("BEGIN")
         study_row = db.execute("SELECT * FROM studies WHERE id=?", (study_id,)).fetchone()
@@ -385,7 +387,7 @@ def retain_decision(workspace, directory, state, binding):
     """Retain native exports once; subsequent history cannot rewrite a release."""
     if binding is None:
         return None
-    directory = Path(directory)
+    directory = native_path(directory)
     pin = binding["source_decision"]
     prefix = "decision/" + digest(pin) + "/"
     target = directory / prefix
