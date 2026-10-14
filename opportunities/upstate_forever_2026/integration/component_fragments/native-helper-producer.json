@@ -1,0 +1,17 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "native-helper-producer",
+  "source_reference": "ECO-HELPER-PRODUCER-7065/1.0.0/2026-10-14",
+  "components": {
+    "native-helper-producer": {
+      "paths": [
+        "source_tools/build_native_helper_bundle.py",
+        "source_tools/NATIVE_HELPER_PRODUCER.md",
+        "integration/component_fragments/native-helper-producer.json"
+      ],
+      "requires": [],
+      "retained_only": []
+    }
+  },
+  "required_components": ["native-helper-producer"]
+}
