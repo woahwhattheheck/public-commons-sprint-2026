@@ -16,12 +16,17 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import re
-import stat
 import sys
 import tempfile
 import time
 import urllib.parse
 import zipfile
+
+# Import the shared original-source filesystem implementation for standalone CLI use.
+APPLICATION_ROOT = Path(__file__).resolve().parent.parent
+if str(APPLICATION_ROOT) not in sys.path:
+    sys.path.insert(0, str(APPLICATION_ROOT))
+from model import portable_fs as fs
 
 PLAN_SCHEMA = "upstate.received-study-set/v1"
 ARCHIVE_SCHEMA = "upstate.scientific-workspace-archive/v1"
@@ -77,16 +82,13 @@ def error_detail(error: Exception) -> dict:
 
 @contextlib.contextmanager
 def original_file(path: Path):
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-                 | getattr(os, "O_NONBLOCK", 0))
-    with os.fdopen(fd, "rb") as stream:
-        if not stat.S_ISREG(os.fstat(stream.fileno()).st_mode):
-            raise ValueError("Select an original regular file")
+    """Open the original regular member without following Windows reparse points."""
+    with os.fdopen(fs.open_file(path, os.O_RDONLY), "rb") as stream:
         yield stream
 
 
 def identity(stream):
-    value = os.fstat(stream.fileno())
+    value = fs.fd_stat(stream.fileno())
     return (value.st_dev, value.st_ino, value.st_size,
             value.st_mtime_ns, value.st_ctime_ns)
 
@@ -124,9 +126,10 @@ def atomic_json(path: Path, value, *, exclusive=False) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         if exclusive:
-            os.link(pending, path)
+            fs.publish_file(pending, path)
         else:
-            os.replace(pending, path)
+            fs.replace(pending, path)
+        fs.sync_directory(path.parent)
     finally:
         with contextlib.suppress(FileNotFoundError):
             os.unlink(pending)
@@ -134,23 +137,9 @@ def atomic_json(path: Path, value, *, exclusive=False) -> None:
 
 @contextlib.contextmanager
 def receiving_lock(path: Path):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
-            raise ValueError("Use a regular receiving lock file")
-        if os.name == "nt":
-            import msvcrt
-            if os.fstat(fd).st_size == 0:
-                os.write(fd, b"0")
-            os.lseek(fd, 0, os.SEEK_SET)
-            msvcrt.locking(fd, msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    """Hold a native whole-file lease across original upload and result receiving."""
+    with fs.locked(path, blocking=False):
         yield
-    finally:
-        os.close(fd)
 
 
 def relative_path(value: str) -> PurePosixPath:
@@ -580,7 +569,8 @@ def write_csv(destination: Path, studies: list[dict]) -> None:
                         **{key: row.get(key, "") for key in ("profile_id", "scenario_id", "grid_id")}})
             output.flush()
             os.fsync(output.fileno())
-        os.replace(temporary, output_path(destination, "joined-runs.csv"))
+        fs.replace(temporary, output_path(destination, "joined-runs.csv"))
+        fs.sync_directory(destination)
     finally:
         with contextlib.suppress(FileNotFoundError):
             os.unlink(temporary)
