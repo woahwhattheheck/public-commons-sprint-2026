@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import email
+from contextlib import contextmanager
 import copy
 import time
 import hashlib
@@ -18,9 +19,13 @@ import tarfile
 import tempfile
 import zipfile
 
-from . import probe
+from . import probe, platform_runtime
+
+# Conda Windows may need Library/bin before shared helpers import ctypes.
+platform_runtime.activate_libraries()
+from model.portable_fs import publish_file, sync_directory
 from .transport import (BLOCK, atomic_json, canonical, check_descriptor, contained,
-                        copy_verified, descriptor, file_hash, lock, read_json,
+                        copy_verified, descriptor, file_hash, lock as transport_lock, read_json,
                         regular, safe_relative, stamp, verify_file)
 
 SCHEMA = "upstate.native-runtime-capsule/v1"
@@ -35,65 +40,85 @@ def normalized(name):
 
 
 def environment(prefix=None, offline=False):
-    """No inherited Python injection or pip destination/config overrides."""
-    env = {key: value for key, value in os.environ.items()
-           if not key.startswith(("PYTHON", "PIP_", "CONDA_"))
-           and key not in ("VIRTUAL_ENV", "GDAL_DATA", "PROJ_LIB", "PROJ_DATA")}
-    env["PYTHONDONTWRITEBYTECODE"] = "1"
-    env["PYTHONNOUSERSITE"] = "1"
-    env["PIP_CONFIG_FILE"] = os.devnull
-    env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
-    env["PIP_NO_INPUT"] = "1"
-    if offline:
-        env["PIP_NO_INDEX"] = "1"
-    if prefix:
-        prefix = Path(prefix)
-        env["PATH"] = str(prefix / "bin") + os.pathsep + env.get("PATH", "")
-        env["CONDA_PREFIX"] = str(prefix)
-        # The received Measurements Node uses this qualified runtime's C++/GCC
-        # libraries after relocation, including through the ordinary opener.
-        if (sys.platform == "linux" and (prefix / "bin" / "node").is_file()
-                and (prefix / "lib").is_dir()):
-            libraries = str(prefix / "lib")
-            inherited = env.get("LD_LIBRARY_PATH", "")
-            env["LD_LIBRARY_PATH"] = libraries + (os.pathsep + inherited if inherited else "")
-        # Preserve explicit trust configuration while relocating the supplied CA bundle.
-        certificates = prefix / "ssl/cert.pem"
-        if "SSL_CERT_FILE" not in env and certificates.is_file():
-            import ssl
-            context = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-            context.load_verify_locations(cafile=str(certificates))
-            if not context.cert_store_stats()["x509_ca"]:
-                raise ValueError("The supplied relocated trust store contains no certificate authorities.")
-            env["SSL_CERT_FILE"] = str(certificates)
-    return env
+    """Activate only the selected prefix; preserve explicit trust configuration."""
+    return platform_runtime.prefix_environment(prefix, offline)
+
+
+@contextmanager
+def lock(path):
+    """An installer lease retained by its explicit child after parent exit.
+
+    POSIX uses the original flock open-description custody. Windows uses the
+    shared backend's exclusive-share handle, not a process-owned LockFileEx
+    region lock. Both lock the original operation path, without stale markers.
+    """
+    if os.name == "nt":
+        from model import windows_process
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = windows_process.open_batch_lease(path)
+        try:
+            yield fd
+        finally:
+            os.close(fd)
+    else:
+        with transport_lock(path) as fd:
+            yield fd
 
 
 def command(arguments, log, *, cwd=None, prefix=None, offline=False, lease_fd=None):
-    """Synchronous retained subprocess: actual child PID, complete file-backed output."""
+    """Run one retained command with owned cancellation and explicit lease custody."""
     log = Path(log)
     log.parent.mkdir(parents=True, exist_ok=True)
+    windows = None
+    if os.name == "nt":
+        from model import windows_process as windows
     with log.open("ab") as output:
         output.write(("\n--- " + stamp() + " ---\n").encode())
         output.flush()
-        child = subprocess.Popen([str(v) for v in arguments], stdout=output,
-                                 stderr=subprocess.STDOUT, cwd=cwd,
-                                 env=environment(prefix, offline), start_new_session=True,
-                                 pass_fds=() if lease_fd is None else (lease_fd,))
+        kwargs = dict(stdout=output, stderr=subprocess.STDOUT, cwd=cwd,
+                      env=environment(prefix, offline))
+        custody = () if lease_fd is None else (lease_fd,)
+        if windows is not None:
+            # Backend assigns the suspended child to its owned Job before resume.
+            child = windows.spawn([str(v) for v in arguments], custody_fds=custody, **kwargs)
+        else:
+            child = subprocess.Popen([str(v) for v in arguments], start_new_session=True,
+                                     pass_fds=custody, **kwargs)
         print(json.dumps({"event": "native_runtime_child", "pid": child.pid,
                           "log": str(log)}, sort_keys=True), file=sys.stderr, flush=True)
         try:
-            code = child.wait()
-        except BaseException:
-            os.killpg(child.pid, signal.SIGTERM)
+            identity = child.identity() if windows is not None else None
             try:
-                child.wait(timeout=10)
-            except subprocess.TimeoutExpired:
-                os.killpg(child.pid, signal.SIGKILL)
-                child.wait()
-            raise
-        output.flush()
-        os.fsync(output.fileno())
+                code = child.wait()
+            except BaseException:
+                # A child may exit between cancellation and delivery of a signal.
+                # Do not replace the original interruption with ProcessLookupError.
+                if child.poll() is None:
+                    if windows is not None:
+                        windows.signal_owned(identity, signal.SIGINT)
+                    else:
+                        try:
+                            os.killpg(child.pid, signal.SIGTERM)
+                        except ProcessLookupError:
+                            pass
+                    try:
+                        child.wait(timeout=10)
+                    except subprocess.TimeoutExpired:
+                        if windows is not None:
+                            windows.signal_owned(identity, signal.SIGTERM)
+                        else:
+                            try:
+                                os.killpg(child.pid, signal.SIGKILL)
+                            except ProcessLookupError:
+                                pass
+                        child.wait()
+                raise
+        finally:
+            if windows is not None:
+                child.close()
+            output.flush()
+            os.fsync(output.fileno())
     if code:
         raise RuntimeError(f"Native runtime command exited {code}; complete output: {log}")
     return code
@@ -123,9 +148,12 @@ def python_identity(python):
         raise RuntimeError("Selected Python identity failed: " +
                            result.stderr.decode("utf-8", "replace"))
     value = json.loads(result.stdout)
-    required = ("system", "machine", "implementation", "cache_tag", "soabi", "python")
+    required = ("system", "machine", "implementation", "cache_tag", "python", "prefix", "executable")
     if any(not value.get(key) for key in required):
         raise ValueError("Selected interpreter returned incomplete ABI identity")
+    abi = "extension_suffix" if platform_runtime.system_name(value["system"]) == "Windows" else "soabi"
+    if not value.get(abi):
+        raise ValueError("Selected interpreter returned incomplete extension ABI identity: " + abi)
     return value
 
 
@@ -203,13 +231,13 @@ def conda_members(archive):
         if name in names:
             raise ValueError("Duplicate conda archive member: " + name)
         names.add(name)
-    required = {"bin/python", "bin/conda-unpack"}
     wrapper = ""
-    if not required <= names and names:
+    if platform_runtime.archive_layout(names) is None and names:
         candidate = next(iter(names)).split("/", 1)[0]
-        if (all(name == candidate or name.startswith(candidate + "/") for name in names)
-                and {candidate + "/" + name for name in required} <= names):
-            wrapper = candidate
+        if all(name == candidate or name.startswith(candidate + "/") for name in names):
+            relative = {name[len(candidate) + 1:] for name in names if name != candidate}
+            if platform_runtime.archive_layout(relative) is not None:
+                wrapper = candidate
     selected = []
     for original in members:
         member = copy.copy(original)
@@ -274,9 +302,28 @@ def scan_conda(path):
                     raise ValueError("Conda archive link cycle: " + source)
                 active.add(target)
                 target = links[target]
-        if "bin/python" not in seen or "bin/conda-unpack" not in seen:
-            raise ValueError("Select a complete conda-pack archive with bin/python and bin/conda-unpack")
+        layout = platform_runtime.require_layout(seen)
+        if layout["family"] == "windows":
+            # A Windows archive is interpreted by a case-insensitive filesystem.
+            # Reject ambiguous/Win32-special names before the first payload write.
+            import unicodedata
+            canonical_names = set()
+            reserved = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"}
+            reserved.update(f"{base}{number}" for base in ("COM", "LPT") for number in range(1, 10))
+            for name in seen:
+                for part in PurePosixPath(name).parts:
+                    if (part[-1:] in (".", " ") or any(c in part for c in ':<>"|?*')
+                            or any(ord(c) < 32 for c in part)
+                            or part.split(".", 1)[0].upper() in reserved):
+                        raise ValueError("Win32-special runtime member: " + name)
+                key = unicodedata.normalize("NFC", name).casefold()
+                if key in canonical_names:
+                    raise ValueError("Colliding Windows runtime member: " + name)
+                canonical_names.add(key)
     result = {"members": original_count, "unpacked_bytes": total}
+    # Preserve old POSIX capsule metadata byte-for-byte for capture recovery.
+    if layout["family"] == "windows":
+        result["layout"] = layout
     if wrapper:
         result["archive_prefix"] = wrapper
     return result
@@ -350,6 +397,9 @@ def seal(payload, output, selection, target, *, kind, donor_probe=None, require_
         else:
             regular(payload)
             archive_info = scan_conda(payload)
+            with tarfile.open(payload, "r:*") as packed:
+                entries, _, _ = conda_members(packed)
+                platform_runtime.require_layout((entry.name.rstrip("/") for entry in entries), target["system"])
             destination = stage / "payload" / "runtime.tar.gz"
             copy_verified(payload, destination)
             files.append(descriptor(stage, destination))
@@ -366,7 +416,8 @@ def seal(payload, output, selection, target, *, kind, donor_probe=None, require_
             archive.write(stage / "capsule.json", "capsule.json")
             for item in files:
                 archive.write(stage / item["path"], item["path"])
-        os.link(temporary_zip, output)
+        publish_file(temporary_zip, output)
+        sync_directory(output.parent)
     return {"path": str(output), "bytes": output.stat().st_size,
             "sha256": file_hash(output), "manifest": manifest}
 
@@ -449,7 +500,8 @@ def extract_payload(capsule, destination, manifest):
                     os.fsync(output.fileno())
                 if size != item["bytes"] or checksum.hexdigest() != item["sha256"]:
                     raise ValueError("Changed capsule payload: " + item["path"])
-                os.link(temporary, target)
+                publish_file(temporary, target)
+                sync_directory(target.parent)
             finally:
                 os.unlink(temporary)
     return destination
@@ -460,13 +512,17 @@ def compatible(manifest, current=None):
     target = manifest["target"]
     problems = []
     warnings = []
-    for name in ("system", "machine"):
-        if current.get(name) != target.get(name):
+    for name, normalize in (("system", platform_runtime.system_name),
+                            ("machine", platform_runtime.machine_name)):
+        if not current.get(name) or not target.get(name) or normalize(current[name]) != normalize(target[name]):
             problems.append(f"{name}: capsule {target.get(name)}, host {current.get(name)}")
     if manifest["kind"] == "wheelhouse":
-        for name in ("implementation", "cache_tag", "soabi"):
-            if current.get(name) != target.get(name):
+        for name in ("implementation", "cache_tag"):
+            if not current.get(name) or current.get(name) != target.get(name):
                 problems.append(f"{name}: capsule {target.get(name)}, host {current.get(name)}")
+        abi = "extension_suffix" if platform_runtime.system_name(current.get("system")) == "Windows" else "soabi"
+        if not current.get(abi) or current.get(abi) != target.get(abi):
+            problems.append(f"{abi}: capsule {target.get(abi)}, host {current.get(abi)}")
     libc = current.get("libc", ["", ""])
     donor_libc = target.get("libc", ["", ""])
     if libc[0] and donor_libc[0] and libc[0] != donor_libc[0]:
@@ -540,7 +596,7 @@ def install(capsule, prefix, application, *, python=sys.executable, resume=False
         try:
             payload = stage("receive_payload", lambda: extract_payload(capsule, operation, manifest))
             if manifest["kind"] == "wheelhouse":
-                interpreter = prefix / "bin" / "python"
+                interpreter = platform_runtime.interpreter(prefix, kind="wheelhouse")
                 if "create_environment" not in state["stages"]:
                     stage("create_environment", lambda: command(
                         [python, "-m", "venv", str(prefix)], operation / "create-environment.log", offline=True, lease_fd=lease_fd))
@@ -561,16 +617,20 @@ def install(capsule, prefix, application, *, python=sys.executable, resume=False
             else:
                 original = verify_file(payload, manifest["files"][0])
                 scan_conda(original)
+                with tarfile.open(original, "r:*") as packed:
+                    entries, _, _ = conda_members(packed)
+                    layout = platform_runtime.require_layout(
+                        (entry.name.rstrip("/") for entry in entries), manifest["target"]["system"])
                 if "extract_environment" not in state["stages"]:
                     prefix.mkdir(exist_ok=True)
                     def unpack():
                         # Python's data filter additionally checks chained real paths.
                         extract_conda(original, prefix)
                     stage("extract_environment", unpack)
-                interpreter = prefix / "bin" / "python"
+                interpreter = prefix / layout["python"]
                 if "relocate_environment" not in state["stages"]:
                     stage("relocate_environment", lambda: command(
-                        [interpreter, prefix / "bin" / "conda-unpack"],
+                        [interpreter, prefix / layout["relocation"]],
                         operation / "relocate.log", prefix=prefix, offline=True, lease_fd=lease_fd))
             actual = stage("native_probe", lambda: probe_python(
                 interpreter, selected, operation / "probe", application=application, prefix=prefix, lease_fd=lease_fd))
@@ -669,7 +729,7 @@ def capture_conda(prefix, application, output, *, pack_python=sys.executable, re
         try:
             if output.exists() or output.is_symlink():
                 return _recover_capture_output(output, stage, state, request)
-            actual = probe_python(prefix / "bin" / "python", selected, stage / "probe",
+            actual = probe_python(platform_runtime.interpreter(prefix), selected, stage / "probe",
                                   application=application, prefix=prefix, lease_fd=lease_fd)
             if actual["state"] != "ready":
                 raise RuntimeError("Donor native probe failed; see " + str(stage / "probe" / "runtime-probe.json"))

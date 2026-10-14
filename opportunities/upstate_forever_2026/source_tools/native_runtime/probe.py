@@ -56,6 +56,12 @@ def run(selection, application=None):
     The raster round trip exercises driver availability and pygeoprocessing/GDAL
     ABI cooperation. It is not a nutrient or sediment scientific-model run.
     """
+    # This file also executes directly under the selected interpreter.
+    if __package__:
+        from .platform_runtime import activate_libraries
+    else:
+        from platform_runtime import activate_libraries
+    activate_libraries()
     result = {"schema": "upstate.native-runtime-probe/v1", "identity": identity(),
               "selection": selection, "packages": {}, "checks": {}, "errors": []}
 

@@ -23,6 +23,8 @@ import json, pathlib, runpy, sys
 application, entry, inspect_only = sys.argv[1:4]
 arguments = sys.argv[4:]
 sys.path.insert(0, application)
+from source_tools.native_runtime.platform_runtime import activate_libraries
+activate_libraries()
 from model.native import runtime
 modules, native = runtime()
 if inspect_only == "1":
@@ -61,11 +63,6 @@ def prepare(python: str | Path, application: str | Path, entry: str,
     actual = capsule.python_identity(executable)
     prefix = Path(actual["prefix"]).resolve(strict=True)
     env = capsule.environment(prefix=prefix)
-    # Avoid choosing a different installation's PROJ database after relocation.
-    if (prefix / "share" / "proj" / "proj.db").is_file():
-        env["PROJ_DATA"] = str(prefix / "share" / "proj")
-    if (prefix / "share" / "gdal").is_dir():
-        env["GDAL_DATA"] = str(prefix / "share" / "gdal")
     command = [str(executable), "-B", "-c", BOOTSTRAP, str(root), str(target),
                "1" if inspect_only else "0", *args]
     return {"command": command, "environment": env, "application": str(root),
