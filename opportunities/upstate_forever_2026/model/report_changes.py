@@ -36,7 +36,8 @@ else:
     from model import portable_fs as _fs
     from model.portable_databases import _database_uri
 
-VERSION = "1.0.0"
+# Presentation revision creates a new saved comparison without replacing earlier exports.
+VERSION = "1.0.1"
 KIND = "scientific-report-comparisons"
 SCHEMA = "upstate.scientific-report-comparison/v1"
 EDITION_SCHEMA = "upstate.scientific-report-edition/v1"
@@ -589,98 +590,286 @@ def _display(value):
     return value if isinstance(value, str) else json.dumps(value, ensure_ascii=False, sort_keys=True)
 
 
+def _value_html(value, depth=0):
+    """Readable original values; nested structures remain complete and expandable."""
+    if isinstance(value, (dict, list)):
+        if not value:
+            return '<span class="scalar">' + ('{}' if isinstance(value, dict) else '[]') + '</span>'
+        if depth >= 4:
+            return '<pre>' + escape(json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2)) + '</pre>'
+        if isinstance(value, dict):
+            content = '<dl class="fields">' + ''.join(
+                '<dt>' + escape(str(key)) + '</dt><dd>' + _value_html(item, depth + 1) + '</dd>'
+                for key, item in value.items()) + '</dl>'
+            label = '%d fields' % len(value)
+        else:
+            content = '<ol class="values">' + ''.join(
+                '<li>' + _value_html(item, depth + 1) + '</li>' for item in value) + '</ol>'
+            label = '%d values' % len(value)
+        if depth or len(value) > 6:
+            return '<details class="nested"><summary>' + label + '</summary>' + content + '</details>'
+        return content
+    if value is None:
+        return '<span class="scalar">null</span>'
+    text = _display(value)
+    if text == '':
+        return '<span class="empty">Empty string</span>'
+    numeric = isinstance(value, (int, float)) and not isinstance(value, bool)
+    # Scientific tables also retain exact numeric strings, not rounded display values.
+    numeric = numeric or (isinstance(value, str) and bool(re.fullmatch(
+        r'[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?', value)))
+    return '<span class="' + ('number' if numeric else 'scalar') + '">' + escape(text) + '</span>'
+
+
 def _cell(value):
-    return "<pre>" + escape(_display(value)) + "</pre>"
+    return _value_html(value)
 
 
-def _html(title, body, *, prefix=""):
-    return ("<!doctype html><html lang=\"en\"><meta charset=\"utf-8\">"
-            "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
-            "<title>" + escape(title) + "</title><link rel=\"stylesheet\" href=\"" + prefix + "comparison.css\">"
-            "<body><main>" + body + "</main></body></html>\n").encode()
+def _edition_values(row, side, table):
+    if row[side + '_json'] is None:
+        return '<p class="empty">No value in this edition</p>'
+    value = row[side]
+    columns = table.get(side + '_columns', []) if table else []
+    if row['category'] == 'row' and isinstance(value, list) and len(columns) == len(value):
+        return '<dl class="fields row-fields">' + ''.join(
+            '<dt>' + escape(_display(column)) + '</dt><dd>' + _value_html(item) + '</dd>'
+            for column, item in zip(columns, value)) + '</dl>'
+    return _value_html(value)
+
+
+def _html(title, body, *, prefix='', interactive=False):
+    return ('<!doctype html><html lang="en"><head><meta charset="utf-8">'
+            '<meta name="viewport" content="width=device-width,initial-scale=1">'
+            '<title>' + escape(title) + '</title><link rel="stylesheet" href="' + prefix + 'comparison.css">'
+            '</head><body><main>' + body + '</main>'
+            + ('<script>' + REVIEW_SCRIPT + '</script>' if interactive else '')
+            + '</body></html>\n').encode()
 
 
 STYLE = """*{box-sizing:border-box}body{margin:0;color:#171717;background:#fff;font:15px/1.5 Arial,sans-serif}
-main{max-width:1280px;margin:auto;padding:28px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:28px;border-bottom:1px solid #999;padding-bottom:8px}
-a{color:inherit;text-decoration:underline}nav,.summary{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}nav a,.summary span{border:1px solid #888;padding:6px 10px}
+main{max-width:1280px;margin:auto;padding:28px}h1{font-size:28px;line-height:1.25}h2{font-size:20px;margin-top:28px;border-bottom:1px solid #999;padding-bottom:8px}h3{font-size:16px;margin:0 0 12px}
+a{color:inherit;text-decoration:underline}nav,.summary{display:flex;flex-wrap:wrap;gap:12px;margin:16px 0}nav a,.summary span{border:1px solid #888;padding:6px 10px}nav a:hover,button:hover{background:#eee}
 .table-wrap{overflow:auto}table{border-collapse:collapse;width:100%;font-size:13px}th,td{text-align:left;vertical-align:top;border-bottom:1px solid #ccc;padding:8px}th{background:#eee}
 pre{font:12px/1.5 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;max-height:26em;overflow:auto}small{display:block;color:#444}
-.pair{display:grid;grid-template-columns:1fr 1fr;gap:16px}.pair section{border:1px solid #888;padding:16px;min-width:0}.mono{font-family:monospace;overflow-wrap:anywhere}
-.note{max-width:100ch}iframe{width:100%;height:70vh;border:1px solid #999}.status{white-space:nowrap;font-weight:bold}.removed{border-left:4px double #333}.added{border-left:4px solid #555}
-@media(max-width:700px){main{padding:14px}.pair{grid-template-columns:1fr}h1{font-size:23px}td,th{padding:5px}}
-@media print{main{max-width:none;padding:0}nav,iframe{display:none}pre{max-height:none;overflow:visible}.table-wrap{overflow:visible}thead{display:table-header-group}h2{break-after:avoid}}
+.pair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}.pair section{border:1px solid #888;padding:16px;min-width:0}.mono{font-family:monospace;overflow-wrap:anywhere}
+.note{max-width:100ch}.status{white-space:nowrap;font-weight:bold}.removed{border-left:4px double #333}.added{border-left:4px solid #555}
+[hidden]{display:none!important}button,input,select{font:inherit;color:inherit;background:#fff;border:1px solid #777;border-radius:0;padding:8px;max-width:100%;min-height:40px}button,summary{cursor:pointer}button:focus-visible,a:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #171717;outline-offset:3px}
+.filters{display:grid;grid-template-columns:minmax(180px,2fr) repeat(3,minmax(130px,1fr));gap:12px;padding:16px;background:#f4f4f4;border:1px solid #aaa}.filters label{display:flex;flex-direction:column;gap:5px;min-width:0;font-size:13px;font-weight:bold}.filter-actions{grid-column:1/-1;display:flex;align-items:center;flex-wrap:wrap;gap:10px}.filter-actions output{margin-left:auto;font-size:13px}.filter-note{font-size:13px;margin:8px 0 20px}
+.change{border:1px solid #aaa;border-left:4px solid #777;margin:12px 0;scroll-margin-top:16px;min-width:0}.change.removed{border-left-style:double}.change>details>summary{padding:12px 16px;background:#f6f6f6;overflow-wrap:anywhere}.change>details[open]>summary{border-bottom:1px solid #aaa}.change-title{font-weight:bold}.change-meta{margin-left:14px;font-size:13px;font-weight:normal;color:#444}.change-content{padding:16px}.change-content .pair section{border-color:#ccc}.change-content .pair{margin:16px 0}.change:target{outline:2px solid #333;outline-offset:2px}
+.fields{display:grid;grid-template-columns:minmax(90px,2fr) minmax(0,3fr);margin:0;font-size:13px}.fields dt,.fields dd{padding:7px 8px;border-bottom:1px solid #ddd;margin:0;min-width:0;overflow-wrap:anywhere}.fields dt{font-weight:bold;background:#f7f7f7}.fields dd{overflow:auto}.number{display:block;white-space:nowrap;font-variant-numeric:tabular-nums;overflow-x:auto}.scalar{white-space:pre-wrap;overflow-wrap:anywhere}.empty{font-style:italic;color:#555}.values{padding-left:22px;margin:8px 0}.values li{margin:6px 0}.nested{margin:5px 0;min-width:0}.nested>summary{font-size:13px;text-decoration:underline;padding:4px 0}.nested[open]>summary{margin-bottom:8px}.original-location{font-size:13px;margin:8px 0}.counts{margin:0;padding-left:18px}.counts li{white-space:nowrap}.no-results{border:1px solid #777;padding:20px}
+@media(max-width:800px){.filters{grid-template-columns:repeat(2,minmax(0,1fr))}.filters .search-label{grid-column:1/-1}.filters .table-label{grid-column:1/-1}}
+@media(max-width:700px){main{padding:14px}.pair{grid-template-columns:1fr}h1{font-size:23px}td,th{padding:5px}.change-content{padding:10px}.change>details>summary{padding:10px}.change-meta{display:block;margin-left:14px}.fields{grid-template-columns:minmax(90px,2fr) minmax(0,3fr)}.filter-actions output{margin-left:0;width:100%}.filters{padding:12px}.pair section{padding:12px}}
+@media print{main{max-width:none;padding:0}nav,.filters,.filter-note,iframe{display:none}pre{max-height:none;overflow:visible}.table-wrap{overflow:visible}.pair{grid-template-columns:1fr}.change{break-inside:auto}.change>details>summary{break-after:avoid}.number{white-space:pre-wrap;overflow:visible}.fields dd{overflow:visible}thead{display:table-header-group}h2,h3{break-after:avoid}}
 """
 
 
+REVIEW_SCRIPT = r"""(() => {
+  'use strict';
+  const form = document.querySelector('#review-filters');
+  if (!form) return;
+  const records = Array.from(document.querySelectorAll('article.change'));
+  const query = document.querySelector('#review-query');
+  const category = document.querySelector('#review-category');
+  const status = document.querySelector('#review-status');
+  const table = document.querySelector('#review-table');
+  const count = document.querySelector('#review-count');
+  const empty = document.querySelector('#review-empty');
+  // textContent includes closed disclosures, so exact retained values are searchable.
+  const searchable = new Map(records.map(node => [node, node.textContent.toLocaleLowerCase()]));
+  function filter() {
+    const term = query.value.trim().toLocaleLowerCase();
+    let visible = 0;
+    records.forEach(node => {
+      node.hidden = Boolean((term && !searchable.get(node).includes(term)) ||
+        (category.value && node.dataset.category !== category.value) ||
+        (status.value && node.dataset.status !== status.value) ||
+        (table.value && node.dataset.table !== table.value));
+      if (!node.hidden) visible += 1;
+    });
+    count.textContent = visible + ' of ' + records.length + ' changes shown on this page';
+    empty.hidden = visible !== 0;
+  }
+  form.hidden = false;
+  form.addEventListener('submit', event => event.preventDefault());
+  [query, category, status, table].forEach(control => control.addEventListener('input', filter));
+  form.querySelector('[data-action="reset"]').addEventListener('click', () => {
+    form.reset(); filter(); query.focus();
+  });
+  ['expand','collapse'].forEach(action => {
+    form.querySelector('[data-action="' + action + '"]').addEventListener('click', () => {
+      records.filter(node => !node.hidden).forEach(node => {
+        node.querySelectorAll('details').forEach(detail => { detail.open = action === 'expand'; });
+      });
+    });
+  });
+  function revealAnchor() {
+    const id = location.hash.slice(1);
+    if (!/^change-\d+$/.test(id)) return;
+    const node = document.getElementById(id);
+    if (!node) return;
+    if (node.hidden) { form.reset(); filter(); }
+    node.querySelector('details').open = true;
+    node.scrollIntoView({block:'start'});
+  }
+  let printState = null;
+  addEventListener('beforeprint', () => {
+    if (printState) return;
+    printState = [];
+    records.filter(node => !node.hidden).forEach(node => {
+      node.querySelectorAll('details').forEach(detail => {
+        printState.push([detail, detail.open]); detail.open = true;
+      });
+    });
+  });
+  addEventListener('afterprint', () => {
+    if (printState) printState.forEach(([detail, open]) => { detail.open = open; });
+    printState = null;
+  });
+  addEventListener('hashchange', revealAnchor);
+  filter(); revealAnchor();
+})();"""
+
+
+def _review_controls(rows, tables):
+    def options(values, label):
+        return '<option value="">' + label + '</option>' + ''.join(
+            '<option value="' + escape(value, quote=True) + '">' + escape(text) + '</option>'
+            for value, text in values)
+    categories = sorted({row['category'] for row in rows})
+    statuses = sorted({row['status'] for row in rows})
+    table_ids = {row['table_id'] for row in rows if row['table_id']}
+    table_options = [(key, tables[key]['heading'] + ' · table ' +
+                      str(tables[key]['identity']['table_occurrence']))
+                     for key in tables if key in table_ids]
+    return ('<form id="review-filters" class="filters" hidden aria-label="Filter changes on this page">'
+            '<label class="search-label">Find a value, field or location<input id="review-query" type="search" autocomplete="off"></label>'
+            '<label>Category<select id="review-category">' + options([(v, v.replace('_', ' ')) for v in categories], 'All categories') + '</select></label>'
+            '<label>Status<select id="review-status">' + options([(v, v.replace('_', ' ')) for v in statuses], 'All statuses') + '</select></label>'
+            '<label class="table-label">Original table<select id="review-table">' + options(table_options, 'All tables and other changes') + '</select></label>'
+            '<div class="filter-actions"><button type="button" data-action="reset">Clear filters</button>'
+            '<button type="button" data-action="expand">Expand shown values</button>'
+            '<button type="button" data-action="collapse">Collapse shown values</button>'
+            '<output id="review-count" aria-live="polite"></output></div></form>'
+            '<p class="filter-note">Filters apply to this page only. Open a change to read both original editions. Printing includes all values in the shown changes.</p>'
+            '<noscript><p>Open each change to read its full values. The complete CSV register includes every page.</p></noscript>')
+
+
+def _change_html(row, table):
+    status = row['status'].replace('_', ' ')
+    heading = table['heading'] if table else row['category'].replace('_', ' ').capitalize()
+    body = ('<article class="change ' + escape(row['status'], quote=True) + '" id="change-' + str(row['seq']) + '"'
+            ' data-category="' + escape(row['category'], quote=True) + '" data-status="' + escape(row['status'], quote=True) + '"'
+            ' data-table="' + escape(row['table_id'] or '', quote=True) + '"><details><summary>'
+            '<span class="change-title">' + escape(heading) + '</span><span class="change-meta">#' + str(row['seq'])
+            + ' · ' + escape(row['category']) + ' · ' + escape(status))
+    if table:
+        body += ' · table ' + str(table['identity']['table_occurrence'])
+    positions = [(row[side + '_position'] + 1) if row[side + '_position'] is not None else None
+                 for side in ('left', 'right')]
+    if any(position is not None for position in positions):
+        body += ' · original position ' + str(positions[0] if positions[0] is not None else 'absent')
+        body += ' → ' + str(positions[1] if positions[1] is not None else 'absent')
+    body += '</span></summary><div class="change-content">'
+    body += '<p class="original-location"><strong>Original location</strong></p>' + _value_html(row['locator'])
+    body += '<div class="pair">'
+    for side, label in (('left', 'Earlier edition'), ('right', 'Later edition')):
+        body += '<section><h3>' + label + '</h3>'
+        if table and table.get(side + '_caption'):
+            body += '<p class="note">' + escape(table[side + '_caption']) + '</p>'
+        body += _edition_values(row, side, table) + '</section>'
+    body += '</div>'
+    if row['detail']:
+        body += '<details class="nested"><summary>Exact comparison details</summary>' + _value_html(row['detail']) + '</details>'
+    body += '</div></details></article>'
+    return body
+
+
 def _render(directory, record, db):
-    title = record["title"]
-    tables_by_id = {table["id"]: table for table in record["tables"]}
-    _write(directory / "comparison.css", STYLE.encode())
-    total = db.execute("SELECT COUNT(*) FROM changes").fetchone()[0]
+    title = record['title']
+    tables_by_id = {table['id']: table for table in record['tables']}
+    _write(directory / 'comparison.css', STYLE.encode())
+    total = db.execute('SELECT COUNT(*) FROM changes').fetchone()[0]
     page_count = (total + PAGE_ROWS - 1) // PAGE_ROWS
-    with (directory / "changes.csv").open("w", encoding="utf-8", newline="") as stream:
+    with (directory / 'changes.csv').open('w', encoding='utf-8', newline='') as stream:
         writer = csv.writer(stream)
-        writer.writerow(["sequence", "category", "table_id", "status", "locator_json", "left_position_1based",
-                         "right_position_1based", "left_json", "right_json", "detail_json"])
-        for row in db.execute("SELECT * FROM changes ORDER BY seq"):
+        writer.writerow(['sequence', 'category', 'table_id', 'status', 'locator_json', 'left_position_1based',
+                         'right_position_1based', 'left_json', 'right_json', 'detail_json'])
+        for row in db.execute('SELECT * FROM changes ORDER BY seq'):
             seq, category, table, status, locator, lp, rp, l, r, detail = row
-            # Original values are JSON-encoded, not spreadsheet expressions.
+            # Keep the original lossless register independent of HTML presentation.
             writer.writerow([seq, category, table, status, json.dumps(locator, ensure_ascii=False),
-                             lp + 1 if lp is not None else "", rp + 1 if rp is not None else "", l, r, detail])
+                             lp + 1 if lp is not None else '', rp + 1 if rp is not None else '', l, r, detail])
         stream.flush()
         os.fsync(stream.fileno())
-    cursor = db.execute("SELECT * FROM changes ORDER BY seq")
+    first_table_change, first_row_change = {}, None
+    cursor = db.execute('SELECT * FROM changes ORDER BY seq')
     for page in range(1, page_count + 1):
-        selected = cursor.fetchmany(PAGE_ROWS)
-        body = '<h1>' + escape(title) + '</h1><nav><a href="../index.html">Comparison overview</a>'
+        selected = [_decode_row(row) for row in cursor.fetchmany(PAGE_ROWS)]
+        for row in selected:
+            href = 'pages/page-%05d.html#change-%d' % (page, row['seq'])
+            if row['table_id']:
+                first_table_change.setdefault(row['table_id'], href)
+            if row['category'] == 'row' and first_row_change is None:
+                first_row_change = href
+        body = '<h1>Report changes</h1><p class="note">' + escape(title) + '</p><nav aria-label="Change pages"><a href="../index.html">Comparison overview</a>'
         if page > 1:
             body += '<a href="page-%05d.html">Previous page</a>' % (page - 1)
         if page < page_count:
             body += '<a href="page-%05d.html">Next page</a>' % (page + 1)
-        body += '</nav><p>Change page %d of %d · all %d recorded changes are included.</p>' % (page, page_count, total)
-        body += '<div class="table-wrap"><table><thead><tr><th>Change / original location</th><th>Earlier edition</th><th>Later edition</th></tr></thead><tbody>'
-        for source in selected:
-            row = _decode_row(source)
-            body += '<tr class="' + escape(row["status"]) + '"><td><span class="status">' + escape(row["status"].replace('_', ' ')) + '</span>'
-            body += '<small>#%d · %s</small>' % (row["seq"], escape(row["category"]))
-            if row["table_id"]:
-                table = tables_by_id[row["table_id"]]
-                body += '<small>' + escape(table["heading"]) + ' · table ' + str(table["identity"]["table_occurrence"]) + '</small>'
-            body += _cell(row["locator"]) + '<small>Original row positions: ' + str((row["left_position"] + 1) if row["left_position"] is not None else '—') + ' → ' + str((row["right_position"] + 1) if row["right_position"] is not None else '—') + '</small></td>'
-            body += '<td>' + _cell(row["left"]) + '</td><td>' + _cell(row["right"]) + '</td></tr>'
-        body += '</tbody></table></div><p><a href="../changes.csv">Complete change register CSV</a> · <a href="../changes.sqlite">Complete indexed change database</a></p>'
-        _write(directory / "pages" / ("page-%05d.html" % page), _html(title, body, prefix="../"))
-    body = '<h1>' + escape(title) + '</h1><p class="note">Read the exact earlier and later saved editions alongside their recorded changes. Source selection, section order, units, table headers and original values remain visible. This comparison does not recalculate scientific results.</p>'
-    body += '<div class="pair">'
-    for side, label in (("left", "Earlier"), ("right", "Later")):
+        body += '<a href="../changes.csv">Complete CSV register</a></nav>'
+        body += '<p>Page %d of %d · %d changes on this page · %d across the complete comparison.</p>' % (page, page_count, len(selected), total)
+        body += _review_controls(selected, tables_by_id)
+        body += '<p id="review-empty" class="no-results" hidden>No changes on this page match these filters. Clear filters or open another change page.</p>'
+        body += ''.join(_change_html(row, tables_by_id.get(row['table_id'])) for row in selected)
+        body += '<nav aria-label="Complete change exports"><a href="../changes.csv">Complete change register CSV</a><a href="../changes.sqlite">Complete indexed change database</a><a href="../index.html">Comparison overview</a></nav>'
+        _write(directory / 'pages' / ('page-%05d.html' % page), _html(title, body, prefix='../', interactive=True))
+    body = '<h1>Report comparison</h1><p class="note">' + escape(title) + '</p>'
+    body += '<p class="note">Review the earlier and later saved reports, then open a table to find its recorded changes. Original units, column labels and complete values are retained.</p><div class="pair">'
+    for side, label in (('left', 'Earlier'), ('right', 'Later')):
         value = record[side]
         source = edition(directory / side)
-        report = source["record"]["files"].get("report_html", {})
-        body += '<section><h2>' + label + '</h2><strong>' + escape(value["title"]) + '</strong><p class="mono">' + escape(value["id"]) + '</p>'
-        if report.get("path"):
-            href = side + '/' + quote(report["path"], safe="/")
+        report = source['record']['files'].get('report_html', {})
+        body += '<section><h2>' + label + '</h2><strong>' + escape(value['title']) + '</strong>'
+        if report.get('path'):
+            href = side + '/' + quote(report['path'], safe='/')
             body += '<p><a target="_blank" rel="noopener noreferrer" href="' + escape(href, quote=True) + '">Open complete original report</a></p>'
-        body += '<p>%d original files · %s bytes</p></section>' % (value["file_count"], format(value["bytes"], ','))
-    body += '</div><div class="summary"><span>%d recorded changes</span><span>%d original tables compared</span><span>%d complete change pages</span></div>' % (total, len(record["tables"]), page_count)
-    body += '<nav><a href="changes.csv">Complete CSV register</a><a href="changes.sqlite">SQLite change database</a><a href="summary.json">Structured comparison summary</a><a href="files.html">All retained original files</a></nav>'
-    if not record["same_project"]:
+        body += '<p>%d original files · %s bytes</p>' % (value['file_count'], format(value['bytes'], ','))
+        body += '<details class="nested"><summary>Original edition identifier</summary><p class="mono">' + escape(value['id']) + '</p></details></section>'
+    body += '</div><div class="summary"><span>%d recorded changes</span><span>%d original tables compared</span><span>%d change pages</span></div>' % (total, len(record['tables']), page_count)
+    body += '<nav aria-label="Review and exports">'
+    if first_row_change:
+        body += '<a href="' + first_row_change + '">Read table-row changes</a>'
+    if page_count:
+        body += '<a href="pages/page-00001.html">Read all change categories</a>'
+    body += '<a href="changes.csv">Complete CSV register</a><a href="files.html">All retained original files</a></nav>'
+    if not record['same_project']:
         body += '<p><strong>The selected editions belong to different original projects.</strong> Their project identities remain separate.</p>'
-    body += '<p class="note">Tables without a selected unique key use exact-row multiset matching: duplicate counts are retained, changed rows appear as removals and additions. With explicit keys, the same record is matched by the selected original columns. Position-only changes are counted separately; full position records are ' + ('included.' if record["plan"]["include_positions"] else 'not requested. Both complete original row sequences remain in the retained reports.') + '</p>'
-    body += '<h2>Table changes</h2><div class="table-wrap"><table><thead><tr><th>Original table</th><th>Matching</th><th>Earlier / later rows</th><th>Counts</th></tr></thead><tbody>'
-    for table in record["tables"]:
-        body += '<tr><td>' + escape(table["heading"]) + '<small>' + escape(_display(table["right_caption"] or table["left_caption"])) + '</small></td><td>' + escape(table["matching"]) + '</td><td>%d / %d</td><td>' % (table["left_rows"], table["right_rows"]) + _cell(table["counts"]) + '</td></tr>'
-    body += '</tbody></table></div><h2>Read every recorded change</h2><nav>'
+    body += '<details class="nested"><summary>Comparison method and original selections</summary><p class="note">Tables without a selected unique key use exact-row multiset matching: duplicate counts are retained, changed rows appear as removals and additions. With explicit keys, the same record is matched by the selected original columns. Position-only changes are counted separately; full position records are '
+    body += ('included.' if record['plan']['include_positions'] else 'not requested. Both complete original row sequences remain in the retained reports.')
+    body += '</p><p>This comparison reads saved results; it does not recalculate the scientific study.</p><a href="summary.json">Structured comparison summary</a> · <a href="changes.sqlite">SQLite change database</a></details>'
+    body += '<h2>Table changes</h2><div class="table-wrap"><table><thead><tr><th scope="col">Original table</th><th scope="col">Matching</th><th scope="col">Earlier / later rows</th><th scope="col">Row counts</th></tr></thead><tbody>'
+    for table in record['tables']:
+        heading = escape(table['heading'])
+        if table['id'] in first_table_change:
+            heading = '<a href="' + first_table_change[table['id']] + '">' + heading + '</a>'
+        body += '<tr><td>' + heading + '<small>Table ' + str(table['identity']['table_occurrence']) + '</small>'
+        if table['right_caption'] or table['left_caption']:
+            body += '<small>' + escape(table['right_caption'] or table['left_caption']) + '</small>'
+        body += '</td><td>' + escape(table['matching']) + '</td><td>%d / %d</td><td><ul class="counts">' % (table['left_rows'], table['right_rows'])
+        body += ''.join('<li>' + str(count) + ' ' + escape(status.replace('_', ' ')) + '</li>' for status, count in table['counts'].items())
+        body += '</ul></td></tr>'
+    body += '</tbody></table></div><h2>Read every recorded change</h2><nav aria-label="All change pages">'
     for page in range(1, page_count + 1):
-        body += '<a href="pages/page-%05d.html">%d–%d</a>' % (page, (page - 1) * PAGE_ROWS + 1, min(page * PAGE_ROWS, total))
+        body += '<a href="pages/page-%05d.html">Changes %d to %d</a>' % (page, (page - 1) * PAGE_ROWS + 1, min(page * PAGE_ROWS, total))
     body += '</nav>' + ('<p>The two retained editions have no recorded content or source changes.</p>' if not total else '')
-    _write(directory / "index.html", _html(title, body))
-    body = '<h1>Complete original report files</h1><nav><a href="index.html">Comparison overview</a></nav><div class="table-wrap"><table><thead><tr><th>Edition / file</th><th>Bytes</th><th>SHA256</th></tr></thead><tbody>'
-    for side in ("left", "right"):
-        for name, item in record["identity"][side]["members"].items():
-            href = side + '/' + quote(name, safe="/")
-            body += '<tr><td><a href="' + escape(href, quote=True) + '">' + escape(side + '/' + name) + '</a></td><td>' + str(item["bytes"]) + '</td><td class="mono">' + escape(item["sha256"]) + '</td></tr>'
+    _write(directory / 'index.html', _html(title, body))
+    body = '<h1>Complete original report files</h1><nav><a href="index.html">Comparison overview</a></nav><div class="table-wrap"><table><thead><tr><th scope="col">Edition / file</th><th scope="col">Bytes</th><th scope="col">SHA256</th></tr></thead><tbody>'
+    for side in ('left', 'right'):
+        for name, item in record['identity'][side]['members'].items():
+            href = side + '/' + quote(name, safe='/')
+            body += '<tr><td><a href="' + escape(href, quote=True) + '">' + escape(side + '/' + name) + '</a></td><td>' + str(item['bytes']) + '</td><td class="mono">' + escape(item['sha256']) + '</td></tr>'
     body += '</tbody></table></div>'
-    _write(directory / "files.html", _html("Complete original report files", body))
+    _write(directory / 'files.html', _html('Complete original report files', body))
     return page_count
 
 
