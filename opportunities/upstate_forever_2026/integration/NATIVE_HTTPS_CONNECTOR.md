@@ -107,3 +107,9 @@ A startup_retry event means registration is still pending. The existing connecte
 
 HTTP Retry-After syntax is defined in RFC9110 section10.2.3:
 https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after
+
+## Closing the original launcher and retained edge state
+
+When the original owner stops, queued recovery and a just-returned poll check the same STOP signal before starting another retained request. Registration that finishes after shutdown does not enter the pending-work or worker phase. The native dispatch path checks shutdown before entering and again after the edge execution marker; if that marker completed but no native call began, the same request returns to ready in the retained journal. An already-started native exchange keeps its existing durable uncertainty/reconciliation behavior. The lifecycle owner gives only its own connector child a15-second graceful close, then reaps that child if necessary; the original scientific process and journal remain under their existing owners.
+
+The edge's quota-outage mode may retain control metadata in its current process while the native input/response bytes and write journal remain durable. If that edge state has been evicted, an absent original result or status is reported explicitly as EDGE_STATE_LOST. Keep the original request, operation and task identifiers and read the original native task/project state through the same authorized application. Do not erase the native journal, switch connector identity or resubmit a scientific mutation under a new identifier to hide a lost edge response. Ordinary original native tasks, reports and downloads remain recoverable from the existing workbench.
