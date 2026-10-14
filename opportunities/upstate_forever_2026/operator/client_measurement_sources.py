@@ -8,7 +8,8 @@ from pathlib import Path
 from model.common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                           held, identifier, now, read_json, verify_file)
 from model.client_source_files import need, text
-from model.client_measurement_sources import project_worksheet, preparation_value, checked_request
+from model.client_measurement_sources import (project_worksheet, preparation_value, checked_request,
+                                               identifier_columns)
 from client_source_intake import ClientSourceIntake
 
 ACTION = "client-measurement.prepare"
@@ -39,16 +40,47 @@ class ClientMeasurementSources:
         source_id = text(payload["source_id"], "retained source", True)
         source, entry = ws.source_file(collection, source_id)
         bound = entry.get("client_source", {})
-        need(entry.get("kind") == "table" and entry.get("role") == "MEASUREMENTS" and bound,
+        need(entry.get("kind") == "table" and entry.get("role") == "MEASUREMENTS"
+             and isinstance(bound, dict) and bound and not entry.get("field_projection"),
              "Choose a saved original table reviewed for Measurements.")
-        inspection = self.sources._load(ws, identifier(bound["inspection_id"]))
-        need(inspection["state"] == "complete" and inspection["action"] == "client-source.inspect",
-             "The complete original file inspection is unavailable.")
-        choice = bound["selection"]
-        need(choice["role"] == "MEASUREMENTS", "Keep the original reviewed measurement role.")
-        item = inspection["files"][choice["file_index"]]
-        part = item["inspection"]["parts"][choice["part_index"]]
-        need(part["kind"] == "table" and entry.get("sheet") == part.get("sheet") and
+        key = identifier(bound["inspection_id"])
+        choice = bound.get("selection")
+        need(isinstance(choice, dict) and choice.get("role") == "MEASUREMENTS",
+             "Keep the original reviewed measurement role.")
+        need(all(type(choice.get(name)) is int and choice[name] >= 0
+                 for name in ("file_index", "part_index")),
+             "Retain the original reviewed file and worksheet positions.")
+        saved = bound.get("inspection")
+        if saved is not None:
+            # The immutable source edition carries its actual selected native
+            # inspection through a source-only Study. Do not manufacture or
+            # require a producer operation directory in the receiving Workspace.
+            from model.client_source_inspection_report import retained_table_preview
+            preview = retained_table_preview(ws, entry)
+            need(preview is not None, "Retain the original native worksheet evidence.")
+            part = saved["part"]
+            item = {"filename": bound["filename"],
+                    "original": {"sha256": entry["body"]["sha256"],
+                                 "bytes": entry["body"]["bytes"]},
+                    "options": deepcopy(saved["options"])}
+            # Downstream lineage uses the retained original identity only.
+            inspection = {"id": key}
+        else:
+            # Earlier editions retain their exact original inspection record in
+            # the maintained Study closure; its complete validation is unchanged.
+            inspection = self.sources._load(ws, key)
+            need(inspection["state"] == "complete" and inspection["action"] == "client-source.inspect",
+                 "The complete original file inspection is unavailable.")
+            fi, pi = choice["file_index"], choice["part_index"]
+            need(fi < len(inspection["files"]),
+                 "The retained source has no matching original file position.")
+            item = inspection["files"][fi]
+            parts = item.get("inspection", {}).get("parts", [])
+            need(pi < len(parts), "The retained source has no matching original worksheet position.")
+            part = parts[pi]
+        need(part["kind"] == "table" and not part.get("error") and
+             entry.get("sheet") == part.get("sheet") and
+             part.get("header_row") == item["options"].get("header_row") and
              item["original"]["sha256"] == bound["source_sha256"] == entry["body"]["sha256"] and
              item["filename"] == bound["filename"] and part["name"] == bound["part_name"],
              "The retained worksheet differs from its original reviewed selection.")
@@ -78,6 +110,8 @@ class ClientMeasurementSources:
     def _check_packet(record, request, packet):
         need(packet["workspaceId"] == record["target_workspace_id"],
              "The original Measurements workspace changed.")
+        need(request["value"]["lineage"].get("identifier_formatting", {}).get("columns", []) ==
+             record.get("identifier_columns", []), "The retained identifier-column choice changed.")
         edition = next((e for e in packet["editions"]
                         if e["id"] == record["preparation_id"] and e["revision"] == 1), None)
         need(edition is not None and edition["value"] == request["value"],
@@ -110,20 +144,25 @@ class ClientMeasurementSources:
         ws = self.operator.ws(workspace_key)
         if operation == "catalog":
             entries, seen = [], set()
-            for path in sorted((ws.root / "client-source-intake").glob("*/operation.json")):
-                row = read_json(path)
-                if row.get("state") != "complete" or row.get("action") != "client-source.commit":
-                    continue
-                record = self.sources._load(ws, path.parent.name)
-                collection = ws._get("sources", record["source_collection_id"])
+            # Source collections are the maintained scientific editions. A
+            # selected Study carries them without the producer's commit queue.
+            for collection in ws._list("sources"):
                 for entry in collection["entries"]:
                     key = (collection["id"], entry["id"])
-                    if entry.get("kind") != "table" or entry.get("role") != "MEASUREMENTS" or not entry.get("client_source") or key in seen:
+                    if entry.get("kind") != "table" or entry.get("role") != "MEASUREMENTS" or not entry.get("client_source") or entry.get("field_projection") or key in seen:
                         continue
                     seen.add(key)
+                    preview = entry["client_source"].get("inspection")
+                    if preview is None:
+                        _, _, _, item, part = self._selected(ws, {
+                            "source_collection_id": collection["id"], "source_id": entry["id"]})
+                        preview = {"format": item["inspection"]["format"], "part": part}
                     entries.append({"source_collection_id": collection["id"], "source_id": entry["id"],
                                     "title": entry["title"], "sheet": entry.get("sheet"),
                                     "filename": entry["client_source"]["filename"],
+                                    "format": preview["format"],
+                                    "fields": deepcopy(preview["part"].get("fields", [])),
+                                    "preview": deepcopy(preview["part"].get("rows", [])[:3]),
                                     "sha256": entry["body"]["sha256"], "bytes": entry["body"]["bytes"]})
             operations = []
             for path in sorted((ws.root / "client-measurement-sources").glob("*/operation.json")):
@@ -158,6 +197,7 @@ class ClientMeasurementSources:
     def invoke(self, task):
         need(task["action"] == ACTION, "Choose an original worksheet preparation.")
         ws = self.operator.ws(task["workspace"])
+        identifiers = identifier_columns(task["payload"].get("identifier_columns"))
         directory = self.directory(ws, task["id"])
         directory.mkdir(parents=True, exist_ok=True)
         path = directory / "operation.json"
@@ -177,7 +217,11 @@ class ClientMeasurementSources:
                                       {"filename": item["filename"]},
                           "target_workspace_id": text(payload["target_workspace_id"], "Measurements workspace", True),
                           "preparation_id": "source-" + task["id"], "created_at": now(), "state": "working"}
+                if identifiers:
+                    record["identifier_columns"] = identifiers
                 atomic_json(path, record)
+            need(record.get("identifier_columns", []) == identifiers,
+                 "Keep the exact original identifier-column choice.")
             try:
                 target = self._rpc(task["workspace"], "GET", "/intake")
                 need(target["workspaceId"] == record["target_workspace_id"],
@@ -195,7 +239,8 @@ class ClientMeasurementSources:
                     projected = project_worksheet(source, sheet=part.get("sheet"), reading=item["options"],
                         original=record["original"], project_id=ws.project["id"],
                         source_collection_id=record["selection"]["source_collection_id"],
-                        source_id=record["selection"]["source_id"], inspection_id=inspection["id"])
+                        source_id=record["selection"]["source_id"], inspection_id=inspection["id"],
+                        identifier_fields=identifiers)
                     payload = task["payload"]
                     value = preparation_value(projected, kind=payload["kind"], label=payload["label"],
                         reviewer=payload["reviewer"], note=payload.get("note", ""), context=payload.get("context", ""))
@@ -219,7 +264,8 @@ class ClientMeasurementSources:
                      request["value"]["label"] == task["payload"]["label"] and
                      request["value"]["reviewer"] == task["payload"]["reviewer"] and
                      request["value"]["note"] == task["payload"].get("note", "") and
-                     request["value"]["context"] == task["payload"].get("context", ""),
+                     request["value"]["context"] == task["payload"].get("context", "") and
+                     request["value"]["lineage"].get("identifier_formatting", {}).get("columns", []) == identifiers,
                      "The retained native preparation request differs from its original selection.")
                 need((directory / "worksheet.csv").read_bytes().decode("utf-8") == request["text"] and
                      read_json(directory / "worksheet-lineage.json") == request["value"]["lineage"],

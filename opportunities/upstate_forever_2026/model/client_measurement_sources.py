@@ -9,6 +9,8 @@ import csv
 import hashlib
 import io
 import json
+import math
+import re
 from pathlib import Path
 
 from .client_source_files import need, options, scalar, table_records
@@ -31,10 +33,44 @@ def _record_values(record):
     return [_cell(value) for value in record["values"]]
 
 
+def identifier_columns(value):
+    """An explicit column choice; omitted legacy requests keep their raw projection."""
+    if value is None:
+        return []
+    need(isinstance(value, list) and len(value) <= 16384 and
+         all(isinstance(item, str) and re.fullmatch(r"c(?:0|[1-9][0-9]*)", item)
+             for item in value) and len(set(value)) == len(value),
+         "Choose each original identifier column once.")
+    return sorted(value, key=lambda item: int(item[1:]))
+
+
+def _identifier_text(value, metadata, row, column):
+    """Preserve only plain Excel zero masks; never round or guess an identifier."""
+    where = "Identifier at worksheet row " + str(row) + ", column " + str(column + 1)
+    kind, mask = metadata.get("data_type"), metadata.get("number_format")
+    need(kind not in {"f", "e"}, where +
+         " contains an unevaluated formula or Excel error. Choose saved cached results or correct the original source.")
+    if value is None or isinstance(value, str):
+        return _cell(value)
+    need(type(value) is int or type(value) is float and math.isfinite(value),
+         where + " is not text or a finite number; keep its stored-value reading or supply an explicit text identifier.")
+    if mask in (None, "", "General", "@"):
+        return _cell(value)
+    need(isinstance(mask, str) and re.fullmatch(r"0{1,255}", mask),
+         where + " uses unsupported Excel format " + repr(mask) +
+         ". Identifier preservation supports only plain zero masks (for example 000); keep its stored-value reading or supply explicit text.")
+    need(value >= 0 and value == int(value),
+         where + " would require rounding or a signed-format interpretation. Keep its stored-value reading or supply explicit text.")
+    return str(int(value)).zfill(len(mask))
+
+
 def project_worksheet(path, *, sheet, reading, original, project_id,
-                      source_collection_id, source_id, inspection_id):
+                      source_collection_id, source_id, inspection_id, identifier_fields=None):
     path = Path(path)
     opts = options(reading)
+    identifiers = identifier_columns(identifier_fields)
+    need(not identifiers or path.suffix.lower() in {".xlsx", ".xlsm"},
+         "Excel identifier formatting applies only to an original workbook. Text identifiers are already retained verbatim.")
     need(path.stat().st_size == original["bytes"] and file_digest(path) == original["sha256"],
          "The complete original workbook or text file changed.")
     header_row = opts["header_row"]
@@ -62,6 +98,9 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
         used.add(proposed)
         columns.append({"index": index, "column_id": "c" + str(index),
                         "original_label": label, "transport_column": proposed})
+    selected_indexes = {int(item[1:]) for item in identifiers}
+    need(all(index < width for index in selected_indexes), "Choose identifier columns present in this original worksheet.")
+    identifier_cells = []
     stream = io.StringIO(newline="")
     writer = csv.writer(stream, lineterminator="\r\n")
     writer.writerow([column["transport_column"] for column in columns])
@@ -92,6 +131,17 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
                         need(index < len(record["values"]) and record["values"][index] is not None,
                              "Worksheet row " + str(number) + ", column " + str(index + 1) +
                              " has an original formula without a cached result. Recalculate/save the original or choose its preserved formula reading; no row was imported.")
+            for index in sorted(selected_indexes):
+                if index >= len(record["values"]):
+                    continue
+                metadata = record["cell_metadata"][index]
+                raw = record["values"][index]
+                rendered = _identifier_text(raw, metadata, number, index)
+                # Keep the exact reading and format for every reviewed identifier cell.
+                identifier_cells.append({"source_row": number, "column_id": "c" + str(index),
+                                         "stored_value": scalar(raw), **metadata,
+                                         "text": rendered})
+                values[index] = rendered
             values += [""] * (width - len(values))
             if not any(value != "" for value in values):
                 excluded.append({**position, "reason": "empty-derived"})
@@ -123,6 +173,11 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
                "derived": {"format": "csv", "sha256": hashlib.sha256(body).hexdigest(),
                            "bytes": len(body), "filename": path.stem + "-selected-sheet.csv"},
                "meaning": "Mechanical original-cell text only. Scientific mapping, units, fractions and interpretation remain subject to original native review."}
+    if identifiers:
+        lineage["identifier_formatting"] = {
+            "policy": "excel-plain-zero-identifiers/v1", "columns": identifiers,
+            "cells": identifier_cells,
+            "meaning": "Explicit identifier-column choice only; other cells retain their stored-value reading."}
     # Bind the whole lineage deterministically; no local absolute path enters it.
     return {"text": content, "lineage": lineage}
 
