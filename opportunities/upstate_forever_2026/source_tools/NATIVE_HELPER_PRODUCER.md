@@ -40,6 +40,51 @@ application supports an older OS: the release must also retain the selected
 Python, Node, InVEST and native dependency requirements. A Mac code-signature
 load command is reported as present/absent, not represented as notarization.
 
+## Resume and complete one native-helper ZIP in the cloud
+
+Use a persistent cloud work directory to finish the three targets with one
+command. Completed targets are retained after a stopped session; invoking the
+same command continues with the remaining targets instead of compiling all six
+executables again.
+
+```sh
+python source_tools/complete_native_helpers.py \
+  --application /path/to/selected/application \
+  --zig /path/to/zig-distribution/zig \
+  --work /path/to/persistent/helper-work \
+  --output /path/to/private-handoff/Native_Helpers.zip
+```
+
+The command freezes the two sources and their local headers once. Its cache
+identity includes their exact bytes, the producer source, compiler version/hash,
+compiler/runtime licenses and Mac minimum-version selection. Source changes select
+a new cache edition without removing earlier completed builds. A process lock
+prevents two completion commands from compiling into the same work directory.
+
+To consume work already completed by another cloud seat, append one or more
+`--reuse-bundle /path/to/existing/producer-output` arguments. These are unpacked
+actual native-helper bundles, not source-only installer packets. Matching target
+bundles are copied with their sources, licenses and executable modes; only missing
+targets are compiled. Supply the same complete Zig distribution that built those
+bundles. A changed compiler or source edition is not silently combined.
+
+The output contains the existing root `NATIVE_HELPERS.json` contract and all six
+native executables. Packaging uses the maintained producer and preserves modes.
+The persistent work directory contains the completed per-target directories,
+`combined/`, `Native_Helpers.zip` and a machine-readable completion record beneath
+the printed fingerprint. Reuse these bytes when handing work between cloud seats;
+they contain the helper payload only, not the application datasets.
+
+Publication first creates a complete same-directory ZIP copy and then exposes it
+create-only. A byte-identical existing output is reused; a different existing ZIP
+is preserved. POSIX publication requires same-directory hard-link support; Windows
+uses its create-only rename behavior. On publication failure, the completed cache
+archive and staging copy are retained, so another destination can be selected
+without recompiling. Invalid cached bundles are moved aside before replacement.
+
+This command builds/packages helpers; it does not run numerical exercises. Keep
+actual Windows use of these binaries with the existing release receiving course.
+
 ## Combine, use, and package the same payload
 
 ```sh
