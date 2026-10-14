@@ -3,11 +3,11 @@
 from __future__ import annotations
 import argparse
 import ast
-import fcntl
 import hashlib
+import types
 import json
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath, PureWindowsPath
 import shutil
 import stat
 import subprocess
@@ -36,9 +36,9 @@ def registry_constructor(value):
 def name(value):
     if not isinstance(value, str):
         raise ValueError("Choose an original application-relative source member.")
-    path = Path(value)
-    if (not value or path.is_absolute()
-            or "\\" in value or str(path) != value
+    path = PurePosixPath(value)
+    if (not value or path.is_absolute() or PureWindowsPath(value).drive
+            or ":" in value or "\\" in value or str(path) != value
             or any(part in (".", "..") for part in path.parts)):
         raise ValueError("Choose an original application-relative source member.")
     return value
@@ -60,7 +60,9 @@ def body(root, relative, *, optional=False):
     return path.read_bytes()
 
 
-def replace(path, data):
+def replace(path, data, *, platform=None):
+    if platform is not None and platform.windows is not None:
+        return platform.replace_windows(path, data)
     path.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".measurement-install-", delete=False) as stream:
         pending = Path(stream.name)
@@ -129,13 +131,23 @@ def install(application, source_root, *, check=False):
     declared = {node.name for node in chemistry.body if isinstance(node, ast.FunctionDef)}
     if not {"observation_components", "observation_rows"} <= declared:
         raise ValueError("Install the complete maintained Chemistry compound/interval component first.")
-    node = shutil.which("node")
-    if not node:
-        raise ValueError("Use the original Measurements Node 22.16 or newer runtime.")
-    version = subprocess.run([node, "--version"], check=True, capture_output=True, text=True).stdout.strip()
-    parts = version.removeprefix("v").split(".")
-    if len(parts) < 2 or not all(part.isdigit() for part in parts[:2]) or tuple(map(int, parts[:2])) < (22, 16):
-        raise ValueError("The original SQLite measurement engine needs Node 22.16 or newer.")
+    runtime_path = source / "measurement_workspace/node_runtime.py"
+    if "measurement_workspace/node_runtime.py" not in prepared:
+        raise ValueError("Retain the complete Measurements runtime selection source.")
+    runtime_module = types.ModuleType("_upstate_measurements_node_runtime")
+    runtime_module.__file__ = str(runtime_path)
+    exec(compile(prepared["measurement_workspace/node_runtime.py"],
+                 str(runtime_path), "exec"), runtime_module.__dict__)
+    runtime = runtime_module.inspect_node()
+    version = "v" + runtime["version"]
+    platform_relative = "measurement_workspace/install_platform.py"
+    if platform_relative not in prepared:
+        raise ValueError("Retain the complete Measurements installer platform source.")
+    platform_module = types.ModuleType("_upstate_measurements_install_platform")
+    platform_module.__file__ = str(source / platform_relative)
+    exec(compile(prepared[platform_relative], platform_module.__file__, "exec"),
+         platform_module.__dict__)
+    install_files = platform_module.InstallerFiles(prepared, source)
     descriptor = json.loads(prepared["operator/extensions/measured-observations.json"])
     if (descriptor.get("schema") != "upstate.operator-extension/v1"
             or descriptor.get("id") != "measured-observations"
@@ -148,8 +160,7 @@ def install(application, source_root, *, check=False):
     if lock.is_symlink() or lock.parent.is_symlink() or not lock.resolve().is_relative_to(target):
         raise ValueError("Keep the original shared installation lock inside the application.")
     lock.parent.mkdir(parents=True, exist_ok=True)
-    with lock.open("a+") as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX)
+    with install_files.held(lock):
         before, changes = {}, {}
         previous = inventory.get("predecessors", {})
         for relative, selected in prepared.items():
@@ -178,7 +189,7 @@ def install(application, source_root, *, check=False):
         result = {"schema": "upstate.measurements-installation-result/v1",
                   "application": str(target), "source_root": str(source), "check": check,
                   "inventory_sha256": sha(raw), "source_files": len(prepared),
-                  "changed": sorted(changes), "node": version, "view": "measured-observations"}
+                  "changed": sorted(changes), "node": version, "runtime": runtime, "view": "measured-observations"}
         if check or not changes:
             return result
         saved = target / ".measurement-installations" / sha(raw)
@@ -193,7 +204,7 @@ def install(application, source_root, *, check=False):
                     if current != prepared[relative]:
                         raise ValueError("The retained installation preimage differs: " + relative)
                 elif not backup.exists():
-                    replace(backup, current)
+                    replace(backup, current, platform=install_files)
         for relative, current in shared_before.items():
             if body(target, relative) != current:
                 raise RuntimeError("A shared application dependency changed: " + relative)
@@ -206,9 +217,10 @@ def install(application, source_root, *, check=False):
                 if body(target, relative, optional=True) != before[relative]:
                     raise RuntimeError("Concurrent measured source change: " + relative)
                 committed.append(relative)
-                replace(target / relative, selected)
+                replace(target / relative, selected, platform=install_files)
             result["state"] = "installed"
-            replace(saved / "installation.json", (json.dumps(result, indent=2) + "\n").encode("utf-8"))
+            replace(saved / "installation.json", (json.dumps(result, indent=2) + "\n").encode("utf-8"),
+                    platform=install_files)
             return result
         except BaseException as failure:
             conflicts = []
@@ -228,7 +240,7 @@ def install(application, source_root, *, check=False):
                     if before[relative] is None:
                         destination.unlink()
                     else:
-                        replace(destination, before[relative])
+                        replace(destination, before[relative], platform=install_files)
                 except OSError:
                     conflicts.append(relative)
             if conflicts:

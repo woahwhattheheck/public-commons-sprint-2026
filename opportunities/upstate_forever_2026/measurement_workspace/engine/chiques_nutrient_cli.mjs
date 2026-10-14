@@ -12,8 +12,6 @@ async function completeOutput(options,value){
  const data=Buffer.isBuffer(value)?value:Buffer.from(typeof value==='string'?value:JSON.stringify(value,null,2)+'\n');
  if(!options.output){if(Buffer.isBuffer(value))throw Error('Choose --output for the complete binary collection');process.stdout.write(data);return;}
  const target=path.resolve(options.output);await publishExactFile(target,data);
- const file=await fs.open(target,'r');try{await file.sync();}finally{await file.close();}
- const directory=await fs.open(path.dirname(target),'r');try{await directory.sync();}finally{await directory.close();}
 }
 export async function runChiquesCLI(operation,options,directory){
  if(operation==='prepare'){

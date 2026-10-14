@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "temporal-analysis",
+  "components": {
+    "temporal-analysis": {
+      "title": "Season-matched monitoring change and complete-source receiving",
+      "paths": [
+        "measurement_workspace/temporal_analysis.py",
+        "measurement_workspace/temporal_transfer.py",
+        "measurement_workspace/temporal_report.html",
+        "measurement_workspace/TEMPORAL_ANALYSIS.md",
+        "operator/temporal_analysis_provider.py",
+        "operator/extensions/temporal-analysis.json",
+        "operator/web/temporal_analysis.mjs",
+        "operator/web/temporal_analysis.css",
+        "measurement_workspace/temporal_workspace.py",
+        "measurement_workspace/temporal_comparison.py",
+        "measurement_workspace/TEMPORAL_COMPARISON.md",
+        "operator/web/temporal_comparison.mjs",
+        "source_tools/exercise_temporal_comparison.py",
+        "measurement_workspace/NATIVE_OBSERVATION_SELECTION.md",
+        "operator/web/observed_series.mjs",
+        "operator/OBSERVED_SOURCE_REVIEW.md"
+      ],
+      "requires": [
+        "core",
+        "published-studies",
+        "observed-context",
+        "observed-station-studies",
+        "utility-microbial-study"
+      ]
+    }
+  },
+  "required_components": [
+    "temporal-analysis"
+  ]
+}

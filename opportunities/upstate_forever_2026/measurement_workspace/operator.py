@@ -19,20 +19,22 @@ import sys
 import threading
 from typing import Any, Callable
 from urllib.parse import urlsplit
+from .node_runtime import inspect_node, MeasurementRuntimeError
 
 BASE = "/api/measurement-workspace"
 MAX_BODY = 128 * 1024 * 1024
 
 class Measurements:
     def __init__(self, workspace: Any, *, data_dir: str | Path,
-                 reaches: Callable[[Any], list[dict]], node: str = "node") -> None:
+                 reaches: Callable[[Any], list[dict]], node: str | None = None) -> None:
         self.workspace = workspace
         self.directory = Path(data_dir).resolve()
         self.directory.mkdir(parents=True, exist_ok=True)
         self.reach_resolver = reaches
-        self.node = shutil.which(node)
-        if self.node is None:
-            raise RuntimeError("Node 22.16 or newer is required for the measurement SQLite engine")
+        self._node_selection = node
+        self.node = None
+        self.runtime = None
+        self._collector = None
         self._lock = threading.RLock()
         self._process: subprocess.Popen | None = None
         self._port: int | None = None
@@ -56,37 +58,121 @@ class Measurements:
             stream.write(encoded); stream.flush(); os.fsync(stream.fileno())
         temp.replace(target)
 
+    def _release_child(self) -> None:
+        process = self._process
+        if process is not None and process.poll() is None:
+            raise RuntimeError("The original Measurements child is still running")
+        if self._collector is not None:
+            self._collector.join()
+            self._collector = None
+        if process is not None:
+            for stream in (process.stdin, process.stdout):
+                if stream is not None:
+                    stream.close()
+        self._process = None
+        self._port = None
+        if self._log is not None:
+            self._log.close()
+            self._log = None
+
     def _ensure(self) -> tuple[int, str]:
         with self._lock:
             if self._closed:
                 raise RuntimeError("Measurement service is closed")
             self._sync_reaches()
             if self._process and self._process.poll() is None:
+                if self._port is None:
+                    raise RuntimeError("The original Measurements child has not completed startup")
                 return self._port, self._token
-            if self._process:
-                for stream in (self._process.stdin, self._process.stdout):
-                    if stream: stream.close()
-            if self._log:
-                self._log.close()
+            self._release_child()
+            self.runtime = inspect_node(self._node_selection)
+            self.node = self.runtime["selected_executable"]
             self._log = (self.directory / "measurement-process.log").open("ab", buffering=0)
+            log = self._log
+            try:
+                log.write(("\n[measurements-runtime] " + json.dumps(self.runtime, ensure_ascii=False) + "\n").encode("utf-8"))
+            except (OSError, ValueError) as exc:
+                self._release_child()
+                raise MeasurementRuntimeError("ENGINE_LOG", "Measurements cannot write its local process log; check the Workspace volume before opening the engine.") from exc
             env = {**os.environ, "MEASUREMENTS_INTERNAL_TOKEN": self._token}
-            env['MEASUREMENTS_PYTHON'] = sys.executable
+            env["MEASUREMENTS_PYTHON"] = sys.executable
             command = [self.node, str(Path(__file__).parent / "engine" / "cli.mjs"),
                        "serve", "--workspace", str(self.directory), "--host", "127.0.0.1", "--port", "0"]
-            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                       stderr=self._log, env=env, close_fds=True)
+            try:
+                process = subprocess.Popen(
+                    command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                    stderr=log, env=env, close_fds=True,
+                    creationflags=subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0)
+            except OSError as exc:
+                try:
+                    log.write(("[measurements-start] " + str(exc) + "\n").encode("utf-8", errors="replace"))
+                except (OSError, ValueError):
+                    pass
+                self._release_child()
+                raise MeasurementRuntimeError("ENGINE_EXECUTION", "Measurements could not launch the inspected Node runtime; inspect measurement-process.log.") from exc
             self._process = process
-            ready = queue.Queue()
-            threading.Thread(target=lambda: ready.put(process.stdout.readline()), daemon=True).start()
+            ready = queue.Queue(maxsize=1)
+            # Drain stdout for the child's whole lifetime, including shutdown.
+            # The first line is a small readiness record; later output is retained
+            # locally and cannot fill the unread pipe during a long operation.
+            self._log_error = None
+            self._stdout_error = None
+            def retain_output(chunk):
+                if self._log_error is not None:
+                    return
+                try:
+                    log.write(chunk)
+                except (OSError, ValueError) as exc:
+                    # A full/unavailable log destination must not stop stdout
+                    # drainage and strand the child's active scientific write.
+                    self._log_error = str(exc)
+            def collect():
+                try:
+                    line = process.stdout.readline(16385)
+                    ready.put(line)
+                    if line:
+                        retain_output(line)
+                    while True:
+                        chunk = process.stdout.read(65536)
+                        if not chunk:
+                            break
+                        retain_output(chunk)
+                except (OSError, ValueError) as exc:
+                    self._stdout_error = str(exc)
+                    try:
+                        ready.put_nowait(exc)
+                    except queue.Full:
+                        pass
+            self._collector = threading.Thread(target=collect, name="measurements-stdout", daemon=True)
+            self._collector.start()
             try:
                 line = ready.get(timeout=12)
+                if isinstance(line, Exception):
+                    raise line
+                if len(line) > 16384 or not line.endswith(b"\n"):
+                    raise ValueError("Missing or oversized child readiness response")
                 value = json.loads(line)
-                if not value.get("ready") or value.get("host") != "127.0.0.1" or not isinstance(value.get("port"), int):
+                if (not isinstance(value, dict) or value.get("ready") is not True
+                        or value.get("host") != "127.0.0.1"
+                        or type(value.get("port")) is not int
+                        or not 1 <= value["port"] <= 65535
+                        or value.get("pid") != process.pid):
                     raise ValueError("Invalid measurement child readiness")
                 self._port = value["port"]
+                if process.poll() is not None:
+                    raise RuntimeError("Measurement child exited during startup")
             except Exception as exc:
-                process.kill(); process.wait(timeout=5)
-                raise RuntimeError("Measurement engine did not start; inspect measurement-process.log") from exc
+                # A child that never became ready has accepted no proxied writes.
+                # Normal close below always uses the existing stdin drain.
+                if process.poll() is None:
+                    process.kill()
+                process.wait()
+                code = process.returncode
+                retain_output(("[measurements-start] " + str(exc) + "; exit " + str(code) + "\n").encode("utf-8", errors="replace"))
+                self._release_child()
+                raise MeasurementRuntimeError(
+                    "ENGINE_STARTUP", "Measurements did not open with Node " + self.runtime["version"]
+                    + " (exit " + str(code) + "). Inspect measurement-process.log for the original startup error.") from exc
             return self._port, self._token
 
     def request(self, method: str, path: str, body: bytes = b"") -> tuple[int, dict, bytes]:
@@ -116,7 +202,7 @@ class Measurements:
     @staticmethod
     def handles(path: str) -> bool:
         p = urlsplit(path).path
-        return p == BASE or p.startswith(BASE + "/") or p in {"/measurements/eco_handovers.mjs", "/measurements/chiques_nutrients.mjs", "/measurements/intake_comparison.mjs", "/measurements/observation_editions.mjs", "/measurements/observation_editions.css", "/measurements/sediment.mjs", "/measurements/sediment_comparisons.mjs", "/measurements/benchmarks.mjs", "/measurements", "/measurements/", "/measurements/source_reconciliation.mjs", "/measurements/source_reconciliation.css", "/measurements/source_handback.mjs", "/measurements/source_handback.css", "/measurements/results.mjs", "/measurements/result_handback.mjs", "/measurements/flow_editions.mjs", "/measurements/flow_editions.css", "/measurements/flow_loads_ui.mjs", "/measurements/flow_load_comparison_ui.mjs", "/measurements/workspace.js", "/measurements/workspace.css", "/measurements/collections.mjs", "/measurements/collection_working.mjs", "/measurements/collection_transfer.mjs", "/measurements/large_files.mjs", "/measurements/intake.mjs"}
+        return p == BASE or p.startswith(BASE + "/") or p in {"/measurements/edition_reader.mjs", "/measurements/edition_review.mjs", "/measurements/collection_folder.mjs", "/measurements/eco_handovers.mjs", "/measurements/chiques_nutrients.mjs", "/measurements/intake_comparison.mjs", "/measurements/observation_editions.mjs", "/measurements/observation_editions.css", "/measurements/sediment.mjs", "/measurements/sediment_comparisons.mjs", "/measurements/benchmarks.mjs", "/measurements", "/measurements/", "/measurements/source_reconciliation.mjs", "/measurements/source_reconciliation.css", "/measurements/source_handback.mjs", "/measurements/source_handback.css", "/measurements/results.mjs", "/measurements/result_handback.mjs", "/measurements/flow_editions.mjs", "/measurements/flow_editions.css", "/measurements/flow_loads_ui.mjs", "/measurements/flow_load_comparison_ui.mjs", "/measurements/workspace.js", "/measurements/workspace.css", "/measurements/collections.mjs", "/measurements/collection_working.mjs", "/measurements/collection_transfer.mjs", "/measurements/large_files.mjs", "/measurements/intake.mjs"}
 
     def try_handle(self, handler) -> bool:
         """Return False without touching unrelated native routes or response writers."""
@@ -160,6 +246,8 @@ class Measurements:
             pass
         except (ValueError, json.JSONDecodeError) as exc:
             self._error(handler, 400, str(exc))
+        except MeasurementRuntimeError as exc:
+            self._error(handler, 503, str(exc))
         except Exception:
             self._error(handler, 503, "Measurement operation unavailable; inspect the local measurement-process.log. Refresh before retrying a write.")
         return True
@@ -192,11 +280,16 @@ class Measurements:
     def close(self) -> None:
         with self._lock:
             self._closed = True
-            if self._process and self._process.poll() is None:
-                if self._process.stdin: self._process.stdin.close()
-                try: self._process.wait(timeout=3)
-                except subprocess.TimeoutExpired:
-                    self._process.terminate()
-                    try: self._process.wait(timeout=3)
-                    except subprocess.TimeoutExpired: self._process.kill(); self._process.wait(timeout=3)
-            if self._log: self._log.close(); self._log = None
+            process = self._process
+            if process is not None and process.poll() is None:
+                # The managed engine's existing stdin-end route stops accepting
+                # connections and waits for active HTTP requests before SQLite
+                # closes. Do not turn an ordinary close into TerminateProcess
+                # after three seconds while an import/export is committing.
+                if process.stdin is not None:
+                    try:
+                        process.stdin.close()
+                    except BrokenPipeError:
+                        pass
+                process.wait()
+            self._release_child()

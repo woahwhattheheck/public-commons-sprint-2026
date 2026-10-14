@@ -86,6 +86,43 @@ request. `wait` only observes; expiry does not cancel or restart anything.
 Failed, interrupted or cancelled tasks remain retained. Inspect their original
 error and native state before explicitly using `resume <task-id>`.
 
+## Cancel or resume an Assistant question
+
+Use the original `intelligence.ask` task ID for both controls. The task retains
+its investigation, question, selected source and operation ID.
+
+```powershell
+python operator/workbench_client.py --connection <private-startup.json> task <original-task-id>
+python operator/workbench_client.py --connection <private-startup.json> cancel <original-task-id>
+python operator/workbench_client.py --connection <private-startup.json> wait <original-task-id> --seconds 60
+python operator/workbench_client.py --connection <private-startup.json> resume <original-task-id>
+```
+
+The HTTP controls use the existing routes and the same body:
+
+```json
+{"id": "<original-task-id>"}
+```
+
+A running question first records `cancel_requested`. Read the original task
+until its state becomes terminal: accepting the request does not itself mean
+the provider connection has closed. The Assistant cooperatively closes its
+owned request and retains its progress. If a complete answer was retained
+before cancellation reached the worker, open that completed answer.
+
+An explicit `resume` continues the same task. It first reuses retained provider
+responses and completed tool results. If the prior connection ended without a
+usable response, the explicit resume permits another provider attempt for the
+same saved question; the previous attempt remains in the history. No connection
+failure or observation timeout automatically submits another question.
+Completed scientific operations and prepared actions retain their identities.
+
+Read `provider_wait` in the original task response for the saved Assistant
+phase and progress. The browser and ordinary client status display that
+progress; `--json` or `--out` keeps the complete response. Investigation
+checkpoints remain in the existing project Store and travel with its normal
+project/Study transfer.
+
 ## Original data to readable results
 
 1. **Upload original files.** Use the unchanged XLSX, CSV, TSV, GIS layer or

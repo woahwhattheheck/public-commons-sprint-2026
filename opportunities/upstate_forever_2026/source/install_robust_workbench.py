@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import ast
 import base64
-import fcntl
+import contextlib
 import hashlib
 import json
 import os
@@ -19,8 +19,26 @@ from pathlib import Path, PurePosixPath
 import re
 import stat
 import tempfile
+from types import SimpleNamespace
+
+if os.name != "nt":
+    import fcntl
 
 ALLOWED = frozenset({
+    "model/climate_management_working.py",
+    "model/climate_management_working_comparison.py",
+    "model/climate_management_working_comparison_transfer.py",
+    "model/climate_management_working_transfer.py",
+    "operator/CLIMATE_MANAGEMENT_DESIGN_COMPARISON.md",
+    "operator/CLIMATE_MANAGEMENT_WORKING.md",
+    "operator/web/climate_management_working.mjs",
+    "operator/web/climate_management_working_comparison.mjs",
+    "source_tools/CLIMATE_MANAGEMENT_RECEIVING.md",
+    "source_tools/climate_management_browser_support.py",
+    "source_tools/climate_management_working.py",
+    "source_tools/compose.py",
+    "source_tools/receive_climate_management.py",
+    "source_tools/receive_climate_management_browser.mjs",
     "model/joint_delivery.py",
     "operator/joint_delivery.py",
     "source/joint-delivery/20261013/profile.json",
@@ -649,6 +667,20 @@ ALLOWED = frozenset({
     "source/ROBUST_RECEIVING.md",
 })
 REQUIRED = ALLOWED - {
+    "model/climate_management_working.py",
+    "model/climate_management_working_comparison.py",
+    "model/climate_management_working_comparison_transfer.py",
+    "model/climate_management_working_transfer.py",
+    "operator/CLIMATE_MANAGEMENT_DESIGN_COMPARISON.md",
+    "operator/CLIMATE_MANAGEMENT_WORKING.md",
+    "operator/web/climate_management_working.mjs",
+    "operator/web/climate_management_working_comparison.mjs",
+    "source_tools/CLIMATE_MANAGEMENT_RECEIVING.md",
+    "source_tools/climate_management_browser_support.py",
+    "source_tools/climate_management_working.py",
+    "source_tools/compose.py",
+    "source_tools/receive_climate_management.py",
+    "source_tools/receive_climate_management_browser.mjs",
     "model/joint_delivery.py",
     "operator/joint_delivery.py",
     "source/joint-delivery/20261013/profile.json",
@@ -1265,6 +1297,266 @@ REQUIRED = ALLOWED - {
     "operator/web/retained_desks.mjs",
     "operator/web/experiment_diagnostics.mjs",
 }
+
+# Optional whole-workbench receiving closure; the original REQUIRED set stays unchanged.
+STARTUP_GUIDE_FILES = frozenset({
+    "operator/web/startup_guide.mjs",
+    "operator/web/startup_guide.css",
+    "operator/STARTUP_GUIDE.md",
+    "operator/web/index.html",
+    "operator/README.md",
+    "source_tools/Open_Workbench.sh",
+    "source_tools/Open_Workbench_WSL.cmd",
+    "source_tools/open_workbench_wsl.sh",
+    "source_tools/open_windows_browser.py",
+    "source_tools/prepare_recipient_opening.py",
+    "source_tools/WORKBENCH_OPENING_RECEIVING.md",
+    "integration/component_fragments/workbench-startup-guide.json",
+    "source_tools/open_received_study.py",
+    "source_tools/workbench_session.py",
+    "source_tools/OPEN_RECEIVED_WORKBENCH.md",
+    "tests/test_workbench_session.py",
+    "integration/component_fragments/recipient-workbench-opening.json",
+    "source_tools/native_runtime/invocation.py",
+    "source_tools/NATIVE_INVOCATION.md",
+    "integration/component_fragments/native-runtime-invocation.json",
+    "source_tools/native_runtime/__init__.py",
+    "source_tools/native_runtime/__main__.py",
+    "source_tools/native_runtime/capsule.py",
+    "source_tools/native_runtime/probe.py",
+    "source_tools/native_runtime/transport.py",
+    "source_tools/NATIVE_RUNTIME.md",
+    "tests/test_native_runtime_workflows.py",
+    "integration/component_fragments/native-runtime-capsule.json",
+})
+ALLOWED = ALLOWED | STARTUP_GUIDE_FILES | frozenset({
+    "operator/CONSERVATION_REPORT_PRESENTATION.md",
+    "model/windows_fs.py",
+    "model/verified_files.py",
+    "model/parameter_views.py",
+    "model/paired_ensemble/ensemble_store.py",
+    "model/client_source_recipe_portable.py",
+    # Optional original-source intake and readable inspection receiving.
+    "model/client_source_files.py",
+    "model/client_source_inspection_report.py",
+    "operator/client_source_intake.py",
+    "operator/extensions/client-source-intake.json",
+    "operator/web/client_source_intake.mjs",
+    "operator/web/client_source_intake.css",
+    "operator/web/scientific_inspection.mjs",
+    "operator/web/source_inspection_summary.mjs",
+    "operator/extensions/scientific-inspection.json",
+    "operator/CLIENT_SOURCE_INTAKE.md",
+    "source_tools/CLIENT_SOURCE_INSPECTION_REPORT.md",
+})
+
+# Optional Sampling field protocol and maintained API client; REQUIRED was calculated above.
+ALLOWED = ALLOWED | frozenset({
+    "model/monitoring_sampling_protocol.py",
+    "model/field_deployment.py",
+    "integration/SAMPLING_FIELDWORK_HANDOVER.md",
+    "integration/component_fragments/sampling-field-protocol.json",
+    "operator/workbench_client.py",
+    "operator/WORKBENCH_API.md",
+    "operator/workbench_api.py",
+    "operator/extensions/workbench-api.json",
+})
+
+# Optional primary native Windows opener; REQUIRED was calculated above.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/Open_Workbench.cmd",
+    "source_tools/open_workbench_windows.py",
+})
+
+# Optional maintained Implementation receiving; REQUIRED remains unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/receive_implementation.py",
+    "source_tools/receive_monitoring_fieldwork.py",
+    "model/project_transfer.py",
+    "model/project_transfer_workspace.py",
+    "model/portable_databases.py",
+})
+
+# Optional authenticated HTTPS origin and browser transport; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "operator/origin_policy.py",
+    "integration/component_fragments/workbench-advertised-origin.json",
+    "integration/WORKBENCH_HTTPS_ORIGIN.md",
+    "operator/web/style.css",
+    "operator/web/community_report_handover.mjs",
+    "operator/web/scenario_input_review.mjs",
+    "source_tools/receive_native_runtime.py",
+    "model/retained_download.py",
+    "source_tools/receive_sampling_additions.py",
+    "operator/web/remote_transport.mjs",
+    "operator/extensions/remote-transport.json",
+    "integration/component_fragments/remote-browser-transport.json",
+    "integration/REMOTE_BROWSER_TRANSPORT.md",
+})
+
+
+# Optional rescued complete Measurements source; REQUIRED remains unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "MEASUREMENT_LARGE_FILES_SOURCE.json",
+    "install_measurement_large_files.py",
+    "integration/component_fragments/measurement-chemistry.json",
+    "integration/component_fragments/temporal-analysis.json",
+    "integration/measurements/INSTALLATION.json",
+    "measurement_workspace/NATIVE_OBSERVATION_SELECTION.md",
+    "measurement_workspace/RUNTIME.md",
+    "measurement_workspace/TEMPORAL_ANALYSIS.md",
+    "measurement_workspace/TEMPORAL_COMPARISON.md",
+    "measurement_workspace/WINDOWS_FILE_WORKFLOW.md",
+    "measurement_workspace/WINDOWS_LONG_PATH_SUCCESSOR.md",
+    "measurement_workspace/engine/chiques_nutrient_cli.mjs",
+    "measurement_workspace/engine/eco_handover.mjs",
+    "measurement_workspace/engine/file_platform.mjs",
+    "measurement_workspace/engine/file_platform.py",
+    "measurement_workspace/engine/file_product.mjs",
+    "measurement_workspace/engine/handover_archive.py",
+    "measurement_workspace/engine/intake-comparison-receiving.mjs",
+    "measurement_workspace/engine/large_archive.py",
+    "measurement_workspace/install_platform.py",
+    "measurement_workspace/node_runtime.py",
+    "measurement_workspace/operator.py",
+    "measurement_workspace/temporal_analysis.py",
+    "measurement_workspace/temporal_comparison.py",
+    "measurement_workspace/temporal_report.html",
+    "measurement_workspace/temporal_transfer.py",
+    "measurement_workspace/temporal_workspace.py",
+    "operator/MEASUREMENTS_INSTALLATION.md",
+    "operator/extensions/temporal-analysis.json",
+    "operator/install_measurements.py",
+    "operator/temporal_analysis_provider.py",
+    "operator/web/measured_native_observations.mjs",
+    "operator/web/measured_observations_extension.mjs",
+    "operator/web/temporal_analysis.css",
+    "operator/web/temporal_analysis.mjs",
+    "operator/web/temporal_comparison.mjs",
+    "source_tools/exercise_temporal_comparison.py",
+})
+
+# Optional original Intelligence source and maintained staged API transport; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "eco_intelligence/upstate.py",
+    "operator/web/investigations.mjs",
+    "model/staged_transport.py",
+})
+
+# Optional original saved-source receiving course; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/receive_saved_source_reference.py",
+    "source_tools/SAVED_SOURCE_REFERENCE_RECEIVING.md",
+})
+
+# Optional original native HTTPS connector family; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/eco_native_connector.py",
+    "integration/NATIVE_HTTPS_CONNECTOR.md",
+    "integration/component_fragments/native-https-connector.json",
+})
+
+# Optional original Sampling design comparison family; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "model/monitoring_sampling_comparison.py",
+    "operator/web/monitoring_sampling_comparison.mjs",
+    "integration/component_fragments/sampling-design-comparison.json",
+})
+
+# Optional original configured HTTPS opening; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/workbench_transport.py",
+    "integration/WORKBENCH_HTTPS_OPENING.md",
+    "integration/component_fragments/workbench-https-opening.json",
+})
+
+# Optional original Intelligence catalogue and component tooling; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "science_catalog_delivery.py",
+    "SCIENTIFIC_CATALOG.md",
+    "requirements-intelligence.txt",
+    "install_intelligence.py",
+})
+
+# Optional original Disturbance report and comparison desk; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "model/disturbance_report.html",
+    "operator/web/disturbance_studies.mjs",
+    "operator/web/disturbance_studies.css",
+})
+
+# Optional original Assistant question and selected-Study Windows source.
+ALLOWED = ALLOWED | frozenset({
+    "operator/intelligence_diagnostic_entry.py",
+    "eco_intelligence/study_transfer.py",
+})
+
+# Optional original observed-report renderer; REQUIRED stays unchanged.
+ALLOWED = ALLOWED | frozenset({
+    "model/observed_report_render.py",
+})
+
+# Optional original Assistant focused-source and provider delivery paths.
+ALLOWED = ALLOWED | frozenset({
+    "eco_intelligence/provider.py",
+    "eco_intelligence/schemas.py",
+    "eco_intelligence/engine.py",
+    "operator/intelligence.py",
+    "eco_intelligence/report.py",
+})
+
+# Current own-data table, source-lineage and Assistant source readers.
+ALLOWED = ALLOWED | frozenset({
+    "eco_intelligence/profiling.py",
+    "measurement_workspace/engine/parse.mjs",
+    "measurement_workspace/engine/source_handback_core.mjs",
+    "measurement_workspace/engine/source_lineage.mjs",
+    "measurement_workspace/engine/stream_csv.mjs",
+    "model/client_measurement_sources.py",
+    "operator/WORKBOOK_MEASUREMENTS.md",
+    "operator/client_measurement_sources.py",
+    "operator/web/client_measurement_sources.mjs",
+    "source_tools/receive_workbook_measurements.mjs",
+})
+
+# Complete selected own-data source interpretation and receiving leaves.
+ALLOWED = ALLOWED | frozenset({
+    "measurement_workspace/engine/benchmark_workspace.mjs",
+    "measurement_workspace/engine/chiques_nutrient_workspace.mjs",
+    "measurement_workspace/engine/chiques_nutrients.mjs",
+    "measurement_workspace/engine/collections.mjs",
+    "measurement_workspace/engine/intake.mjs",
+    "measurement_workspace/engine/intake_comparison.mjs",
+    "measurement_workspace/engine/large_delivery.mjs",
+    "measurement_workspace/engine/large_intake.mjs",
+    "measurement_workspace/engine/native_observations.mjs",
+    "measurement_workspace/engine/normalise.mjs",
+    "measurement_workspace/engine/sediment_workspace.mjs",
+    "measurement_workspace/engine/source_handback.mjs",
+    "measurement_workspace/engine/source_workbook_returns.mjs",
+    "measurement_workspace/engine/workspace.mjs",
+    "measurement_workspace/web/intake.mjs",
+})
+
+# Complete selected own-data source interpretation and receiving leaves.
+ALLOWED = ALLOWED | frozenset({
+    "checks/client_source_mapping_check.mjs",
+    "operator/web/client_source_mapping.mjs",
+})
+
+# Complete selected own-data source interpretation and receiving leaves.
+ALLOWED = ALLOWED | frozenset({
+    "install_intelligence_operator.py",
+    "model/scenario_mask_sources.py",
+    "operator/INPUT_LINEAGE.md",
+    "operator/extensions/investigations.json",
+    "operator/intelligence_lineage.py",
+    "operator/science_catalog.py",
+    "operator/web/investigation_lineage.mjs",
+    "receiving/eco_intelligence/receive_input_lineage.mjs",
+    "receiving/eco_intelligence/receive_input_lineage.py",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
@@ -2635,7 +2927,178 @@ def verify_joint_delivery_dependencies(application, pending):
         assembled_data(application, pending, name)
 
 
+def verify_management_working_dependencies(application, pending):
+    """Retain original unfinished Management designs and readable comparisons."""
+    def source(name):
+        return pending[name] if name in pending else read_existing(application, name)
+
+    transfer = source("model/study_transfer.py")
+    selector = source("operator/web/extensions/study_transfer.mjs")
+    provider = source("operator/climate_management.py")
+    client = source("operator/web/climate_management.mjs")
+    consumers = (transfer, provider, client)
+    comparison = (any(body is not None and b"climate_management_working_comparison" in body
+                      for body in consumers)
+                  or source("model/climate_management_working_comparison.py") is not None)
+    working = comparison or any(
+        body is not None and b"climate_management_working" in body for body in consumers)
+    working = working or source("model/climate_management_working.py") is not None
+    if not working:
+        return
+
+    paths = {
+        "model/climate_management_working.py",
+        "model/climate_management_working_transfer.py",
+        "operator/web/climate_management_working.mjs",
+        "operator/CLIMATE_MANAGEMENT_WORKING.md",
+        "source_tools/climate_management_working.py",
+    }
+    assets = {"climate_management_working.mjs"}
+    actions = {"climate-management.working.save", "climate-management.working.export"}
+    routes = {("/api/climate-management/working-list", "working-list", "GET"),
+              ("/api/climate-management/working-view", "working-view", "GET")}
+    items = {("climate-management-working", "working-view")}
+    markers = [(b"climate_management_working_transfer", b"climate-management-working",
+                b"openWorkingRevision")]
+    if comparison:
+        paths.update({
+            "model/climate_management_working_comparison.py",
+            "model/climate_management_working_comparison_transfer.py",
+            "operator/web/climate_management_working_comparison.mjs",
+            "operator/CLIMATE_MANAGEMENT_DESIGN_COMPARISON.md",
+        })
+        assets.add("climate_management_working_comparison.mjs")
+        actions.add("climate-management.working.compare")
+        routes.update({
+            ("/api/climate-management/working-comparison-catalog", "working-comparison-catalog", "GET"),
+            ("/api/climate-management/working-comparison-preview", "working-comparison-preview", "POST"),
+            ("/api/climate-management/working-comparison", "working-comparison", "GET"),
+        })
+        items.add(("climate-management-working-comparisons", "working-comparison"))
+        markers.append((b"climate_management_working_comparison_transfer",
+                        b"climate-management-working-comparisons", b"openWorkingComparison"))
+    for name in paths | {
+        "model/common.py", "model/workspace.py", "model/climate_management.py",
+        "model/climate_forcing.py", "model/climate_forcing_study_transfer.py",
+        "model/study_transfer.py", "operator/climate_management.py",
+        "operator/extensions/climate-management.json", "operator/web/climate_management.mjs",
+        "operator/web/extensions/study_transfer.mjs",
+    }:
+        assembled_data(application, pending, name)
+    for native_marker, kind, opener in markers:
+        if transfer is None or native_marker not in transfer or kind not in transfer:
+            raise ValueError("Receive the original Management working Study root: " + kind.decode())
+        if selector is None or kind not in selector or opener not in selector:
+            raise ValueError("Receive the original Management working Study opener: " + opener.decode())
+        if client is None or opener not in client:
+            raise ValueError("Receive the original Management working desk method: " + opener.decode())
+
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/climate-management.json"))
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "climate-management"):
+        raise ValueError("Retain the original Management component identity")
+    family = fragment.get("components", {}).get("climate-management", {})
+    members = family.get("paths")
+    if (not isinstance(members, list) or not members
+            or any(not isinstance(name, str) for name in members)
+            or len(members) != len(set(members)) or not paths.issubset(members)):
+        raise ValueError("Retain every original Management working source and guide")
+    if not {"core", "climate-forcing", "study-transfer", "extension-startup",
+            "gis-projects", "scientific-report-review"}.issubset(family.get("requires", [])):
+        raise ValueError("Retain original Management source/report/GIS/Study dependencies")
+    for name in members:
+        assembled_data(application, pending, name)
+
+    descriptor = json.loads(assembled_data(application, pending,
+        "operator/extensions/climate-management.json"))
+    backend = descriptor.get("backend", {})
+    declared_routes = {(row.get("path"), row.get("operation"), method)
+                       for row in backend.get("routes", [])
+                       for method in row.get("methods", [])}
+    declared_items = {(row.get("kind"), row.get("operation"))
+                      for row in backend.get("items", [])}
+    if (descriptor.get("id") != "climate-management"
+            or not assets.issubset(descriptor.get("assets", []))
+            or not actions.issubset(backend.get("actions", []))
+            or not routes.issubset(declared_routes) or not items.issubset(declared_items)):
+        raise ValueError("Receive complete original Management working actions, routes, items and assets")
+
+
+def verify_startup_guide_dependencies(application, pending):
+    client = pending.get("operator/web/app.mjs")
+    if client is None:
+        client = read_existing(application, "operator/web/app.mjs")
+    helper_selected = any(name in pending for name in (
+        "operator/web/startup_guide.mjs", "operator/web/startup_guide.css",
+        "source_tools/prepare_recipient_opening.py"))
+    if not helper_selected and (client is None or b"startup_guide.mjs" not in client):
+        return
+    for dependency in STARTUP_GUIDE_FILES:
+        assembled_data(application, pending, dependency)
+    client = assembled_data(application, pending, "operator/web/app.mjs").decode("utf-8")
+    index = assembled_data(application, pending, "operator/web/index.html").decode("utf-8")
+    server = assembled_data(application, pending, "operator/server.py").decode("utf-8")
+    helper = assembled_data(application, pending, "operator/web/startup_guide.mjs").decode("utf-8")
+    for token in ("startup_guide.mjs", "attachStartupGuide", "startupGuide.observe(", "startupGuide.suspend("):
+        if token not in client:
+            raise ValueError("Compose the complete startup guide into the current operator app: " + token)
+    for token in ("/web/startup_guide.css", 'id="startup-guide-open"'):
+        if token not in index:
+            raise ValueError("Compose the current startup guide stylesheet and Quick guide control: " + token)
+    tree = ast.parse(server, filename="operator/server.py")
+    registered = {node.value for node in ast.walk(tree)
+                  if isinstance(node, ast.Constant) and isinstance(node.value, str)}
+    for asset in ("startup_guide.mjs", "startup_guide.css"):
+        if asset not in registered:
+            raise ValueError("Serve the startup guide's complete original browser member: " + asset)
+    if "export function attachStartupGuide" not in helper:
+        raise ValueError("Receive the complete maintained startup guide helper")
+    fragment = json.loads(assembled_data(application, pending,
+        "integration/component_fragments/workbench-startup-guide.json"))
+    component = fragment.get("components", {}).get("workbench-startup-guide", {})
+    if (fragment.get("schema") != "upstate.application-component-fragment/v1"
+            or fragment.get("id") != "workbench-startup-guide"
+            or not {"core", "recipient-workbench-opening"} <= set(component.get("requires", []))):
+        raise ValueError("Compose the startup guide's original core and recipient-opening component")
+    required_members = {
+        "operator/web/startup_guide.mjs", "operator/web/startup_guide.css",
+        "operator/web/app.mjs", "operator/web/index.html", "operator/server.py",
+        "source_tools/Open_Workbench.sh", "source_tools/Open_Workbench_WSL.cmd",
+        "source_tools/open_windows_browser.py", "source_tools/prepare_recipient_opening.py",
+    }
+    if not required_members <= set(component.get("paths", [])):
+        raise ValueError("Retain the complete startup guide and recipient-opening component paths")
+
+
+def verify_source_inspection_dependencies(application, pending):
+    adapter = pending.get("operator/client_source_intake.py")
+    if adapter is None:
+        adapter = read_existing(application, "operator/client_source_intake.py")
+    if adapter is not None and b"model.client_source_inspection_report" in adapter:
+        for dependency in (
+                "model/client_source_inspection_report.py", "model/client_source_files.py",
+                "model/model_selection.py", "model/common.py",
+                "operator/client_source_intake.py", "operator/extensions/client-source-intake.json",
+                "operator/web/client_source_intake.mjs", "operator/web/client_source_intake.css",
+                "operator/web/scientific_inspection.mjs",
+                "operator/extensions/scientific-inspection.json"):
+            assembled_data(application, pending, dependency)
+    inspection_client = pending.get("operator/web/scientific_inspection.mjs")
+    if inspection_client is None:
+        inspection_client = read_existing(application, "operator/web/scientific_inspection.mjs")
+    if inspection_client is not None and b"source_inspection_summary.mjs" in inspection_client:
+        assembled_data(application, pending, "operator/web/source_inspection_summary.mjs")
+        descriptor = json.loads(assembled_data(application, pending,
+            "operator/extensions/scientific-inspection.json"))
+        if "source_inspection_summary.mjs" not in descriptor.get("assets", []):
+            raise ValueError("Register the source inspection summary in the existing inspection extension assets")
+
+
 def verify_composition(application, pending):
+    verify_source_inspection_dependencies(application, pending)
+    verify_startup_guide_dependencies(application, pending)
+    verify_management_working_dependencies(application, pending)
     verify_joint_delivery_dependencies(application, pending)
     verify_conservation_joint_dependencies(application, pending)
     verify_advancing_study_dependencies(application, pending)
@@ -2955,11 +3418,62 @@ def prepare_legacy_retirement(application, pending):
     return old, backup
 
 
+def _windows_install_platform(application, pending, allowed):
+    """Use the original received platform body before application imports work."""
+    if os.name != "nt":
+        return None, None
+    name = "model/windows_fs.py"
+    current = read_existing(application, name)
+    body = pending.get(name, current)
+    if body is None:
+        raise ValueError("Include the original Windows platform source in these packets: " + name)
+    if (current is not None and body != current
+            and sha(current) not in allowed.get(name, set())):
+        raise ValueError("Compose the newer original Windows platform source first: " + name)
+    # This is the complete same platform source carried by the checked source
+    # layer. It can be loaded before common.py is updated, without importing
+    # another application from sys.path or installing a second locking layer.
+    namespace = {"__name__": "_upstate_windows_installer_platform",
+                 "__file__": str(target_path(application, name)), "__package__": ""}
+    exec(compile(body, namespace["__file__"], "exec"), namespace)
+    for function in ("no_follow_open", "flock", "replace"):
+        if not callable(namespace.get(function)):
+            raise ValueError("The received Windows platform lacks " + function)
+    if namespace.get("LOCK_EX") != 2:
+        raise ValueError("Preserve the original Windows exclusive lock contract")
+    return SimpleNamespace(**namespace), body
+
+
+def _verify_install_platform_source(application, pending, selected):
+    name = "model/windows_fs.py"
+    if (selected is not None and name not in pending
+            and read_existing(application, name) != selected):
+        raise RuntimeError("The original Windows platform source changed; rerun these same packets")
+
+
+@contextlib.contextmanager
+def _extension_install_lock(path, platform):
+    # The same application lock coordinates every original installer.
+    if platform is None:
+        with path.open("a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            yield
+    else:
+        descriptor = platform.no_follow_open(path, os.O_CREAT | os.O_RDWR, 0o600)
+        try:
+            platform.flock(descriptor, platform.LOCK_EX)
+            yield
+        finally:
+            os.close(descriptor)
+
+
 def run(application, packet_paths, *, dry_run=False):
     application = Path(application).resolve(strict=True)
     if not application.is_dir():
         raise ValueError("Application must be a directory")
     pending, allowed, origins = read_layers(packet_paths)
+    platform, platform_source = _windows_install_platform(application, pending, allowed)
+    replace = platform.replace if platform is not None else os.replace
     lock_root = application / ".locks"
     if lock_root.is_symlink():
         raise ValueError("Preserve and reconcile the application's .locks symlink")
@@ -2967,10 +3481,8 @@ def run(application, packet_paths, *, dry_run=False):
     lock_path = lock_root / "extension-install.lock"
     if lock_path.is_symlink():
         raise ValueError("Preserve and reconcile the extension installer lock symlink")
-    with lock_path.open("a+") as lock:
-        # Share the original extension installer's lock; do not create a
-        # competing independent lock for modifications to the same application.
-        fcntl.flock(lock, fcntl.LOCK_EX)
+    with _extension_install_lock(lock_path, platform):
+        _verify_install_platform_source(application, pending, platform_source)
         originals, modes, conflicts = {}, {}, []
         for name, data in pending.items():
             path = target_path(application, name)
@@ -3012,6 +3524,7 @@ def run(application, packet_paths, *, dry_run=False):
                     os.fsync(stream.fileno())
                 staged.chmod(modes[name])
             # Reconcile all inputs once more before the first replacement.
+            _verify_install_platform_source(application, pending, platform_source)
             for name in pending:
                 if read_existing(application, name) != originals[name]:
                     raise RuntimeError("Concurrent authored change preserved at " + name)
@@ -3021,14 +3534,14 @@ def run(application, packet_paths, *, dry_run=False):
             if legacy is not None:
                 # The known old descriptor owns the same twelve actions. Retain
                 # its exact bytes outside *.json so the registry has one owner.
-                os.replace(target_path(application, LEGACY), target_path(application, RETIRED))
+                replace(target_path(application, LEGACY), target_path(application, RETIRED))
             for name in changed:
                 target = target_path(application, name)
                 if read_existing(application, name) != originals[name]:
                     raise RuntimeError("Concurrent authored change preserved at " + name +
                                        "; compose current source and rerun the same packets")
                 target.parent.mkdir(parents=True, exist_ok=True)
-                os.replace(staging / name, target)
+                replace(staging / name, target)
         # An interrupted install is restartable because incoming-identical
         # files are accepted and all remaining replacements retain preimages.
         for name, data in pending.items():

@@ -8,11 +8,11 @@ import assert from 'node:assert/strict';
 import {createHash,randomUUID} from 'node:crypto';
 import {reopenIntakeComparison} from './intake.mjs';
 import {stable} from './normalise.mjs';
+import {syncDirectory} from './file_platform.mjs';
 const activePages=new WeakSet(),sha=x=>createHash('sha256').update(x).digest('hex');
 const sourceRoot=fileURLToPath(new URL('../../',import.meta.url));
 const sourcePaths=['measurement_workspace/engine/intake-comparison-receiving.mjs','measurement_workspace/engine/intake_comparison.mjs','measurement_workspace/engine/intake.mjs','measurement_workspace/engine/parse.mjs','measurement_workspace/engine/normalise.mjs','measurement_workspace/engine/characteristics.mjs','measurement_workspace/engine/source_lineage.mjs','measurement_workspace/engine/http.mjs','measurement_workspace/engine/cli.mjs','measurement_workspace/web/intake.mjs','measurement_workspace/web/intake_comparison.mjs','operator/web/measured_intake.mjs','operator/web/intake_comparison.mjs'];
 const bytes=value=>Buffer.isBuffer(value)?value:Buffer.from(typeof value==='string'?value:JSON.stringify(value,null,2)+'\n');
-async function syncDirectory(directory){const h=await fs.open(directory,'r');try{await h.sync();}finally{await h.close();}}
 async function durableDirectory(directory){
  try{const st=await fs.lstat(directory);if(!st.isDirectory()||st.isSymbolicLink())throw Error('Use an owned real output directory: '+directory);await syncDirectory(directory);await syncDirectory(path.dirname(directory));return;}
  catch(e){if(e.code!=='ENOENT')throw e;}
@@ -25,7 +25,7 @@ async function exact(file,value){
  const b=bytes(value),temporary=file+'.complete-'+randomUUID();let h;
  try{
   h=await fs.open(temporary,'wx',0o600);await h.writeFile(b);await h.sync();await h.close();h=null;
-  try{await fs.link(temporary,file);}catch(e){if(e.code!=='EEXIST')throw e;const st=await fs.lstat(file);assert(st.isFile()&&!st.isSymbolicLink(),'Output must be an original regular file');assert.deepEqual(await fs.readFile(file),b,'Original retained selection changed: '+file);h=await fs.open(file,'r');await h.sync();await h.close();h=null;}
+  try{await fs.link(temporary,file);}catch(e){if(e.code!=='EEXIST')throw e;const st=await fs.lstat(file);assert(st.isFile()&&!st.isSymbolicLink(),'Output must be an original regular file');assert.deepEqual(await fs.readFile(file),b,'Original retained selection changed: '+file);h=await fs.open(file,process.platform==='win32'?'r+':'r');await h.sync();await h.close();h=null;}
   await syncDirectory(path.dirname(file));await fs.unlink(temporary);await syncDirectory(path.dirname(file));
   return {path:path.basename(file),bytes:b.length,sha256:sha(b)};
  }finally{await h?.close();}

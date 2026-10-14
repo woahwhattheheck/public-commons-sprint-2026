@@ -1290,11 +1290,16 @@ def report_pdf(path, title, sections, *, contact, source_records,
             remaining = blocks
         for block in remaining:
             append(block)
+    source_start = len(story)
     story.append(paragraph("Source editions", styles["Heading2"]))
     append(_source_block(source_records))
     prepared = " · ".join(str(contact[key]).strip() for key in ("name", "organization", "email") if contact.get(key))
     if prepared:
         story.append(paragraph("Prepared by " + prepared))
+    # Keep a short source context intact instead of orphaning the final line
+    # of an edition. KeepTogether releases oversized content to the existing
+    # page-aware table splitter, so long original source registries still flow.
+    story[source_start:] = [KeepTogether(story[source_start:])]
 
     def page_number(canvas, document):
         canvas.saveState()

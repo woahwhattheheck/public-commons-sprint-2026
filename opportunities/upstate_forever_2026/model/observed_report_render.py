@@ -144,7 +144,8 @@ def render(ws, preview, output):
     records = preview["source_records"]
     contact = identity["contact"]
     output = Path(output).resolve()
-    if observed_context.bind(ws, selection) != bound:
+    current_binding = observed_context.bind(ws, selection)
+    if not observed_context.same_retained_binding(current_binding, bound):
         raise ValueError("The chosen report sources changed after preview")
     output.mkdir(parents=True, exist_ok=True)
     with held(output / ".observed-report.lock"):
@@ -159,6 +160,8 @@ def render(ws, preview, output):
             for item in result["files"].values():
                 verify_file(output, item)
         else:
+            if current_binding != bound:
+                raise ValueError("The scientific report source binding changed after preview; review this edition again")
             if (identity.get("rendering_sources") is not None
                     and identity["rendering_sources"] != _rendering_sources()):
                 raise ValueError("The scientific report renderer changed after preview; review this edition again")

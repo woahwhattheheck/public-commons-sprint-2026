@@ -19,7 +19,7 @@ CHUNK = 1024 * 1024
 FORMAT = 'upper-savannah-measurements-files/v1'
 
 def relative(name: str) -> str:
-    if not isinstance(name, str) or not name or '\\' in name or '\0' in name:
+    if not isinstance(name, str) or not name or '\\' in name or '\0' in name or ':' in name:
         raise ValueError('Invalid archive member')
     if PurePosixPath(name).is_absolute() or any(x in {'', '.', '..'} for x in name.split('/')):
         raise ValueError('Archive member escapes its destination')
@@ -67,7 +67,7 @@ def pack(source: Path, output: Path, revision: int) -> dict:
                     raise ValueError('Snapshot member changed while archiving: ' + row['path'])
             archive.writestr('MEASUREMENTS_ARCHIVE.json', json.dumps(manifest, ensure_ascii=False,
                               sort_keys=True, separators=(',', ':')) + '\n')
-        with temporary.open('rb') as stream:
+        with temporary.open('r+b') as stream:
             os.fsync(stream.fileno())
         os.link(temporary, output)
     finally:

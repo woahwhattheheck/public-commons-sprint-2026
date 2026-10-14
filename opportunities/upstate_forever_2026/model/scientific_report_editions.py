@@ -50,7 +50,8 @@ def inspect(workspace, key):
             or result.get("files") != value.get("files")
             or read_json(selected / "selection.json") != identity):
         raise ValueError("The completed report differs from its saved selection")
-    if observed_context.bind(workspace, identity["selection"]) != identity["binding"]:
+    if not observed_context.same_retained_binding(
+            observed_context.bind(workspace, identity["selection"]), identity["binding"]):
         raise ValueError("The saved report's original scientific source edition changed")
     for item in result["files"].values():
         verify_file(selected, item)
@@ -110,7 +111,8 @@ def validate_request(workspace, payload, identity):
         raise ValueError("Report contact details must be text")
     if identity.get("title") != resolved or identity.get("contact") != contact:
         raise PreviewChanged("The retained report belongs to another title or contact.")
-    if observed_context.bind(workspace, identity["selection"]) != identity.get("binding"):
+    if not observed_context.same_retained_binding(
+            observed_context.bind(workspace, identity["selection"]), identity.get("binding")):
         raise PreviewChanged("The retained report's original scientific source edition changed.")
     return choices
 

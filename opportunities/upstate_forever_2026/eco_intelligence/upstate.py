@@ -431,7 +431,17 @@ class UpstateRepository(StoreBackedRepository):
             _verify(path, row)
         elif file_digest(path) != row["sha256"]:
             raise IntelligenceError("The selected scientific export differs from its registered hash.", 409)
-        return path, public_metadata(row.get("metadata") or {})
+        original_metadata = row.get("metadata") or {}
+        metadata = public_metadata(original_metadata)
+        original_source = original_metadata.get("source") or {}
+        if (original_metadata.get("native_kind") == "retained_source"
+                and (original_metadata.get("source_binding") or {}).get("role") == "primary"
+                and original_source.get("kind") == "vector"
+                and isinstance(original_source.get("layer"), str)):
+            # A GeoPackage layer is an exact quoted identifier, not a fetch URL.
+            # Keep the reviewed name while filtering unrelated registry metadata.
+            metadata["source"]["layer"] = original_source["layer"]
+        return path, metadata
 
     def artifacts(self, tenant, job_id):
         with self.read_scope(tenant):

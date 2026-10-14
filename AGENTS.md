@@ -1,5 +1,9 @@
 # Owner-directed rendered-product inspection
 
+## Current Ecosystem native release
+
+For Ecosystem work, read `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md` version `2026-10-14.1` before the historical direction references below. Bryce approved the complete Windows/Mac implementation and opening-link lifecycle repair. Preserve all seven Workspaces and82 retained runs, build three native runtime packs with the shared application/data, and deliver the actual operated release privately to Bryce. Carry that complete brief into child/provider/cloud copies.
+
 Source: direct owner instruction of October 13, 2026. Repository copy version: `2026-10-13.1`.
 Scope: owner-controlled work across providers, local and cloud runtimes, and current and future workers. Existing owner controls remain in force.
 
@@ -9,7 +13,7 @@ The Ecosystem product requires plain industrial design: readable tables, clear h
 
 Persist this instruction in the active owner-controlled instruction surfaces actually read by the relevant workers: global/project AGENTS/CLAUDE/GEMINI/rules, provider-specific boot instructions, source mirrors, cloud repository copies and current build/receiving guides. Include this instruction in every delegated child assignment, including assignments to another provider or runtime. Maintainers update their own consumed files and return exact paths, source/version and readback. A coordination acknowledgment alone is not propagation. Do not alter historical evidence or third-party/vendor policies. No forced restarts, new watchers or revival of owner-stopped work.
 
-Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners; other coordinators receive propagation rather than duplicate implementation. Continue native source/runtime/archive joins rather than diverting everyone to cosmetic review. For Ecosystem Sciences, read `opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md` version `2026-10-13.4`. Bryce's direct instruction at October 13, 2026, 10:46 a.m. Eastern renewed the existing work toward his call and superseded the earlier 10 a.m. cutoff. Preserve active workers, completed scientific outputs and all other standing controls while finishing and integrating the actual application.
+Inspect the actual completed scientific screens, reports, source pages and downloadable HTML in the real operator. Prior empty-Workspace screenshots are not completed-workspace acceptance. Preserve current engineering owners and active calculations. For Ecosystem Sciences, read opportunities/upstate_forever_2026/CURRENT_OWNER_DIRECTION.md version `2026-10-14.1` and implement its complete approved Windows/Mac release and reliable opening routes. Preserve original outputs and use the actual delivered product.
 
 Source assembly and standalone application handoffs retain the application-level instruction copies with their current guides. This file records an owner-requested product delivery requirement; it does not change provider safeguards, repository access controls, or existing authorization boundaries.
 

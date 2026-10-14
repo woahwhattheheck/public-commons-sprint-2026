@@ -34,7 +34,7 @@ def _record_values(record):
 
 
 def identifier_columns(value):
-    """An explicit column choice; omitted legacy requests keep their raw projection."""
+    """An explicit column choice; omitted requests keep the shared reader values."""
     if value is None:
         return []
     need(isinstance(value, list) and len(value) <= 16384 and
@@ -124,7 +124,7 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
             if number <= header_row:
                 excluded.append({**position, "reason": "header" if number == header_row else "preamble"})
                 continue
-            raw_cells = original_record["values"]
+            raw_cells = original_record.get("stored_values", original_record["values"])
             if not any(value is not None and str(value) != "" for value in raw_cells):
                 excluded.append({**position, "reason": "blank"})
                 continue
@@ -140,7 +140,7 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
                 if index >= len(record["values"]):
                     continue
                 metadata = record["cell_metadata"][index]
-                raw = record["values"][index]
+                raw = record.get("stored_values", record["values"])[index]
                 rendered = _identifier_text(raw, metadata, number, index)
                 # Keep the exact reading and format for every reviewed identifier cell.
                 identifier_cells.append({"source_row": number, "column_id": "c" + str(index),
@@ -182,7 +182,7 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
         lineage["identifier_formatting"] = {
             "policy": "excel-plain-zero-identifiers/v1", "columns": identifiers,
             "cells": identifier_cells,
-            "meaning": "Explicit identifier-column choice only; other cells retain their stored-value reading."}
+            "meaning": "Explicit identifier-column choice; stored_value records the original cell value for each selected identifier. Other cells retain the shared original reader values, including displayed leading zeros for plain all-zero integer formats."}
     # Bind the whole lineage deterministically; no local absolute path enters it.
     return {"text": content, "lineage": lineage}
 

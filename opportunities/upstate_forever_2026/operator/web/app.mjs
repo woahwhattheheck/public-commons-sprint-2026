@@ -29,9 +29,40 @@ const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;',
 const short = value => value ? String(value).slice(0,12) : '—';
 const pretty = value => JSON.stringify(value, null, 2);
 const human = value => String(value ?? '').replaceAll('_',' ').replaceAll('.',' · ');
+const sourceScopeLabel = value => {
+  if(typeof value==='string')return value;
+  if(!value||typeof value!=='object')return 'Not declared';
+  if(value.client_source_intake)return 'Original workbook and reviewed source choices';
+  return Object.entries(value).map(([key,item])=>{
+    const label=human(key);
+    return typeof item==='string'&&!/^[a-f0-9]{32,}$/i.test(item)?label+': '+item:
+      typeof item==='number'||typeof item==='boolean'?label+': '+item:label;
+  }).join('; ')||'Not declared';
+};
 const number = value => value === null || value === undefined ? '—' : typeof value === 'number' ? value.toLocaleString(undefined,{maximumFractionDigits:6}) : esc(value);
 const bytes = value => {if(value===undefined)return '—';const units=['B','KiB','MiB','GiB'];let n=Number(value),i=0;while(n>=1024&&i<3){n/=1024;i++;}return n.toLocaleString(undefined,{maximumFractionDigits:i?1:0})+' '+units[i];};
 const when = value => value ? new Date(value).toLocaleString() : '—';
+// The display keeps date-only provenance date-only and retains the original
+// timestamp in the time element. UTC avoids an unlabeled reader-local shift.
+function sourceCapturedMarkup(value){
+  if(value===null||value===undefined||String(value).trim()==='')return '<span class="note">Not supplied</span>';
+  const raw=String(value),dateOnly=/^\d{4}-\d{2}-\d{2}$/.test(raw);
+  const timestamp=/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/.test(raw);
+  if(!dateOnly&&!timestamp)return esc(raw);
+  const parsed=new Date(dateOnly?raw+'T00:00:00Z':raw);
+  if(!Number.isFinite(parsed.getTime())||(dateOnly&&parsed.toISOString().slice(0,10)!==raw))return esc(raw);
+  const label=new Intl.DateTimeFormat('en-GB',{year:'numeric',month:'short',day:'numeric',timeZone:'UTC'}).format(parsed);
+  return '<time datetime="'+esc(raw)+'" title="Original: '+esc(raw)+'"><span style="white-space:nowrap">'+esc(label)+'</span>'+(!dateOnly?'<br><small style="white-space:nowrap">'+parsed.toISOString().slice(11,19)+' UTC</small>':'')+'</time>';
+}
+function sourceScopeMarkup(value){
+  if(value===null||value===undefined||(typeof value==='string'&&value.trim()===''))return '<span class="note">Not supplied</span>';
+  if(typeof value!=='object')return esc(value);
+  const entries=Array.isArray(value)?value:Object.entries(value);
+  if(!entries.length)return '<span class="note">Not supplied</span>';
+  if(Array.isArray(value))return '<ul>'+value.map(item=>'<li>'+sourceScopeMarkup(item)+'</li>').join('')+'</ul>';
+  return '<dl class="definition">'+entries.map(([key,item])=>'<dt>'+esc(human(key))+'</dt><dd>'+sourceScopeMarkup(item)+'</dd>').join('')+'</dl>';
+}
+
 const safeURL = value => /^https?:\/\//i.test(value??'') ? value : null;
 const external = value => safeURL(value) ? '<a href="'+esc(value)+'" target="_blank" rel="noopener noreferrer">'+esc(value)+'</a>' : esc(value??'');
 const badge = value => '<span class="status '+esc(value)+'">'+esc(human(value))+'</span>';
@@ -49,6 +80,19 @@ const mapTitles={future_sediment_loss:'Future sediment loss',future_nutrient_run
 const keyName='upstate-operator-capability';
 const fragment=new URLSearchParams(location.hash.slice(1));
 let capability=fragment.get('token')||sessionStorage.getItem(keyName);
+// The secure session cookie survives a new tab; its non-secret transport marker is tab-local.
+if(!capability&&location.protocol==='https:'){
+ const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
+ try{
+  const response=await fetch('/_eco/health',{credentials:'same-origin',redirect:'error',cache:'no-store',signal:controller.signal});
+  if(response.ok){
+   const health=await response.json();
+   if(health?.schema==='upstate.eco-relay/v1'){
+    capability='eco-edge-session';sessionStorage.setItem(keyName,capability);
+   }
+  }
+ }catch{}finally{clearTimeout(timer);}
+}
 if(fragment.get('token')){sessionStorage.setItem(keyName,capability);history.replaceState(null,'','#overview');}
 let workspace=sessionStorage.getItem('upstate-selected-workspace')||null;
 let teamPerson=null,connectionEpoch=0;
@@ -342,7 +386,7 @@ async function refresh({force=false}={}){
     $('#team-person').textContent=(teamPerson?.display_name||'Local installation owner')+' · '+access;
     $('#team-manage').hidden=!teamPerson?.administrator;
     $('#team-sign-out').hidden=false;
-    const options=data.workspaces.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===workspace?'selected':'')+' '+(!x.available?'disabled':'')+'>'+esc(x.title)+(x.received?' · restored copy':'')+'</option>').join('');
+    const options=data.workspaces.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===workspace?'selected':'')+' '+(!x.available?'disabled':'')+'>'+esc((x.received?.purpose==='optional-reference'?'Reference · ':'')+x.title)+(x.received&&!['own-data','optional-reference'].includes(x.received.purpose)?' · restored copy':'')+'</option>').join('');
     $('#workspace-select').innerHTML=options;
     for(const task of data.tasks){
       const taskKey=workspace+':'+task.id,before=lastTaskStates.get(taskKey);
@@ -428,7 +472,7 @@ function render(){
   const d=state.data;let html='';
   if(view==='overview'){
     const complete=d.runs.filter(x=>x.state==='complete').length;
-    html=pageHeader(d.project.title,'Original data, explicit model choices, retained native outputs and a complete receiving package.',button('source-open','Import sources','','primary'));
+    html=pageHeader(d.project.title,'Open your own files, review their scientific meaning, and continue into native analysis and retained results.',button('open-my-data','Open my data','','primary')+button('source-open','Import source package'));
     html+='<div class="page-actions">'+button('journey-home','Open guided journey','','primary')+'</div>';
     html+='<div class="cards">'+[
       ['Source editions',d.sources.length,'Retained original files and provenance.'],
@@ -437,7 +481,7 @@ function render(){
       ['Complete deliveries',d.deliveries.filter(x=>x.state==='complete').length,'Seven map families, physical rasters and working archive.']
     ].map(x=>'<div class="card"><h3>'+x[0]+'</h3><strong class="number">'+number(x[1])+'</strong><p>'+x[2]+'</p></div>').join('')+'</div>';
     html+='<div class="two-columns">'+section('Continue the original workflow','Each saved selection remains available after reopening.','<div class="section-body flow-list">'+[
-      ['1','Retain original source editions','Import a native source package or register a published table with its actual provenance.','source-open','Sources'],
+      ['1','Open and review your data','Choose CSV, Excel or GIS files, inspect their actual contents, then confirm their scientific meaning.','open-my-data','Open my data'],
       ['2','Select the biophysical profile and reporting grid','Choose real land-cover coefficients, hydrologic context, units and native parameters.','profile-new','Profile'],
       ['3','Compare explicit land-cover scenarios','Run the retained baseline and alternatives on the same source grid.','run-prepare','Prepare run'],
       ['4','Assemble the seven-map delivery','Join actual water-designation overlays, observations, report, metadata and a full working archive.','delivery-new','Delivery']
@@ -446,7 +490,7 @@ function render(){
   }
   if(view==='sources'){
     html=pageHeader('Original sources','Retain the source URI, edition, units, exact bytes and native sidecars before selecting data for analysis.',button('source-open','Import source edition','','primary')+button('source-reports-open','Review retained reports'));
-    html+=d.sources.length?section('Retained source editions','Select an edition to inspect its original files and native schema.',table(['Edition','Captured','Sources','Scope',''],d.sources.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong>'+metaId(row)+'</td><td>'+esc(row.captured_at||'Not supplied')+'</td><td>'+row.entries.length+'</td><td>'+esc(typeof row.scope==='string'?row.scope:JSON.stringify(row.scope))+'</td><td class="actions-cell">'+itemButton('sources',row.id)+'</td></tr>'))):noRows('Import the original source data','A source edition retains its actual manifest and file bytes, including raster units and the biophysical CSV.','source-open','Import sources');
+    html+=d.sources.length?section('Retained source editions','Select an edition to inspect its original files and native schema.',table(['Edition','Captured','Sources','Scope',''],d.sources.map(row=>'<tr><td class="name-cell"><strong>'+esc(row.title)+'</strong>'+metaId(row)+'</td><td>'+sourceCapturedMarkup(row.captured_at)+'</td><td>'+row.entries.length+'</td><td>'+(row.scope?.client_source_intake?esc(sourceScopeLabel(row.scope)):sourceScopeMarkup(row.scope))+'</td><td class="actions-cell">'+itemButton('sources',row.id)+'</td></tr>'))):noRows('Import the original source data','A source edition retains its actual manifest and file bytes, including raster units and the biophysical CSV.','source-open','Import sources');
   }
   if(view==='profiles'){
     html=pageHeader('Parameter profiles','Use the original biophysical CSV and parameters for the selected native NDR/SDR models. Save revisions as new immutable profiles.',button('profile-new','New parameter profile','','primary'));
@@ -1588,6 +1632,11 @@ async function dispatch(button){
   detailDialog.close();detailContext=null;await spatialWorkspace.openTarget(target);return navigate('spatial');
  }
  if(action==='item')return openItem(button.dataset.kind,id);
+ if(action==='open-my-data'){
+  await extensions.load();
+  if(!extensions.hasView('client-source-intake'))throw Error('Open my data is unavailable in this installation. Refresh the workbench to load its source intake desk.');
+  return navigate('client-source-intake');
+ }
  if(action==='source-open')return sourceForm();
  if(action==='source-reports-open'){sourceReports.focus();return;}
  if(action==='source-inspect')return inspectSource(button.dataset.collection,button.dataset.source,button.dataset.layer);
@@ -1692,6 +1741,7 @@ $('#workspace-select').addEventListener('change',event=>selectWorkspace(event.ta
 window.addEventListener('hashchange',()=>{const incoming=new URLSearchParams(location.hash.slice(1)).get('token');if(incoming){sessionStorage.setItem(keyName,incoming);sessionStorage.removeItem('upstate-selected-workspace');history.replaceState(null,'','/');location.reload();return;}const requested=location.hash.slice(1);if(viewLabels[requested]||extensions.hasView(requested))navigate(requested).catch(globalError);});
 window.addEventListener('online',()=>refresh({force:true}));
 function showConnection(message='Open your private access link or paste it below.'){
+ const remoteSession=capability==='eco-edge-session';
  startupGuide.suspend();
  connectionEpoch++;itemRequest++;workspaceFinder.reset();
  nativeJobs.detach();rehearsal.detach();extensions.detach();spatialWorkspace.suspend();
@@ -1704,6 +1754,10 @@ function showConnection(message='Open your private access link or paste it below
  $('#task-panel').hidden=true;$('#task-list').replaceChildren();$('#task-count').textContent='0';
  $('#workspace-select').replaceChildren();$('#team-person').textContent='Disconnected';$('#team-manage').hidden=true;$('#team-sign-out').hidden=true;
  $('#connection-state').textContent='';
+ if(remoteSession){
+  $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><p>Sign in again to continue with your saved workspaces.</p><form action="/_eco/login" method="get"><button type="submit">Sign in to workbench</button></form></div>';
+  return;
+ }
  $('#content').innerHTML='<div class="empty"><h1>Connect to the workbench</h1><p>'+esc(message)+'</p><form id="team-connect-form"><label for="team-access-link">Private access link</label><input id="team-access-link" type="password" required autocomplete="off"><button type="submit">Connect</button></form></div>';
  $('#team-connect-form').addEventListener('submit',event=>{
    event.preventDefault();const supplied=$('#team-access-link').value.trim();let selected;
@@ -1714,7 +1768,7 @@ function showConnection(message='Open your private access link or paste it below
 }
 $('#team-sign-out').addEventListener('click',async()=>{
  try{await api('/api/logout',{method:'POST',body:{}});}catch{}
- finally{showConnection('Signed out. Open a current private access link to reconnect.');}
+ finally{showConnection(capability==='eco-edge-session'?'Signed out of the secure workbench.':'Signed out. Open a current private access link to reconnect.');}
 });
 if(capability){
  try{

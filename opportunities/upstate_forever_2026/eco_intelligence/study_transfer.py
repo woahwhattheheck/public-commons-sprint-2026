@@ -18,7 +18,7 @@ import tempfile
 import uuid
 
 from .common import IntelligenceError, digest as evidence_digest, file_digest, now
-from model.common import atomic_bytes, digest as native_digest, read_json, verify_file
+from model.common import atomic_bytes, digest as native_digest, read_json, verify_file, _sync_directory
 
 FORMAT = "upstate.selected-study-investigations/v1"
 _SCHEMA_TABLES = frozenset({
@@ -77,14 +77,10 @@ def snapshot_project_state(
                     "observed_at": saved[1] if saved else None,
                 })
             dst.commit()
-        with pending.open("rb") as handle:
+        with pending.open("r+b") as handle:
             os.fsync(handle.fileno())
         os.link(pending, destination)
-        descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        _sync_directory(destination.parent)
         result = {
             "format": snapshot_format, "workspace_key": workspace_key,
             "project_id": workspace.project["id"],

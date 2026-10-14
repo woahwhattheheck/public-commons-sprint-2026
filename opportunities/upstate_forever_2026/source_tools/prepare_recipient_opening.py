@@ -20,7 +20,7 @@ REQUIRED = (
     "source_tools/open_windows_browser.py",
 )
 
-def prepare(project_directory, *, include_wsl=False):
+def prepare(project_directory, *, include_wsl=False, include_windows=False):
     project = Path(project_directory).expanduser().resolve(strict=True)
     app = project / "application"
     workspace = project / "workspace"
@@ -28,7 +28,10 @@ def prepare(project_directory, *, include_wsl=False):
         raise ValueError("Select the complete received project with ordinary application and workspace directories")
     if app.resolve(strict=True) != APPLICATION:
         raise ValueError("Run the preparer from this received project's own application")
-    for relative in REQUIRED:
+    required = REQUIRED
+    if include_windows:
+        required += ("model/windows_fs.py", "source_tools/open_workbench_windows.py")
+    for relative in required:
         member = app / relative
         if member.is_symlink() or not member.is_file():
             raise ValueError("Receive the complete maintained application member: " + relative)
@@ -41,6 +44,8 @@ def prepare(project_directory, *, include_wsl=False):
         raise ValueError("Select the original scientific Workspace")
     outputs = []
     templates = [("Open_Workbench.sh", 0o755)]
+    if include_windows:
+        templates.append(("Open_Workbench.cmd", 0o644))
     if include_wsl:
         templates.append(("Open_Workbench_WSL.cmd", 0o644))
     for name, mode in templates:
@@ -87,7 +92,8 @@ def prepare(project_directory, *, include_wsl=False):
         "project_id": identity["id"],
         "project_directory": str(project),
         "files": results,
-        "platform": "Linux x86_64; Windows shortcut requires an existing Linux x86_64 WSL distribution",
+        "platform": ("Linux x86_64; native Windows operator requires Windows8011 source and installed Python 3.12"\
+                     if include_windows else "Linux x86_64; optional WSL shortcut requires an existing Linux x86_64 WSL distribution"),
         "launches_model_on_open": False,
     }
 
@@ -95,8 +101,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("project_directory")
     parser.add_argument("--include-wsl", action="store_true", help="Also copy the optional shortcut for a verified existing WSL recipient")
+    parser.add_argument("--include-windows", action="store_true", help="Also copy the native Windows opener for the full Win32-compatible application and installed Python 3.12")
     args = parser.parse_args(argv)
-    print(json.dumps(prepare(args.project_directory, include_wsl=args.include_wsl), indent=2, sort_keys=True))
+    print(json.dumps(prepare(args.project_directory, include_wsl=args.include_wsl,
+                             include_windows=args.include_windows), indent=2, sort_keys=True))
 
 if __name__ == "__main__":
     main()

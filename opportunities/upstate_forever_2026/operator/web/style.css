@@ -105,3 +105,20 @@
  .dialog-footer{flex-wrap:wrap}
  .dialog-footer>span{flex-basis:100%;max-width:none;overflow-wrap:anywhere}
 }
+
+/* Original edition tables retain readable source text in their scroll region. */
+.table-scroll>table:has([data-action="item"][data-kind="sources"]){min-width:940px;table-layout:fixed}
+.table-scroll>table:has([data-action="item"][data-kind="sources"]) td{overflow-wrap:anywhere}
+.table-scroll>table:has([data-action="item"][data-kind="sources"]) th:nth-child(1){width:26%}
+.table-scroll>table:has([data-action="item"][data-kind="sources"]) th:nth-child(2){width:19%}
+.table-scroll>table:has([data-action="item"][data-kind="sources"]) th:nth-child(3){width:8%}
+.table-scroll>table:has([data-action="item"][data-kind="sources"]) th:nth-child(4){width:35%}
+.table-scroll>table:has([data-action="item"][data-kind="sources"]) th:nth-child(5){width:12%}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]){min-width:1060px;table-layout:fixed}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) td{overflow-wrap:anywhere}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) th:nth-child(1){width:23%}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) th:nth-child(2){width:7%}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) th:nth-child(3){width:19%}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) th:nth-child(4){width:14%}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) th:nth-child(5){width:29%}
+.table-scroll>table:has([data-action="item"][data-kind="observations"]) th:nth-child(6){width:8%}

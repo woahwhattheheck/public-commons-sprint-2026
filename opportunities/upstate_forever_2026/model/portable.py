@@ -12,7 +12,7 @@ import zipfile
 from .common import (SCHEMA, atomic_json, canonical, file_digest, held, identifier,
                      now, read_json, relative_file)
 from .portable_databases import snapshot_databases, without_database_files, verify_database_sources
-from .common import _sync_directory, _path_stat, _fd_stat
+from .common import _sync_directory, _path_stat, _fd_stat, _native_fs_path
 from .portable_acquisitions import capture_lock_paths, verify_acquisitions
 from .portable_implementation import locked_implementation, verify_implementation
 from .portable_parameter_studies import verify_parameter_studies
@@ -236,7 +236,7 @@ def _application(source_root):
 
 def application_digest():
     """Identify the complete current source used by a newly requested delivery."""
-    source_root = Path(__file__).resolve().parent.parent
+    source_root = _native_fs_path(Path(__file__).resolve().parent.parent)
     selected = {path.relative_to(source_root).as_posix(): _identity(path)
                 for path in _application(source_root)}
     records = {}
@@ -531,13 +531,13 @@ def _received_member_aliases(manifest, destination):
 def backup(workspace, destination, *, include_intermediates=True, include_deliveries=True,
            delivery_root=None, delivery_files=None, delivery_state=None,
            frozen_databases=None):
-    root = workspace.root
-    destination = Path(destination).absolute()
+    root = _native_fs_path(workspace.root)
+    destination = _native_fs_path(destination).absolute()
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
         raise ValueError("Choose a new archive path")
     pending = None
-    source_root = Path(__file__).resolve().parent.parent
+    source_root = _native_fs_path(Path(__file__).resolve().parent.parent)
     excluded = {destination}
     selection = {"include_intermediates": bool(include_intermediates),
                  "include_deliveries": bool(include_deliveries)}
@@ -812,12 +812,12 @@ def _inspect_archive(archive, *, verify):
     return manifest
 
 def restore(archive_path, destination):
-    destination = Path(destination).absolute()
+    destination = _native_fs_path(destination).absolute()
     if destination.exists():
         raise ValueError("Restore into a new directory so existing work is preserved")
     # Metadata and extraction use one opened edition. Each payload is verified
     # during extraction rather than decompressed once just to inspect it first.
-    with Path(archive_path).open("rb") as source:
+    with _native_fs_path(archive_path).open("rb") as source:
         before = _archive_identity(source)
         with zipfile.ZipFile(source) as archive:
             manifest = _inspect_archive(archive, verify=False)
@@ -941,11 +941,11 @@ def _legacy_received_record(manifest, destination, archive_sha256, archive_bytes
 def resume_restore(archive_path, destination, *, expected_archive_sha256=None):
     """Reconcile the same published receive; never restore over existing work."""
     from .workspace import Workspace
-    destination = Path(destination).absolute()
+    destination = _native_fs_path(destination).absolute()
     if destination.is_symlink() or not destination.is_dir():
         raise ValueError("Select the original published receiving directory")
     with held(destination.parent / (".receive-" + destination.name + ".lock"), blocking=False):
-        with Path(archive_path).open("rb") as source:
+        with _native_fs_path(archive_path).open("rb") as source:
             before = _archive_identity(source)
             with zipfile.ZipFile(source) as archive:
                 manifest = _inspect_archive(archive, verify=False)
