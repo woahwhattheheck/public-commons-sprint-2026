@@ -1,12 +1,15 @@
 """Join receiving-water analyses to the existing seven-map delivery."""
 from __future__ import annotations
+import hashlib
 import json
+import os
 from pathlib import Path
-import shutil
+import tempfile
 from .common import (
     atomic_json, describe_file, file_digest, identifier, read_json, verify_file,
 )
 from . import rasters, receiving_waters
+from .portable_fs import native_path, publish_file, relative_name, sync_directory
 
 
 def selected_analysis(workspace, selection, *, priority_settings=None, progress=None):
@@ -68,14 +71,47 @@ def selected_analysis(workspace, selection, *, priority_settings=None, progress=
 
 
 def _copy_member(source_root, item, directory, prefix):
+    """Retain an independently writable original, without partial public copies.
+
+    Verify the completed source; create a fully flushed independent temp member;
+    then publish create-only across native and linkless filesystems. A concurrent
+    receiver's winner is checked against the same original, never overwritten.
+    """
     original = verify_file(source_root, item)
-    target = directory / prefix / item["path"]
+    name = relative_name(item["path"], windows=True)
+    directory = native_path(directory)
+    target = directory / prefix / name
     target.parent.mkdir(parents=True, exist_ok=True)
-    if target.exists():
-        if target.stat().st_size != item["bytes"] or file_digest(target) != item["sha256"]:
-            raise ValueError("A retained receiving-water delivery member changed: " + str(target))
-    else:
-        shutil.copyfile(original, target)
+    expected = {**item, "path": target.relative_to(directory).as_posix()}
+    if not (target.exists() or target.is_symlink()):
+        fd, temporary = tempfile.mkstemp(prefix=".receiving-water-", dir=target.parent)
+        pending = native_path(temporary)
+        try:
+            size, checksum = 0, hashlib.sha256()
+            with os.fdopen(fd, "wb") as outgoing, original.open("rb") as incoming:
+                before = os.fstat(incoming.fileno())
+                for block in iter(lambda: incoming.read(1024 * 1024), b""):
+                    outgoing.write(block)
+                    size += len(block)
+                    checksum.update(block)
+                outgoing.flush()
+                os.fsync(outgoing.fileno())
+                after = os.fstat(incoming.fileno())
+            identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
+                                     info.st_mtime_ns, info.st_ctime_ns)
+            if identity(before) != identity(after) or size != item["bytes"] or (
+                    checksum.hexdigest() != item["sha256"]):
+                raise ValueError("An original receiving-water delivery member changed")
+            try:
+                publish_file(pending, target)
+            except FileExistsError:
+                pass
+        finally:
+            pending.unlink(missing_ok=True)
+    if target.is_symlink():
+        raise ValueError("Receiving-water delivery target is not an original regular file")
+    verify_file(directory, expected)
+    sync_directory(target.parent)
     result = {**item, **describe_file(directory, target)}
     if result["bytes"] != item["bytes"] or result["sha256"] != item["sha256"]:
         raise ValueError("Receiving-water delivery copy differs from its original")
@@ -88,7 +124,7 @@ def export(workspace, analysis_id, directory):
     if analysis["state"] != "complete":
         raise ValueError("Complete the selected receiving-water analysis for export")
     plan = receiving_waters.inspect_plan(workspace, analysis["plan_id"])
-    directory = Path(directory)
+    directory = native_path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     analysis_root = workspace.root / "receiving-water-analyses" / analysis["id"]
     plan_root = workspace.root / "receiving-water-plans" / plan["id"]
@@ -161,7 +197,7 @@ def export(workspace, analysis_id, directory):
             for row in analysis["subjects"] if row["kind"] == "receptor"
         ],
     }
-    atomic_json(index_path, result)
+    atomic_json(index_path, result, immutable=True)
     return result
 
 
