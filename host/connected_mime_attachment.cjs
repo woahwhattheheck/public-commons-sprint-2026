@@ -173,4 +173,15 @@ function receiveGmailRawAttachment(message,selection){
   return {schema:SCHEMA,source:{provider:'gmail',link_id:request.link_id,message_id:message.id,raw_bytes:inspected.raw.bytes,raw_sha256:inspected.raw.sha256},
     attachment:{filename:part.filename,part_path:part.part_path,media_type:part.media_type,transfer_encoding:part.transfer_encoding,...actual},data};
 }
-module.exports={inspectMimeAttachments,receiveGmailRawAttachment};
+/** Select the same complete MIME attachment, then restore its retained original source. */
+function receiveGmailSourceCarrier(message,selection){
+  need(selection&&selection.source_carrier,'Select the complete original source identity');
+  const attachment=receiveGmailRawAttachment(message,selection);
+  const restored=require('./connected_source_carrier.cjs').receiveSourceCarrier(
+    attachment.data,{carrier:selection.expected,source:selection.source_carrier},
+    {maxSourceBytes:selection.maxSourceBytes,maxCarrierBytes:selection.maxCarrierBytes});
+  return {...attachment,original:restored.source,carrier:{
+    schema:restored.schema,...restored.carrier,gzip:restored.gzip,members:restored.members
+  },data:restored.data};
+}
+module.exports={inspectMimeAttachments,receiveGmailRawAttachment,receiveGmailSourceCarrier};
