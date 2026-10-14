@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="referrer" content="no-referrer">
+<title>Reopen the scientific workbench</title>
+<link rel="stylesheet" href="/web/workbench_links.css">
+<script type="module" src="/web/workbench_links.mjs"></script>
+</head>
+<body class="wb-reopen-body" data-workbench-reopen>
+<main class="wb-reopen">
+<p class="wb-eyebrow">Ecosystem Sciences · Local workbench</p>
+<h1>Reopen your scientific workbench</h1>
+<p id="wb-reopen-status" class="wb-reopen-status" role="status">This saved address is not responding.</p>
+<p>The application runs from the workbench folder on your computer. A saved browser address can outlive that running session.</p>
+<ol>
+<li>Open the folder where you extracted the complete workbench ZIP.</li>
+<li>Double-click <code>Open_Workbench.cmd</code> on Windows or <code>Open_Workbench.command</code> on Mac. Let runtime preparation finish.</li>
+<li>The launcher opens the ready application at its current address. Select your original workspace and reopen the retained report or operation.</li>
+</ol>
+<p>Keep the workbench terminal open while you use the application. Closing a browser tab does not close the workbench.</p>
+<div class="wb-actions">
+<button id="wb-retry" type="button">Check this address again</button>
+<a class="wb-button" id="wb-main" href="/" hidden>Open the running workbench</a>
+<a class="wb-button" id="wb-save" href="/web/workbench_reopen.html?download=1" download="Reopen_Workbench.html">Save reopening help</a>
+</div>
+<details id="wb-link-details"><summary>Use the current private link printed by the launcher</summary>
+<form id="wb-current-link-form">
+<label for="wb-current-link">Current private workbench link</label>
+<input id="wb-current-link" type="password" autocomplete="off" spellcheck="false" required>
+<small>Use the complete link from the current launcher. It is used only to open that local workbench; this help page does not save it.</small>
+<div class="wb-actions"><button type="submit">Open current workbench</button></div>
+<p id="wb-link-error" role="alert" hidden></p>
+</form>
+</details>
+<p class="wb-reopen-footer">A report downloaded as a complete offline file can still be read without the server. For an expired browser download link, reopen the original item to create its current download.</p>
+<noscript><p>JavaScript is disabled. Open the extracted workbench folder and double-click its Windows or Mac launcher.</p></noscript>
+</main>
+</body>
+</html>
