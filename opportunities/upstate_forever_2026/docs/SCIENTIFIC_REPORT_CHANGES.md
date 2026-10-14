@@ -84,6 +84,16 @@ Python 3.10+ and its standard library are sufficient for the comparison engine.
 The existing GIS application remains necessary to render new scientific editions;
 it is not necessary to inspect or re-compare already delivered originals.
 
+The original `model/portable_fs.py`, `model/windows_fs.py` and
+`model/portable_databases.py` helpers travel with this component and its editable
+Study/report-review source closure. They use only the standard library; the
+comparison does not import InVEST or the GIS runtime. Windows filenames and SQLite
+connections use the same long-path implementation as the rest of the application.
+Completed ZIPs are flushed with writable handles, and immutable files/directories
+are published without replacing another destination, including on filesystems
+without hard links. All existing comparison IDs, row-key plans and original report
+bytes are preserved.
+
 Run from the application/source root:
 
 ```sh
