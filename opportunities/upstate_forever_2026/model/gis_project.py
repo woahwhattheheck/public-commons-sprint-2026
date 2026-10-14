@@ -12,6 +12,7 @@ import html
 import json
 import math
 import os
+import posixpath
 from pathlib import Path, PurePosixPath
 import re
 import shutil
@@ -33,6 +34,20 @@ SCHEMA = "upstate.editable-gis/v1"
 REQUEST_SCHEMA = "upstate.gis-request/v1"
 VERSION = "1.6.0"
 CHUNK = 1024 * 1024
+
+
+# Q47: complete portable GIS filesystem callers.
+def _portable():
+    if __package__:
+        from . import gis_project_portable
+    else:
+        import importlib
+        import sys
+        parent = str(Path(__file__).resolve().parent.parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+        gis_project_portable = importlib.import_module("model.gis_project_portable")
+    return gis_project_portable
 
 
 def canonical(value: Any) -> bytes:
@@ -63,31 +78,15 @@ def load(path: Path) -> dict:
 
 
 def save(path: Path, value: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    pending = path.with_name(path.name + ".pending-" + uuid.uuid4().hex)
-    try:
-        with pending.open("xb") as out:
-            out.write(canonical(value) + b"\n")
-            out.flush()
-            os.fsync(out.fileno())
-        os.replace(pending, path)
-    finally:
-        pending.unlink(missing_ok=True)
+    _portable().save(path, canonical(value) + b"\n")
 
 
 def member(name: str) -> PurePosixPath:
-    if not isinstance(name, str) or not name or "\\" in name or "\0" in name or ":" in name:
-        raise ValueError("Use a portable relative member path")
-    p = PurePosixPath(name)
-    if p.is_absolute() or str(p) != name or any(x in (".", "..", "") for x in p.parts):
-        raise ValueError("Unsafe relative member: " + name)
-    if any(x.endswith((".", " ")) or re.fullmatch(r"(?i)(con|prn|aux|nul|com[1-9]|lpt[1-9])(\..*)?", x)
-           for x in p.parts):
-        raise ValueError("Member is not portable to Windows: " + name)
-    return p
+    return PurePosixPath(_portable().member(name))
 
 
 def local(root: Path, name: str, *, exists: bool = True) -> Path:
+    root = _portable().native_path(root)
     p = root / member(name)
     if p.is_symlink() or not p.resolve().is_relative_to(root.resolve()):
         raise ValueError("Member escapes the selected root: " + name)
@@ -112,42 +111,13 @@ def checked(root: Path, rec: dict) -> Path:
 
 @contextlib.contextmanager
 def locked(path: Path):
-    """Cross-process lock; the file remains as a harmless reusable lock anchor."""
-    path.parent.mkdir(parents=True, exist_ok=True)
-    stream = path.open("a+b")
-    try:
-        if os.name == "nt":
-            import msvcrt
-            stream.seek(0)
-            if not stream.read(1):
-                stream.write(b"0"); stream.flush()
-            stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    """Keep the shared native whole-file lock and the existing nonblocking API."""
+    with _portable().locked(path):
         yield
-    finally:
-        stream.close()
 
 
 def copy_checked(source_root: Path, rec: dict, target: Path) -> None:
-    source = checked(source_root, rec)
-    target.parent.mkdir(parents=True, exist_ok=True)
-    if target.exists():
-        if target.stat().st_size == rec["bytes"] and sha256(target) == rec["sha256"]:
-            return
-        raise ValueError("Retained staged original changed: " + str(target))
-    pending = target.with_name(target.name + ".copying")
-    try:
-        with source.open("rb") as src, pending.open("wb") as out:
-            shutil.copyfileobj(src, out, CHUNK)
-            out.flush(); os.fsync(out.fileno())
-        if pending.stat().st_size != rec["bytes"] or sha256(pending) != rec["sha256"]:
-            raise ValueError("Input changed during copy: " + rec["path"])
-        os.replace(pending, target)
-    finally:
-        pending.unlink(missing_ok=True)
+    _portable().copy_checked(source_root, rec, target)
 
 
 def _finite_bounds(bounds: Iterable[float]) -> list[float]:
@@ -912,7 +882,7 @@ def attachment_metadata(manifest: dict, attachment: dict) -> dict:
 
 
 def verify(root: Path | str, *, native: bool = True) -> dict:
-    root = Path(root).resolve(strict=True)
+    root = _portable().native_path(Path(root).resolve(strict=True))
     inv, manifest = load(root/"inventory.json"), load(root/"project.json")
     if manifest.get("schema") != SCHEMA or inv.get("schema") != SCHEMA+"/inventory":
         raise ValueError("Select an editable GIS package")
@@ -921,6 +891,7 @@ def verify(root: Path | str, *, native: bool = True) -> dict:
     expected = {r["path"] for r in inv["files"]}
     if len(expected) != len(inv["files"]):
         raise ValueError("Duplicate inventory member")
+    _portable().validate_members([*expected, "inventory.json"])
     seen = set()
     for p in root.rglob("*"):
         if p.is_symlink():
@@ -991,7 +962,8 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
     if not spec.get("title") or not isinstance(spec["title"],str):
         raise ValueError("Give the GIS handover a title")
     project_crs = CRS.from_user_input(spec["project_crs"]).to_string()
-    source_root, destination = Path(source_root).resolve(strict=True), Path(destination).resolve()
+    source_root, destination = (_portable().native_path(Path(source_root).resolve(strict=True)),
+                                _portable().native_path(Path(destination).resolve()))
     if destination.is_relative_to(source_root) and destination == source_root:
         raise ValueError("Export to a separate directory")
     identities = [item["id"] for item in [*spec["layers"], *spec.get("attachments", [])]]
@@ -1033,7 +1005,7 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
                         missing=[f for f in dataset.files if Path(f).resolve() not in original_paths]
                         if missing:
                             raise ValueError("Declare every original raster companion before export: "+", ".join(Path(f).name for f in missing))
-                common=os.path.commonpath([str(PurePosixPath(r["path"]).parent) for r in originals])
+                common=posixpath.commonpath([str(PurePosixPath(r["path"]).parent) for r in originals])
                 group=fingerprint(originals)
                 copied=[]
                 folded=set()
@@ -1089,7 +1061,7 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
                     raise ValueError("An attached source must declare table or document kind")
                 files=[]
                 original_documents=[item["file"]]+item.get("companions",[])
-                common=os.path.commonpath([str(PurePosixPath(r["path"]).parent) for r in original_documents])
+                common=posixpath.commonpath([str(PurePosixPath(r["path"]).parent) for r in original_documents])
                 group=fingerprint(original_documents) if len(original_documents)>1 else original_documents[0]["sha256"]
                 names=set()
                 for rec in original_documents:
@@ -1120,12 +1092,13 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
             tools=stage/"tools"/"model"
             tools.mkdir(parents=True,exist_ok=True)
             for name in ("gis_project.py","gis_project_cli.py","gis_project_view.html","gis_project_native.py","gis_workspace.py",
-                         "gis_vector_metadata.py","fgdc_metadata.py"):
+                         "gis_vector_metadata.py","fgdc_metadata.py","__init__.py",
+                         "gis_project_portable.py","portable_fs.py","windows_fs.py"):
                 shutil.copyfile(Path(__file__).with_name(name),tools/name)
             (stage/"progress.json").unlink(missing_ok=True)
             inventory(stage)
             result=verify(stage)
-            os.replace(stage,destination)
+            _portable().publish_directory(stage,destination)
             return {**result,"directory":str(destination),"reused":False,"elapsed_seconds":round(time.monotonic()-started,4)}
         except BaseException as exc:
             emit("failed",error={"type":type(exc).__name__,"message":str(exc)})
@@ -1133,85 +1106,16 @@ def build(spec: dict, source_root: Path | str, destination: Path | str,
 
 
 def pack(root: Path | str, destination: Path | str) -> dict:
-    root,destination=Path(root).resolve(strict=True),Path(destination).resolve()
-    result=verify(root)
-    if destination.is_relative_to(root):
-        raise ValueError("Write the ZIP outside the working GIS directory")
-    destination.parent.mkdir(parents=True,exist_ok=True)
-    temporary=destination.with_name(destination.name+".pending-"+uuid.uuid4().hex)
-    try:
-        with zipfile.ZipFile(temporary,"w",compression=zipfile.ZIP_DEFLATED,compresslevel=6,allowZip64=True) as z:
-            for p in sorted(root.rglob("*")):
-                if p.is_file():
-                    z.write(p,p.relative_to(root).as_posix())
-        with zipfile.ZipFile(temporary) as z:
-            captured=json.loads(z.read("inventory.json"))
-            for rec in captured["files"]:
-                h=hashlib.sha256();count=0
-                with z.open(rec["path"]) as data:
-                    for chunk in iter(lambda:data.read(CHUNK),b""):
-                        h.update(chunk);count+=len(chunk)
-                if count!=rec["bytes"] or h.hexdigest()!=rec["sha256"]:
-                    raise ValueError("File changed while packaging: "+rec["path"])
-        if destination.exists():
-            if sha256(destination)!=sha256(temporary):
-                raise FileExistsError("Archive destination already contains another edition")
-        else:
-            os.link(temporary,destination)
-        return {**result,"archive":str(destination),"archive_bytes":destination.stat().st_size,"archive_sha256":sha256(destination)}
-    finally:
-        temporary.unlink(missing_ok=True)
+    return _portable().pack(root, destination)
 
 
 def receive(archive: Path | str, destination: Path | str) -> dict:
-    archive,destination=Path(archive).resolve(strict=True),Path(destination).resolve()
-    if destination.exists():
-        raise FileExistsError("Receive into a new directory")
-    destination.parent.mkdir(parents=True,exist_ok=True)
-    staging=Path(tempfile.mkdtemp(prefix=".gis-receiving-",dir=destination.parent))
-    try:
-        with zipfile.ZipFile(archive) as z:
-            names=set(); folded=set()
-            for entry in z.infolist():
-                if entry.is_dir():
-                    continue
-                p=member(entry.filename)
-                norm=unicodedata.normalize("NFC",str(p)).casefold()
-                mode=entry.external_attr>>16
-                if stat.S_ISLNK(mode) or (stat.S_IFMT(mode) not in (0,stat.S_IFREG)):
-                    raise ValueError("Archive contains a nonregular member")
-                if entry.filename in names or norm in folded:
-                    raise ValueError("Archive members collide")
-                if entry.flag_bits & 1:
-                    raise ValueError("Encrypted members are not supported")
-                names.add(entry.filename);folded.add(norm)
-            if not {"inventory.json","project.json","project.qgs","project.qgz"}<=names:
-                raise ValueError("Archive lacks the editable GIS project")
-            total=sum(x.file_size for x in z.infolist())
-            if total>shutil.disk_usage(staging).free:
-                raise OSError("Receiving volume lacks space for the complete uncompressed GIS project")
-            for entry in z.infolist():
-                if entry.is_dir():
-                    continue
-                target=staging/member(entry.filename)
-                target.parent.mkdir(parents=True,exist_ok=True)
-                with z.open(entry) as src,target.open("xb") as out:
-                    shutil.copyfileobj(src,out,CHUNK)
-        result=verify(staging)
-        # Avoid replacement if another receiver completed this destination concurrently.
-        with locked(destination.parent/("."+destination.name+".lock")):
-            if destination.exists():
-                raise FileExistsError("Receiving destination was created by another operation")
-            os.replace(staging,destination)
-        return {**result,"directory":str(destination),"archive_sha256":sha256(archive)}
-    finally:
-        if staging.exists():
-            shutil.rmtree(staging)
+    return _portable().receive(archive, destination)
 
 
 def seal(root: Path | str, reason: str, *, project_file: str | None=None) -> dict:
     """Record intentional recipient edits; original source bytes stay unchanged."""
-    root=Path(root).resolve(strict=True)
+    root=_portable().native_path(Path(root).resolve(strict=True))
     if not isinstance(reason,str) or not reason.strip():
         raise ValueError("Describe the recipient's edit")
     with locked(root.parent/("."+root.name+".lock")):

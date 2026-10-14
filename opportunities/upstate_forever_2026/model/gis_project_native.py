@@ -18,15 +18,20 @@ layer identities, CRS, units, styles and the complete accompanying datasets.
 """
 from __future__ import annotations
 import argparse
+import contextlib
 import json
 import os
 from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
+import zipfile
 
-
+# The shipped tools are themselves inventoried source members. Merely importing
+# them must not add untracked bytecode to the original sender or receiving copy.
+sys.dont_write_bytecode = True
 
 
 def inspect_atlas_styles(layer, expected, *, require_original):
@@ -74,29 +79,18 @@ def inspect_atlas_styles(layer, expected, *, require_original):
     return observed
 
 
-def run(directory, output):
-    gis = _gis_module()
-    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-    from qgis.core import (QgsApplication, QgsProject, QgsMapSettings,
-                           QgsMapRendererParallelJob, QgsRectangle, Qgis)
+def _native_roundtrip(output, manifest):
+    """Release all providers before QGIS shutdown and filesystem publication."""
+    from qgis.core import (QgsProject, QgsMapSettings, QgsMapRendererParallelJob,
+                           QgsRectangle, Qgis)
     from qgis.PyQt.QtCore import QSize
     from qgis.PyQt.QtGui import QColor
-    directory, output = Path(directory).resolve(strict=True), Path(output).resolve()
-    before = gis.verify(directory, native=False)
-    if output.exists() or output.is_relative_to(directory):
-        raise FileExistsError("Choose a new receiving directory outside the sender")
-    output.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copytree(directory, output, copy_function=shutil.copyfile)
-    if os.environ.get("QGIS_PREFIX_PATH"):
-        QgsApplication.setPrefixPath(os.environ["QGIS_PREFIX_PATH"], True)
-    app = QgsApplication([], False)
-    app.initQgis()
-    started = time.monotonic()
+    project = check = settings = job = layer = None
+    loaded = {}
     try:
         project = QgsProject()
         if not project.read(str(output / "project.qgs")):
             raise ValueError("QGIS could not open the editable project")
-        manifest = gis.load(output / "project.json")
         expected = {row["key"]: row for row in manifest["layers"]}
         loaded = project.mapLayers()
         if set(loaded) != set(expected):
@@ -136,39 +130,117 @@ def run(directory, output):
         native_file = output / "project.qgz"
         if not project.write(str(native_file)):
             raise OSError("Native QGIS save failed")
+        # Cold provider reopening must not borrow open layers or GeoPackage
+        # descriptions from the first project. Windows also needs these closed
+        # before the complete receiving directory can be published.
+        job = None
+        settings.setLayers([])
+        settings = None
+        loaded.clear()
+        layer = None
+        project.clear()
+        project = None
         check = QgsProject()
         if not check.read(str(native_file)) or set(check.mapLayers()) != set(expected):
             raise ValueError("The native saved project did not reopen")
-        if any(not layer.isValid() for layer in check.mapLayers().values()):
-            raise ValueError("A layer did not reopen from the native saved edition")
         for key, layer in check.mapLayers().items():
+            if not layer.isValid():
+                raise ValueError("A layer did not reopen from the native saved edition")
             inspect_atlas_styles(layer, expected[key], require_original=not manifest.get("history"))
-        import zipfile
-        with zipfile.ZipFile(native_file) as archive:
+        return {"version": Qgis.QGIS_VERSION, "layer_count": len(rows),
+                "layers": rows, "render_errors": errors, "native_save_reopened": True}
+    finally:
+        if job is not None:
+            with contextlib.suppress(RuntimeError):
+                job.cancel()
+        job = None
+        if settings is not None:
+            settings.setLayers([])
+        settings = None
+        loaded.clear()
+        layer = None
+        if check is not None:
+            check.clear()
+        check = None
+        if project is not None:
+            project.clear()
+        project = None
+
+
+def _copy_member(source, destination):
+    fs = _filesystem()
+    incoming = fs.open_file(source, os.O_RDONLY)
+    with os.fdopen(incoming, "rb") as reader:
+        outgoing = fs.open_file(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+        with os.fdopen(outgoing, "wb") as writer:
+            shutil.copyfileobj(reader, writer, 1024 * 1024)
+            writer.flush()
+            os.fsync(writer.fileno())
+    return destination
+
+
+def run(directory, output):
+    gis, fs = _gis_module(), _filesystem()
+    os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+    from qgis.core import QgsApplication
+    directory = fs.native_path(Path(directory).resolve(strict=True))
+    output = fs.native_path(Path(output).resolve())
+    before = gis.verify(directory, native=False)
+    if output.exists() or output.is_relative_to(directory):
+        raise FileExistsError("Choose a new receiving directory outside the sender")
+    output.parent.mkdir(parents=True, exist_ok=True)
+    staging = Path(tempfile.mkdtemp(prefix=".gis-native-receiving-", dir=output.parent))
+    started = time.monotonic()
+    try:
+        shutil.copytree(directory, staging, copy_function=_copy_member, dirs_exist_ok=True)
+        manifest = gis.load(staging / "project.json")
+        if os.environ.get("QGIS_PREFIX_PATH"):
+            QgsApplication.setPrefixPath(os.environ["QGIS_PREFIX_PATH"], True)
+        app = QgsApplication([], False)
+        try:
+            app.initQgis()
+            native = _native_roundtrip(staging, manifest)
+        finally:
+            app.exitQgis()
+        # No QGIS project, renderer or provider is alive beyond this point.
+        with zipfile.ZipFile(staging / "project.qgz") as archive:
             qgs = [n for n in archive.namelist() if n.endswith(".qgs")]
             if len(qgs) != 1:
                 raise ValueError("Expected one native project XML")
-            (output / "project.qgs").write_bytes(archive.read(qgs[0]))
-        result = {"schema": "upstate.gis-native-receiving/v1", "version": Qgis.QGIS_VERSION,
-                  "layer_count": len(rows), "layers": rows, "render_errors": errors,
-                  "native_save_reopened": True, "seconds": round(time.monotonic()-started, 6)}
-        gis.save(output / "native-receiving.json", result)
+            with (staging / "project.qgs").open("wb") as writer:
+                writer.write(archive.read(qgs[0]))
+                writer.flush()
+                os.fsync(writer.fileno())
+        result = {"schema": "upstate.gis-native-receiving/v1", **native,
+                  "seconds": round(time.monotonic()-started, 6)}
+        gis.save(staging / "native-receiving.json", result)
         manifest["native_qgis"] = {"status": "opened, rendered, saved and reopened", **result}
-        gis.save(output / "project.json", manifest)
+        gis.save(staging / "project.json", manifest)
         # HTML does not depend on QGIS Python's Fiona/Rasterio installation.
-        gis.catalogue(output, manifest)
-        gis.inventory(output)
-        gis.verify(output, native=False)
+        gis.catalogue(staging, manifest)
+        gis.inventory(staging)
+        gis.verify(staging, native=False)
         if gis.verify(directory, native=False) != before:
             raise ValueError("Sender changed during native receiving")
+        # Flush native-created files through writable handles on Windows.
+        for path in staging.rglob("*"):
+            if path.is_file():
+                descriptor = fs.open_file(path, os.O_RDWR)
+                try:
+                    os.fsync(descriptor)
+                finally:
+                    os.close(descriptor)
+        for path in sorted((p for p in staging.rglob("*") if p.is_dir()),
+                           key=lambda p: len(p.parts), reverse=True):
+            fs.sync_directory(path)
+        fs.sync_directory(staging)
+        fs.publish_directory(staging, output)
         return {**result, "directory": str(output), "sender_unchanged": True}
-    except Exception:
-        # A failed native receive remains available for diagnosis, with no success record.
-        raise
-    finally:
-        project = None
-        app.exitQgis()
-
+    except Exception as error:
+        # The final destination only appears after a complete successful receive.
+        # Keep a failed staging copy for diagnosis, never overwrite an old edition.
+        raise RuntimeError("Native GIS receiving did not publish; working copy retained at "
+                           + str(staging) + ": " + str(error)) from error
 
 
 # QGIS installation bootstrap stays in this shipped helper, not the workbench runtime.
@@ -180,7 +252,7 @@ _ENV_KEYS = ("PATH", "PYTHONHOME", "PYTHONPATH", "QGIS_PREFIX_PATH", "OSGEO4W_RO
              "GDAL_DATA", "GDAL_DRIVER_PATH", "PROJ_LIB", "PROJ_DATA",
              "LD_LIBRARY_PATH", "DYLD_LIBRARY_PATH", "DYLD_FRAMEWORK_PATH")
 _PROBE_CODE = (
-    "import json,os,sys;from qgis.core import Qgis;"
+    "import json,os,sys;sys.dont_write_bytecode=True;from qgis.core import Qgis;"
     "print('ECO_QGIS_RUNTIME='+json.dumps({'executable':sys.executable,"
     "'version':Qgis.QGIS_VERSION,'environment':{k:os.environ[k] for k in "
     + repr(_ENV_KEYS) + " if k in os.environ}}))"
@@ -192,11 +264,23 @@ def _gis_module():
         from . import gis_project
     else:
         import importlib
-        parent = str(Path(__file__).resolve().parent)
+        parent = str(Path(__file__).resolve().parent.parent)
         if parent not in sys.path:
             sys.path.insert(0, parent)
-        gis_project = importlib.import_module("gis_project")
+        gis_project = importlib.import_module("model.gis_project")
     return gis_project
+
+
+def _filesystem():
+    if __package__:
+        from . import portable_fs
+    else:
+        import importlib
+        parent = str(Path(__file__).resolve().parent.parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+        portable_fs = importlib.import_module("model.portable_fs")
+    return portable_fs
 
 
 def _executable(value):
@@ -221,6 +305,7 @@ def _candidates(python=None, prefix=None):
     environment = os.environ.copy()
     environment["PYTHONIOENCODING"] = "utf-8"
     environment["PYTHONUTF8"] = "1"
+    environment["PYTHONDONTWRITEBYTECODE"] = "1"
     environment.setdefault("QT_QPA_PLATFORM", "offscreen")
     if prefix:
         path = Path(prefix).expanduser().resolve(strict=True)
@@ -282,21 +367,21 @@ def _windows_command(environment, expression):
 
 def _probe_command(executable, environment):
     child = environment.copy()
+    child["PYTHONDONTWRITEBYTECODE"] = "1"
     if executable.suffix.lower() in {".bat", ".cmd"}:
         if sys.platform != "win32":
             raise ValueError("A QGIS Windows installer wrapper requires Windows")
         # Only fixed code reaches cmd parsing. Project paths are never shell text.
         child["ECO_QGIS_WRAPPER"] = str(executable)
         child["ECO_QGIS_PROBE_CODE"] = _PROBE_CODE
-        command = _windows_command(child, '"%ECO_QGIS_WRAPPER%" -c "%ECO_QGIS_PROBE_CODE%"')
+        command = _windows_command(child, '"%ECO_QGIS_WRAPPER%" -B -c "%ECO_QGIS_PROBE_CODE%"')
     else:
-        command = [str(executable), "-c", _PROBE_CODE]
+        command = [str(executable), "-B", "-c", _PROBE_CODE]
     return command, child
 
 
 def select_runtime(python=None, prefix=None):
     """Resolve real bindings without importing an incompatible Qt into the host."""
-    import subprocess
     seen, failures = set(), []
     for executable, environment in _candidates(python, prefix):
         key = (os.path.normcase(str(executable)), environment.get("QGIS_PREFIX_PATH"))
@@ -330,6 +415,7 @@ def select_runtime(python=None, prefix=None):
             for key in _ENV_KEYS:
                 child.pop(key, None)
             child.update(configured)
+            child["PYTHONDONTWRITEBYTECODE"] = "1"
             if prefix:
                 child["QGIS_PREFIX_PATH"] = str(Path(prefix).expanduser().resolve(strict=True))
             return {"executable": str(actual), "version": runtime["version"], "environment": child}
@@ -342,8 +428,7 @@ def select_runtime(python=None, prefix=None):
 
 
 def receive(directory, output, *, python=None, prefix=None):
-    """Run the unchanged native receiving workflow in its compatible QGIS Python."""
-    import subprocess
+    """Run the native receiving workflow in its compatible QGIS Python."""
     directory = Path(directory).expanduser().resolve(strict=True)
     output = Path(output).expanduser().resolve()
     if not directory.is_dir():
@@ -352,7 +437,7 @@ def receive(directory, output, *, python=None, prefix=None):
         raise FileExistsError("Choose a new receiving directory outside the sender")
     runtime = select_runtime(python, prefix)
     request = json.dumps({"directory": str(directory), "output": str(output)}, ensure_ascii=False)
-    command = [runtime["executable"], str(Path(__file__).resolve()), "--_worker"]
+    command = [runtime["executable"], "-B", str(Path(__file__).resolve()), "--_worker"]
     process = subprocess.Popen(command, env=runtime["environment"], cwd=directory,
                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                text=True, encoding="utf-8", errors="replace")
@@ -381,12 +466,18 @@ def receive(directory, output, *, python=None, prefix=None):
 
 
 def open_project(directory):
-    """Ask the desktop to open the complete relative-path project, without waiting for it to close."""
-    import subprocess
+    """Open an editable working project; sealing belongs to the handoff operation."""
     root = Path(directory).expanduser().resolve(strict=True)
-    _gis_module().verify(root, native=False)
-    project = root / "project.qgz"
+    gis = _gis_module()
+    manifest = gis.load(gis.local(root, "project.json"))
+    if manifest.get("schema") != gis.SCHEMA:
+        raise ValueError("Select the complete extracted editable GIS directory")
+    project = gis.local(root, "project.qgz")
+    # A scientist may save ordinary QGIS edits between opening and sealing.
+    # Hash verification here would prevent reopening that legitimate working
+    # copy. Receive/verify/pack still require the full original inventory.
     child = os.environ.copy()
+    child["PYTHONDONTWRITEBYTECODE"] = "1"
     if child.get("QT_QPA_PLATFORM", "").split(":", 1)[0] in {"offscreen", "minimal"}:
         child.pop("QT_QPA_PLATFORM", None)
     if sys.platform == "win32":
@@ -403,7 +494,7 @@ def open_project(directory):
         subprocess.Popen([executable, str(project)], cwd=root, env=child, stdin=subprocess.DEVNULL,
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
     return {"state": "desktop_open_requested", "project": str(project),
-            "instruction": "Keep the extracted folder together. Edit and save the relative-path project in QGIS."}
+            "instruction": "Keep the extracted folder together. Edit and save in QGIS; close QGIS and seal intentional edits before packing a new edition."}
 
 
 def main(argv=None):
@@ -439,6 +530,9 @@ def main(argv=None):
         print(json.dumps({"error": {"type": type(error).__name__, "message": str(error)}},
                          ensure_ascii=False), file=sys.stderr)
         return 2
+    except KeyboardInterrupt:
+        print("GIS operation interrupted.", file=sys.stderr)
+        return 130
 
 
 if __name__ == "__main__":
