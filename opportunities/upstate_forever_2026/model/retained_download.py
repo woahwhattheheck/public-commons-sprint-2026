@@ -21,6 +21,8 @@ import time
 import urllib.parse
 from typing import Callable, Mapping
 
+from . import portable_fs as _fs
+
 SCHEMA = "upstate.retained-download/v1"
 COHORT_SCHEMA = "upstate.retained-download-cohort/v1"
 BLOCK = 1024 * 1024
@@ -130,12 +132,11 @@ def descriptor(ticket: Mapping) -> dict:
 
 
 def _open(path: Path, flags: int, mode: str):
-    if path.is_symlink():
+    if _fs.native_path(path).is_symlink():
         raise ValueError("A receiving member was replaced by a symbolic link: " + path.name)
-    fd = os.open(path, flags | getattr(os, "O_NOFOLLOW", 0)
-                 | getattr(os, "O_BINARY", 0), 0o600)
+    fd = _fs.open_file(path, flags | getattr(os, "O_BINARY", 0), 0o600)
     try:
-        if not stat.S_ISREG(os.fstat(fd).st_mode):
+        if not stat.S_ISREG(_fs.fd_stat(fd).st_mode):
             raise ValueError("A receiving member is not a regular file: " + path.name)
         return os.fdopen(fd, mode)
     except BaseException:
@@ -144,15 +145,7 @@ def _open(path: Path, flags: int, mode: str):
 
 
 def _sync_directory(path: Path):
-    # Windows fsync accepts regular files, not directory handles. Every body and
-    # checkpoint is flushed before publication on both supported platforms.
-    if os.name == "nt":
-        return
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    _fs.sync_directory(path)
 
 
 def now() -> str:
@@ -171,8 +164,8 @@ def read_json(path: Path):
 
 def atomic_json(path: Path, value, *, immutable=False):
     body = canonical(value) + b"\n"
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=".write-", dir=path.parent)
+    _fs.native_path(path.parent).mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=".write-", dir=_fs.native_path(path.parent))
     try:
         with os.fdopen(fd, "wb") as output:
             output.write(body)
@@ -180,13 +173,13 @@ def atomic_json(path: Path, value, *, immutable=False):
             os.fsync(output.fileno())
         if immutable:
             try:
-                os.link(temporary, path)
+                _fs.publish_file(temporary, path)
             except FileExistsError:
                 with _open(path, os.O_RDONLY, "rb") as source:
                     if source.read() != body:
                         raise ValueError("The immutable receiving plan differs")
         else:
-            os.replace(temporary, path)
+            _fs.replace(temporary, path)
         _sync_directory(path.parent)
     finally:
         with contextlib.suppress(FileNotFoundError):
@@ -195,18 +188,9 @@ def atomic_json(path: Path, value, *, immutable=False):
 
 @contextlib.contextmanager
 def held(path: Path, *, blocking=True):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with _open(path, os.O_CREAT | os.O_RDWR, "r+b") as lock:
-        if os.name == "nt":
-            import msvcrt
-            if os.fstat(lock.fileno()).st_size == 0:
-                lock.write(b"0")
-                lock.flush()
-            lock.seek(0)
-            msvcrt.locking(lock.fileno(), msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(lock.fileno(), fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+    # Use the same lock and handle ownership as the native application. Old
+    # Windows one-byte locks overlap this whole-file lock during upgrades.
+    with _fs.locked(path, blocking=blocking):
         yield
 
 
@@ -214,13 +198,13 @@ def _matches(path: Path, selected: dict) -> bool:
     """Verify an existing final file without following a replaced symlink."""
     try:
         with _open(path, os.O_RDONLY, "rb") as source:
-            before = os.fstat(source.fileno())
+            before = _fs.fd_stat(source.fileno())
             if before.st_size != selected["bytes"]:
                 return False
             h = hashlib.sha256()
             for block in iter(lambda: source.read(BLOCK), b""):
                 h.update(block)
-            after = os.fstat(source.fileno())
+            after = _fs.fd_stat(source.fileno())
             signature = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
             return (h.hexdigest() == selected["sha256"]
                     and signature(before) == signature(after))
@@ -247,7 +231,7 @@ def download(port: int, token: str, ticket: Mapping, destination,
     selected = descriptor(ticket)
     selected_transport = _transport(port, token, transport)
     destination = Path(destination).absolute()
-    destination.parent.mkdir(parents=True, exist_ok=True)
+    _fs.native_path(destination.parent).mkdir(parents=True, exist_ok=True)
     destination = destination.parent.resolve(strict=True) / destination.name
     name_key = hashlib.sha256(destination.name.encode("utf-8")).hexdigest()[:24]
     bank = destination.parent / (".upstate-download-" + name_key)
@@ -294,7 +278,7 @@ def download(port: int, token: str, ticket: Mapping, destination,
             saved = _checkpoint(checkpoint, binding, count, h)
         flags = os.O_RDWR | (os.O_CREAT if count == 0 else 0)
         with _open(partial, flags, "r+b") as output:
-            if os.fstat(output.fileno()).st_size < count:
+            if _fs.fd_stat(output.fileno()).st_size < count:
                 raise ValueError("The retained receiving prefix is shorter than its durable checkpoint")
             remaining = count
             while remaining:
@@ -371,7 +355,7 @@ def download(port: int, token: str, ticket: Mapping, destination,
         if not _matches(partial, selected):
             raise ValueError("The complete receiving file changed before publication")
         try:
-            os.link(partial, destination, follow_symlinks=False)
+            _fs.publish_file(partial, destination)
         except FileExistsError:
             if not _matches(destination, selected):
                 raise FileExistsError("A different output appeared during the original download")
@@ -400,7 +384,7 @@ def receive_cohort(port: int, token: str, tickets: list, directory,
     if not isinstance(tickets, list) or not tickets:
         raise ValueError("Select a nonempty complete download cohort")
     directory = Path(directory).absolute()
-    directory.mkdir(parents=True, exist_ok=True)
+    _fs.native_path(directory).mkdir(parents=True, exist_ok=True)
     if directory.is_symlink():
         raise ValueError("Select an ordinary receiving directory")
     directory = directory.resolve(strict=True)
