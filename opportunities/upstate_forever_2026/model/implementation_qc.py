@@ -23,6 +23,7 @@ from .implementation_schema import (
 from .portable_implementation import report_edition
 from .implementation_observations import _attachment_inventory, _retain
 from .common import describe_file, read_json, file_digest
+from .portable_fs import native_path, publish_file, sync_directory
 from . import observed_context
 
 SCHEMA = "upstate.implementation-qc-review/v1"
@@ -571,38 +572,61 @@ def _verify_archive(path, files):
         raise ImplementationError("The retained QC archive is incomplete or unreadable.") from error
 
 
-def export(workspace, plan_id, report_id, destination):
-    """Complete flat report ZIP; original Workspace backup remains the editable project transfer."""
-    inspected = inspect(workspace, plan_id, report_id)
-    root = Path(workspace.root)
-    path = Path(destination).expanduser().absolute()
+def _export_archive(workspace, files, destination, *, label, prefix):
+    """One durable flat-package writer for reviews, actions and comparisons.
+
+    Keep the complete original member inventory and file metadata. The common
+    publisher retains create-only semantics on filesystems without hard links.
+    Fsync the writable ZIP handle after its central directory has been closed.
+    """
+    root = native_path(workspace.root)
+    logical_path = Path(destination).expanduser().absolute()
+    path = native_path(logical_path)
     if path.resolve().is_relative_to(root.resolve()):
-        raise ImplementationError("Save QC exports outside the original Workspace.")
+        raise ImplementationError("Save " + label + " exports outside the original Workspace.")
     path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
+
+    def retained(*, reused=False):
         if path.is_symlink() or not path.is_file():
-            raise ImplementationError("The retained QC archive must be an ordinary file.")
-        _verify_archive(path, inspected["files"])
-        return {"path": str(path), "bytes": path.stat().st_size,
-                "sha256": file_digest(path), "report_id": report_id,
-                "reused": True}
-    descriptor, staged = tempfile.mkstemp(prefix=".qc-export-", dir=path.parent)
-    os.close(descriptor)
-    staged = Path(staged)
+            raise ImplementationError("The retained " + label + " archive must be an ordinary file.")
+        _verify_archive(path, files)
+        # Also completes a retry after publication succeeded but syncing failed.
+        sync_directory(path.parent)
+        result = {"path": str(logical_path), "bytes": path.stat().st_size,
+                  "sha256": file_digest(path)}
+        if reused:
+            result["reused"] = True
+        return result
+
+    if path.exists() or path.is_symlink():
+        return retained(reused=True)
+    descriptor, staged = tempfile.mkstemp(prefix=prefix, dir=path.parent)
+    staged = native_path(staged)
     try:
-        with zipfile.ZipFile(staged, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for item in inspected["files"]:
-                source = root / item["path"]
-                current = describe_file(root, source)
-                if current != item:
-                    raise ImplementationError("The retained QC export source changed.")
-                archive.write(source, source.name)
-        _verify_archive(staged, inspected["files"])
-        os.link(staged, path)
-        return {"path": str(path), "bytes": path.stat().st_size,
-                "sha256": file_digest(path), "report_id": report_id}
+        with os.fdopen(descriptor, "w+b") as output:
+            with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                for item in files:
+                    source = root / item["path"]
+                    if describe_file(root, source) != item:
+                        raise ImplementationError("The retained " + label + " export source changed.")
+                    archive.write(source, source.name)
+            output.flush()
+            os.fsync(output.fileno())
+        _verify_archive(staged, files)
+        try:
+            publish_file(staged, path)
+        except FileExistsError:
+            return retained(reused=True)
+        return retained()
     finally:
         staged.unlink(missing_ok=True)
+
+
+def export(workspace, plan_id, report_id, destination):
+    """Complete flat report ZIP; Workspace backup remains the editable project transfer."""
+    inspected = inspect(workspace, plan_id, report_id)
+    return {**_export_archive(workspace, inspected["files"], destination,
+                             label="QC", prefix=".qc-export-"), "report_id": report_id}
 
 
 def main(argv=None):

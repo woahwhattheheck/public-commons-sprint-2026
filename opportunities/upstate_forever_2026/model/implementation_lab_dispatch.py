@@ -13,6 +13,7 @@ import re
 import zipfile
 
 from .common import atomic_bytes, atomic_json, digest, file_digest, held, read_json
+from .portable_fs import native_path, open_file, publish_file, sync_directory
 from .implementation import ImplementationStore
 from .implementation_observation_quality import method_context
 from .implementation_schema import ImplementationError, document_digest, validate_plan
@@ -116,7 +117,7 @@ def _attachment(workspace, plan, link):
     relative = Path(reference)
     if relative.is_absolute() or ".." in relative.parts:
         raise ImplementationError("Original attachment reference must remain inside its plan")
-    root = workspace.root.resolve()
+    root = native_path(workspace.root).resolve()
     bank = (root / "implementation" / "plans" / plan["id"] / "attachments").resolve()
     source = root / relative
     if source.is_symlink() or not source.is_file() or not source.resolve().is_relative_to(bank):
@@ -210,9 +211,9 @@ def preview_dispatch(workspace, saved_plan, selection):
 def _root(workspace, dispatch_id):
     if not isinstance(dispatch_id, str) or not HEX.fullmatch(dispatch_id):
         raise ImplementationError("Choose an exact retained laboratory dispatch ID")
-    base = workspace.root.resolve() / "implementation" / "laboratory-dispatch"
+    base = native_path(workspace.root).resolve() / "implementation" / "laboratory-dispatch"
     root = base / dispatch_id
-    if (not base.resolve().is_relative_to(workspace.root.resolve()) or root.is_symlink()
+    if (not base.resolve().is_relative_to(native_path(workspace.root).resolve()) or root.is_symlink()
             or root.resolve().parent != base.resolve()):
         raise ImplementationError("The laboratory dispatch directory changed")
     return root
@@ -240,20 +241,21 @@ def _describe(root, path):
 
 def _retain_file(source, destination, expected):
     """Retain verified originals without loading attachments into memory."""
-    source, destination = Path(source), Path(destination)
+    source, destination = native_path(source), native_path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
+    if destination.exists() or destination.is_symlink():
         if (destination.is_symlink() or not destination.is_file()
                 or destination.stat().st_size != expected["bytes"]
                 or file_digest(destination) != expected["sha256"]):
             raise ImplementationError("Retained laboratory member changed: " + destination.name)
+        sync_directory(destination.parent)
         return
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(prefix=".dispatch-", dir=destination.parent, delete=False) as output:
             temporary = Path(output.name)
             checksum, size = hashlib.sha256(), 0
-            with source.open("rb") as original:
+            with os.fdopen(open_file(source, os.O_RDONLY), "rb") as original:
                 for chunk in iter(lambda: original.read(1024 * 1024), b""):
                     checksum.update(chunk)
                     size += len(chunk)
@@ -263,16 +265,12 @@ def _retain_file(source, destination, expected):
         if size != expected["bytes"] or checksum.hexdigest() != expected["sha256"]:
             raise ImplementationError("Original laboratory member changed while retaining: " + source.name)
         try:
-            os.link(temporary, destination)
+            publish_file(temporary, destination)
         except FileExistsError:
             if (destination.is_symlink() or not destination.is_file()
                     or destination.stat().st_size != size or file_digest(destination) != checksum.hexdigest()):
                 raise ImplementationError("Concurrent laboratory member differs: " + destination.name)
-        descriptor = os.open(destination.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        sync_directory(destination.parent)
     finally:
         if temporary is not None:
             temporary.unlink(missing_ok=True)
@@ -461,7 +459,7 @@ def prepare_dispatch(workspace, saved_plan, selection, *, expected_operation_id,
             "label": context["selection"]["label"], "laboratory": context["selection"]["laboratory"],
             "prepared_at": intent["prepared_at"], "status": "prepared",
             "summary": context["summary"], "files": members,
-            "directory": root.relative_to(workspace.root.resolve()).as_posix(),
+            "directory": root.relative_to(native_path(workspace.root).resolve()).as_posix(),
         }
         atomic_json(root / "receipt.json", receipt, immutable=True)
         return get_dispatch(workspace, context["plan"]["id"], context["operation_id"])
@@ -497,7 +495,7 @@ def dispatch_files(workspace, plan_id, dispatch_id):
 
 
 def list_dispatches(workspace, plan_id):
-    base = workspace.root.resolve() / "implementation" / "laboratory-dispatch"
+    base = native_path(workspace.root).resolve() / "implementation" / "laboratory-dispatch"
     items = []
     for path in sorted(base.glob("*/receipt.json")) if base.is_dir() else ():
         if path.is_symlink() or path.parent.is_symlink():
