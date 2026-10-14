@@ -218,7 +218,8 @@ class NativeJobs:
     def _new(self, task, ws, run):
         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
                         "model/native.py", "model/workspace.py", "model/common.py",
-                        "model/verified_files.py", "model/native_supervision.py")
+                        "model/verified_files.py", "model/native_supervision.py",
+                        "source_tools/process_resources.py")
         if "reuse_source_run_ids" in task["payload"]:
             source_paths += ("model/stage_cache.py", "model/native_equivalence.py",
                              "model/native_arguments.py", "model/reuse.py",
@@ -643,17 +644,12 @@ class NativeJobs:
             return process_resources(identity)
         if not identity or not identity_matches(identity):
             return {}
-        values = {}
-        try:
-            status = (Path("/proc") / str(identity["pid"]) / "status").read_text()
-            for line in status.splitlines():
-                if line.startswith(("VmRSS:", "VmHWM:", "Threads:")):
-                    key, raw = line.split(":", 1)
-                    number = int(raw.split()[0])
-                    values[{"VmRSS": "resident_bytes", "VmHWM": "peak_resident_bytes",
-                            "Threads": "threads"}[key]] = number * 1024 if key.startswith("Vm") else number
-        except (OSError, ValueError, IndexError):
-            return {}
+        from source_tools.process_resources import process_memory
+        observed = process_memory(identity["pid"])
+        values = {key: observed[key] for key in (
+            "resident_bytes", "peak_resident_bytes", "virtual_bytes", "threads",
+            "private_commit_bytes", "peak_private_commit_bytes", "page_faults")
+            if key in observed}
         return values if identity_matches(identity) else {}
 
     @staticmethod
