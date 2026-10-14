@@ -11,10 +11,11 @@ import hashlib
 import math
 import os
 from pathlib import Path
-import shutil
+import stat
 import tempfile
 import zipfile
 
+from .. import portable_fs as _fs
 from .ensemble_store import (atomic, canonical, digest, fingerprint, held, identifier,
                              now, read, verify, native_provenance)
 
@@ -55,40 +56,41 @@ def _text(value):
 
 def _copy(source, target, expected):
     """Stream and verify one immutable original; never replace an existing member."""
+    source, target = _fs.native_path(source), _fs.native_path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
+    if target.is_symlink():
+        raise ValueError('Report capture destination must be an original file: ' + str(target))
     if target.exists():
         verify(target.parent, {**expected, 'path': target.name})
         return
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(dir=target.parent, prefix='.capture-', delete=False) as out:
-            temporary = Path(out.name)
+            temporary = _fs.native_path(out.name)
             checksum, count = hashlib.sha256(), 0
-            with source.open('rb') as incoming:
+            with os.fdopen(_fs.open_file(source, os.O_RDONLY), 'rb') as incoming:
                 for chunk in iter(lambda: incoming.read(1024 * 1024), b''):
                     checksum.update(chunk)
                     count += len(chunk)
+                    if count > expected['bytes']:
+                        raise ValueError('Original ensemble grew during report capture: ' + str(source))
                     out.write(chunk)
             out.flush()
             os.fsync(out.fileno())
         if count != expected['bytes'] or checksum.hexdigest() != expected['sha256']:
             raise ValueError('Original ensemble changed during report capture: ' + str(source))
         try:
-            os.link(temporary, target)
+            _fs.publish_file(temporary, target)
         except FileExistsError:
             verify(target.parent, {**expected, 'path': target.name})
-        descriptor = os.open(target.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        _fs.sync_directory(target.parent)
     finally:
         if temporary:
             temporary.unlink(missing_ok=True)
 
 
 def _completed(directory):
-    directory = Path(directory).resolve(strict=True)
+    directory = _fs.native_path(directory).resolve(strict=True)
     state = read(directory / 'analysis.json')
     if (state.get('schema') != 'upstate.paired-raster-ensemble/v1'
             or state.get('state') != 'complete'
@@ -111,6 +113,7 @@ def _completed(directory):
         if record['path'] in members and members[record['path']] != record:
             raise ValueError('Retained ensemble members disagree on their identity')
         members[record['path']] = record
+    _fs.validate_members(members, portable=True)
     selection = state['selection']
     summary_record = read(directory / 'summary.json')
     if (read(directory / 'selection.json') != selection
@@ -286,16 +289,22 @@ def sections(state, runtime=None):
 
 def capture(project, destination, *, title=None, workspace_id=None):
     """Prepare one independently importable report source from a complete result directory."""
-    project = Path(project).resolve(strict=True)
-    destination = Path(destination).resolve()
+    project = _fs.native_path(project).resolve(strict=True)
+    destination = _fs.native_path(destination).resolve()
     if title is not None and (not isinstance(title, str) or not title.strip()):
         raise ValueError('Enter a nonempty scientific report title')
     state, reports, members = _completed(project)
     title = title.strip() if title is not None else state['selection']['title']
+    producer = _fs.native_path(__file__)
+    implementations = {
+        'producer': producer,
+        'storage_implementation': producer.with_name('ensemble_store.py'),
+        'filesystem_implementation': producer.parent.parent / 'portable_fs.py',
+        'windows_filesystem_implementation': producer.parent.parent / 'windows_fs.py',
+    }
     identity = {'edition': EDITION, 'ensemble_id': state['id'], 'workspace_id': workspace_id,
                 'title': title, 'original_members': members,
-                'producer': fingerprint(Path(__file__)),
-                'storage_implementation': fingerprint(Path(__file__).with_name('ensemble_store.py'))}
+                **{field: fingerprint(path) for field, path in implementations.items()}}
     key = digest(identity)
     root = destination / key
     destination.mkdir(parents=True, exist_ok=True)
@@ -321,11 +330,10 @@ def capture(project, destination, *, title=None, workspace_id=None):
             target = root / 'original' / name
             _copy(original, target, descriptor)
             companions.append({**descriptor, 'path': 'original/' + name})
-        for name in ('ensemble_report_source.py', 'ensemble_store.py'):
-            source = Path(__file__).with_name(name)
-            expected = identity['producer' if name == 'ensemble_report_source.py' else 'storage_implementation']
-            _copy(source, root / 'implementation' / name, expected)
-            companions.append({'path': 'implementation/' + name, **expected})
+        for field, source in implementations.items():
+            expected = identity[field]
+            _copy(source, root / 'implementation' / source.name, expected)
+            companions.append({'path': 'implementation/' + source.name, **expected})
         runtime = native_provenance(project, state, reports.get('native_provenance'))
         report_sections, summary = sections(state, runtime)
         atomic(root / 'science-summary.json', {'ensemble_id': state['id'],
@@ -362,6 +370,7 @@ def capture(project, destination, *, title=None, workspace_id=None):
                'captured_at': intent['created_at'], 'entries': [entry]}, immutable=True)
         files = companions + [{'path': name, **fingerprint(root / name)}
                               for name in ('intent.json', 'report-source.json', 'sources.json')]
+        _fs.validate_members([item['path'] for item in files] + ['report-source-record.json'], portable=True)
         record = {'schema': SCHEMA, 'id': key, 'ensemble_id': state['id'], 'state': 'complete',
                   'identity': identity, 'title': title, 'created_at': intent['created_at'],
                   'source_id': SOURCE_ID, 'files': files, 'summary': summary}
@@ -376,13 +385,14 @@ def capture(project, destination, *, title=None, workspace_id=None):
 
 
 def inspect(directory):
-    root = Path(directory).resolve(strict=True)
+    root = _fs.native_path(directory).resolve(strict=True)
     record = read(root / 'report-source-record.json')
     if (record.get('schema') != SCHEMA or record.get('state') != 'complete'
             or record.get('id') != digest(record['identity'])
             or record.get('record_sha256') != digest({key: value for key, value in record.items()
                                                     if key != 'record_sha256'})):
         raise ValueError('Retained paired ensemble report source changed')
+    _fs.validate_members([item['path'] for item in record['files']] + ['report-source-record.json'], portable=True)
     for item in record['files']:
         verify(root, item)
     return record
@@ -426,47 +436,67 @@ def prepare(workspace, selection, *, progress=None):
 
 def export_source(directory, destination):
     """Export all declared source files for normal create-only source receiving."""
-    root = Path(directory).resolve(strict=True)
+    root = _fs.native_path(directory).resolve(strict=True)
     record = inspect(root)
-    destination = Path(destination).resolve()
-    if destination.is_relative_to(root):
+    displayed_destination = Path(destination).absolute()
+    destination = _fs.native_path(displayed_destination)
+    if destination.parent.resolve().is_relative_to(root):
         raise ValueError('Keep a source archive outside its captured directory')
     destination.parent.mkdir(parents=True, exist_ok=True)
     members = {item['path']: item for item in record['files']}
     members['report-source-record.json'] = {'path': 'report-source-record.json',
                                           **fingerprint(root / 'report-source-record.json')}
+    _fs.validate_members(members, portable=True)
+    if destination.is_symlink():
+        raise ValueError('Source archive destination must be an original file')
     if destination.exists():
-        with zipfile.ZipFile(destination) as archive:
-            if set(archive.namelist()) != set(members):
-                raise ValueError('Existing archive has another scientific-source inventory')
-            for name, item in members.items():
-                checksum, count = hashlib.sha256(), 0
-                with archive.open(name) as stream:
-                    for chunk in iter(lambda: stream.read(1024 * 1024), b''):
-                        checksum.update(chunk)
-                        count += len(chunk)
-                if count != item['bytes'] or checksum.hexdigest() != item['sha256']:
-                    raise ValueError('Existing source archive changed: ' + name)
-        return {'path': str(destination), **fingerprint(destination), 'reused': True}
+        with os.fdopen(_fs.open_file(destination, os.O_RDONLY), 'rb') as original:
+            with zipfile.ZipFile(original) as archive:
+                infos = archive.infolist()
+                if len(infos) != len(members) or {info.filename for info in infos} != set(members):
+                    raise ValueError('Existing archive has another scientific-source inventory')
+                for info in infos:
+                    if (info.is_dir() or info.orig_filename != info.filename or info.flag_bits & 1
+                            or stat.S_IFMT(info.external_attr >> 16) not in (0, stat.S_IFREG)):
+                        raise ValueError('Existing source archive must contain original regular files')
+                for name, item in members.items():
+                    checksum, count = hashlib.sha256(), 0
+                    with archive.open(name) as stream:
+                        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                            checksum.update(chunk)
+                            count += len(chunk)
+                    if count != item['bytes'] or checksum.hexdigest() != item['sha256']:
+                        raise ValueError('Existing source archive changed: ' + name)
+        return {'path': str(displayed_destination), **fingerprint(destination), 'reused': True}
     temporary = None
     try:
         with tempfile.NamedTemporaryFile(dir=destination.parent, suffix='.zip', delete=False) as stream:
-            temporary = Path(stream.name)
-        with zipfile.ZipFile(temporary, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-            for name, item in sorted(members.items()):
-                path = verify(root, item)
-                info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                info.compress_type = zipfile.ZIP_DEFLATED
-                info.external_attr = 0o100644 << 16
-                with path.open('rb') as incoming, archive.open(info, 'w', force_zip64=True) as outgoing:
-                    shutil.copyfileobj(incoming, outgoing, 1024 * 1024)
-                verify(root, item)
-        with temporary.open('rb') as stream:
+            temporary = _fs.native_path(stream.name)
+            with zipfile.ZipFile(stream, 'w', compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+                for name, item in sorted(members.items()):
+                    path = verify(root, item)
+                    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                    info.compress_type = zipfile.ZIP_DEFLATED
+                    info.external_attr = 0o100644 << 16
+                    checksum, count = hashlib.sha256(), 0
+                    with os.fdopen(_fs.open_file(path, os.O_RDONLY), 'rb') as incoming:
+                        with archive.open(info, 'w', force_zip64=True) as outgoing:
+                            for chunk in iter(lambda: incoming.read(1024 * 1024), b''):
+                                count += len(chunk)
+                                if count > item['bytes']:
+                                    raise ValueError('Original report source grew during export: ' + name)
+                                checksum.update(chunk)
+                                outgoing.write(chunk)
+                    if count != item['bytes'] or checksum.hexdigest() != item['sha256']:
+                        raise ValueError('Original report source changed during export: ' + name)
+                    verify(root, item)
+            stream.flush()
             os.fsync(stream.fileno())
-        os.link(temporary, destination)
+        _fs.publish_file(temporary, destination)
+        _fs.sync_directory(destination.parent)
     except FileExistsError:
-        return export_source(root, destination)
+        return export_source(root, displayed_destination)
     finally:
         if temporary:
             temporary.unlink(missing_ok=True)
-    return {'path': str(destination), **fingerprint(destination), 'reused': False}
+    return {'path': str(displayed_destination), **fingerprint(destination), 'reused': False}
