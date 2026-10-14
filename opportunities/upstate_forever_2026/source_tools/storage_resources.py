@@ -1,6 +1,6 @@
 """Resource accounting for streamed original-source capture.
 
-Inspect the destination filesystem and the current Linux cgroup hierarchy.
+Inspect native destination capacity and memory; retain Linux cgroup accounting.
 A disk-backed HTTP range retains only its read/write buffers in process memory;
 a tmpfs range also consumes memory for every appended byte. Clean filesystem
 cache can be reclaimed under cgroup pressure; shared-memory pages cannot.
@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import re
+import sys
 
 SCHEMA = "upstate.streamed-source-capacity/v1"
 MIB = 1024 * 1024
@@ -72,11 +73,21 @@ def _beneath(path, root):
 
 def filesystem_snapshot(path, *, mounts=None):
     requested = Path(path).expanduser().absolute()
+    if os.name == "nt":
+        from model.windows_fs import native_path
+        requested = native_path(requested)
     resolved = requested.resolve(strict=False)
     probe = resolved
     while not probe.exists() and probe != probe.parent:
         probe = probe.parent
+    if probe.is_file():
+        probe = probe.parent
     stat = probe.stat()
+    if os.name == "nt":
+        from source_tools.native_resources import windows_filesystem
+        return {"requested_path": str(requested), "resolved_path": str(resolved),
+                "probe_path": str(probe), "device": stat.st_dev,
+                **windows_filesystem(probe)}
     usage = os.statvfs(probe)
     candidates = [row for row in (mounts if mounts is not None else _mounts())
                   if _beneath(str(resolved), row["mountpoint"])]
@@ -171,6 +182,9 @@ def _cgroup_sample(path, version):
 
 
 def memory_snapshot(*, mounts=None):
+    if os.name == "nt" or sys.platform == "darwin":
+        from source_tools.native_resources import native_memory
+        return native_memory("win32" if os.name == "nt" else "darwin")
     selected_mounts = mounts if mounts is not None else _mounts()
     meminfo = {}
     for line in (_text("/proc/meminfo") or "").splitlines():
