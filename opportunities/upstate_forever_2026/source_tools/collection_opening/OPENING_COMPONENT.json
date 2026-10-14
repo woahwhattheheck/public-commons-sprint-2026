@@ -40,7 +40,8 @@
       "bytes": 1410,
       "sha256": "0572bf3a058df28ab7557bc7a8a86c729a562523bc677022a3dd0e1efc59bdaf",
       "predecessor_sha256": [
-        "4cfbf7a0e5bb0ceb699805156de096ee8cfaebed55d14f313a48b239c0136073"
+        "4cfbf7a0e5bb0ceb699805156de096ee8cfaebed55d14f313a48b239c0136073",
+        "183c4b94e2570bd6eb5439ae2f44cc4c69cfbbf2e12facce9371d19e76f22aad"
       ],
       "mode": "0755"
     },
@@ -70,7 +71,8 @@
       "predecessor_sha256": [
         "5975d4ff9a4a3c491c6a104f9d2522ec48a82267ef637b83fd30ce14ecd4b25c",
         "2c1ec455fd560dc7a2e37d928a96e877f1f9084aa73a4e199ca8c208d29b3398",
-        "8ffbbbfd7eff7e16873f609caf9f33cc67662f9d099dbf61cab1c5cc94629cc1"
+        "8ffbbbfd7eff7e16873f609caf9f33cc67662f9d099dbf61cab1c5cc94629cc1",
+        "c69588b7dfa93f24c6ddb92f70c2f5e53d2c7f5ddb99acafdd633f2719770199"
       ],
       "mode": "0644"
     },
