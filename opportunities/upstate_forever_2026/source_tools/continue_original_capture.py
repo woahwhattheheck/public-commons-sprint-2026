@@ -44,7 +44,13 @@ def main(argv=None):
         # Start this same driver directly in a clean interpreter before importing
         # the selected application, so its package cannot reuse the wrong engine.
         arguments = sys.argv[1:] if argv is None else list(argv)
-        os.execv(sys.executable, [sys.executable, "-B", str(Path(__file__).resolve()), *arguments])
+        command = [sys.executable, "-B", str(Path(__file__).resolve()), *arguments]
+        if os.name == "nt":
+            # CRT execv splits unquoted spaced arguments; subprocess handles the
+            # Windows command-line quoting while keeping the selected exit code.
+            import subprocess
+            raise SystemExit(subprocess.run(command, check=False).returncode)
+        os.execv(sys.executable, command)
     sys.path.insert(0, str(application))
     from model.common import atomic_json, held, now, read_json
     from model.portable_fs import native_path
