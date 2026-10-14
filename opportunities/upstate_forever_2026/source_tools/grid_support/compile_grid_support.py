@@ -5,10 +5,17 @@ This builds physical source masks and class counts, not a model simulation.
 Original inputs are retained alongside derived masks. No raster is resampled.
 """
 from __future__ import annotations
-import argparse, csv, gzip, hashlib, json, math, resource, shutil, sys, time
+import argparse, csv, gzip, hashlib, json, math, shutil, sys, time
 from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
+# Exported source has the observer beside it; the maintained app keeps it
+# one directory above these compilers. Prefer that exact source location.
+_observer_directory = Path(__file__).resolve().parent
+if not (_observer_directory / "process_resources.py").is_file():
+    _observer_directory = _observer_directory.parent
+sys.path.insert(0, str(_observer_directory))
+from process_resources import peak_memory, retain_source
 import geopandas as gpd
 import numpy as np
 import pyogrio, rasterio, shapely
@@ -166,6 +173,7 @@ def compile_support(app,geo,out,tile=512,source_directory=None):
         shutil.copytree(planning,out/'originals/planning_basins2023',dirs_exist_ok=True)
         shutil.copytree(source,out/'originals/nlcd2025',dirs_exist_ok=True)
         shutil.copy2(Path(__file__).resolve(),out/'source/compile_grid_support.py')
+        retain_source(out/'source')
         gpkg=out/'vectors/geographic-support.gpkg'
         for name,df in native.items():df.to_file(gpkg,layer=name,driver='GPKG',engine='pyogrio',append=gpkg.exists())
         working['huc12_full']=hucs
@@ -227,6 +235,7 @@ def compile_support(app,geo,out,tile=512,source_directory=None):
         save_csv(out/'tables/original-intakes-grid-crosswalk.csv',intakes);save_json(out/'tables/geometry-working-repairs.json',repairs)
         grid={'crs':crs.to_string(),'transform':list(transform)[:6],'width':width,'height':height,'cell_count':width*height,
           'pixel_area_ha':cell_ha,'bounds':list(ref.bounds),'reference_sha256':refmeta['sha256'],'reference_source_time':refmeta['source_time']}
+    memory = peak_memory()
     result={'schema':'upstate.native-grid-support/v1','created_at_utc':started,'source_project_id':selections_doc['project_id'],
       'grid':grid,'scopes':summaries,'classes':CLASSES,'huc12':huc_rows,'intakes':intakes,'geometry_working_repairs':repairs,
       'source_selection_file':'originals/geography/source-selections.json',
@@ -243,7 +252,7 @@ def compile_support(app,geo,out,tile=512,source_directory=None):
         'Point membership uses vector geometry; containing-cell membership is recorded separately.',
         'Reuse masks only with matching CRS, dimensions and all six affine values, not nominal resolution alone.'],
       'runtime':{'started_at_utc':started,'completed_at_utc':datetime.now(timezone.utc).isoformat(),
-        'elapsed_seconds':round(time.monotonic()-tick,3),'max_resident_mb':round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,3),
+        'elapsed_seconds':round(time.monotonic()-tick,3),**memory,'max_resident_mb':memory['peak_rss_mib'],
         'tile_size':tile,'python':sys.version.split()[0],'rasterio':rasterio.__version__,'pyogrio':pyogrio.__version__,
         'gdal_vector':'.'.join(map(str,pyogrio.__gdal_version__)),'shapely':shapely.__version__}}
     save_json(out/'support-summary.json',result);return result

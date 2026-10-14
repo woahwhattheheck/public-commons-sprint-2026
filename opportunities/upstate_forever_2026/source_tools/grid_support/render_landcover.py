@@ -84,7 +84,8 @@ document.addEventListener('click',e=>{const a=e.target.closest('a[download]');if
 $('downloadCrosswalk').addEventListener('click',()=>csvDownload(filtered,'Upper_Savannah_filtered_HUC12.csv'));
 $('reset').addEventListener('click',()=>{$('search').value='';drawRows();showScope('sc_reporting');fullDomain();$('selected-huc').textContent='No watershed selected.';document.querySelectorAll('.huc.selected').forEach(n=>n.classList.remove('selected'));});
 for(const path of document.querySelectorAll('.huc'))path.addEventListener('click',()=>{document.querySelectorAll('.huc.selected').forEach(n=>n.classList.remove('selected'));path.classList.add('selected');const r=D.huc12.find(r=>r.huc12===path.dataset.huc);$('selected-huc').textContent=r.huc12+' · '+r.name+' · '+fmt(r.model_domain_cells)+' model cells';});
-$('runtime').textContent='Full-grid compilation: '+D.runtime.elapsed_seconds+' seconds; peak resident memory '+D.runtime.peak_rss_mb+' MB. Complete rectangular source class counts match the corrected original source inventory.';drawRows();showScope('sc_reporting');
+const peakMemoryLabel=runtime=>{const value=runtime.peak_rss_bytes;if(typeof value==='number'&&Number.isFinite(value)&&value>=0)return fmt(value/1048576,3)+' MiB';const legacy=runtime.peak_rss_mb??runtime.max_resident_mb;if(typeof legacy!=='number'||!Number.isFinite(legacy)||legacy<0)return 'unavailable';return fmt(legacy,3)+(runtime.memory_unit==='MiB'?' MiB':' MB (legacy recorded value)');};
+$('runtime').textContent='Full-grid compilation: '+D.runtime.elapsed_seconds+' seconds; peak resident memory '+peakMemoryLabel(D.runtime)+'. Complete rectangular source class counts match the corrected original source inventory.';drawRows();showScope('sc_reporting');
 
 let selectedHuc=null,displayedCover=[];
 const groups={forest:[41,42,43],agriculture:[81,82],developed:[21,22,23,24],wetland:[90,95]};
