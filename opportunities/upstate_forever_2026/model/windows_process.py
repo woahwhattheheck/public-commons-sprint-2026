@@ -186,11 +186,20 @@ class OwnedProcess:
         return self.returncode
     def wait(self,timeout=None):
         if self.returncode is not None:return self.returncode
-        milliseconds=0xffffffff if timeout is None else min(0xfffffffe,max(0,int(timeout*1000)))
-        result=_wait(self._handle,milliseconds)
-        if result==258:raise subprocess.TimeoutExpired(self.args,timeout)
-        if result==0xffffffff:raise ctypes.WinError(ctypes.get_last_error())
-        return self.poll()
+        deadline=None if timeout is None else time.monotonic()+timeout
+        while True:
+            # Return to Python regularly so Ctrl+C reaches the existing owned
+            # cancellation path even when the child has no console window.
+            if deadline is None:
+                milliseconds=250
+            else:
+                remaining=deadline-time.monotonic()
+                milliseconds=0 if remaining<=0 else min(250,int(remaining*1000)+1)
+            result=_wait(self._handle,milliseconds)
+            if result==0xffffffff:raise ctypes.WinError(ctypes.get_last_error())
+            if result!=258:return self.poll()
+            if deadline is not None and time.monotonic()>=deadline:
+                raise subprocess.TimeoutExpired(self.args,timeout)
     def identity(self):return _identity(self._handle,self.pid,self.names['job'])
     def terminate(self):return signal_owned(self.identity(),signal.SIGTERM)
     def kill(self):return signal_owned(self.identity(),9)
