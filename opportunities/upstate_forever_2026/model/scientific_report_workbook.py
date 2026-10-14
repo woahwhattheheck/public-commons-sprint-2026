@@ -11,6 +11,8 @@ from io import BytesIO
 import json
 from pathlib import Path
 import re
+import textwrap
+import unicodedata
 from xml.sax.saxutils import escape, quoteattr
 from zipfile import ZIP_DEFLATED, ZipFile, ZipInfo
 
@@ -64,6 +66,25 @@ def _column(index):
         index, remainder = divmod(index - 1, 26)
         value = chr(65 + remainder) + value
     return value
+
+
+def _wrapped_lines(value, width, point_size):
+    """Estimate visible wrapped lines using the actual column and font size.
+
+    Text remains untouched in the cell. Wide Unicode characters and explicit
+    newlines contribute their display width; long identifiers may wrap too.
+    The small margin covers differences among native spreadsheet font metrics.
+    """
+    capacity = max(1, int(width * 11 / point_size * .9) - 2)
+    lines = 0
+    for paragraph in value.split("\n"):
+        measured = "".join(
+            "xx" if unicodedata.east_asian_width(char) in ("W", "F")
+            else "" if unicodedata.combining(char) else char
+            for char in paragraph)
+        lines += max(1, len(textwrap.wrap(measured, width=capacity,
+                                         break_long_words=True, break_on_hyphens=False)))
+    return lines
 
 
 def _zip_member(archive, name, body):
@@ -165,20 +186,29 @@ class _Book:
                    '<selection pane="bottomLeft" activeCell="A' + str(frozen + 1) +
                    '" sqref="A' + str(frozen + 1) + '"/>')
         yield '</sheetView></sheetViews><sheetFormatPr defaultRowHeight="18"/><cols>'
-        for col in range(columns):
-            width = (sheet["widths"][col] if sheet["widths"] and col < len(sheet["widths"])
-                     else 24 if columns > 5 else 38)
+        widths = [sheet["widths"][col] if sheet["widths"] and col < len(sheet["widths"])
+                  else 24 if columns > 5 else 38 for col in range(columns)]
+        for col, width in enumerate(widths):
             yield '<col min="' + str(col + 1) + '" max="' + str(col + 1) + '" width="' + str(width) + '" customWidth="1"/>'
         yield '</cols><sheetData>'
-        external = []
+        external, merged = [], []
         for row_number, row in enumerate(rows, 1):
-            longest = max([len(cell["text"]) for cell in row] + [0])
-            line_count = max([cell["text"].count("\n") + 1 for cell in row] + [1])
-            height = min(90, max(20, line_count * 15, (min(longest, 180) // 45 + 1) * 15))
-            yield '<row r="' + str(row_number) + '" ht="' + str(height) + '" customHeight="1">'
+            style = sheet["styles"].get(row_number, 1 if row_number == sheet["header"] else 3)
+            point_size = 15 if style == 2 else 11
+            preface = row_number < sheet["header"] and len(row) == 1
+            if preface and columns > 1:
+                merged.append("A%d:%s%d" % (row_number, _column(columns), row_number))
+            line_count = max([_wrapped_lines(cell["text"],
+                                            sum(widths) if preface else widths[col], point_size)
+                              for col, cell in enumerate(row)] + [1])
+            # Introductory rows span the table; their captions and source binding
+            # must fit without asking the recipient to resize them. Preserve the
+            # compact body-row limit for long source records and continuations.
+            height = min(409 if preface else 90,
+                         max(20, line_count * (point_size * 1.4) + 5))
+            yield '<row r="' + str(row_number) + '" ht="' + str(round(height, 1)) + '" customHeight="1">'
             for col_number, cell in enumerate(row, 1):
                 address = _column(col_number) + str(row_number)
-                style = sheet["styles"].get(row_number, 1 if row_number == sheet["header"] else 3)
                 yield ('<c r="' + address + '" s="' + str(style) +
                        '" t="inlineStr"><is><t xml:space="preserve">' +
                        _text(cell["text"]) + '</t></is></c>')
@@ -188,6 +218,11 @@ class _Book:
         yield '</sheetData>'
         if sheet["filter"] and rows:
             yield '<autoFilter ref="A' + str(sheet["header"]) + ':' + last + '"/>'
+        if merged:
+            yield '<mergeCells count="' + str(len(merged)) + '">'
+            for area in merged:
+                yield '<mergeCell ref="' + area + '"/>'
+            yield '</mergeCells>'
         if external or sheet["locations"]:
             yield '<hyperlinks>'
             for index, (address, href) in enumerate(external, 1):
