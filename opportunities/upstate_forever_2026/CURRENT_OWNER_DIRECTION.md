@@ -1,18 +1,28 @@
 # Current owner direction: complete Windows and Mac Ecosystem workbench
 
-Version: `2026-10-14.1`. Owner: Bryce / Token Junkie Labs.
+Version: `2026-10-14.2`. Owner: Bryce / Token Junkie Labs.
+
+## Immediate delivery direction
+
+Bryce's [October 14, 2026, 15:52 EDT delivery direction](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1792007557669849) supersedes the previous sequencing that withheld the package until every remaining bug and native-runtime item was finished. Deliver the same complete portable **WORKING** archive now so it can be viewed while further engineering continues. Portability and usable access are the immediate deliverable; a zero-bug declaration is not a delivery requirement.
+
+Keep the original full-archive publisher and the existing private transfer/email operation. Use the current complete application and its original studies, not a source-only checkpoint, an isolated patch product, or a competing final assembly. Send its usable private download to **Bryce, brycembusiness2@gmail.com** for forwarding. Tim contact remains with Bryce. Carry the actual archive filename and available identity with that delivery, record the completed provider send, and preserve that delivered version while subsequent source and runtime work continues in the same project.
+
+The approved implementation list below remains authorized and should continue. Its unfinished items, further feature joins, extra test runs, all-platform qualification and optional review materials must not become new withholding gates for this current WORKING delivery. Describe the actual included operating routes accurately and fix observed opening failures in that existing package. A successful upload or send is reported from the provider outcome, not from a planned handoff.
 
 ## Current authorized outcome
 
-Complete the approved native Windows x64, macOS Intel and macOS Apple Silicon work. The earlier code-only planning direction is superseded by Bryce's approval of the whole implementation list. Deliver one Windows/Mac ZIP containing the shared application and original data once, all three qualified native runtimes, root double-click launchers, and readable opening/API guidance. The recipient must not need a separate Python, Node, compiler or GIS installation.
+Complete the approved native Windows x64, macOS Intel and macOS Apple Silicon work. The earlier code-only planning direction is superseded by Bryce's approval of the whole implementation list. The complete implementation target is one Windows/Mac ZIP containing the shared application and original data once, all three qualified native runtimes, root double-click launchers, and readable opening/API guidance. The recipient must not need a separate Python, Node, compiler or GIS installation for the delivered operating routes. Advance that target alongside immediate delivery of the current WORKING package; do not restart delivery sequencing when another improvement arrives.
 
 Open into **Tim — Own data**, retain all seven original workspace entries across the five study families and all82 completed scientific runs. The complete application includes native calculations, intake, maps, readable reports, backup/restore, API and the optional Assistant through its maintained configuration. Preserve source/data semantics, original IDs, saved operations, current work and attribution. Current195 is selected integration source over the complete original application; both belong in assembly.
 
-The existing local owner handles Windows native receiving/use, local process/handle behavior and private final delivery. Cloud peers perform the bulk of implementation, runtime construction, Mac work, shared fixes and release assembly. Claims coordinate changes; they do not prevent complementary work. Keep one actual writer for a shared file and compose complete changes at the existing integration point. Preserve live calculations and transport operations.
+The existing local owner handles Windows native receiving/use, local process/handle behavior and private delivery. Cloud peers perform the bulk of implementation, runtime construction, Mac work, shared fixes and release assembly. Claims coordinate changes; they do not prevent complementary work. Keep one actual writer for a shared file and compose complete changes at the existing integration point. Preserve live calculations and transport operations.
 
-Final recipient: **Bryce, brycembusiness2@gmail.com**. After the exact release has been opened and used normally, send its usable private download and exact filename/hash to Bryce. Tim contact remains with Bryce.
+Recipient: **Bryce, brycembusiness2@gmail.com**. Deliver the current complete portable WORKING copy under the immediate direction above, then continue the remaining implementation and normal product use. Tim contact remains with Bryce.
 
 ## Approved implementation list
+
+These are the complete continuing implementation requirements, not a new pre-send checklist for the current WORKING copy.
 
 Original work orders: [1–18](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791966559505019), [19–45](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791966583085769), [46–58 and delivery](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791966585016569). The later [opening/link addition59](https://tokenjunkielabs.slack.com/archives/C0BTTA66TK3/p1791967927485619) is part of the same release.
 
@@ -81,8 +91,8 @@ Original work orders: [1–18](https://tokenjunkielabs.slack.com/archives/C0BTTA
 
 ## Product use and source handling
 
-Use the actual native product and every outgoing attachment as a recipient would: open and LOOK at the rendered result, operate the relevant controls, inspect downloaded contents and cold-reopen the delivered workspace. Fix observed faults within the authorized work. Preserve the standing industrial/plain visual style and focused validation policy. Full suites, repeated accepted runs and a separate review product do not replace implementation and usable delivery.
+Use the actual native product and every outgoing attachment as a recipient would: open and LOOK at the rendered result, operate the relevant controls, inspect downloaded contents and cold-reopen the delivered workspace. Fix observed faults within the authorized work. Preserve the standing industrial/plain visual style and focused validation policy. Full suites, repeated accepted runs and a separate review product do not replace implementation and usable delivery. Reuse completed product operations and continue remaining work without withholding the current WORKING copy.
 
 Pass this version and the complete list into relevant child/provider/cloud work and handoffs. Read the standing AGENTS.md inspection instructions with this file. Keep the current repository source, producer outputs and integration records coherent; preserve prior versions as history.
 
-Retain the existing no-private-repository/no-Actions and no-llama.cpp instructions, original scientific/source/copyright controls, customer-contact rules and personal-meeting approval. This work schedules no new meeting or watcher. Existing immutable file transport continues using its original archive identity and receipts while the new native release is assembled.
+Retain the existing no-private-repository/no-Actions and no-llama.cpp instructions, original scientific/source/copyright controls, customer-contact rules and personal-meeting approval. This work schedules no new meeting or watcher. Existing immutable file transport continues using its original archive identity and receipts while the native release is advanced.
