@@ -1,0 +1,3 @@
+numpy
+jax
+dfbench==0.3.3

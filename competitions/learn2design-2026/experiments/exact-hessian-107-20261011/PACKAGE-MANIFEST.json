@@ -92,8 +92,8 @@
     },
     {
       "path": "compare_native.py",
-      "bytes": 12029,
-      "sha256": "f40b79efd6abeeef5c106a53ada015c2d10606ee20088f30f594cdddfd9a55aa"
+      "bytes": 14787,
+      "sha256": "65ac91e20f7f7ea8a966885daf9c538b628d84142e3a5a7dd83ecce9dd9c39bc"
     },
     {
       "path": "coordinate-map-110/EXTRACTION-MANIFEST.json",
@@ -119,6 +119,91 @@
       "path": "coordinate-map-110/submission.py",
       "bytes": 42436,
       "sha256": "0c0ffd4da1a9a55406c29dd3d0de0cac05a481dd853ff2a256b420325f46c9d0"
+    },
+    {
+      "path": "episode-budget-ffr130eb/fixtures_ffr130eb.py",
+      "bytes": 14519,
+      "sha256": "2342cf7d2568043b65e3d6026ce7f74a4d766a18805b4c6915ba9fdb2998c214"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/COMPETITION-LICENSE.txt",
+      "bytes": 1082,
+      "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/competition-README.md",
+      "bytes": 29624,
+      "sha256": "33fd3c55e4b18a1fa0564ce108159cf2de8c075b76a8007b15b60c5ff468d130"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/DFBENCH-LICENSE.txt",
+      "bytes": 1081,
+      "sha256": "1e9c85d2d82d75b73e3ec139a6f5810f4118cfa742f3d2c6e379c48ab2a7409e"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/evaluation-environment.md",
+      "bytes": 2314,
+      "sha256": "edb9c4d9b82df51270193080dfe9acf619a66d3b76b1b1fad0e63c59e1fb6584"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/objective-0.3.3.py",
+      "bytes": 116097,
+      "sha256": "9e2c2bb54517f59efacf4c2a59908ffd55c7fb2e15089d53263ece796e71daa2"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/Objective-API-Reference.md",
+      "bytes": 44231,
+      "sha256": "4d748ee316c059d372c8dea486ee69de899bfc6af5e7523ab11e682d6b5a13a6"
+    },
+    {
+      "path": "episode-budget-ffr130eb/official/submission.md",
+      "bytes": 9111,
+      "sha256": "60c865fb0fb069376f304234151232d8ed514050080c52ff16b9eb874125029c"
+    },
+    {
+      "path": "episode-budget-ffr130eb/README.md",
+      "bytes": 11528,
+      "sha256": "efe2309edca950ce20feffe9008efbb7343074e225d4713ccc7f74beda98dee8"
+    },
+    {
+      "path": "episode-budget-ffr130eb/requirements.txt",
+      "bytes": 25,
+      "sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee"
+    },
+    {
+      "path": "episode-budget-ffr130eb/retained-sources-before-integration.json",
+      "bytes": 38333,
+      "sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613"
+    },
+    {
+      "path": "episode-budget-ffr130eb/selected/096-selected.zip",
+      "bytes": 4884,
+      "sha256": "bc29ad0832ed28618d10880e16708d8bb2152510d1aed8317b9e96a5b837a4fa"
+    },
+    {
+      "path": "episode-budget-ffr130eb/selected/ffr130-selected.zip",
+      "bytes": 8981,
+      "sha256": "e4dda86663508a7233585a712733441ee3b7d68b6e144e8a16d9d4a3aacd776a"
+    },
+    {
+      "path": "episode-budget-ffr130eb/selected/ffr130eb-selected.zip",
+      "bytes": 11838,
+      "sha256": "b8026992a7bca26e91b0db7f1b2ce5148f741b80c4bb19d95c63c0b88fb1e9d7"
+    },
+    {
+      "path": "episode-budget-ffr130eb/selected/PACKAGES.json",
+      "bytes": 10534,
+      "sha256": "f2ba62a90efb24950eaa299f63045af8ddb1eb25498f60587d60dc2b4b1ebc2e"
+    },
+    {
+      "path": "episode-budget-ffr130eb/SOURCE_MAP.json",
+      "bytes": 2167,
+      "sha256": "3dd6ed636614d357811b96175387c1281df3841c9d85b95c576f975c0e37a79b"
+    },
+    {
+      "path": "episode-budget-ffr130eb/submission.py",
+      "bytes": 30975,
+      "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271"
     },
     {
       "path": "feasible-retention-comparison/README.md",
@@ -407,8 +492,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 16734,
-      "sha256": "f0c9224c89213c785fe170eeda0ec50863cbf0e120a4b35c08672c56225b5e0c"
+      "bytes": 17383,
+      "sha256": "0a7ed5439a7d5c28c55d86200a09c0ac759e2551a442783f89e3286b8edc5892"
     },
     {
       "path": "recoverable-polish-7f24/analysis/current14-derived.json",
@@ -512,8 +597,8 @@
     },
     {
       "path": "RUN_PLAN.json",
-      "bytes": 23333,
-      "sha256": "b52d7f02ed253666859c7d2e102c2fa7e835a08e5370cbd4f9a3edb129214673"
+      "bytes": 25082,
+      "sha256": "8019fa44c654748505fa525583a87e676749a96d432200126f6b5ba1acfaa9f1"
     },
     {
       "path": "runner/invocation.py",
@@ -547,8 +632,8 @@
     },
     {
       "path": "SOURCES.json",
-      "bytes": 38333,
-      "sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613"
+      "bytes": 40588,
+      "sha256": "a2800b5fb5e26bfe7c2d81a9a9ea534a5f11aa7efda791f8c8062e43bc589619"
     },
     {
       "path": "submission-zips/099.zip",
@@ -571,7 +656,7 @@
       "sha256": "205b7a3778e163cab1673a20dd4f3202dcad53be46be9575bed2431e7df59150"
     }
   ],
-  "revision": "r11-recoverable-polish096-native-comparison",
+  "revision": "r12-ffr130eb-episode-budget-native-integration",
   "coordinate_map_entrypoint": "coordinate-map-110/submission.py",
   "invocation_adapter": "runner/invocation.py",
   "batch_entrypoint": "batch-portfolio-d76c/submission.py",
@@ -585,5 +670,7 @@
   "incumbent096_entrypoint": "original/096/submission.py",
   "incumbent_comparison_guide": "incumbent-comparison/README.md",
   "recoverable_polish_entrypoint": "recoverable-polish-7f24/submission.py",
-  "recoverable_polish_guide": "recoverable-polish-7f24/README.md"
+  "recoverable_polish_guide": "recoverable-polish-7f24/README.md",
+  "episode_budget_entrypoint": "episode-budget-ffr130eb/submission.py",
+  "episode_budget_guide": "episode-budget-ffr130eb/README.md"
 }

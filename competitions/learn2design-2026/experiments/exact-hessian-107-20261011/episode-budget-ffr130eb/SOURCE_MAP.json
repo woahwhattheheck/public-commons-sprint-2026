@@ -1,0 +1,56 @@
+{
+  "schema": "tjlabs.l2d.episode-budget-source/v1",
+  "operation": "L2D-EPISODE-BUDGET-NATIVE-INTEGRATION-7F24-20261014",
+  "original_case": "C0C1F274SGH/1791736325.457109",
+  "source_handoff": "1792006883.007749",
+  "source_file": "F0C9DT34D0U",
+  "original_source_job": "l2d-episode-budget-complete-delivery-20261014-root-01",
+  "original_response_sha256": "85a74a295e17a38c3359f2fc1b773fc627a59b14001eca8d1e3db9868b048ecc",
+  "source_parent_sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b",
+  "candidate": {
+    "path": "episode-budget-ffr130eb/submission.py",
+    "bytes": 30975,
+    "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271"
+  },
+  "fixtures": {
+    "path": "episode-budget-ffr130eb/fixtures_ffr130eb.py",
+    "bytes": 14519,
+    "sha256": "2342cf7d2568043b65e3d6026ce7f74a4d766a18805b4c6915ba9fdb2998c214"
+  },
+  "requirements": {
+    "path": "episode-budget-ffr130eb/requirements.txt",
+    "original_path": "original/ffr130/requirements.txt",
+    "bytes": 25,
+    "sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee"
+  },
+  "official": {
+    "competition_commit": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+    "benchmark_commit": "25d7f7867938a288927c071442092f9972ac99e0",
+    "objective_sha256": "9e2c2bb54517f59efacf4c2a59908ffd55c7fb2e15089d53263ece796e71daa2",
+    "checked_date": "2026-10-14"
+  },
+  "preserved": {
+    "prior_candidates": 22,
+    "prior_phases": 17,
+    "original096": true,
+    "originalFFR130": true,
+    "all_existing_native_datasets": true
+  },
+  "native_course": {
+    "fixtures": 5,
+    "changed_only_cells": 3,
+    "topologies": [
+      7,
+      8,
+      9
+    ],
+    "algorithm_seed": 42,
+    "seconds": 180,
+    "original_runner_sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+  },
+  "status": "Source integration and complete archives prepared; actual native results stay with their retained original execution.",
+  "prior_source_manifest": {
+    "path": "episode-budget-ffr130eb/retained-sources-before-integration.json",
+    "sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613"
+  }
+}

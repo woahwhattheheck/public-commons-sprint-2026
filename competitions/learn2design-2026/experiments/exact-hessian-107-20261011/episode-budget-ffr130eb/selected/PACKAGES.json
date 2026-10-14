@@ -1,0 +1,256 @@
+{
+  "schema": "tjlabs.l2d.complete-selected-packages/v1",
+  "operation": "L2D-EPISODE-BUDGET-NATIVE-INTEGRATION-7F24-20261014",
+  "packages": [
+    {
+      "source_id": "096",
+      "path": "episode-budget-ffr130eb/selected/096-selected.zip",
+      "bytes": 4884,
+      "sha256": "bc29ad0832ed28618d10880e16708d8bb2152510d1aed8317b9e96a5b837a4fa",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096",
+        "class": "StagedTrustPortfolio096",
+        "arm_sha256": "8f7e95f6fdc60327b0aca253328146c3ffe8bc7e77e059ad1cde81650745f6ce",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+          "requirements_sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+          "companions": [],
+          "optimize_kwargs": {},
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_staged_trust_portfolio_096"
+            }
+          ]
+        },
+        "source_manifest_sha256": "a2800b5fb5e26bfe7c2d81a9a9ea534a5f11aa7efda791f8c8062e43bc589619",
+        "source_manifest_content_sha256": "e92fa6500bd3d84667fd6856c85fc1d395936f580a4467543db029bcb980c0fc",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "original/096/submission.py",
+            "bytes": 6722,
+            "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "original/096/requirements.txt",
+            "bytes": 42,
+            "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 6722,
+        "actual_original_submission": {
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": [
+        {
+          "path": "submission.py",
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 42,
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 1941,
+          "sha256": "5c6797ff4170abc3eb637829c8a0872b92e793adbf699b02c61db9c3858535eb"
+        }
+      ]
+    },
+    {
+      "source_id": "ffr130",
+      "path": "episode-budget-ffr130eb/selected/ffr130-selected.zip",
+      "bytes": 8981,
+      "sha256": "e4dda86663508a7233585a712733441ee3b7d68b6e144e8a16d9d4a3aacd776a",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "ffr130",
+        "class": "FeasibleFilterRetention130",
+        "arm_sha256": "31350dd3b65a8c87978bdff3e700054532e919787be8b8d19fd7e363d1c9cc81",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b",
+          "requirements_sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee",
+          "companions": [],
+          "optimize_kwargs": {},
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_ffr130"
+            }
+          ]
+        },
+        "source_manifest_sha256": "a2800b5fb5e26bfe7c2d81a9a9ea534a5f11aa7efda791f8c8062e43bc589619",
+        "source_manifest_content_sha256": "e92fa6500bd3d84667fd6856c85fc1d395936f580a4467543db029bcb980c0fc",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "original/ffr130/submission.py",
+            "bytes": 20780,
+            "sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "original/ffr130/requirements.txt",
+            "bytes": 25,
+            "sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1191,
+          "sha256": "fe940964f9d307b8c9b3e4df6ad4e2d10ce70d9f4d074549a4d52a5c99f746ff"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 20780,
+        "actual_original_submission": {
+          "bytes": 20780,
+          "sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": [
+        {
+          "path": "submission.py",
+          "bytes": 1191,
+          "sha256": "fe940964f9d307b8c9b3e4df6ad4e2d10ce70d9f4d074549a4d52a5c99f746ff"
+        },
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 20780,
+          "sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 25,
+          "sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 1936,
+          "sha256": "9065b4d37f28303190c170c337bba69d3b7c9e4ccbb5de480992bb4bfa3c982b"
+        }
+      ]
+    },
+    {
+      "source_id": "ffr130eb",
+      "path": "episode-budget-ffr130eb/selected/ffr130eb-selected.zip",
+      "bytes": 11838,
+      "sha256": "b8026992a7bca26e91b0db7f1b2ce5148f741b80c4bb19d95c63c0b88fb1e9d7",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "ffr130eb",
+        "class": "FeasibleFilterRetention130EB",
+        "arm_sha256": "cae7587a1a91cc0cda376454f40121a23369c213114136f5f942067228c1e53d",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271",
+          "requirements_sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee",
+          "companions": [],
+          "optimize_kwargs": {},
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_ffr130eb"
+            },
+            {
+              "path": [
+                "budget_patience"
+              ],
+              "equals": true
+            }
+          ]
+        },
+        "source_manifest_sha256": "a2800b5fb5e26bfe7c2d81a9a9ea534a5f11aa7efda791f8c8062e43bc589619",
+        "source_manifest_content_sha256": "e92fa6500bd3d84667fd6856c85fc1d395936f580a4467543db029bcb980c0fc",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "episode-budget-ffr130eb/submission.py",
+            "bytes": 30975,
+            "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "episode-budget-ffr130eb/requirements.txt",
+            "bytes": 25,
+            "sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1201,
+          "sha256": "f11eee166a580516de7a9677feb1eae3dc0265f4276ccefe5b1bfa85d6caec2d"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 30975,
+        "actual_original_submission": {
+          "bytes": 30975,
+          "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": [
+        {
+          "path": "submission.py",
+          "bytes": 1201,
+          "sha256": "f11eee166a580516de7a9677feb1eae3dc0265f4276ccefe5b1bfa85d6caec2d"
+        },
+        {
+          "path": "retained_algorithm.py",
+          "bytes": 30975,
+          "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271"
+        },
+        {
+          "path": "requirements.txt",
+          "bytes": 25,
+          "sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee"
+        },
+        {
+          "path": "THIRD_PARTY_LICENSE.txt",
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        {
+          "path": "RELEASE.json",
+          "bytes": 2055,
+          "sha256": "9da3d28e5fcd59ca685e480512f5d5370a7c53c178b46d800f35af31b23566e7"
+        }
+      ]
+    }
+  ],
+  "creation": "Complete exact five-member payloads composed under the retained release_selected.py contract; ZIP decoded and all member bytes checked. Native official validator remains in the original receiver."
+}
