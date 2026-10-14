@@ -16,6 +16,7 @@ export const ACTIVE_INCIDENT_PREDICATE = [
   'SELECT 1 FROM publication_projection_recovery p',
   'WHERE p.operation_id=i.op_id AND p.incident_id=i.id',
   'AND p.original_digest=ops.digest',
+  "AND i.reason='self_fault_admission'",
   'AND p.incident_content=i.content AND p.incident_destination=i.destination',
   "AND p.projection_version='branch-publication-content/v1'))"
 ].join('\n');
