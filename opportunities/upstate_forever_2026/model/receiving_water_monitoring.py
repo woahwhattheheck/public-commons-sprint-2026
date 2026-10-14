@@ -15,6 +15,7 @@ from pathlib import Path
 from .common import (atomic_json, canonical, describe_file, digest, file_digest,
                      held, identifier, now, read_json, verify_file)
 from . import rasters, receiving_waters as water
+from .portable_fs import native_path, publish_file, sync_directory
 
 SCHEMA = "upstate.receiving-water-monitoring/v1"
 METHOD_VERSION = "receiving-water-monitoring/1"
@@ -267,20 +268,36 @@ def _priority_totals(context, progress):
 
 
 def _link_verified(source, destination):
-    source, destination = Path(source), Path(destination)
+    """Retain complete original GIS companions without buffering raster contents.
+
+    A create-only publication preserves the existing edition. When hard links
+    are unavailable, the shared publisher streams and verifies the new copy.
+    """
+    source, destination = native_path(source), native_path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
-        if source.stat().st_size != destination.stat().st_size or file_digest(source) != file_digest(destination):
+    if source.is_symlink() or not source.is_file():
+        raise ValueError("Original monitoring companion must be a regular file")
+    before = source.stat()
+    source_digest = file_digest(source)
+
+    def verify():
+        if (destination.is_symlink() or not destination.is_file()
+                or destination.stat().st_size != before.st_size
+                or file_digest(destination) != source_digest):
             raise ValueError("Retained monitoring companion differs on resume")
-        return
-    try:
-        os.link(source, destination)
-    except FileExistsError:
-        _link_verified(source, destination)
-    except OSError:
-        # Cross-device fallback with the original atomic byte writer.
-        from .common import atomic_bytes
-        atomic_bytes(destination, source.read_bytes(), immutable=True)
+
+    if not (destination.exists() or destination.is_symlink()):
+        try:
+            publish_file(source, destination)
+        except FileExistsError:
+            # Another receiver won the race: verify, never overwrite it.
+            pass
+    verify()
+    after = source.stat()
+    if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
+            after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns, after.st_ctime_ns):
+        raise ValueError("Original monitoring companion changed during copy")
+    sync_directory(destination.parent)
 
 
 def _original_companions(workspace, context, directory):
