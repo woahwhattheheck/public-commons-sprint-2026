@@ -53,7 +53,7 @@ def compile_matcher(destination: Path) -> Path:
         raise FileExistsError(f"Preserve the existing executable: {destination}")
     destination.parent.mkdir(parents=True, exist_ok=True)
     temporary = destination.with_name(destination.name + ".pending")
-    command = [compiler, "-std=c++17", "-O2", "-Wall", "-Wextra", "-o", str(temporary), str(source)]
+    command = [compiler, *(["-municode"] if os.name == "nt" else []), "-std=c++17", "-O2", "-Wall", "-Wextra", "-o", str(temporary), str(source)]
     started = time.perf_counter()
     try:
         completed = subprocess.run(command, capture_output=True, text=True, check=False)
@@ -70,6 +70,23 @@ def compile_matcher(destination: Path) -> Path:
         "arguments": command, "elapsed_seconds": time.perf_counter() - started,
     })
     return destination
+
+
+def select_matcher(binary: Path | None = None) -> Path:
+    """Use an explicit developer binary, the qualified bundle, or a legacy binary."""
+    if binary is not None:
+        return Path(binary).resolve()
+    if __package__:
+        from .native_helpers import bundled_executable
+    else:
+        from native_helpers import bundled_executable
+    bundled = bundled_executable("matched_control_exact")
+    if bundled is not None:
+        return bundled
+    legacy = HERE / ("matched-control-exact.exe" if os.name == "nt" else "matched-control-exact")
+    if legacy.is_file():
+        return legacy
+    raise RuntimeError("The application has no bundled exact matcher for this platform; restore its native helper package or supply --binary. Developers may explicitly use --compile.")
 
 
 def binary_units(values: np.ndarray) -> tuple[np.ndarray, int]:
@@ -92,8 +109,9 @@ def binary_units(values: np.ndarray) -> tuple[np.ndarray, int]:
 
 def match_points(target_values: np.ndarray, candidate_values: np.ndarray,
                  target_ids: np.ndarray, candidate_ids: np.ndarray,
-                 binary: Path, directory: Path) -> tuple[np.ndarray, dict]:
+                 binary: Path | None, directory: Path) -> tuple[np.ndarray, dict]:
     """Return globally minimum-L1 ordered pairs, without replacement."""
+    binary = select_matcher(binary)
     target_values = np.asarray(target_values, dtype=np.float64)
     candidate_values = np.asarray(candidate_values, dtype=np.float64)
     def original_ids(values: np.ndarray, name: str) -> np.ndarray:
@@ -126,8 +144,8 @@ def match_points(target_values: np.ndarray, candidate_values: np.ndarray,
             records.tofile(stream); offset += len(ids)
     del encoded
     started = time.perf_counter()
-    result = subprocess.run([str(binary.resolve()), str(input_path), str(output_path)],
-                            capture_output=True, text=True, check=False)
+    result = subprocess.run([str(binary.resolve()), input_path.name, output_path.name],
+                            cwd=directory.resolve(), capture_output=True, text=True, check=False)
     elapsed = time.perf_counter() - started
     if result.returncode:
         raise RuntimeError(f"Exact control matcher failed ({result.returncode}): {result.stderr[-8000:]}")
@@ -158,7 +176,7 @@ def _mean(values: np.ndarray) -> float | None:
 
 def match_arrays(landcover: np.ndarray, precipitation: np.ndarray, corridor: np.ndarray,
                  valid_mask: np.ndarray, *, from_codes: Iterable[int], to_code: int,
-                 pixel_area_ha: float, binary: Path, output: Path,
+                 pixel_area_ha: float, binary: Path | None = None, output: Path,
                  reporting_mask: np.ndarray | None = None,
                  reporting_stratified: bool = False,
                  support_fields: dict[str, np.ndarray] | None = None) -> tuple[np.ndarray, dict]:
@@ -183,6 +201,7 @@ def match_arrays(landcover: np.ndarray, precipitation: np.ndarray, corridor: np.
         raise ValueError("Valid land-cover classes must be finite integers")
     if not np.isin(corr[valid], (0, 1)).all():
         raise ValueError("The complete restoration corridor must be binary on model support")
+    binary = select_matcher(binary)
     if not binary.is_file() or not os.access(binary, os.X_OK):
         raise ValueError("Supply the retained exact matcher executable, or explicitly compile it first")
     codes = list(from_codes)
@@ -366,9 +385,11 @@ def raster_main(args: argparse.Namespace) -> dict:
     area = abs(transform.a * transform.e - transform.b * transform.d) / 10000.0
     if not math.isclose(abs(transform.a), 30.0, rel_tol=0, abs_tol=1e-9) or not math.isclose(abs(transform.e), 30.0, rel_tol=0, abs_tol=1e-9) or transform.b != 0 or transform.d != 0:
         raise ValueError("This receiving course requires the owner's unchanged north-up 30 m grid")
-    binary = Path(args.binary).resolve()
     if args.compile:
-        binary = compile_matcher(binary)
+        destination = Path(args.binary) if args.binary else HERE / ("matched-control-exact.exe" if os.name == "nt" else "matched-control-exact")
+        binary = compile_matcher(destination)
+    else:
+        binary = select_matcher(Path(args.binary) if args.binary else None)
     output = Path(args.output).resolve()
     mask, result = match_arrays(values["landcover"], values["precipitation"], values["corridor"], values["domain"],
         from_codes=args.from_codes, to_code=args.to_code, pixel_area_ha=area, binary=binary, output=output,
@@ -407,7 +428,7 @@ def main() -> int:
     parser.add_argument("--support", action="append", default=[])
     parser.add_argument("--from-codes", nargs="+", type=int, default=[81,82])
     parser.add_argument("--to-code", type=int, default=41)
-    parser.add_argument("--binary", default=str(HERE / "matched-control-exact"))
+    parser.add_argument("--binary", help="Explicit numerical helper; omitted uses the source-bound platform bundle")
     parser.add_argument("--compile", action="store_true")
     args = parser.parse_args()
     started = time.perf_counter()
