@@ -3,19 +3,24 @@ from __future__ import annotations
 
 import base64
 from collections.abc import Mapping
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 import csv
 import html
 import json
 import math
+import os
 from pathlib import Path
 import re
 import shutil
 import sqlite3
+import tempfile
 import zipfile
 
 from . import gis_project as gis
+from . import portable_fs as fs
+from .portable_databases import _database_uri
 
 SCHEMA = "upstate.gis-edition-review/v1"
 VERSION = "received-gis-review/v2"
@@ -115,12 +120,12 @@ def _vector(before_root, before, after_root, after, folder):
     from pyproj import CRS
     from shapely.geometry import shape
     field = before["data"]["source_identity_field"]
-    database = folder / "features.sqlite"
+    database = fs.native_path(folder) / "features.sqlite"
     database.unlink(missing_ok=True)
-    db = sqlite3.connect(database)
-    db.execute("CREATE TABLE features (edition INTEGER, ordinal INTEGER, identity TEXT, fid TEXT, props TEXT, geom TEXT)")
+    db = sqlite3.connect(_database_uri(database, "rwc"), uri=True)
     headers = []
     try:
+        db.execute("CREATE TABLE features (edition INTEGER, ordinal INTEGER, identity TEXT, fid TEXT, props TEXT, geom TEXT)")
         for edition, root, row in ((0, before_root, before), (1, after_root, after)):
             with fiona.open(gis.local(root, row["working_path"]), layer=row["data"]["layer"]) as src:
                 headers.append({"crs": src.crs_wkt or dict(src.crs),
@@ -225,7 +230,8 @@ def _vector(before_root, before, after_root, after, folder):
                 "records": "changes.jsonl", "table": "changes.csv"}
     finally:
         db.close()
-        database.unlink(missing_ok=True)
+        for suffix in ("", "-journal", "-wal", "-shm"):
+            database.with_name(database.name + suffix).unlink(missing_ok=True)
 
 
 def _raster_header(src):
@@ -292,7 +298,7 @@ def _raster(before_root, before, after_root, after, folder):
                         om, nm = np.ma.getmaskarray(old), np.ma.getmaskarray(new)
                         of, nf = np.isfinite(old.data), np.isfinite(new.data)
                         ov, nv = (~om)&of, (~nm)&nf
-                        common, added, removed = ov&nv, (~ov)&nv, ov&(~nv)
+                        common, added, removed = ov&nv, (~ov)&(~nv)
                         counts["common_valid"] += int(common.sum())
                         counts["added_valid"] += int(added.sum())
                         counts["removed_valid"] += int(removed.sum())
@@ -418,13 +424,32 @@ def _report_html(report, directory):
     return render(report, directory)
 
 
+@contextmanager
+def _durable_output(path, mode, **options):
+    descriptor = fs.open_file(path, os.O_RDWR | os.O_CREAT | os.O_EXCL)
+    with os.fdopen(descriptor, mode, **options) as stream:
+        yield stream
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
+def _sync_outputs(directory):
+    """Commit closed native raster/CSV/HTML output before a reusable checkpoint."""
+    for path in sorted(directory.rglob("*")):
+        if path.is_file():
+            with os.fdopen(fs.open_file(path, os.O_RDWR), "r+b") as stream:
+                os.fsync(stream.fileno())
+    fs.sync_directory(directory)
+
+
 def _folder(workspace, receipt_id, review_id):
-    return workspace.root / "gis-received" / _id(receipt_id) / "reviews" / _id(review_id)
+    return fs.native_path(workspace.root) / "gis-received" / _id(receipt_id) / "reviews" / _id(review_id)
 
 
 def read(workspace, receipt_id, review_id, *, verify_files=True):
     folder = _folder(workspace, receipt_id, review_id)
-    state = gis.load(gis.local(workspace.root, (folder/"review-state.json").relative_to(workspace.root).as_posix()))
+    relative = (folder / "review-state.json").relative_to(fs.native_path(workspace.root)).as_posix()
+    state = gis.load(gis.local(workspace.root, relative))
     if (state.get("schema") != SCHEMA or state.get("id") != review_id or state.get("state") != "complete"
             or state["selection"]["receipt_id"] != receipt_id
             or state["selection"]["project_id"] != workspace.project["id"]
@@ -473,6 +498,7 @@ def review(workspace, selection, *, progress=None):
                     if directory.exists():
                         shutil.rmtree(directory)
                     directory.mkdir(parents=True)
+                    fs.sync_directory(directory.parent)
                     compare = _vector if before["data"]["kind"] == "vector" else _raster
                     comparison = compare(original[0], before, received[0], after, directory)
                     view_path = None
@@ -484,6 +510,7 @@ def review(workspace, selection, *, progress=None):
                     for source_root, source_layer in ((original[0], before), (received[0], after)):
                         for member in _members(source_root, source_layer):
                             gis.checked(source_root, member)
+                    _sync_outputs(directory)
                     value = {"selection": key, "layer_id": layer_id, "title": after["title"],
                         "kind": before["data"]["kind"], "units": after["data"]["units"],
                         "source": deepcopy(before.get("source")),
@@ -522,21 +549,30 @@ def review(workspace, selection, *, progress=None):
             gis.save(folder / "received-project.json", received[2])
             report = {**state, "state": "complete"}
             gis.save(folder / "review.json", report)
-            (folder / "REVIEW.html").write_text(_report_html(report, folder), encoding="utf-8")
-            with (folder / "layers.csv").open("w", encoding="utf-8", newline="") as stream:
-                writer = csv.DictWriter(stream, fieldnames=["layer_id", "title", "kind", "units",
-                    "working_files_changed", "comparison", "counts"])
-                writer.writeheader()
-                for row in report["layers"]:
-                    writer.writerow({key: row.get(key) for key in
-                        ("layer_id", "title", "kind", "units", "working_files_changed")} |
-                        {"comparison": row["comparison"].get("comparison", row["comparison"].get("method")),
-                         "counts": _json(row["comparison"].get("counts", {}))})
-            paths = [p for p in sorted(folder.rglob("*")) if p.is_file()
-                     and p.name not in {".review.lock", "review-state.json", "review.zip"}]
-            with zipfile.ZipFile(folder / "review.zip", "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
-                for path in paths:
-                    archive.write(path, path.relative_to(folder).as_posix())
+            with tempfile.TemporaryDirectory(prefix=".review-output-", dir=folder) as temporary:
+                staging = fs.native_path(temporary)
+                with _durable_output(staging / "REVIEW.html", "w", encoding="utf-8") as stream:
+                    stream.write(_report_html(report, folder))
+                with _durable_output(staging / "layers.csv", "w", encoding="utf-8", newline="") as stream:
+                    writer = csv.DictWriter(stream, fieldnames=["layer_id", "title", "kind", "units",
+                        "working_files_changed", "comparison", "counts"])
+                    writer.writeheader()
+                    for row in report["layers"]:
+                        writer.writerow({key: row.get(key) for key in
+                            ("layer_id", "title", "kind", "units", "working_files_changed")} |
+                            {"comparison": row["comparison"].get("comparison", row["comparison"].get("method")),
+                             "counts": _json(row["comparison"].get("counts", {}))})
+                for name in ("REVIEW.html", "layers.csv"):
+                    fs.replace(staging / name, folder / name)
+                paths = [p for p in sorted(folder.rglob("*")) if p.is_file()
+                         and p.name not in {".review.lock", "review-state.json", "review.zip"}
+                         and not any(part.startswith(".review-output-") for part in p.relative_to(folder).parts)]
+                with _durable_output(staging / "review.zip", "w+b") as stream:
+                    with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED, allowZip64=True) as archive:
+                        for path in paths:
+                            archive.write(path, path.relative_to(folder).as_posix())
+                fs.replace(staging / "review.zip", folder / "review.zip")
+                fs.sync_directory(folder)
             state["state"] = "complete"
             state["files"] = {p.relative_to(folder).as_posix(): gis.record(folder, p)
                               for p in [*paths, folder / "review.zip"]}
