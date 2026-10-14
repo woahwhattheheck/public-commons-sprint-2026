@@ -1,10 +1,9 @@
-"""Replay the declared full-population numerical capacity workload on Linux."""
+"""Replay the declared full-population numerical capacity workload on the selected native platform."""
 from __future__ import annotations
 import argparse
 import hashlib
 import json
 from pathlib import Path
-import resource
 import sys
 import time
 import numpy as np
@@ -12,6 +11,7 @@ import numpy as np
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 from precipitation_matching import match_precipitation
+from process_resources import peak_memory
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
@@ -32,11 +32,12 @@ def main() -> None:
     elapsed = time.perf_counter() - start
     if np.unique(result.candidate_positions).size != args.targets:
         raise ArithmeticError('Candidate identities are not distinct')
+    memory = peak_memory()
     out = {**result.metadata(), 'workload': 'PCG64 uniform rainfall algorithm capacity',
            'seed': args.seed, 'range_mm_year': [1000,1600],
            'elapsed_seconds': elapsed,
-           'peak_process_rss': resource.getrusage(resource.RUSAGE_SELF).ru_maxrss,
-           'peak_process_rss_unit': 'bytes' if sys.platform == 'darwin' else 'KiB',
+           **memory, 'peak_process_rss': memory['peak_rss_bytes'],
+           'peak_process_rss_unit': 'bytes',
            'platform': sys.platform, 'python': sys.version, 'numpy': np.__version__,
            'target_sha256': hashlib.sha256(a.tobytes()).hexdigest(),
            'candidate_sha256': hashlib.sha256(b.tobytes()).hexdigest(),

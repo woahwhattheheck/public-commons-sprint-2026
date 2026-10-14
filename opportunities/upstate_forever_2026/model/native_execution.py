@@ -52,76 +52,75 @@ def _resource_status():
         errors.append({"source": name, "type": type(error).__name__,
                        "message": str(error)})
 
-    try:
-        fields = {}
-        for line in Path("/proc/self/status").read_text().splitlines():
-            name, _, value = line.partition(":")
-            if name in ("VmRSS", "VmHWM", "VmSize"):
-                amount, unit = value.split()
-                if unit == "kB":
-                    fields[name + "_bytes"] = int(amount) * 1024
-            elif name == "Threads":
-                fields["threads"] = int(value)
-        result["process"] = fields
-    except (OSError, ValueError) as error:
-        problem("/proc/self/status", error)
+    from source_tools.process_resources import process_memory
+    darwin_reader = None
+    if sys.platform == "darwin":
+        from .macos_process import process_identity, process_resources
+        darwin_reader = lambda: process_resources(process_identity())
+    observed = process_memory(darwin_reader=darwin_reader)
+    errors.extend(observed.pop("read_errors", []))
+    result["platform"] = sys.platform
+    result["process"] = observed
 
-    try:
-        membership = next((line.split(":", 2)[2]
-                           for line in Path("/proc/self/cgroup").read_text().splitlines()
-                           if line.startswith("0::")), None)
-        if membership is not None:
-            def unescape(value):
-                for before, after in (("\\040", " "), ("\\011", "\t"),
-                                      ("\\012", "\n"), ("\\134", "\\")):
-                    value = value.replace(before, after)
-                return value
+    if sys.platform.startswith("linux"):
+        try:
+            membership = next((line.split(":", 2)[2]
+                               for line in Path("/proc/self/cgroup").read_text().splitlines()
+                               if line.startswith("0::")), None)
+            if membership is not None:
+                def unescape(value):
+                    for before, after in (("\\040", " "), ("\\011", "\t"),
+                                          ("\\012", "\n"), ("\\134", "\\")):
+                        value = value.replace(before, after)
+                    return value
 
-            candidates = []
-            for line in Path("/proc/self/mountinfo").read_text().splitlines():
-                left, separator, right = line.partition(" - ")
-                if not separator or right.split()[0] != "cgroup2":
-                    continue
-                fields = left.split()
-                root, mount = Path(unescape(fields[3])), Path(unescape(fields[4]))
-                try:
-                    relative = Path(membership).relative_to(root)
-                except ValueError:
-                    continue
-                if ".." not in relative.parts:
-                    candidates.append((len(root.parts), mount / relative))
-            if candidates:
-                directory = max(candidates, key=lambda row: row[0])[1]
-                group = {"version": 2, "membership": membership, "path": str(directory)}
-                for name in ("memory.current", "memory.peak", "memory.max", "memory.high",
-                             "memory.swap.current", "memory.swap.max"):
-                    try:
-                        value = (directory / name).read_text().strip()
-                        group[name] = value if value == "max" else int(value)
-                    except FileNotFoundError:
+                candidates = []
+                for line in Path("/proc/self/mountinfo").read_text().splitlines():
+                    left, separator, right = line.partition(" - ")
+                    if not separator or right.split()[0] != "cgroup2":
                         continue
-                    except (OSError, ValueError) as error:
-                        problem(str(directory / name), error)
-                for name in ("memory.events", "memory.events.local", "memory.stat"):
+                    fields = left.split()
+                    root, mount = Path(unescape(fields[3])), Path(unescape(fields[4]))
                     try:
-                        values = {key: int(value) for key, value in
-                                  (line.split() for line in (directory / name).read_text().splitlines())}
-                        if name == "memory.stat":
-                            selected = ("anon", "file", "shmem", "kernel", "file_mapped",
-                                        "file_dirty", "file_writeback", "slab", "sock",
-                                        "active_anon", "inactive_anon", "active_file", "inactive_file")
-                            values = {key: values[key] for key in selected if key in values}
-                        group[name] = values
-                    except FileNotFoundError:
+                        relative = Path(membership).relative_to(root)
+                    except ValueError:
                         continue
-                    except (OSError, ValueError) as error:
-                        problem(str(directory / name), error)
-                result["cgroup"] = group
-            else:
-                result["cgroup"] = {"version": 2, "membership": membership,
-                                    "state": "mount_not_resolved"}
-    except (OSError, ValueError, IndexError) as error:
-        problem("cgroup2", error)
+                    if ".." not in relative.parts:
+                        candidates.append((len(root.parts), mount / relative))
+                if candidates:
+                    directory = max(candidates, key=lambda row: row[0])[1]
+                    group = {"version": 2, "membership": membership, "path": str(directory)}
+                    for name in ("memory.current", "memory.peak", "memory.max", "memory.high",
+                                 "memory.swap.current", "memory.swap.max"):
+                        try:
+                            value = (directory / name).read_text().strip()
+                            group[name] = value if value == "max" else int(value)
+                        except FileNotFoundError:
+                            continue
+                        except (OSError, ValueError) as error:
+                            problem(str(directory / name), error)
+                    for name in ("memory.events", "memory.events.local", "memory.stat"):
+                        try:
+                            values = {key: int(value) for key, value in
+                                      (line.split() for line in (directory / name).read_text().splitlines())}
+                            if name == "memory.stat":
+                                selected = ("anon", "file", "shmem", "kernel", "file_mapped",
+                                            "file_dirty", "file_writeback", "slab", "sock",
+                                            "active_anon", "inactive_anon", "active_file", "inactive_file")
+                                values = {key: values[key] for key in selected if key in values}
+                            group[name] = values
+                        except FileNotFoundError:
+                            continue
+                        except (OSError, ValueError) as error:
+                            problem(str(directory / name), error)
+                    result["cgroup"] = group
+                else:
+                    result["cgroup"] = {"version": 2, "membership": membership,
+                                        "state": "mount_not_resolved"}
+        except (OSError, ValueError, IndexError) as error:
+            problem("cgroup2", error)
+    else:
+        result["cgroup"] = {"state": "not_applicable", "platform": sys.platform}
 
     # GetCacheMax initializes GDAL's cache on its first call. Read it only
     # after actual cached blocks establish that the engine already initialized

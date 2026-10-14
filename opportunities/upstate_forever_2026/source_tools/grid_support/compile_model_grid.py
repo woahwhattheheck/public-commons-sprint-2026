@@ -5,10 +5,17 @@ Original source bodies and GDAL-derived working geometries are retained. The
 result is source support, not modeled water-quality results or intake loading.
 """
 from __future__ import annotations
-import argparse,csv,hashlib,json,math,resource,shutil,sys,time,zipfile
+import argparse,csv,hashlib,json,math,shutil,sys,time,zipfile
 from contextlib import ExitStack
 from datetime import datetime,timezone
 from pathlib import Path
+# Exported source has the observer beside it; the maintained app keeps it
+# one directory above these compilers. Prefer that exact source location.
+_observer_directory = Path(__file__).resolve().parent
+if not (_observer_directory / "process_resources.py").is_file():
+    _observer_directory = _observer_directory.parent
+sys.path.insert(0, str(_observer_directory))
+from process_resources import peak_memory, retain_source
 import geopandas as gpd
 import numpy as np
 import rasterio,shapely
@@ -117,9 +124,11 @@ def compile_model_grid(geo,shp,gridfile,out,tile=512):
     shutil.copytree(shp.parent,out/'originals/planning_basins2023',dirs_exist_ok=True)
     shutil.copy2(gridfile,out/'originals/model-grid-HW13.json')
     for name in ('compile_model_grid.py','compile_grid_support.py'):shutil.copy2(Path(__file__).parent/name,out/'source'/name)
+    retain_source(out/'source')
     actual_domain=rows[0]['grid_cells'];actual_reporting=rows[1]['model_domain_cells']
     retained={'model_domain_cells':original['masks']['model-domain-30m.tif']['included_cells'],
               'sc_reporting_within_model_cells':original['masks']['sc-reporting-support-30m.tif']['included_cells']}
+    memory = peak_memory()
     result={'schema':'upstate.model-grid-support/v1','created_at_utc':start,'source_project_id':sels['project_id'],
       'grid':{**grid,'pixel_area_ha':area,'definition_sha256':digest(gridfile)},'scopes':rows,'huc12':hr,'intakes':ir,
       'geometry_working_repairs':repairs,'retained_grid_counts':retained,
@@ -134,7 +143,7 @@ def compile_model_grid(geo,shp,gridfile,out,tile=512):
         'Native NLCD source uses a different EPSG:5070 affine; these EPSG:26917 masks must not be overlaid without an explicit grid-aware operation.'],
       'method_references':['https://rasterio.readthedocs.io/en/stable/api/rasterio.features.html','https://gdal.org/en/stable/drivers/vector/esrijson.html'],
       'runtime':{'started_at_utc':start,'finished_at_utc':datetime.now(timezone.utc).isoformat(),'elapsed_seconds':round(time.monotonic()-tick,3),
-        'peak_rss_mb':round(resource.getrusage(resource.RUSAGE_SELF).ru_maxrss/1024,3),'tile_size':tile,'python':sys.version.split()[0],
+        **memory,'peak_rss_mb':memory['peak_rss_mib'],'tile_size':tile,'python':sys.version.split()[0],
         'rasterio':rasterio.__version__,'shapely':shapely.__version__}}
     save_json(out/'support-summary.json',result)
     print(json.dumps({'status':'complete','runtime':result['runtime'],'same_grid_counts':result['retained_grid_counts_match'],'scopes':rows}),flush=True)

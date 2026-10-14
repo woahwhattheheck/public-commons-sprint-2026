@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "resource-observation-portability",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "model/native_execution.py",
+        "source_tools/grid_support/compile_grid_support.py",
+        "source_tools/grid_support/compile_model_grid.py",
+        "source_tools/precipitation_matching_capacity.py",
+        "source_tools/grid_support/render_support.py",
+        "source_tools/grid_support/render_landcover.py",
+        "operator/native_jobs.py",
+        "source_tools/process_resources.py",
+        "operator/RESOURCE_OBSERVATIONS.md",
+        "integration/component_fragments/resource-observation-portability.json"
+      ]
+    }
+  }
+}
