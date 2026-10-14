@@ -1,6 +1,6 @@
 # Native runtime payload completion
 
-ECO-PORT-PAYLOAD-LINK-A9E1 / 1.0.0. This is the assembly-side completion arm of
+ECO-PORT-PAYLOAD-LINK-A9E1 / 1.0.1. This is the assembly-side completion arm of
 approved portability items 8, 48, 50 and 56. Read `CURRENT_OWNER_DIRECTION.md`
 2026-10-14.1 and the current `AGENTS.md`. The shared Windows/Mac release retains
 all seven Workspaces and the original 82 runs. These additive tools do not change
@@ -107,7 +107,8 @@ with their existing owners' payloads.
 
 ## Focused use
 
-`checks/native_payload_course.py NEW_OUTPUT` builds an actual ELF dependency
+The complete source carrier contains the manual
+`checks/native_payload_course.py NEW_OUTPUT` course. It builds an actual ELF dependency
 chain and Windows PE dependency chain, completes one selected missing package,
 checks delay/forwarded PE imports, preserves the seed, rejects a different build,
 and executes the Linux chain after a Unicode/spaced-folder move. This is a manual
@@ -119,6 +120,12 @@ container. The actual September 2 CPython 3.12.14 build artifacts selected by
 bootstrap C84D were inspected here: 17 native binaries and 65 imports each,
 no missing local libraries, minimums 11.0.0 ARM and 10.15.0 Intel. These are the
 bootstrap binaries' minima; the scientific runtimes may require a higher OS.
+The same selected Windows artifact was received and inspected: 47 native images
+and 336 loader references with no missing bundled libraries. Its `_msi.pyd`
+uses the operating system's Windows Installer `msi.dll`; it is classified as an
+OS library rather than copied into the recipient payload. Microsoft documents
+that DLL in the [Windows Installer API requirements](https://learn.microsoft.com/en-us/windows/win32/api/msiquery/nf-msiquery-msigetactivedatabase).
+The header subsystem version does not lower the supported Windows release.
 
 The full original Linux scientific runtime was independently copied, packaged
 through the source-origin adapter, extracted to a new Unicode path and relocated
@@ -128,6 +135,13 @@ course exercises packaging with retained sources; new Windows/Mac scientific
 runtime selection remains with the existing runtime builder.
 
 ## Source composition
+
+The complete carrier includes `APPLICATION_PACKET.json` with just these five
+maintained application files, exact full contents and their accepted 1.0.0
+preimages. Feed that packet into the existing installer together with the other
+selected source layers after its owner admits the five named paths. The full
+`COMPLETE_SOURCE.json` also contains the development course and results and is
+not an application-only installer input.
 
 Include `native_runtime/binary_dependencies.py`, `payload_closure.py`,
 `prefix_pack.py`, this guide and the component fragment together under
