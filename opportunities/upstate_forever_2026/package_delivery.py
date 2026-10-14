@@ -12,12 +12,13 @@ from pathlib import Path, PurePosixPath
 import stat
 import sys
 
+from model import portable_fs as _fs
 from delivery_snapshot import (DEFAULT_LIMITS, MAX_INDEX_BYTES, MAX_MANIFEST_BYTES,
                                capture_delivery, capture_limits, fingerprint,
                                relative_path, verify_capture)
 from handoff_view import render_handoff
 
-HERE = Path(__file__).resolve().parent
+HERE = _fs.native_path(__file__).resolve().parent
 
 
 def require(ok, detail):
@@ -38,14 +39,14 @@ def reject_constant(_value):
 
 
 def read_regular(path, limit):
-    fd = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    fd = _fs.open_file(_fs.native_path(path), os.O_RDONLY)
     try:
-        before = os.fstat(fd)
+        before = _fs.fd_stat(fd)
         require(stat.S_ISREG(before.st_mode) and before.st_size <= limit,
                 'Input must be a regular file within its documented byte limit')
         with os.fdopen(fd, 'rb', closefd=False) as stream:
             raw = stream.read(limit + 1)
-        after = os.fstat(fd)
+        after = _fs.fd_stat(fd)
         require(len(raw) <= limit, 'Input exceeds its byte limit')
         require((before.st_size, before.st_mtime_ns, before.st_ctime_ns) ==
                 (after.st_size, after.st_mtime_ns, after.st_ctime_ns), 'Input changed while reading')
@@ -172,9 +173,13 @@ def run_original_audit(captured_manifest, index, raster_paths, *, limits=None):
 
 
 def write_new(path, raw):
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    path = _fs.native_path(path)
+    fd = _fs.open_file(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, 'wb') as stream:
         stream.write(raw)
+        stream.flush()
+        os.fsync(stream.fileno())
+    _fs.sync_directory(path.parent)
 
 
 def json_bytes(value):
@@ -183,9 +188,10 @@ def json_bytes(value):
 
 def write_json_new(path, value, maximum):
     """Stream a new metadata member within its selected byte budget."""
+    path = _fs.native_path(path)
     encoder = json.JSONEncoder(ensure_ascii=False, indent=2,
                                sort_keys=True, allow_nan=False)
-    fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    fd = _fs.open_file(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
     with os.fdopen(fd, 'wb') as stream:
         size = 0
         for chunk in encoder.iterencode(value):
@@ -195,10 +201,15 @@ def write_json_new(path, value, maximum):
                     'Package metadata exceeds max_index_bytes=' + str(maximum))
             stream.write(raw)
         stream.write(b'\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+    _fs.sync_directory(path.parent)
 
 
 def pack(manifest_path, output, *, limits=None):
     limits = capture_limits(limits)
+    displayed_output = str(output)
+    manifest_path, output = _fs.native_path(manifest_path), _fs.native_path(output)
     raw = read_regular(manifest_path, limits['max_manifest_bytes'])
     data = parse_json(raw)
     references, raster_paths = collect_references(data, limits=limits)
@@ -248,7 +259,7 @@ def pack(manifest_path, output, *, limits=None):
     # a derivative of the inventory/audit and is outside their fingerprint.
     write_json_new(output / 'package.json', index, limits['max_index_bytes'])
     write_new(output / 'index.html', render_handoff(index, audit).encode('utf-8'))
-    print(json.dumps({'disposition': index['disposition'], 'package': str(output),
+    print(json.dumps({'disposition': index['disposition'], 'package': displayed_output,
                       'packageSha256': index['packageSha256'], 'capturedFiles': len(index['artifacts']),
                       'missingReferences': len(index['missing']), 'auditStatus': audit['status'],
                       'humanReview': index['humanReview']}, sort_keys=True))
@@ -257,6 +268,7 @@ def pack(manifest_path, output, *, limits=None):
 
 def verify(output, *, limits=None):
     limits = capture_limits(limits)
+    output = _fs.native_path(output)
     index = parse_json(read_regular(output / 'package.json', limits['max_index_bytes']))
     verify_capture(output, index, limits=limits)
     print(json.dumps({'integrity': 'MATCH', 'packageSha256': index['packageSha256'],
