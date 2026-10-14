@@ -33,3 +33,6 @@ export async function omitRecoveredUnfrozenMembers(db,digestId) {
     " AND d.state IN ('collecting','prepared') AND d.payload IS NULL AND d.attempt_at IS NULL)"
   ).bind(digestId).run();
 }
+
+// One retained representative per duplicate family, including an excluded parent.
+export const NOTICE_REPRESENTATIVE = "(m.duplicate_of IS NULL OR ( NOT EXISTS (SELECT 1 FROM owner_notice_members p WHERE p.incident_id=m.duplicate_of AND p.digest_id=m.digest_id AND p.included=1) AND NOT EXISTS (SELECT 1 FROM owner_notice_members s WHERE s.digest_id=m.digest_id AND s.included=1 AND s.duplicate_of=m.duplicate_of AND s.incident_id<m.incident_id) ))";
