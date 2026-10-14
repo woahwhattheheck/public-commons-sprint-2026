@@ -7,3 +7,28 @@
 .ci-desk [data-ci-files] td:first-child{min-width:220px}
 .ci-desk [data-ci-files] td:nth-child(3){min-width:300px}
 @media screen{.ci-scroll[aria-label$=" original preview"] table{width:max-content;min-width:100%}.ci-scroll[aria-label$=" original preview"] th,.ci-scroll[aria-label$=" original preview"] td{white-space:nowrap;max-width:none;overflow-wrap:normal}}
+
+/* Full original-table reader, independent of the saved intake draft. */
+.ci-original-dialog{width:min(1320px,calc(100vw - 24px));max-height:calc(100vh - 24px);padding:24px;border:1px solid #707a82;background:white;color:#202428;border-radius:4px}
+.ci-original-dialog::backdrop{background:rgb(0 0 0 / .35)}
+.ci-original-dialog *{box-sizing:border-box}
+.ci-original-dialog>header{display:flex;justify-content:space-between;gap:20px;align-items:start}
+.ci-original-dialog h2{font-size:24px;margin:0 0 8px}
+.ci-original-dialog p{line-height:1.5;overflow-wrap:anywhere}
+.ci-original-dialog form{display:flex;gap:12px;align-items:end;flex-wrap:wrap;margin:20px 0}
+.ci-original-dialog label{display:flex;flex-direction:column;gap:6px}
+.ci-original-dialog input,.ci-original-dialog select,.ci-original-dialog button{font:inherit;padding:9px;border:1px solid #858d94;background:white;color:inherit;border-radius:3px;max-width:100%}
+.ci-original-dialog button{cursor:pointer}
+.ci-original-dialog button:disabled{opacity:.55;cursor:default}
+.ci-original-dialog .ci-row-check{flex-direction:row;align-items:center;padding-bottom:10px}
+.ci-original-dialog .ci-row-source{font-size:13px}
+.ci-original-grid table{border-collapse:collapse;min-width:100%;width:max-content}
+.ci-original-grid th,.ci-original-grid td{padding:10px;min-width:140px;max-width:500px;text-align:left;vertical-align:top;border-bottom:1px solid #d5dade;white-space:pre-wrap;overflow-wrap:anywhere}
+.ci-original-grid th{background:#f0f2f3}
+.ci-original-grid caption{padding:10px;text-align:left;font-weight:600}
+.ci-original-grid details{margin-top:8px}
+.ci-original-grid dt{font-weight:600}.ci-original-grid dd{margin:5px 0 12px}
+.ci-row-empty{color:#5e6870;font-style:italic}
+.ci-original-dialog [hidden]{display:none!important}
+.ci-original-dialog :focus-visible{outline:3px solid #54616b;outline-offset:2px}
+@media(max-width:650px){.ci-original-dialog{padding:12px}.ci-original-dialog h2{font-size:21px}.ci-original-dialog form>label{width:100%}.ci-original-dialog button{min-height:44px}.ci-original-dialog input{width:100%}.ci-original-dialog .ci-row-check input{width:auto}}

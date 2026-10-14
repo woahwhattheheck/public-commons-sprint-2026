@@ -1,4 +1,5 @@
 /** Guided original-file intake in the maintained scientific operator. */
+import {createOriginalTableReader} from "./client_source_rows.mjs";
 import {validateMappingLibrary, createMappingTemplate, verifyMappingTemplate,
   previewMappingTemplate, applyMappingTemplate} from './client_source_mapping.mjs';
 const clone = value => JSON.parse(JSON.stringify(value));
@@ -107,6 +108,7 @@ function inspectedUploads(value){
     sha256:file.original.sha256,bytes:file.original.bytes,options:clone(file.options)}));
 }
 export function createClientSourceIntake(host){
+  const originalRows = createOriginalTableReader(host);
   let root=null,workspace=null,state=null,generation=0,busy=false,notice='',problem='',storageProblem='';
   let draft=fresh(),catalog=null,inspection=null,result=null,controller=null,invalidRaw=null,reading=0,acceptedTask=null;
   const detachedUploads=new Map();
@@ -398,6 +400,7 @@ export function createClientSourceIntake(host){
           '<details><summary>Original spatial and reading metadata</summary><dl>'+Object.entries(part).filter(([k])=>['crs','bounds','geometry','feature_count','width','height','dtype','nodata','band','declared_unit','scale','offset','header_row','formula_mode'].includes(k)).map(([k,v])=>'<div><dt>'+esc(k.replaceAll('_',' '))+'</dt><dd>'+esc(Array.isArray(v)?v.join(', '):v??'Not supplied')+'</dd></div>').join('')+'</dl></details>'+
           (part.error?'<p role="alert">'+esc(part.error.message)+'</p><p>This worksheet remains in the original workbook. Other readable worksheets remain available. Choose a different header row and inspect again to review this sheet.</p>':
             arr(part.questions).map(x=>'<p>'+esc(x)+'</p>').join('')+table(part)+
+            (part.kind==='table'?actionButton('read-rows','Read / search every original row','data-ci-file="'+fi+'" data-ci-part="'+pi+'"'):'')+
             actionButton('add-choice','Review this source','data-ci-file="'+fi+'" data-ci-part="'+pi+'" data-ci-mutating'))+'</details>').join('')+'</article>';
     }).join('')+'<div class="ci-downloads">'+downloadsHTML(inspection._downloads)+'</div>';
   }
@@ -611,6 +614,15 @@ export function createClientSourceIntake(host){
   async function click(event){
     const button=event.target.closest('[data-ci-action]');if(!button)return;
     const action=button.dataset.ciAction;
+    if(action==='read-rows'){
+      const fi=Number(button.dataset.ciFile),pi=Number(button.dataset.ciPart);
+      const file=inspection?.files?.[fi],part=file?.inspection?.parts?.[pi];
+      if(!file||part?.kind!=='table')return;
+      await originalRows.open({workspace,inspectionId:inspection.id,fileIndex:fi,partIndex:pi,
+        title:file.filename+' · '+part.name,headerRow:part.header_row,
+        original:{...file.original,filename:file.filename}});
+      return;
+    }
     if(action==='download'){download(documentCopy(),'Scientific_Source_Intake_Working.json');return;}
     if(action==='invalid'){download(invalidRaw,'Original_Unreadable_Intake_Browser.json');return;}
     if(action==='task'){await host.showTask(button.dataset.ciId);return;}
@@ -751,7 +763,7 @@ export function createClientSourceIntake(host){
     state=currentState;renderHistory();renderResult();
   }
   function suspend(){
-    controller?.abort();controller=null;root=null;generation++;reading++;busy=false;
+    originalRows.close();controller?.abort();controller=null;root=null;generation++;reading++;busy=false;
   }
   return {mount,update,suspend};
 }
