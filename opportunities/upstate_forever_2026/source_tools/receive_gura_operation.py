@@ -6,16 +6,19 @@ Workspace. Native cases run serially in isolated interpreters. The operation
 lease remains held by an active child even if this supervisor is interrupted.
 """
 from __future__ import annotations
-import argparse, contextlib, datetime, fcntl, hashlib, json, os, signal, subprocess, sys, time
+import argparse, contextlib, datetime, hashlib, json, os, signal, subprocess, sys, time
 from pathlib import Path
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from source_tools import gura_receiving
 
 def utc():
     return datetime.datetime.now(datetime.timezone.utc).isoformat()
 
 def atomic(path, value):
-    temporary = path.with_name(path.name + ".partial")
-    temporary.write_text(json.dumps(value, indent=2) + "\n", encoding="utf-8")
-    temporary.replace(path)
+    from model.common import atomic_bytes
+    atomic_bytes(path, (json.dumps(value, indent=2) + "\n").encode("utf-8"))
 
 
 def deadline(value):
@@ -50,7 +53,8 @@ def stop_requests(cutoff):
         return dict(requested)
 
     try:
-        for signum in (signal.SIGINT, signal.SIGTERM):
+        for signum in dict.fromkeys((signal.SIGINT, signal.SIGTERM,
+                                    getattr(signal, "SIGBREAK", signal.SIGINT))):
             previous[signum] = signal.getsignal(signum)
             if previous[signum] != signal.SIG_IGN:
                 signal.signal(signum, receive)
@@ -61,31 +65,7 @@ def stop_requests(cutoff):
 
 
 def stop_child(process):
-    """Stop only this invocation's new session, including its native descendants."""
-    actions = []
-    # The phase was started with start_new_session=True. Nested native-case
-    # children inherit that process group and the original operation lease.
-    for signum, grace in ((signal.SIGINT, 10), (signal.SIGTERM, 5), (signal.SIGKILL, 5)):
-        try:
-            os.killpg(process.pid, signum)
-        except ProcessLookupError:
-            break
-        actions.append({"signal": signum, "sent_at": utc()})
-        until = time.monotonic() + grace
-        while time.monotonic() < until:
-            process.poll()
-            try:
-                os.killpg(process.pid, 0)
-            except ProcessLookupError:
-                return process.wait(), actions
-            time.sleep(0.1)
-    # Never dispatch another phase if an uninterruptible descendant still owns
-    # the lease. Its inherited descriptor remains the final custody authority.
-    try:
-        code = process.wait(timeout=1)
-    except subprocess.TimeoutExpired:
-        code = None
-    return code, actions
+    return gura_receiving.stop_child(process)
 
 
 def wait_child(process, observe):
@@ -98,7 +78,7 @@ def wait_child(process, observe):
             code = process.wait(timeout=1)
         except subprocess.TimeoutExpired:
             continue
-        if code < 0 or code in (130, 137, 143):
+        if gura_receiving.interrupted(code):
             # A killed phase is a stop of this attempt, even if its caller
             # converted a nested child's signal into a conventional exit code.
             _, actions = stop_child(process)
@@ -147,9 +127,9 @@ def main(argv=None):
     root.mkdir(parents=True, exist_ok=True)
     root.joinpath("logs").mkdir(exist_ok=True)
     state_path = root / "operation.json"
-    with stop_requests(args.deadline_utc) as observe, (root / "operation.lock").open("a") as lock:
-        fcntl.flock(lock.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-        state = json.loads(state_path.read_text()) if state_path.exists() else {
+    with stop_requests(args.deadline_utc) as observe, gura_receiving.receiving_lock(
+            root / "operation.lock") as lock_fd:
+        state = json.loads(state_path.read_text(encoding="utf-8")) if state_path.exists() else {
             "schema": "commons.gura-complete-operation/v1", "created_at": utc(),
             "application": str(app), "workspace": str(workspace),
             "inputs": str(inputs) if inputs is not None else None,
@@ -167,7 +147,7 @@ def main(argv=None):
         env["GDAL_CACHEMAX"] = "64"
         env["PYTHONUNBUFFERED"] = "1"
         env["MALLOC_ARENA_MAX"] = "2"
-        env["GURA_OPERATION_LOCK_FD"] = str(lock.fileno())
+        env["GURA_OPERATION_LOCK_FD"] = str(lock_fd)
         env["GURA_OPERATION_LOCK_PATH"] = str(root / "operation.lock")
         temporary = root / "tmp"
         temporary.mkdir(exist_ok=True)
@@ -193,7 +173,7 @@ def main(argv=None):
         state["continue_argv"] = continuation
         state["execution_policy"] = {"deadline_utc": args.deadline_utc.isoformat()
                                       if args.deadline_utc else None,
-                                      "phase_children": "owned-process-session"}
+                                      "phase_children": "owned-windows-job" if os.name == "nt" else "owned-process-session"}
         state.update(state="running", pid=os.getpid(), updated_at=utc(),
                      failed_phases=[], completed_at=None)
         atomic(state_path, state)
@@ -242,9 +222,9 @@ def main(argv=None):
             process = None
             try:
                 log = log_path.open("w", encoding="utf-8")
-                process = subprocess.Popen(command, cwd=app, env=env,
+                process = gura_receiving.popen(command, cwd=app, env=env,
                                            stdout=log, stderr=subprocess.STDOUT,
-                                           pass_fds=(lock.fileno(),), start_new_session=True)
+                                           pass_fds=(lock_fd,), owned_tree=True)
             except OSError as error:
                 if log is not None:
                     log.close()
@@ -266,6 +246,8 @@ def main(argv=None):
                                 "type": type(cleanup_error).__name__,
                                 "message": str(cleanup_error)}
                         raise
+                    finally:
+                        gura_receiving.close_process(process)
             phase.update(state="complete" if code == 0 else "interrupted" if interrupted else "error",
                          exit_code=code, completed_at=utc())
             state.update(updated_at=utc())

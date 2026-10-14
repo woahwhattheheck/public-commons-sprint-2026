@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-import fcntl
 import hashlib
 import json
 import os
@@ -19,6 +18,11 @@ import subprocess
 import sys
 import tempfile
 from urllib.request import Request, urlopen
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from source_tools import gura_receiving
+from model.portable_fs import native_path, publish_file, sync_directory
 
 SCHEMA = "upstate.gura-first-receiving/v1"
 OPERATION = "GURA-NATIVE-01"
@@ -53,16 +57,8 @@ def digest(path):
 def atomic(path, value):
     body = (json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True,
                        allow_nan=False) + "\n").encode("utf-8")
-    descriptor, temporary = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
-    try:
-        with os.fdopen(descriptor, "wb") as output:
-            output.write(body)
-            output.flush()
-            os.fsync(output.fileno())
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    from model.common import atomic_bytes
+    atomic_bytes(path, body)
 
 
 def artifact(path):
@@ -70,6 +66,7 @@ def artifact(path):
 
 
 def acquire(directory):
+    directory = native_path(directory)
     directory.mkdir(parents=True, exist_ok=True)
     result = []
     for source in ARCHIVES:
@@ -92,7 +89,8 @@ def acquire(directory):
                     raise ValueError("Original archive response differs from its retained bytes: " + source["name"])
                 # Publish without replacing any original file introduced by another operator.
                 try:
-                    os.link(temporary, target)
+                    publish_file(temporary, target)
+                    sync_directory(directory)
                 except FileExistsError:
                     pass  # The exact retained size/hash is checked below.
             finally:
@@ -118,15 +116,21 @@ def execute(command, application, output, state, phase, lock_fd):
     env.setdefault("GDAL_NUM_THREADS", "1")
     # The child writes its retained log directly. Losing this orchestration caller
     # therefore does not close the child's stdout or replace its native operation.
-    # Inherit the same flock description so that a live child also owns admission.
+    # Transfer the same operation lease so that a live child also owns admission.
     with log.open("xb") as capture:
-        process = subprocess.Popen(command, cwd=application, env=env,
+        process = gura_receiving.popen(command, cwd=application, env=env,
                                    stdout=capture, stderr=subprocess.STDOUT, pass_fds=(lock_fd,))
-        row.update(pid=process.pid, state="running")
-        atomic(output / "first-receiving.json", state)
-        print(json.dumps({"operation_id": OPERATION, "phase": phase,
-                          "pid": process.pid, "log": str(log)}), flush=True)
-        code = process.wait()
+        try:
+            row.update(pid=process.pid, state="running")
+            atomic(output / "first-receiving.json", state)
+            print(json.dumps({"operation_id": OPERATION, "phase": phase,
+                              "pid": process.pid, "log": str(log)}), flush=True)
+            code = process.wait()
+        except BaseException:
+            gura_receiving.stop_child(process)
+            raise
+        finally:
+            gura_receiving.close_process(process)
     row.update(exit_code=code, finished_at=now(), state="complete" if code == 0 else "failed")
     atomic(output / "first-receiving.json", state)
     if code:
@@ -148,7 +152,9 @@ def main(argv=None):
     args = parser.parse_args(argv)
     app = args.application.resolve(strict=True)
     root = args.operation_root.resolve()
-    python = args.python.resolve(strict=True)
+    python = args.python.expanduser().absolute()
+    if not python.is_file():
+        raise ValueError("Select the received native Python executable")
     workspace = (args.workspace or root / "workspace").resolve()
     source = (args.source_directory or root / "source").resolve()
     if root == app or root.is_relative_to(app):
@@ -166,8 +172,7 @@ def main(argv=None):
     output.mkdir(exist_ok=True)
     state_path = output / "first-receiving.json"
     lock = output / ".operation.lock"
-    with lock.open("a+") as held:
-        fcntl.flock(held.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with gura_receiving.receiving_lock(lock) as lock_fd:
         state = json.loads(state_path.read_text("utf-8")) if state_path.exists() else {
             "schema": SCHEMA, "operation_id": OPERATION, "created_at": now(),
             "operation_root": str(root), "workspace": str(workspace),
@@ -203,20 +208,20 @@ def main(argv=None):
             base = [str(python), "-B", "-m", "source_tools.gura_workflow"]
             common = ["--workspace", str(workspace), "--source-directory", str(source),
                       "--archives", str(archives), "--convert", "5:8", "--convert", "5:19"]
-            execute(base + ["prepare"] + common, app, output, state, "prepare", held.fileno())
+            execute(base + ["prepare"] + common, app, output, state, "prepare", lock_fd)
             execute([str(python), "-B", "-m", "source_tools.gura_setup_review",
                      "--workspace", str(workspace), "--receiving", str(source / "receiving.json"),
                      "--request", str(app / "source/gura-scientific-setup-request.json"),
                      "--plan", str(source / "gura-comparison-plan.json"),
                      "--case", "class-5-to-8", "--case", "class-5-to-19",
                      "--output-dir", str(root / "scientific-setup")],
-                    app, output, state, "scientific-setup", held.fileno())
+                    app, output, state, "scientific-setup", lock_fd)
             execute(base + ["run"] + common + ["--backup", str(root / "gura-complete.zip")],
-                    app, output, state, "native-baseline-alternatives", held.fileno())
+                    app, output, state, "native-baseline-alternatives", lock_fd)
             execute([str(python), "-B", "-m", "source_tools.receive_scientific_setup",
                      "--workspace", str(workspace), "--catalog",
                      "--output-dir", str(root / "completed-catalog")],
-                    app, output, state, "completed-catalog", held.fileno())
+                    app, output, state, "completed-catalog", lock_fd)
             state["results"] = {}
             for label, path in (
                     ("original_receiving", source / "receiving.json"),
