@@ -6,7 +6,7 @@ This is the root-opening source component for the existing collection. Apply it 
 python source_tools/collection_opening/apply_to_collection.py /path/to/complete-collection
 ```
 
-The join accepts the recorded original root files or its own unchanged output, and preserves a differing concurrent file. It does not rewrite STUDIES.json, Workspace identities, scientific runs, data, or private operator configuration. Preserve executable ZIP modes for `.command` and `.sh` files.
+The join accepts the recorded original root files or its own unchanged output, and preserves a differing concurrent file. It preflights every source and destination before mutation. On POSIX, byte-identical root files whose modes were stripped in transit are reopened without following links and restored to their declared modes; content and mode repairs are reported separately. Content replacement uses the application's shared portable filesystem publication and synchronizes the collection root. It does not rewrite STUDIES.json, Workspace identities, scientific runs, data, or private operator configuration.
 
 Windows uses `Open_Workbench.cmd`, which validates the supplied bootstrap in PowerShell and waits for the actual selected-runtime process. macOS uses `Open_Workbench.command`, selects native Intel/Apple Silicon, verifies its interpreter with native tools, then receives the scientific runtime. Both enter the same `open_native_collection.py` and original `open_collection.py`, defaulting to the retained own-data Workspace. The Windows collection directly invokes the maintained session controller to preserve the waited process lifetime.
 
