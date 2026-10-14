@@ -545,6 +545,117 @@
           }
         ]
       }
+    },
+    {
+      "id": "099-prefeasible-off-regional",
+      "class": "PreFeasibleRecoveryPortfolioRegional",
+      "submission": "prefeasible-recovery-regional/submission.py",
+      "submission_bytes": 21232,
+      "submission_sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "requirements": "prefeasible-recovery-regional/requirements.txt",
+      "requirements_sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+      "source_owner": "REGIONAL pre-feasibility successor of original099 anchor-state source; original source and all three selected modes retained unchanged.",
+      "based_on_submission_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "backtracking_state": "anchor",
+          "prefeasible_recovery": "off",
+          "prefeasible_fraction": 0.1,
+          "prefeasible_min_streak": 12,
+          "prefeasible_max_streak": 80,
+          "prefeasible_max_restarts": 4,
+          "prefeasible_budget_fraction": 0.5
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "backtracking_state"
+            ],
+            "equals": "anchor"
+          },
+          {
+            "path": [
+              "prefeasible_recovery"
+            ],
+            "equals": "off"
+          }
+        ]
+      }
+    },
+    {
+      "id": "099-prefeasible-restart-regional",
+      "class": "PreFeasibleRecoveryPortfolioRegional",
+      "submission": "prefeasible-recovery-regional/submission.py",
+      "submission_bytes": 21232,
+      "submission_sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "requirements": "prefeasible-recovery-regional/requirements.txt",
+      "requirements_sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+      "source_owner": "REGIONAL pre-feasibility successor of original099 anchor-state source; original source and all three selected modes retained unchanged.",
+      "based_on_submission_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "backtracking_state": "anchor",
+          "prefeasible_recovery": "restart",
+          "prefeasible_fraction": 0.1,
+          "prefeasible_min_streak": 12,
+          "prefeasible_max_streak": 80,
+          "prefeasible_max_restarts": 4,
+          "prefeasible_budget_fraction": 0.5
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "backtracking_state"
+            ],
+            "equals": "anchor"
+          },
+          {
+            "path": [
+              "prefeasible_recovery"
+            ],
+            "equals": "restart"
+          }
+        ]
+      }
+    },
+    {
+      "id": "099-prefeasible-restart-penalty-regional",
+      "class": "PreFeasibleRecoveryPortfolioRegional",
+      "submission": "prefeasible-recovery-regional/submission.py",
+      "submission_bytes": 21232,
+      "submission_sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "requirements": "prefeasible-recovery-regional/requirements.txt",
+      "requirements_sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+      "source_owner": "REGIONAL pre-feasibility successor of original099 anchor-state source; original source and all three selected modes retained unchanged.",
+      "based_on_submission_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {
+          "backtracking_state": "anchor",
+          "prefeasible_recovery": "restart_penalty",
+          "prefeasible_fraction": 0.1,
+          "prefeasible_min_streak": 12,
+          "prefeasible_max_streak": 80,
+          "prefeasible_max_restarts": 4,
+          "prefeasible_budget_fraction": 0.5
+        },
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "backtracking_state"
+            ],
+            "equals": "anchor"
+          },
+          {
+            "path": [
+              "prefeasible_recovery"
+            ],
+            "equals": "restart_penalty"
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -607,7 +718,7 @@
   },
   "phase_operator": {
     "path": "run_phase.py",
-    "sha256": "f4a8100c0e566b40b8152303dfe51fb792ad4784c0bdc2cd4a933d07b40b4325",
+    "sha256": "bdf7658fc4883271ee5cf5abdde0b84d70b3d2715e039c61b1fb56a4ec8edd56",
     "semantics": "One source-pinned serial phase inside an existing allocation; original native runner/context; isolated empty per-cell bounded caches; retain every native outcome and interrupted attempt; raw results export."
   },
   "source_carrier": {
@@ -637,6 +748,23 @@
       "source_sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4",
       "treatment": "Restore immutable accepted-anchor Optax state on rejected/nonfinite rollback; legacy control carries the original rolling state. All other algorithm settings retained.",
       "performance": "Unmeasured; existing v7 summary motivates inspection and does not measure this candidate."
+    },
+    "prefeasible_recovery_experiment": {
+      "operation": "L2D-PREFEASIBLE-NATIVE-INTEGRATION-20261014",
+      "source_sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "source_bytes": 21232,
+      "base_commit": "36a66a03bddd458d8f526bc1953fafa34b8b19ec",
+      "source_preserved": true,
+      "source_arms": [
+        "099-prefeasible-off-regional",
+        "099-prefeasible-restart-regional",
+        "099-prefeasible-restart-penalty-regional"
+      ],
+      "guide": "prefeasible-recovery-regional/README.md",
+      "source_map": "prefeasible-recovery-regional/SOURCE_MAP.json",
+      "recovery_condition": "No finite usable feasible optimizer point retained; an aux-feasible result with nonfinite loss or gradient does not disable recovery.",
+      "performance": "Measured results come from these exact arms in a fresh native phase. Retained v7 histories belong to their original 096/099 sources.",
+      "organizer_commit": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70"
     }
   }
 }

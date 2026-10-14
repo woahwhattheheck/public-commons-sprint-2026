@@ -1,0 +1,163 @@
+{
+  "schema": "commons.source-map/v1",
+  "operation": "L2D-PREFEASIBLE-NATIVE-INTEGRATION-20261014",
+  "repository": "woahwhattheheck/public-commons-sprint-2026",
+  "base_commit": "36a66a03bddd458d8f526bc1953fafa34b8b19ec",
+  "original_thread": "https://tokenjunkielabs.slack.com/archives/C0C1F274SGH/p1791736325457109",
+  "original_source_parts": [
+    "F0C91BD2H5L",
+    "F0C8Y1NB11B"
+  ],
+  "original_source_members": [
+    {
+      "path": "official/docs__dfbench__Objective-API-Reference.md",
+      "bytes": 44232,
+      "sha256": "93ae1887a7e55874636821141b6ac35a175f52246828f8e72fbee6d0a01cd166"
+    },
+    {
+      "path": "submission.py",
+      "bytes": 21232,
+      "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e"
+    },
+    {
+      "path": "v7/submission099.py",
+      "bytes": 15794,
+      "sha256": "144216f254636979e1878df1f80afeae04240f8bf2e86d6f06d640d570e27b96"
+    },
+    {
+      "path": "v7/099_t10_s42_180s.json",
+      "bytes": 12505,
+      "sha256": "274e2dbd10bf3c6357fb723c793ae0e4c1692bbffc8f97b1c30876e904410de4"
+    },
+    {
+      "path": "v7/099_t11_s42_180s.json",
+      "bytes": 12202,
+      "sha256": "4b41ac43d0838e6795a7ec7b56774dd5bf8b858d8f7305bd5a696086ec5f6b32"
+    },
+    {
+      "path": "v7/099_t12_s42_180s.json",
+      "bytes": 11570,
+      "sha256": "0f6ee8d148999d88ff0f5f8e7cb387937934a924ff3cb614007108f00359df27"
+    },
+    {
+      "path": "official/docs__submission.md",
+      "bytes": 9112,
+      "sha256": "18360245c993e82d4933f69688b2e41bef56320992e3609eaf3971c71d87be42"
+    },
+    {
+      "path": "cases_prefeasible.py",
+      "bytes": 6979,
+      "sha256": "62391854c0b18923691f5e84b29c14a4442e5b08cef27ca1bd2ea2062928ea83"
+    },
+    {
+      "path": "v7/submission096.py",
+      "bytes": 6722,
+      "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+    },
+    {
+      "path": "official/docs__evaluation-environment.md",
+      "bytes": 2315,
+      "sha256": "32104abdd484854c607161960adc0c0e7e0ab1bc00138f04d6db4c45a754781f"
+    },
+    {
+      "path": "response.txt",
+      "bytes": 37125,
+      "sha256": "8868265f517055076ef12cefbab21d50c640ce8a39f067e8a5ad3765c9456ff5"
+    },
+    {
+      "path": "official/docs__dfbench__Problems.md",
+      "bytes": 22600,
+      "sha256": "6293a1ee3b2bdb1c038720af432c3eb6946d3475ba5ec1424e71edf4808fb1bc"
+    },
+    {
+      "path": "regional_submission.py",
+      "bytes": 17487,
+      "sha256": "32dfbed94d75b54afe1c34902e689778a3280b5ce20ed43bc75390e971de91a4"
+    },
+    {
+      "path": "receipt.json",
+      "bytes": 13006,
+      "sha256": "dfa150173c3998149e9df31029b70bbd2adcb65d5a22874292d6fbe91ba979e0"
+    },
+    {
+      "path": "v7/096_t10_s42_180s.json",
+      "bytes": 12446,
+      "sha256": "b34dbc950bdec5169ec2570efdb7cacab462020ab19c7f0874653e0f1b9ada85"
+    },
+    {
+      "path": "v7/096_t11_s42_180s.json",
+      "bytes": 11972,
+      "sha256": "c83f5eb349185df90fe6d487efdb253c9ee1435bcd517f924116a24f1e6dd66c"
+    },
+    {
+      "path": "v7/096_t12_s42_180s.json",
+      "bytes": 11532,
+      "sha256": "9369ad18b16631c7c6a85c497be609bea52968befabb76f132a93789a0b6d533"
+    },
+    {
+      "path": "v7/ANALYSIS.md",
+      "bytes": 7566,
+      "sha256": "f2517f1fcd846c2677b4d943552552228a8fdc12b9d217045ba8c92f95e15c5d"
+    },
+    {
+      "path": "MANIFEST.json",
+      "bytes": 3634,
+      "sha256": "5b0c44e42b16fc4cbbbebe501e734360034dc6affac656449f72411dc61f64ea"
+    },
+    {
+      "path": "STATIC-REVIEW.md",
+      "bytes": 3579,
+      "sha256": "82ed73b71eb56376e0c4e496b1caaf746b6957dbfe009a106e3c3488756d0ff0"
+    },
+    {
+      "path": "official/docs__scoring.md",
+      "bytes": 2276,
+      "sha256": "89f8ff6e2c4515ee3a8ef6168e16a064f27bfdff2e5c19b7c4c9aa64e875827d"
+    }
+  ],
+  "public_candidate": {
+    "path": "submission.py",
+    "bytes": 21232,
+    "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e"
+  },
+  "requirements": {
+    "path": "requirements.txt",
+    "bytes": 27,
+    "sha256": "6ff4a82ebd099bc428fc77c32194ac9ad7dcadbf7bea6bdfbe398e2bad40147a",
+    "source": "../anchor-state-regional/requirements.txt"
+  },
+  "source_arms": [
+    "099-prefeasible-off-regional",
+    "099-prefeasible-restart-regional",
+    "099-prefeasible-restart-penalty-regional"
+  ],
+  "original_source_history": {
+    "full_source_members": 21,
+    "full_source_bytes": 285886,
+    "preserved_in_original_private_source_carriers": true
+  },
+  "native_engine": {
+    "runner": {
+      "path": "../runner/run_public_uifo.py",
+      "sha256": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+    },
+    "invocation": {
+      "path": "../runner/invocation.py",
+      "sha256": "d567f5b43902893b80d419bcd27bbeb88028627dba6dcab3c1f72344fa765594"
+    },
+    "phase": {
+      "path": "../run_phase.py",
+      "sha256": "bdf7658fc4883271ee5cf5abdde0b84d70b3d2715e039c61b1fb56a4ec8edd56"
+    },
+    "comparison": {
+      "path": "../compare_native.py",
+      "sha256": "f40b79efd6abeeef5c106a53ada015c2d10606ee20088f30f594cdddfd9a55aa"
+    },
+    "selected_packager": {
+      "path": "../release_selected.py",
+      "sha256": "3987f4f856e94b664130cdb3c0217a7873e42c7e4c4ee67ffe09da2c666dce78"
+    }
+  },
+  "official_commit": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+  "semantic_clarification": "The original source docstring says first logged feasible point; the actual recovery guard is no retained finite usable feasible optimizer point. The unchanged candidate and this exact condition define the experiment."
+}

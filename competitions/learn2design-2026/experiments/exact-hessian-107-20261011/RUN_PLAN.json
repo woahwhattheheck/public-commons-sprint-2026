@@ -186,6 +186,45 @@
       "optimize_kwargs": {
         "backtracking_state": "anchor"
       }
+    },
+    {
+      "id": "099-prefeasible-off-regional",
+      "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "optimize_kwargs": {
+        "backtracking_state": "anchor",
+        "prefeasible_recovery": "off",
+        "prefeasible_fraction": 0.1,
+        "prefeasible_min_streak": 12,
+        "prefeasible_max_streak": 80,
+        "prefeasible_max_restarts": 4,
+        "prefeasible_budget_fraction": 0.5
+      }
+    },
+    {
+      "id": "099-prefeasible-restart-regional",
+      "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "optimize_kwargs": {
+        "backtracking_state": "anchor",
+        "prefeasible_recovery": "restart",
+        "prefeasible_fraction": 0.1,
+        "prefeasible_min_streak": 12,
+        "prefeasible_max_streak": 80,
+        "prefeasible_max_restarts": 4,
+        "prefeasible_budget_fraction": 0.5
+      }
+    },
+    {
+      "id": "099-prefeasible-restart-penalty-regional",
+      "sha256": "d7253236b7cc87e7c2b496fbb2ef6fc3b54b6a2af435ccef588986003b7b479e",
+      "optimize_kwargs": {
+        "backtracking_state": "anchor",
+        "prefeasible_recovery": "restart_penalty",
+        "prefeasible_fraction": 0.1,
+        "prefeasible_min_streak": 12,
+        "prefeasible_max_streak": 80,
+        "prefeasible_max_restarts": 4,
+        "prefeasible_budget_fraction": 0.5
+      }
     }
   ],
   "common_objective": {
@@ -402,6 +441,53 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Optional twenty-cell same-source state-policy pair after actual native development findings. Whole topology partitions stay paired and hardware/runtime cohorts remain separate."
+    },
+    {
+      "id": "prefeasible-development",
+      "baseline": "099-prefeasible-off-regional",
+      "candidates": [
+        "099-prefeasible-off-regional",
+        "099-prefeasible-restart-regional",
+        "099-prefeasible-restart-penalty-regional"
+      ],
+      "public_topology_seeds": [
+        10,
+        11,
+        12
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "container_cap_seconds": 16200,
+      "purpose": "Nine fresh source-bound native UIFO cells isolate original recovery off, bounded restart and bounded restart plus public-aux penalty ranking. All three share the exact candidate, anchor Optax-state policy and explicit recovery limits. The original 096/099 v7 histories remain separate input evidence."
+    },
+    {
+      "id": "prefeasible-broad-public",
+      "baseline": "099-prefeasible-off-regional",
+      "candidates": [
+        "099-prefeasible-off-regional",
+        "099-prefeasible-restart-regional",
+        "099-prefeasible-restart-penalty-regional"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Thirty paired native UIFO cells covering every mode on ten public topologies. Whole topology partitions retain all three methods; native feasibility, all failures, same-runtime comparisons and complete panel denominators remain authoritative."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",

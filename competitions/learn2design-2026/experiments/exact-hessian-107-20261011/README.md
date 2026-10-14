@@ -149,3 +149,12 @@ all paired methods for its assigned problems. The batch guide includes the
 whole broad and four-hour campaigns, partition recovery and combined-result
 commands. Phase intents and results retain both assigned and complete panel
 coverage.
+
+## Regional pre-feasibility recovery
+
+The complete [pre-feasibility recovery guide](prefeasible-recovery-regional/README.md)
+adds the exact retained candidate with explicit off, restart and restart-plus-penalty
+source selections. The existing operator runs nine-cell development and thirty-cell
+broad public phases with a fresh original Objective per cell. The same guide covers
+whole topology partitions, actual result recovery, full-budget continuation and
+packaging the exact selected mode through `release_selected.py`.
