@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import platform
 import sys
 from pathlib import Path
@@ -38,6 +39,12 @@ def main(argv=None):
     bundled = root / "application"
     application = (args.application or (bundled if bundled.is_dir() else Path(__file__).resolve().parents[1]))
     application = application.expanduser().resolve(strict=True)
+    if __package__ and application != Path(__file__).resolve().parents[1]:
+        # -m has already imported source_tools from the invoking application.
+        # Start this same driver directly in a clean interpreter before importing
+        # the selected application, so its package cannot reuse the wrong engine.
+        arguments = sys.argv[1:] if argv is None else list(argv)
+        os.execv(sys.executable, [sys.executable, "-B", str(Path(__file__).resolve()), *arguments])
     sys.path.insert(0, str(application))
     from model.common import atomic_json, held, now, read_json
     from model.portable_fs import native_path
