@@ -222,6 +222,29 @@ def resolve_helper(name: str, *, application: Path | None = None,
         raise NativeHelperError(f"Invalid executable byte count for {name}")
     if source_sha != sha256(source):
         raise NativeHelperError(f"The bundled {name} was built from a different source; rebuild the helper package")
+    source_files = row.get("source_files")
+    if source_files is not None:
+        if not isinstance(source_files, list) or not source_files:
+            raise NativeHelperError(f"Invalid retained source-file inventory for {name}")
+        seen = set()
+        for item in source_files:
+            if not isinstance(item, dict):
+                raise NativeHelperError(f"Invalid retained source-file record for {name}")
+            path = _contained(root, item.get("path"), "retained helper source")
+            relative = item["path"]
+            if relative in seen:
+                raise NativeHelperError(f"Repeated retained source file for {name}: {relative}")
+            seen.add(relative)
+            size = item.get("bytes")
+            expected = _digest_field(item.get("sha256"), "retained source file")
+            if isinstance(size, bool) or not isinstance(size, int) or size < 0:
+                raise NativeHelperError(f"Invalid retained source-file size for {name}")
+            if path.stat().st_size != size or sha256(path) != expected:
+                raise NativeHelperError(f"The bundled {name} source file has changed: {relative}; rebuild the helper package")
+            if relative == row["source"] and expected != source_sha:
+                raise NativeHelperError(f"Conflicting retained source identity for {name}")
+        if row["source"] not in seen:
+            raise NativeHelperError(f"The retained source inventory omits the original {name} source")
     if executable.stat().st_size != expected_size or sha256(executable) != binary_sha:
         raise NativeHelperError(f"The bundled {name} has changed; restore the original release files")
     if row.get("format") != expected_format or inspect_executable(executable, selected) != expected_format:
