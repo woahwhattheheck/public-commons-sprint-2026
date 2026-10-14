@@ -1,0 +1,26 @@
+{
+  "component_id": "collection-root-opening",
+  "required_components": [
+    "native-runtime-invocation"
+  ],
+  "included_paths": [
+    "source_tools/collection_opening/OPEN.sh",
+    "source_tools/collection_opening/OPENING_COMPONENT.json",
+    "source_tools/collection_opening/Open_Native_Collection.sh",
+    "source_tools/collection_opening/Open_Workbench.cmd",
+    "source_tools/collection_opening/Open_Workbench.command",
+    "source_tools/collection_opening/Open_Workbench.ps1",
+    "source_tools/collection_opening/README.md",
+    "source_tools/collection_opening/apply_to_collection.py",
+    "source_tools/collection_opening/build_guides.py",
+    "source_tools/collection_opening/compose_runtime_dependencies.py",
+    "source_tools/collection_opening/open_collection.py",
+    "source_tools/collection_opening/open_native_collection.py",
+    "source_tools/collection_opening/prepare_runtime_dependencies.py",
+    "source_tools/collection_opening/receive_collection_studies.py",
+    "source_tools/collection_opening/session_api.py",
+    "integration/component_fragments/collection-root-opening.json"
+  ],
+  "retained_only_paths": [],
+  "description": "Complete root-launcher and recipient-guidance source cohort for the Windows x64, macOS Intel, and macOS Apple Silicon collection. The audited root manifest and applicator place only approved recipient-facing root files; guide generation, session API, and operator documentation remain source-bank tooling for the cumulative release assembler."
+}
