@@ -26,6 +26,16 @@ import unicodedata
 from urllib.parse import quote
 import zipfile
 
+# Both invocation forms use the same maintained native filesystem and SQLite
+# implementation. Importing this package never loads the scientific runtime.
+if __package__:
+    from . import portable_fs as _fs
+    from .portable_databases import _database_uri
+else:
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    from model import portable_fs as _fs
+    from model.portable_databases import _database_uri
+
 VERSION = "1.0.0"
 KIND = "scientific-report-comparisons"
 SCHEMA = "upstate.scientific-report-comparison/v1"
@@ -59,13 +69,36 @@ def _pairs(values):
     return result
 
 
+@contextmanager
+def _reader(path):
+    """Pin one original regular file through reading, including native ChangeTime."""
+    path = _fs.native_path(path)
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as stream:
+        before = _signature(_fs.fd_stat(stream.fileno()))
+        yield stream
+        if (before != _signature(_fs.fd_stat(stream.fileno()))
+                or before != _signature(_fs.path_stat(path))):
+            raise ValueError("A retained report file changed while it was read")
+
+
 def _read(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"), object_pairs_hook=_pairs,
-                      parse_constant=lambda value: (_ for _ in ()).throw(
-                          ValueError("Nonfinite JSON value: " + value)))
+    with _reader(path) as stream:
+        return json.load(stream, object_pairs_hook=_pairs,
+                         parse_constant=lambda value: (_ for _ in ()).throw(
+                             ValueError("Nonfinite JSON value: " + value)))
+
+
+def _reject_link(path):
+    try:
+        info = path.lstat()
+    except FileNotFoundError:
+        return
+    if stat.S_ISLNK(info.st_mode) or getattr(info, "st_file_attributes", 0) & 0x400:
+        raise ValueError("A report member must not be a link or reparse point: " + path.name)
 
 
 def _name(value):
+    _fs.relative_name(value, windows=True)
     if (not isinstance(value, str) or not value or "\\" in value or ":" in value
             or "\x00" in value or value.startswith("/")):
         raise ValueError("Use a portable relative report member path")
@@ -81,15 +114,14 @@ def _name(value):
 
 
 def _path(root, name, *, exists=True):
-    root = Path(root).resolve(strict=True)
+    root = _fs.native_path(root).resolve(strict=True)
     name = _name(name)
     path = root
     for part in name.split("/"):
         path = path / part
-        if path.is_symlink():
-            raise ValueError("A report member must not be a symbolic link: " + name)
+        _reject_link(path)
     if exists:
-        mode = path.stat().st_mode
+        mode = _fs.path_stat(path).st_mode
         if not stat.S_ISREG(mode):
             raise ValueError("A report member must be a regular file: " + name)
     if not path.resolve().is_relative_to(root):
@@ -98,15 +130,12 @@ def _path(root, name, *, exists=True):
 
 
 def _descriptor(root, path):
-    path = Path(path)
+    root, path = _fs.native_path(root), _fs.native_path(path)
     checksum = hashlib.sha256()
-    with path.open("rb") as stream:
-        before = os.fstat(stream.fileno())
+    with _reader(path) as stream:
+        before = _fs.fd_stat(stream.fileno())
         for block in iter(lambda: stream.read(CHUNK), b""):
             checksum.update(block)
-        after = os.fstat(stream.fileno())
-    if _signature(before) != _signature(after):
-        raise ValueError("A report member changed while it was read")
     return {"path": path.relative_to(root).as_posix(), "bytes": before.st_size,
             "sha256": checksum.hexdigest()}
 
@@ -121,11 +150,11 @@ def _verify(root, item, cache=None):
         raise ValueError("A report member requires its original length")
     _identifier(item.get("sha256"))
     path = _path(root, item.get("path"))
-    signature = _signature(path.stat())
+    signature = _signature(_fs.path_stat(path))
     expected = (item["bytes"], item["sha256"])
     cached = (signature, expected)
     if cache is None or cache.get(str(path)) != cached:
-        actual = _descriptor(Path(root), path)
+        actual = _descriptor(_fs.native_path(root), path)
         if (actual["bytes"], actual["sha256"]) != expected:
             raise ValueError("Retained report member changed: " + item["path"])
         if cache is not None:
@@ -134,17 +163,13 @@ def _verify(root, item, cache=None):
 
 
 def _fsync_directory(path):
-    if os.name != "nt":
-        fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+    _fs.sync_directory(path)
 
 
 def _write(path, payload):
-    path = Path(path)
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
+    _reject_link(path)
     fd, name = tempfile.mkstemp(prefix=".writing-", dir=path.parent)
     temporary = Path(name)
     try:
@@ -152,7 +177,7 @@ def _write(path, payload):
             stream.write(payload)
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        _fs.replace(temporary, path)
         _fsync_directory(path.parent)
     finally:
         temporary.unlink(missing_ok=True)
@@ -164,25 +189,9 @@ def _write_json(path, value):
 
 @contextmanager
 def _lock(path):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        if os.name == "nt":
-            import msvcrt
-            if os.fstat(fd).st_size == 0:
-                os.write(fd, b"0")
-            os.lseek(fd, 0, 0)
-            msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(fd, fcntl.LOCK_EX)
+    # Match Workspace/Study transfer locks and release only acquired locks.
+    with _fs.locked(path):
         yield
-    finally:
-        if os.name == "nt":
-            os.lseek(fd, 0, 0)
-            msvcrt.locking(fd, msvcrt.LK_UNLCK, 1)
-        os.close(fd)
 
 
 def _validate_members(members):
@@ -215,16 +224,16 @@ def _validate_members(members):
 
 def _copy(root, item, destination):
     source = _verify(root, item)
-    destination = Path(destination)
+    destination = _fs.native_path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
+    if destination.exists() or destination.is_symlink():
         _verify(destination.parent, {**item, "path": destination.name})
         return
     fd, name = tempfile.mkstemp(prefix=".retaining-", dir=destination.parent)
     temporary = Path(name)
     checksum, size = hashlib.sha256(), 0
     try:
-        with os.fdopen(fd, "wb") as out, source.open("rb") as incoming:
+        with os.fdopen(fd, "wb") as out, _reader(source) as incoming:
             for block in iter(lambda: incoming.read(CHUNK), b""):
                 size += len(block)
                 checksum.update(block)
@@ -233,7 +242,10 @@ def _copy(root, item, destination):
             os.fsync(out.fileno())
         if size != item["bytes"] or checksum.hexdigest() != item["sha256"]:
             raise ValueError("Original report changed during retention: " + item["path"])
-        os.replace(temporary, destination)
+        try:
+            _fs.publish_file(temporary, destination)
+        except FileExistsError:
+            _verify(destination.parent, {**item, "path": destination.name})
         _fsync_directory(destination.parent)
     finally:
         temporary.unlink(missing_ok=True)
@@ -241,7 +253,7 @@ def _copy(root, item, destination):
 
 def edition(directory, *, project_id=None, cache=None):
     """Read one complete original saved edition; never manufacture missing files."""
-    root = Path(directory).resolve(strict=True)
+    root = _fs.native_path(directory).resolve(strict=True)
     record = _read(_path(root, "edition.json"))
     key = _identifier(record.get("id"))
     identity = record.get("render_identity")
@@ -393,9 +405,11 @@ def _plan(plan, left_tables, right_tables):
 
 
 def _connect(path, *, readonly=False):
+    path = _fs.native_path(path).absolute()
+    _reject_link(path)
     if readonly:
-        return sqlite3.connect(Path(path).resolve().as_uri() + "?mode=ro", uri=True)
-    db = sqlite3.connect(path)
+        return sqlite3.connect(_database_uri(path, "ro"), uri=True)
+    db = sqlite3.connect(_database_uri(path, "rwc"), uri=True)
     db.execute("PRAGMA journal_mode=DELETE")
     db.execute("PRAGMA temp_store=FILE")
     db.execute("PRAGMA cache_size=-8192")
@@ -680,7 +694,7 @@ def build(left, right, destination, *, plan=None, expected_id=None, progress=Non
     key = digest(identity)
     if expected_id is not None and expected_id != key:
         raise ValueError("Review the current exact report selections and row keys again")
-    destination = Path(destination).expanduser().absolute()
+    destination = _fs.native_path(Path(destination).expanduser()).absolute()
     for value in (l, r):
         source = value["directory"]
         if destination.resolve().is_relative_to(source) or source.is_relative_to(destination.resolve()):
@@ -693,15 +707,14 @@ def build(left, right, destination, *, plan=None, expected_id=None, progress=Non
             if record["id"] != key:
                 raise ValueError("The destination already contains another saved comparison")
             return record
-        if destination.is_symlink() or stage.is_symlink():
-            raise ValueError("The comparison staging directory must not be a symbolic link")
+        _reject_link(destination)
+        _reject_link(stage)
         stage.mkdir(exist_ok=True)
         if (stage / "comparison.json").exists():
             record = inspect(stage)
             if record["id"] != key:
                 raise ValueError("The completed staging directory contains another comparison")
-            os.rename(stage, destination)
-            _fsync_directory(destination.parent)
+            _fs.publish_directory(stage, destination)
             return record
         if (stage / "identity.json").exists() and _read(stage / "identity.json") != identity:
             raise ValueError("The interrupted comparison has different input selections")
@@ -754,8 +767,7 @@ def build(left, right, destination, *, plan=None, expected_id=None, progress=Non
         record["files"] = members
         _write_json(stage / "comparison.json", record)
         inspect(stage)
-        os.rename(stage, destination)
-        _fsync_directory(destination.parent)
+        _fs.publish_directory(stage, destination)
     return record
 
 
@@ -767,9 +779,9 @@ def identity_for(left, right, plan=None):
 
 
 def inspect(directory, *, cache=None):
-    root = Path(directory).resolve(strict=True)
+    root = _fs.native_path(directory).resolve(strict=True)
     marker = _path(root, "comparison.json")
-    signature = _signature(marker.stat())
+    signature = _signature(_fs.path_stat(marker))
     cache_key = ("complete-comparison", str(root))
     cached = cache.get(cache_key) if cache is not None else None
     if cached is not None and cached[0] == signature:
@@ -800,20 +812,21 @@ def inspect(directory, *, cache=None):
 
 def members(directory, *, cache=None):
     record = inspect(directory, cache=cache)
-    root = Path(directory).resolve()
+    root = _fs.native_path(directory).resolve()
     result = dict(record["files"])
     result["comparison.json"] = _descriptor(root, root / "comparison.json")
     return record, result
 
 
 def export(directory, archive_path):
-    root, target = Path(directory).resolve(strict=True), Path(archive_path).absolute()
+    root = _fs.native_path(directory).resolve(strict=True)
+    target = _fs.native_path(Path(archive_path).expanduser()).absolute()
     record, selected = members(root)
     if target.resolve().is_relative_to(root):
         raise ValueError("Keep the comparison ZIP outside its retained comparison directory")
     target.parent.mkdir(parents=True, exist_ok=True)
     with _lock(target.with_name("." + target.name + ".lock")):
-        if target.exists():
+        if target.exists() or target.is_symlink():
             info = inspect_archive(target)
             if info["comparison_id"] != record["id"] or info["members"] != selected:
                 raise ValueError("The existing archive contains another comparison")
@@ -832,16 +845,23 @@ def export(directory, archive_path):
                     info.external_attr = 0o100600 << 16
                     info.file_size = item["bytes"]
                     checksum, size = hashlib.sha256(), 0
-                    with source.open("rb") as incoming, out.open(info, "w", force_zip64=True) as outgoing:
+                    with _reader(source) as incoming, out.open(info, "w", force_zip64=True) as outgoing:
                         for block in iter(lambda: incoming.read(CHUNK), b""):
                             size += len(block)
                             checksum.update(block)
                             outgoing.write(block)
                     if size != item["bytes"] or checksum.hexdigest() != item["sha256"]:
                         raise ValueError("A comparison member changed during ZIP export")
-            with temporary.open("rb") as stream:
+            # Windows FlushFileBuffers requires a writable handle. Reopen the
+            # completed ZIP without following a replaced final component.
+            with os.fdopen(_fs.open_file(temporary, os.O_RDWR), "r+b") as stream:
                 os.fsync(stream.fileno())
-            os.rename(temporary, target)
+            try:
+                _fs.publish_file(temporary, target)
+            except FileExistsError:
+                info = inspect_archive(target)
+                if info["comparison_id"] != record["id"] or info["members"] != selected:
+                    raise ValueError("A different comparison archive appeared during export")
             _fsync_directory(target.parent)
         finally:
             temporary.unlink(missing_ok=True)
@@ -849,7 +869,7 @@ def export(directory, archive_path):
 
 
 def inspect_archive(archive_path, *, verify=True, max_members=100000, max_bytes=2 * 1024**4):
-    with zipfile.ZipFile(archive_path) as archive:
+    with _reader(archive_path) as incoming, zipfile.ZipFile(incoming) as archive:
         entries = archive.infolist()
         if len(entries) > max_members + 1 or sum(i.file_size for i in entries) > max_bytes:
             raise ValueError("The archive exceeds the configured receiving capacity")
@@ -889,7 +909,9 @@ def inspect_archive(archive_path, *, verify=True, max_members=100000, max_bytes=
 
 def receive(archive_path, destination):
     """Create an independent, byte-complete, re-comparable report pair."""
-    archive_path, destination = Path(archive_path).resolve(strict=True), Path(destination).absolute()
+    archive_path = _fs.native_path(archive_path).resolve(strict=True)
+    destination = _fs.native_path(Path(destination).expanduser()).absolute()
+    _reject_link(destination)
     manifest = inspect_archive(archive_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     if archive_path.is_relative_to(destination.resolve()):
@@ -901,10 +923,9 @@ def receive(archive_path, destination):
                 raise ValueError("The receiving destination contains different work")
             return record
         stage = destination.with_name("." + destination.name + ".receiving-" + manifest["comparison_id"])
-        if stage.is_symlink():
-            raise ValueError("The receiving stage must not be a symbolic link")
+        _reject_link(stage)
         stage.mkdir(exist_ok=True)
-        with zipfile.ZipFile(archive_path) as archive:
+        with _reader(archive_path) as incoming, zipfile.ZipFile(incoming) as archive:
             for name, item in manifest["members"].items():
                 target = _path(stage, name, exists=False)
                 if target.exists():
@@ -924,7 +945,11 @@ def receive(archive_path, destination):
                         os.fsync(out.fileno())
                     if size != item["bytes"] or checksum.hexdigest() != item["sha256"]:
                         raise ValueError("A source archive member changed while receiving")
-                    os.replace(temporary, target)
+                    try:
+                        _fs.publish_file(temporary, target)
+                    except FileExistsError:
+                        _verify(stage, item)
+                    _fsync_directory(target.parent)
                 finally:
                     temporary.unlink(missing_ok=True)
         for path in stage.rglob("*"):
@@ -936,8 +961,7 @@ def receive(archive_path, destination):
         record = inspect(stage)
         if record["id"] != manifest["comparison_id"]:
             raise ValueError("The received comparison has another identity")
-        os.rename(stage, destination)
-        _fsync_directory(destination.parent)
+        _fs.publish_directory(stage, destination)
     return record
 
 

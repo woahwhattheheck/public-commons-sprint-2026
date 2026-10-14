@@ -3,9 +3,11 @@
 from __future__ import annotations
 import argparse, hashlib, json, os, tempfile
 from pathlib import Path
+from model import portable_fs as _fs
 
 MEMBERS=(
  'model/report_changes.py', 'model/report_changes_review.py',
+ 'model/portable_fs.py', 'model/windows_fs.py', 'model/portable_databases.py',
  'model/scientific_report_review.py', 'operator/report_changes.py',
  'operator/web/report_changes.mjs', 'operator/web/report_changes.css',
  'operator/extensions/report-changes.json', 'docs/SCIENTIFIC_REPORT_CHANGES.md',
@@ -15,7 +17,7 @@ MEMBERS=(
 
 def install(application):
     source=Path(__file__).resolve().parent
-    target=Path(application).resolve(strict=True)
+    target=_fs.native_path(application).resolve(strict=True)
     for name in ('operator/source_report_editions.py','operator/extension_registry.py','model/common.py',
                  'model/workspace.py','model/reviews.py','model/scientific_report_editions.py'):
         if not (target/name).is_file():raise ValueError('The original application is missing '+name)
@@ -40,9 +42,10 @@ def install(application):
         temporary=Path(name)
         try:
             with os.fdopen(fd,'wb') as stream:stream.write(body);stream.flush();os.fsync(stream.fileno())
-            try:os.link(temporary,output)
+            try:_fs.publish_file(temporary,output)
             except FileExistsError:
                 if output.read_bytes()!=body:raise ValueError('A concurrent component installation differs: '+str(output))
+            _fs.sync_directory(output.parent)
         finally:temporary.unlink(missing_ok=True)
     return {'component':'scientific-report-changes','version':'1.2.0','installed_files':len(pending),'complete_files':len(MEMBERS),'restart':'Restart the original operator to discover Report changes.'}
 

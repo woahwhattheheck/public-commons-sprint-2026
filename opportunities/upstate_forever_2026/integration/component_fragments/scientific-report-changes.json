@@ -15,7 +15,10 @@
         "integration/component_fragments/scientific-report-changes.json",
         "install_report_changes.py",
         "model/report_changes_review.py",
-        "model/scientific_report_review.py"
+        "model/scientific_report_review.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
+        "model/portable_databases.py"
       ],
       "import_roots": [
         "operator"
@@ -34,13 +37,19 @@
       "paths": [
         "model/report_changes_review.py",
         "model/report_changes.py",
-        "model/scientific_report_review.py"
+        "model/scientific_report_review.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
+        "model/portable_databases.py"
       ]
     },
     "scientific-report-review": {
       "paths": [
         "model/report_changes_review.py",
-        "model/report_changes.py"
+        "model/report_changes.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
+        "model/portable_databases.py"
       ]
     }
   }
