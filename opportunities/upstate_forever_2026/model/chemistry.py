@@ -8,6 +8,7 @@ from copy import deepcopy
 import contextlib
 from hashlib import sha256
 import json
+import os
 from pathlib import Path, PurePosixPath
 import shutil
 import tempfile
@@ -15,6 +16,7 @@ import zipfile
 
 from .common import (atomic_json, canonical, digest, file_digest, held, identifier,
                      now, read_json, relative_file, verify_file, describe_file)
+from .portable_fs import native_path, open_file, publish_file, relative_name, sync_directory
 from .reach_chemistry.model import Project, ModelError
 from .reach_chemistry.service import execute
 from .reach_chemistry.solver import Cancelled
@@ -27,6 +29,75 @@ ACTIONS = {'chemistry.case.save', 'chemistry.case.get', 'chemistry.catalog',
            'chemistry.report.prepare', 'chemistry.report.get', 'chemistry.report.list',
            'chemistry.report.source.prepare', 'chemistry.report.source.get',
            'chemistry.report.source.list', 'chemistry.water.prepare', 'chemistry.water.get'}
+
+
+def _matches(path, expected):
+    path = native_path(path)
+    return (not path.is_symlink() and path.is_file()
+            and path.stat().st_size == expected['bytes']
+            and file_digest(path) == expected['sha256'])
+
+
+def _publish_retained(source, target, expected):
+    """Publish complete retained bytes without replacing another file."""
+    source, target = native_path(source), native_path(target)
+    if not _matches(source, expected):
+        raise ModelError('Complete staged Chemistry member differs')
+    try:
+        publish_file(source, target)
+    except FileExistsError:
+        if not _matches(target, expected):
+            raise ModelError('An existing Chemistry member differs: ' + str(target))
+    if not _matches(target, expected):
+        raise ModelError('Published Chemistry member differs: ' + str(target))
+    sync_directory(target.parent)
+
+
+def _copy_retained(source, target, expected=None):
+    """Retain one original source or run member with native durable publication."""
+    source, target = native_path(source), native_path(target)
+    if expected is None:
+        expected = {'bytes': source.stat().st_size, 'sha256': file_digest(source)}
+    if not _matches(source, expected):
+        raise ModelError('Original Chemistry member changed before retention')
+    if target.exists() or target.is_symlink():
+        if not _matches(target, expected):
+            raise ModelError('An existing Chemistry member differs: ' + str(target))
+        return
+    target.parent.mkdir(parents=True, exist_ok=True)
+    pending = None
+    try:
+        with os.fdopen(open_file(source, os.O_RDONLY), 'rb') as incoming, tempfile.NamedTemporaryFile(
+                dir=target.parent, prefix='.chemistry-copy-', delete=False) as outgoing:
+            pending = Path(outgoing.name)
+            shutil.copyfileobj(incoming, outgoing, 1024 * 1024)
+            outgoing.flush()
+            os.fsync(outgoing.fileno())
+        _publish_retained(pending, target, expected)
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
+
+
+def _verify_transfer_archive(path, manifest):
+    """Accept an interrupted completed archive only from its complete originals."""
+    with os.fdopen(open_file(path, os.O_RDONLY), 'rb') as stream, zipfile.ZipFile(stream) as archive:
+        names = archive.namelist()
+        if (len(names) != len(set(names))
+                or set(names) != set(manifest['files']) | {'manifest.json'}
+                or json.loads(archive.read('manifest.json')) != manifest):
+            raise ModelError('Retained Chemistry archive inventory differs')
+        for name, expected in manifest['files'].items():
+            relative_name(name)
+            if archive.getinfo(name).file_size != expected['bytes']:
+                raise ModelError('Retained Chemistry archive member length differs: ' + name)
+            checksum = sha256()
+            with archive.open(name) as incoming:
+                for body in iter(lambda: incoming.read(1024 * 1024), b''):
+                    checksum.update(body)
+            if checksum.hexdigest() != expected['sha256']:
+                raise ModelError('Retained Chemistry archive member differs: ' + name)
+
 
 class Chemistry:
     def __init__(self, workspace):
@@ -208,7 +279,7 @@ class Chemistry:
             self._verified_artifacts(rid,run); selected.append(run)
         selection={'case_id':case['id'],'run_ids':run_ids,'engine_version':ENGINE_VERSION}
         key=digest(selection); directory=self.ws.root/'chemistry-exports'/key
-        directory.mkdir(parents=True,exist_ok=True)
+        native_path(directory).mkdir(parents=True,exist_ok=True)
         archive=directory/'editable-chemistry.zip'
         with held(directory/'.export.lock',blocking=False):
             receipt=directory/'export.json'
@@ -216,7 +287,7 @@ class Chemistry:
                 existing=read_json(receipt)
                 verify_file(self.ws.root,existing['artifact'])
                 return existing
-            with tempfile.TemporaryDirectory(dir=directory,prefix='.export-') as tmp:
+            with tempfile.TemporaryDirectory(dir=native_path(directory),prefix='.export-') as tmp:
                 root=Path(tmp); atomic_json(root/'case.json',case)
                 sources=[]; entries=[]
                 for i,ref in enumerate(case['source_refs']):
@@ -224,13 +295,16 @@ class Chemistry:
                     body=deepcopy(entry); companions=body.pop('companions',[]); main=body.pop('body')
                     prefix='sources/'+str(i)+'/'
                     main_name=main.get('view_path',main['filename'])
+                    relative_name(prefix+main_name)
                     target=root/prefix/main_name; target.parent.mkdir(parents=True,exist_ok=True)
-                    shutil.copyfile(original_path,target)
+                    _copy_retained(original_path,target,main)
                     body.update(id='source-'+str(i),path=prefix+main_name,sha256=main['sha256'],companions=[])
                     for companion in companions:
                         name=companion.get('view_path',companion['filename'])
+                        relative_name(prefix+name)
                         original=relative_file(self.ws.root,companion['object'])
-                        cp=root/prefix/name; cp.parent.mkdir(parents=True,exist_ok=True); shutil.copyfile(original,cp)
+                        cp=root/prefix/name; cp.parent.mkdir(parents=True,exist_ok=True)
+                        _copy_retained(original,cp,companion)
                         body['companions'].append({'path':prefix+name,'sha256':companion['sha256']})
                     entries.append(body)
                     sources.append({'original':ref,'incoming_id':body['id']})
@@ -239,43 +313,64 @@ class Chemistry:
                     if manifest:
                         target=root/'original-source-manifests'/(ref['source_collection_id']+'.json')
                         target.parent.mkdir(exist_ok=True)
-                        shutil.copyfile(relative_file(self.ws.root,manifest['object']),target)
+                        _copy_retained(relative_file(self.ws.root,manifest['object']),target,manifest)
                 atomic_json(root/'sources.json',{'schema':'upstate.sources/v1','title':'Retained chemistry source files',
                             'entries':entries,'notes':['Original source identities and original manifests are retained in this transfer.']})
                 for run in selected:
                     for artifact in run['artifacts']:
+                        relative_name(artifact['path'])
                         src=verify_file(self.root/run['id'],artifact)
                         dst=root/'runs'/run['id']/artifact['path']; dst.parent.mkdir(parents=True,exist_ok=True)
-                        shutil.copyfile(src,dst)
+                        _copy_retained(src,dst,artifact)
                     atomic_json(root/'runs'/run['id']/'run.json',run)
                 files={p.relative_to(root).as_posix():{'bytes':p.stat().st_size,'sha256':file_digest(p)}
                        for p in sorted(root.rglob('*')) if p.is_file()}
-                atomic_json(root/'manifest.json',{'schema':'upstate.chemistry-transfer/v1','selection':selection,
-                            'source_map':sources,'files':files})
-                pending=directory/'.pending.zip'
-                with zipfile.ZipFile(pending,'w',compression=zipfile.ZIP_DEFLATED) as z:
-                    for p in sorted(root.rglob('*')):
-                        if p.is_file(): z.write(p,p.relative_to(root).as_posix())
-                pending.replace(archive)
+                manifest={'schema':'upstate.chemistry-transfer/v1','selection':selection,
+                          'source_map':sources,'files':files}
+                atomic_json(root/'manifest.json',manifest)
+                pending=None
+                try:
+                    with tempfile.NamedTemporaryFile(dir=native_path(directory), prefix='.chemistry-export-',
+                                                     suffix='.zip', mode='w+b', delete=False) as stream:
+                        pending=Path(stream.name)
+                        with zipfile.ZipFile(stream,'w',compression=zipfile.ZIP_DEFLATED) as z:
+                            for p in sorted(root.rglob('*')):
+                                if p.is_file(): z.write(p,p.relative_to(root).as_posix())
+                        stream.flush()
+                        os.fsync(stream.fileno())
+                    _verify_transfer_archive(pending,manifest)
+                    try:
+                        publish_file(pending,archive)
+                    except FileExistsError:
+                        _verify_transfer_archive(archive,manifest)
+                    sync_directory(directory)
+                finally:
+                    if pending is not None:
+                        pending.unlink(missing_ok=True)
             result={'id':key,'case_id':case['id'],'artifact':describe_file(self.ws.root,archive),
                     'run_ids':run_ids,'source_count':len(case['source_refs'])}
             atomic_json(receipt,result,immutable=True)
             return result
 
     def receive(self,path):
-        path=Path(path).resolve(strict=True)
+        path=native_path(Path(path).expanduser().absolute()).resolve(strict=True)
         archive_sha=file_digest(path)
         destination=self.ws.root/'chemistry-received'/archive_sha
-        destination.mkdir(parents=True,exist_ok=True)
+        native_path(destination).mkdir(parents=True,exist_ok=True)
         receipt=destination/'receiving.json'
         with held(destination/'.receive.lock',blocking=False):
             if receipt.exists():
-                result=read_json(receipt); self.get_case(result['case_id']); return result
-            with zipfile.ZipFile(path) as z:
+                result=read_json(receipt); self.get_case(result['case_id'])
+                for adopted in result.get('adopted_runs',[]):
+                    state=self.get_run(adopted['run_id'])
+                    self._verified_artifacts(state['id'],state)
+                return result
+            with os.fdopen(open_file(path, os.O_RDONLY), 'rb') as stream, zipfile.ZipFile(stream) as z:
                 names=z.namelist()
                 if len(names)!=len(set(names)): raise ModelError('Archive repeats a file name')
                 for info in z.infolist():
                     name=info.filename; member=PurePosixPath(name)
+                    relative_name(name)
                     if name in ('.receive.lock','receiving.json'): raise ModelError('Archive uses a reserved receiving-control name')
                     if member.is_absolute() or '..' in member.parts or str(member)!=name or '\\' in name or '\0' in name:
                         raise ModelError('Archive has an unsafe member name')
@@ -288,18 +383,21 @@ class Chemistry:
                     target=destination/name
                     if target.is_symlink() or not target.parent.resolve().is_relative_to(destination.resolve()):
                         raise ModelError('Receiving target leaves the selected project')
-                    target.parent.mkdir(parents=True,exist_ok=True)
-                    with z.open(name) as source, tempfile.NamedTemporaryFile(dir=target.parent,delete=False) as out:
-                        pending=Path(out.name)
-                        try:
-                            shutil.copyfileobj(source,out,1024*1024); out.flush()
-                        except BaseException:
-                            pending.unlink(missing_ok=True); raise
+                    native_path(target.parent).mkdir(parents=True,exist_ok=True)
+                    pending=None
                     try:
+                        with z.open(name) as source, tempfile.NamedTemporaryFile(
+                                dir=native_path(target.parent),delete=False) as out:
+                            pending=Path(out.name)
+                            shutil.copyfileobj(source,out,1024*1024)
+                            out.flush()
+                            os.fsync(out.fileno())
                         if pending.stat().st_size!=expected['bytes'] or file_digest(pending)!=expected['sha256']:
                             raise ModelError('Received member hash differs: '+name)
-                        pending.replace(target)
-                    finally: pending.unlink(missing_ok=True)
+                        _publish_retained(pending,target,expected)
+                    finally:
+                        if pending is not None:
+                            pending.unlink(missing_ok=True)
             case=read_json(destination/'case.json'); refs=[]
             if manifest['source_map']:
                 collection=self.ws.import_sources(destination/'sources.json')
@@ -316,7 +414,8 @@ class Chemistry:
                         or original['selection']['project_sha256']!=case['project_sha256']):
                     raise ModelError('Incoming run does not belong to the received case')
                 selection=deepcopy(original['selection']); selection['case_id']=incoming['id']
-                new_id=digest(selection); run_dir=self.root/new_id; run_dir.mkdir(parents=True,exist_ok=True)
+                new_id=digest(selection); run_dir=self.root/new_id
+                native_path(run_dir).mkdir(parents=True,exist_ok=True)
                 with held(run_dir/'.run.lock',blocking=False):
                     if (run_dir/'run.json').exists():
                         active=self.get_run(new_id)
@@ -329,8 +428,7 @@ class Chemistry:
                             target=run_dir/item['path']
                             if target.is_symlink() or not target.parent.resolve().is_relative_to(run_dir.resolve()):
                                 raise ModelError('Incoming artifact target leaves its run')
-                            target.parent.mkdir(parents=True,exist_ok=True)
-                            shutil.copyfile(source,target)
+                            _copy_retained(source,target,item)
                         active={**original,'id':new_id,'case_id':incoming['id'],'selection':selection,
                                 'received_from':{'archive_sha256':archive_sha,'run_id':old_id}}
                         active.pop('checkpoint',None)
