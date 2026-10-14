@@ -549,6 +549,7 @@ class Operator:
                 task["execution_requested_by"] = actor
                 task.setdefault("resumptions", []).append({"at": now(), "by": actor})
             task.pop("error", None)
+            task.pop("cancel_requested", None)
             atomic_json(self.root / "tasks" / (key + ".json"), task)
             self.pool.submit(self._perform, key)
             return task
@@ -559,6 +560,15 @@ class Operator:
             self.team.check_workspace(task["workspace"], write=True)
             if self.native_jobs.supports(task) and task["state"] != "queued":
                 return self.native_jobs.request_stop(task)
+            if task["action"] == "intelligence.ask" and task["state"] == "running":
+                requested_at = now()
+                actor = self.team.actor()
+                if not task.get("cancel_requested"):
+                    task.setdefault("cancellations", []).append({"at": requested_at, "by": actor})
+                task.update(cancel_requested=True, cancel_requested_at=requested_at,
+                            cancelled_by=actor)
+                atomic_json(self.root / "tasks" / (key + ".json"), task)
+                return task
             if task["state"] != "queued":
                 raise Fault("TASK_RUNNING", "Only a task that has not started can be cancelled here.", 409)
             task.update(state="cancelled", ended_at=now(), cancelled_by=self.team.actor())
@@ -586,14 +596,23 @@ class Operator:
             attempt.update(state="complete", ended_at=task["ended_at"])
         except BaseException as error:
             detail, status = summary_error(error)
+            ask_cancelled = (task["action"] == "intelligence.ask" and
+                             (getattr(error, "status", None) == 499 or
+                              type(error).__name__ == "AskCancelled"))
             final_state = ("interrupted" if isinstance(error, NativeJobDetached) else
-                           "cancelled" if isinstance(error, NativeJobCancelled) else "failed")
+                           "cancelled" if isinstance(error, NativeJobCancelled) or ask_cancelled
+                           else "failed")
             task.update(state=final_state, error=detail, ended_at=now())
             attempt.update(state=final_state, error=detail, ended_at=task["ended_at"])
             error_file = self.root / "tasks" / (key + ".attempt-" + str(attempt["number"]) + ".error.txt")
             with contextlib.suppress(OSError):
                 error_file.write_text(traceback.format_exc(), encoding="utf-8")
         with self.lock:
+            if task["action"] == "intelligence.ask":
+                retained = self.task(key)
+                for field in ("cancel_requested", "cancel_requested_at", "cancelled_by", "cancellations", "provider_wait"):
+                    if field in retained:
+                        task[field] = retained[field]
             atomic_json(self.root / "tasks" / (key + ".json"), task)
             # Complete revision references travel with the scientific Workspace.
             binding = (self.ws(task["workspace"]).root / "run-revisions"
