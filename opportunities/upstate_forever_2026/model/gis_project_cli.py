@@ -5,6 +5,7 @@ import json
 import subprocess
 from pathlib import Path
 import sys
+import zipfile
 
 # These tools are inventoried original package members. Importing them must not
 # add __pycache__ files to the sender before verify, receive, open or seal runs.
@@ -13,8 +14,9 @@ sys.dont_write_bytecode = True
 if __package__:
     from . import gis_project as gis
 else:
-    sys.path.insert(0,str(Path(__file__).resolve().parent))
-    import gis_project as gis
+    # Keep portable_fs -> windows_fs relative imports in their real package.
+    sys.path.insert(0,str(Path(__file__).resolve().parent.parent))
+    from model import gis_project as gis
 
 
 def main(argv=None):
@@ -53,7 +55,7 @@ def main(argv=None):
             if __package__:
                 from . import gis_project_native as native
             else:
-                import gis_project_native as native
+                from model import gis_project_native as native
             if args.command=="open":
                 result=native.open_project(args.directory)
             elif args.command=="qgis-runtime":
@@ -86,7 +88,7 @@ def main(argv=None):
             else:result=catalogue(ws)
         print(json.dumps(result,ensure_ascii=False,indent=2,allow_nan=False))
         return 0
-    except (ValueError,OSError,RuntimeError,KeyError,TypeError,subprocess.SubprocessError) as exc:
+    except (ValueError,OSError,RuntimeError,KeyError,TypeError,ImportError,zipfile.BadZipFile,subprocess.SubprocessError) as exc:
         print(json.dumps({"error":{"type":type(exc).__name__,"message":str(exc)}},ensure_ascii=False),file=sys.stderr)
         return 2
     except KeyboardInterrupt:
