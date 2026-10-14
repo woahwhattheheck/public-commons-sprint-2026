@@ -153,12 +153,14 @@ def report(session: dict) -> str:
             if fields and all(isinstance(field.get('index'),int) and isinstance(field.get('label'),str) for field in fields):
                 labels=[field['label'] for field in sorted(fields,key=lambda field:field['index'])]
                 if len(set(labels))==len(labels):
-                    key=(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))
+                    key=(metadata.get('source_binding',{}).get('collection_id'),metadata.get('source_binding',{}).get('source_id'),record.get('body',{}).get('sha256'))
                     original_orders[key]=labels
                     identifiers={field.get('id'):field['label'] for field in fields}
                     selections=[record.get('client_source',{}).get('selection',{})]
                     if evidence.get('result',{}).get('format')=='structured_json':
-                        selections.extend(evidence.get('result',{}).get('data',{}).get('selections',[]))
+                        own=record.get('client_source',{}).get('selection',{})
+                        selections.extend(value for value in evidence.get('result',{}).get('data',{}).get('selections',[])
+                            if all(value.get(name)==own.get(name) for name in ('file_index','part_index')))
                     for selection in selections:
                         for field,role in [('identifier_field','Identifier'),('label_field','Label')]:
                             label=identifiers.get(selection.get(field))
@@ -167,7 +169,7 @@ def report(session: dict) -> str:
     for evidence in sorted(session['evidence'], key=lambda e: order.get(e.get('operation', {}).get('operation'), 3)):
         source=next(iter(evidence.get('sources',[])),{})
         metadata=source.get('metadata',{});record=metadata.get('source',{})
-        key=(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))
+        key=(metadata.get('source_binding',{}).get('collection_id'),metadata.get('source_binding',{}).get('source_id'),record.get('body',{}).get('sha256'))
         sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key),column_roles.get(key))+'</section>')
     for plan in session['plans']:
         sections.append('<section><h2>Guided action - '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')

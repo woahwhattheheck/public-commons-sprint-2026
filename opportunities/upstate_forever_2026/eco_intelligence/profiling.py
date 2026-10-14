@@ -46,7 +46,36 @@ class Moments:
                 'population_stddev': math.sqrt(max(0., self.m2 / self.n)) if self.n else None}
 
 
-def rows(path: Path) -> Iterator[dict[str, Any]]:
+def rows(path: Path, selected_table: dict | None = None) -> Iterator[dict[str, Any]]:
+    if selected_table is not None:
+        # Use the host's maintained original reader, with its reviewed worksheet,
+        # header row, encoding, delimiter and formula-mode selection.
+        from model.client_source_files import table_records, headers, scalar
+        reading=selected_table['reading_options']
+        fields=selected_table['original_fields']
+        labels=[field['label'] for field in fields]
+        names=labels if all(labels) and len(set(labels))==len(labels) else [field['display'] for field in fields]
+        if len(set(names))!=len(names):
+            raise IntelligenceError('Review distinct original column positions before table analysis.',409)
+        records=table_records(path,reading,selected_table.get('original_worksheet'))
+        found=False
+        try:
+            for record in records:
+                number,values=record['row'],record['values']
+                if number<reading['header_row']: continue
+                if number==reading['header_row']:
+                    if headers(values)!=fields:
+                        raise IntelligenceError('The selected original header differs from its retained inspection.',409)
+                    found=True;continue
+                if not any(value is not None and value!='' for value in values): continue
+                if len(values)>len(names) and any(value is not None and value!='' for value in values[len(names):]):
+                    raise IntelligenceError('An original row extends beyond the selected header. Review its original columns.',409)
+                yield {name:scalar(values[index]) if index<len(values) else None for index,name in enumerate(names)}
+            if not found:
+                raise IntelligenceError('The selected header row is absent from the original worksheet.',409)
+        finally:
+            records.close()
+        return
     suffix = path.suffix.lower()
     if suffix in {'.csv', '.tsv'}:
         with path.open(encoding='utf-8-sig', newline='') as f:
@@ -70,10 +99,10 @@ def rows(path: Path) -> Iterator[dict[str, Any]]:
         raise IntelligenceError('Tabular analysis supports CSV, TSV, JSONL and NDJSON.')
 
 
-def table_profile(path: Path) -> dict:
+def table_profile(path: Path, selected_table: dict | None = None) -> dict:
     columns: dict[str, dict] = {}
     count = 0
-    for row in rows(path):
+    for row in rows(path, selected_table):
         for key in row:
             if key not in columns:
                 columns[key] = {'missing': count, 'non_numeric': 0, 'numeric': Moments()}
@@ -134,7 +163,9 @@ def vector_profile(path: Path) -> dict:
         return result
 
 
-def profile(path: Path) -> dict:
+def profile(path: Path, selected_table: dict | None = None) -> dict:
+    if selected_table is not None:
+        return {**table_profile(path,selected_table),**selected_table}
     suffix = path.suffix.lower()
     if suffix in {'.csv', '.tsv', '.jsonl', '.ndjson'}:
         return table_profile(path)

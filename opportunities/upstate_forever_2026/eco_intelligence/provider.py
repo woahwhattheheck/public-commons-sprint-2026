@@ -90,14 +90,28 @@ def evidence_context(evidence, limit=3000):
         meaning={key:native[key] for key in ('kind','role','title','units','vintage','uri','period','timezone','analytical_fraction') if key in native}
         reviewed=native.get('client_source',{}).get('selection',{})
         meaning.update({key:reviewed[key] for key in ('role','units','period','timezone','reference','notes','intake_status') if key in reviewed})
+        if native.get('body',{}).get('filename'): meaning['original_filename']=native['body']['filename']
+        if 'sheet' in native: meaning['original_worksheet']=native['sheet']
+        meaning.update({key:reviewed[key] for key in ('file_index','part_index','identifier_field','label_field') if key in reviewed})
         item['meaning']=meaning;sources.append(item)
     # The original complete evidence is stored before projection. Literal row
     # pages are separate from complete-population statistical profiles.
-    compact={'id':evidence['id'],'operation':operation,'sources':sources,'result':evidence.get('result'),
+    result=evidence.get('result')
+    if isinstance(result,dict) and result.get('format')=='structured_json' and result.get('data',{}).get('schema')=='upstate.client-source-selection/v1':
+        native=next(iter(evidence.get('sources',[])),{}).get('metadata',{}).get('source',{})
+        choice=native.get('client_source',{}).get('selection',{})
+        data=result['data'];fi,pi=choice.get('file_index'),choice.get('part_index')
+        if type(fi) is int and type(pi) is int:
+            originals=data.get('originals',[])
+            result={**result,'data':{**data,'selections':[row for row in data.get('selections',[])
+                if row.get('file_index')==fi and row.get('part_index')==pi],
+                'originals':originals[fi:fi+1]},'transport_scope':{'original_file_index':fi,'original_part_index':pi,
+                'note':'Selected original file/worksheet context. The complete unchanged review document remains in this evidence object.'}}
+    compact={'id':evidence['id'],'operation':operation,'sources':sources,'result':result,
              'complete_evidence_available':'Use evidence_page with this ID for every original metadata/result character.'}
     if len(dumps(compact))<=limit:return compact
     return {'id':evidence['id'],'operation':operation,'sources':sources,
-            'result_page':dumps(evidence.get('result'))[:limit],
+            'result_page':dumps(result)[:limit],
             'note':'Result transport preview only. Use evidence_page for complete source/result context; do not infer omitted values.'}
 
 def _seconds(value):
@@ -227,11 +241,19 @@ class Assistant:
             # Registered companion metadata is selected only from this exact source collection.
             if focus_ref is not None and focus_ref.get('kind')=='dataset':
                 selected=self.engine.repo.row(tenant,'dataset',focus_ref['id'])
-                collection=selected.get('metadata',{}).get('source_binding',{}).get('collection_id')
+                selected_metadata=selected.get('metadata',{})
+                selected_binding=selected_metadata.get('source_binding',{})
+                selected_source=selected_metadata.get('source',{})
+                selected_choice=selected_source.get('client_source',{}).get('selection',{})
+                collection=selected_binding.get('collection_id')
                 if collection:
                     inventory=self.engine.repo.inventory(tenant)
                     metadata=next((row for row in inventory.get('datasets',[]) if
                         row.get('metadata',{}).get('source_binding',{}).get('collection_id')==collection
+                        and row.get('metadata',{}).get('source_binding',{}).get('source_id')==selected_binding.get('source_id')
+                        and row.get('metadata',{}).get('source',{}).get('body',{}).get('sha256')==selected_source.get('body',{}).get('sha256')
+                        and all(row.get('metadata',{}).get('source',{}).get('client_source',{}).get('selection',{}).get(key)==selected_choice.get(key)
+                                for key in ('file_index','part_index'))
                         and row.get('metadata',{}).get('selected_member',{}).get('filename')=='reviewed-selection.json'),None)
                     if metadata: requests.append(Inspect(operation='profile',ref=Ref(kind='dataset',id=metadata['id'])))
             initial_results=[]
