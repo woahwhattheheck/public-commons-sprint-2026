@@ -12,7 +12,7 @@ import math
 import re
 from typing import Any
 
-LAYOUT_EDITION = "scientific-table-panels-20261013-v1"
+LAYOUT_EDITION = "scientific-table-panels-20261014-v2"
 _NUMBER = re.compile(r"^[+\-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+\-]?\d+)?%?$")
 MAX_PANEL_COLUMNS = 5
 ROWS_PER_PANEL_GROUP = 8
@@ -33,11 +33,14 @@ def _widths(paragraphs: list[list[Any]], style: Any) -> tuple[list[float], list[
         # Long IDs remain complete and can wrap. Ordinary words and measurement
         # labels get enough room rather than shrinking the source font.
         floor = 46.0 if numeric else (52.0 if not values else 64.0)
-        low = max(floor, min(120.0, widest_word + 12.0))
+        # Twelve points are consumed by the cell's horizontal padding. Keep
+        # one additional point for floating-point layout round-off: an exact
+        # fit (for example 67.6 - 12 < 55.6) can otherwise strand a final digit.
+        low = max(floor, min(120.0, widest_word + 13.0))
         samples = sorted(stringWidth(value, style.fontName, style.fontSize)
                          for value in text if value)
         typical = samples[min(len(samples) - 1, int(len(samples) * .75))] if samples else 0.0
-        high = max(low, min(170.0, typical + 12.0))
+        high = max(low, min(170.0, typical + 13.0))
         minimum.append(low)
         preferred.append(high)
     return minimum, preferred
@@ -48,7 +51,7 @@ def _allocate(minimum: Sequence[float], preferred: Sequence[float], width: float
     if base > width + .01:
         raise ValueError("Scientific table panel is narrower than its readable columns")
     room = max(0.0, width - base)
-    demand = [max(0.0, want - low) for low, want in zip(minimum, preferred)]
+    demand = [max(0.0, want -low) for low, want in zip(minimum, preferred)]
     total = sum(demand)
     if total > 0:
         result = [low + room * extra / total for low, extra in zip(minimum, demand)]
