@@ -11,9 +11,12 @@ from contextvars import ContextVar
 from copy import deepcopy
 from dataclasses import dataclass
 import errno
-import fcntl
 import json
 import os
+if os.name == "nt":
+    from model import windows_fs as fcntl
+else:
+    import fcntl
 from pathlib import Path, PurePosixPath
 import re
 import shutil

@@ -78,7 +78,8 @@ class WorkbenchAPI:
             reads.extend({**route, "extension": entry["id"]} for route in entry.get("file_routes", []))
         return {"schema": "upstate.workbench-api/v1", "version": "1.0.0",
                 "workspace_key": workspace_key, "project_id": ws.project["id"],
-                "authentication": "Existing local operator Bearer capability or approved team credential; never publish startup JSON.",
+                "authentication": "Authorized Bearer for the selected origin; hosted transport uses its separate recipient credential. Never publish private native startup JSON.",
+                "advertised_origin": getattr(getattr(self.operator, "origin_policy", None), "advertised", None),
                 "operation_contract": {"endpoint": "/api/actions", "fields": ["workspace", "action", "payload", "operation_id"],
                     "operation_id": "16-100 ASCII letters, digits, underscore or hyphen; preserve exact value and payload on recovery",
                     "accepted_status": 202, "completion": "GET /api/task?id=... state=complete; inspect original result and files",
@@ -119,7 +120,7 @@ class WorkbenchAPI:
         paths["/api/upload"]["post"]["responses"].pop("200", None)
         return {"openapi": "3.1.0", "info": {"title": "TokenJunkieLabs scientific workbench API", "version": catalog["version"],
                     "description": "The maintained operator API. Installed extension payloads remain governed by their original scientific writers; this discovery document adds no execution engine."},
-                "servers": [{"url": self.operator.origin}], "security": [{"bearerAuth": []}], "paths": paths,
+                "servers": [{"url": getattr(getattr(self.operator, "origin_policy", None), "advertised", None) or self.operator.origin}], "security": [{"bearerAuth": []}], "paths": paths,
                 "components": {"securitySchemes": {"bearerAuth": {"type": "http", "scheme": "bearer"}},
                     "schemas": {"Operation": {"type": "object", "additionalProperties": False,
                         "required": ["workspace", "action", "payload", "operation_id"], "properties": {
