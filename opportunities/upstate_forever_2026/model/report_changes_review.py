@@ -10,7 +10,7 @@ from copy import deepcopy
 from pathlib import Path
 
 from .common import atomic_json, describe_file, digest, held, identifier, read_json, verify_file
-from . import report_changes, reviews, scientific_report_review
+from . import report_changes, reviews, scientific_report_review, portable_fs as _fs
 from .workspace import Workspace
 
 SCHEMA = "upstate.scientific-report-comparison-review/v1"
@@ -27,7 +27,7 @@ def comparison_context(workspace, comparison_id):
     """Read the exact complete local pair without importing sources or writing."""
     workspace = _workspace(workspace)
     key = identifier(comparison_id)
-    root = workspace.root.resolve()
+    root = _fs.native_path(workspace.root).resolve()
     directory = root / report_changes.KIND / key
     if (directory.is_symlink() or not directory.resolve().is_relative_to(root)
             or directory.parent.is_symlink()):
@@ -186,8 +186,8 @@ def _verify_source(workspace, receipt, context):
 
 def _source(workspace, context):
     folder = KIND + "/" + context["source_key"] + "/source"
-    root = workspace.root / folder
-    if root.is_symlink() or not root.resolve().is_relative_to(workspace.root.resolve()):
+    root = _fs.native_path(workspace.root) / folder
+    if root.is_symlink() or not root.resolve().is_relative_to(_fs.native_path(workspace.root).resolve()):
         raise ValueError("Keep comparison review sources inside their original Workspace")
     root.mkdir(parents=True, exist_ok=True)
     receipt_path = root / "source-receipt.json"

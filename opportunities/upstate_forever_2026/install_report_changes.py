@@ -8,7 +8,8 @@ from model import portable_fs as _fs
 MEMBERS=(
  'model/report_changes.py', 'model/report_changes_review.py',
  'model/portable_fs.py', 'model/windows_fs.py', 'model/portable_databases.py',
- 'model/scientific_report_review.py', 'operator/report_changes.py',
+ 'model/scientific_report_review.py', 'model/scientific_report_editions.py',
+ 'operator/report_changes.py',
  'operator/web/report_changes.mjs', 'operator/web/report_changes.css',
  'operator/extensions/report-changes.json', 'docs/SCIENTIFIC_REPORT_CHANGES.md',
  'integration/component_fragments/scientific-report-changes.json',

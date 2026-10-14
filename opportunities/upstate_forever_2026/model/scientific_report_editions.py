@@ -6,6 +6,7 @@ identity are verified together before another workflow consumes the report.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 import hashlib
 import os
 from pathlib import Path
@@ -13,7 +14,7 @@ import tempfile
 import zipfile
 
 from .common import atomic_json, describe_file, digest, held, identifier, read_json, relative_file, verify_file
-from . import observed_context
+from . import observed_context, portable_fs as _fs
 
 KIND = "scientific-report-editions"
 SCHEMA = "upstate.scientific-report-edition/v1"
@@ -21,7 +22,7 @@ SCHEMA = "upstate.scientific-report-edition/v1"
 
 def directory(workspace, key):
     key = identifier(key)
-    root = Path(workspace.root).resolve()
+    root = _fs.native_path(workspace.root).resolve()
     selected = root / KIND / key
     if selected.resolve().is_relative_to(root) is False:
         raise ValueError("Keep the saved report inside its original Workspace")
@@ -62,7 +63,7 @@ def inspect(workspace, key):
 
 
 def files(value, selected):
-    selected = Path(selected)
+    selected = _fs.native_path(selected)
     members = dict(value["files"])
     for role, name in (("operation", "operation.json"), ("edition", "edition.json")):
         if role in members:
@@ -203,9 +204,42 @@ def render(workspace, payload):
     return render_prepared(workspace, prepared)
 
 
+@contextmanager
+def _original_reader(path):
+    """Keep a retained native report bound to one regular-file identity."""
+    path = _fs.native_path(path)
+    signature = lambda item: (item.st_dev, item.st_ino, item.st_size,
+                              item.st_mtime_ns, item.st_ctime_ns)
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
+        before = signature(_fs.fd_stat(source.fileno()))
+        yield source
+        if (before != signature(_fs.fd_stat(source.fileno()))
+                or before != signature(_fs.path_stat(path))):
+            raise ValueError("A saved scientific report changed while it was read")
+
+
+def _verify_archive(path, members):
+    """Recover an already-published archive before its receipt was committed."""
+    with _original_reader(path) as source, zipfile.ZipFile(source) as archive:
+        names = archive.namelist()
+        if len(names) != len(set(names)) or set(names) != set(members):
+            raise ValueError("The existing report archive retains different original files")
+        for name, item in members.items():
+            if archive.getinfo(name).file_size != item["bytes"]:
+                raise ValueError("The existing report archive member differs: " + name)
+            count, checksum = 0, hashlib.sha256()
+            with archive.open(name) as member:
+                while chunk := member.read(1024 * 1024):
+                    count += len(chunk)
+                    checksum.update(chunk)
+            if count != item["bytes"] or checksum.hexdigest() != item["sha256"]:
+                raise ValueError("The existing report archive member differs: " + name)
+
+
 def export(workspace, key):
     """Retain the complete original report ZIP for native and web consumers."""
     record, directory, _ = inspect(workspace, identifier(key))
+    directory = _fs.native_path(directory)
     destination = directory / "report-files.zip"
     receipt = directory / "report-files.json"
     report_files = files(record, directory)
@@ -219,33 +253,41 @@ def export(workspace, key):
                 raise ValueError("The saved report archive belongs to another edition")
             verify_file(directory, prior["file"])
         else:
-            fd, temporary_name = tempfile.mkstemp(prefix=".report-files-", suffix=".zip", dir=directory)
-            os.close(fd)
-            temporary = Path(temporary_name)
-            try:
-                with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_DEFLATED,
-                                     allowZip64=True) as archive:
-                    for name, item in sorted(members.items()):
-                        path = relative_file(directory, name)
-                        info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
-                        info.compress_type = zipfile.ZIP_DEFLATED
-                        info.external_attr = 0o100600 << 16
-                        info.file_size = item["bytes"]
-                        count, checksum = 0, hashlib.sha256()
-                        with path.open("rb") as source, archive.open(
-                                info, "w", force_zip64=item["bytes"] >= zipfile.ZIP64_LIMIT) as target:
-                            while chunk := source.read(1024 * 1024):
-                                count += len(chunk)
-                                checksum.update(chunk)
-                                target.write(chunk)
-                        if count != item["bytes"] or checksum.hexdigest() != item["sha256"]:
-                            raise ValueError("A saved scientific report file changed: " + name)
-                os.replace(temporary, destination)
-                atomic_json(receipt, {"members": identity,
-                                     "file": describe_file(directory, destination)}, immutable=True)
-            finally:
-                temporary.unlink(missing_ok=True)
+            if destination.exists() or destination.is_symlink():
+                _verify_archive(destination, members)
+            else:
+                fd, temporary_name = tempfile.mkstemp(prefix=".report-files-", suffix=".zip", dir=directory)
+                temporary = Path(temporary_name)
+                try:
+                    with os.fdopen(fd, "w+b") as completed:
+                        with zipfile.ZipFile(completed, "w", compression=zipfile.ZIP_DEFLATED,
+                                             allowZip64=True) as archive:
+                            for name, item in sorted(members.items()):
+                                path = relative_file(directory, name)
+                                info = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+                                info.compress_type = zipfile.ZIP_DEFLATED
+                                info.external_attr = 0o100600 << 16
+                                info.file_size = item["bytes"]
+                                count, checksum = 0, hashlib.sha256()
+                                with _original_reader(path) as source, archive.open(
+                                        info, "w", force_zip64=item["bytes"] >= zipfile.ZIP64_LIMIT) as target:
+                                    while chunk := source.read(1024 * 1024):
+                                        count += len(chunk)
+                                        checksum.update(chunk)
+                                        target.write(chunk)
+                                if count != item["bytes"] or checksum.hexdigest() != item["sha256"]:
+                                    raise ValueError("A saved scientific report file changed: " + name)
+                        completed.flush()
+                        os.fsync(completed.fileno())
+                    try:
+                        _fs.publish_file(temporary, destination)
+                    except FileExistsError:
+                        _verify_archive(destination, members)
+                    _fs.sync_directory(directory)
+                finally:
+                    temporary.unlink(missing_ok=True)
+            atomic_json(receipt, {"members": identity,
+                                 "file": describe_file(directory, destination)}, immutable=True)
         item = read_json(receipt)["file"]
     return {"scientific_report_edition_id": key, "state": "complete",
             "title": record["title"], "directory": str(directory), "file": item}
-

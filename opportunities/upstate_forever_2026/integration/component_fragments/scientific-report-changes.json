@@ -18,7 +18,8 @@
         "model/scientific_report_review.py",
         "model/portable_fs.py",
         "model/windows_fs.py",
-        "model/portable_databases.py"
+        "model/portable_databases.py",
+        "model/scientific_report_editions.py"
       ],
       "import_roots": [
         "operator"
@@ -40,7 +41,8 @@
         "model/scientific_report_review.py",
         "model/portable_fs.py",
         "model/windows_fs.py",
-        "model/portable_databases.py"
+        "model/portable_databases.py",
+        "model/scientific_report_editions.py"
       ]
     },
     "scientific-report-review": {
@@ -49,7 +51,9 @@
         "model/report_changes.py",
         "model/portable_fs.py",
         "model/windows_fs.py",
-        "model/portable_databases.py"
+        "model/portable_databases.py",
+        "model/scientific_report_editions.py",
+        "model/scientific_report_review.py"
       ]
     }
   }

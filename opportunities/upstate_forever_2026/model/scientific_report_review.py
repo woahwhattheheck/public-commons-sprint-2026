@@ -9,10 +9,12 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 from pathlib import Path
+import hashlib
 import json
-import shutil
+import os
+import tempfile
 
-from . import reviews, scientific_report_editions
+from . import reviews, scientific_report_editions, portable_fs as _fs
 from .common import atomic_json, describe_file, digest, file_digest, held, read_json, verify_file
 from .workspace import Workspace
 
@@ -53,6 +55,7 @@ def _draft(value):
 
 def _context(workspace, edition_id, review_selection):
     record, directory, result = scientific_report_editions.inspect(workspace, edition_id)
+    directory = _fs.native_path(directory)
     members = scientific_report_editions.files(record, directory)
     primary = members.get("report_html")
     if not isinstance(primary, dict) or not str(primary.get("path", "")).endswith(".html"):
@@ -112,22 +115,33 @@ def preview_review(workspace, edition_id, review_selection):
 
 
 def _copy_original(source, target, descriptor):
+    source, target = _fs.native_path(source), _fs.native_path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
+    expected = {"path": target.name, "bytes": descriptor["bytes"],
+                "sha256": descriptor["sha256"]}
     if target.exists() or target.is_symlink():
-        if (target.is_symlink() or not target.is_file()
-                or target.stat().st_size != descriptor["bytes"]
-                or file_digest(target) != descriptor["sha256"]):
-            raise ValueError("A retained original scientific report file differs: " + descriptor["path"])
+        verify_file(target.parent, expected)
         return
-    pending = target.with_name("." + target.name + ".pending")
+    fd, name = tempfile.mkstemp(prefix=".report-original-", dir=target.parent)
+    pending = Path(name)
     try:
-        shutil.copyfile(source, pending)
-        if pending.stat().st_size != descriptor["bytes"] or file_digest(pending) != descriptor["sha256"]:
+        count, checksum = 0, hashlib.sha256()
+        with os.fdopen(fd, "wb") as output, scientific_report_editions._original_reader(source) as incoming:
+            while chunk := incoming.read(1024 * 1024):
+                count += len(chunk)
+                checksum.update(chunk)
+                output.write(chunk)
+            output.flush()
+            os.fsync(output.fileno())
+        if count != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
             raise ValueError("The original scientific report changed while being retained")
-        pending.replace(target)
+        try:
+            _fs.publish_file(pending, target)
+        except FileExistsError:
+            verify_file(target.parent, expected)
+        _fs.sync_directory(target.parent)
     finally:
         pending.unlink(missing_ok=True)
-
 
 def _verify_source(workspace, receipt, context):
     if receipt.get("schema") != SCHEMA or receipt.get("source_identity") != context["identity"]:
@@ -162,7 +176,8 @@ def _verify_source(workspace, receipt, context):
 
 
 def _source(workspace, context):
-    root = workspace.root / "scientific-report-reviews" / context["source_key"] / "source"
+    workspace_root = _fs.native_path(workspace.root)
+    root = workspace_root / "scientific-report-reviews" / context["source_key"] / "source"
     if root.is_symlink():
         raise ValueError("Keep report review sources inside their original Workspace")
     root.mkdir(parents=True, exist_ok=True)
@@ -207,7 +222,7 @@ def _source(workspace, context):
             "schema": SCHEMA, "source_identity": context["identity"],
             "source_collection_id": collection["id"], "source_id": source_id,
             "source_collection_sha256": digest(collection),
-            "directory": root.relative_to(workspace.root).as_posix(),
+            "directory": root.relative_to(workspace_root).as_posix(),
             "files": [describe_file(workspace.root, root / "model-sources.json"),
                       *[describe_file(workspace.root, root / "report" / relative)
                         for relative in sorted(context["members"])]],
