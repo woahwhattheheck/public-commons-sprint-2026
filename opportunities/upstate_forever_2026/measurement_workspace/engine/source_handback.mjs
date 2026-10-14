@@ -5,7 +5,7 @@ import os from 'node:os';
 import {randomUUID} from 'node:crypto';
 import {crc32} from 'node:zlib';
 import {hash,stable,parseSource} from './normalise.mjs';
-import {InputError} from './parse.mjs';
+import {InputError,sourceLineEndings} from './parse.mjs';
 import {installLargeFileReads} from './large_intake.mjs';
 import {MeasurementWorkspace} from './workspace.mjs';
 import {zipMembers} from './collection_zip.mjs';
@@ -99,8 +99,10 @@ function validateCollection(id,doc,read,selected,project){
   const data=read(f.path);need(data&&data.length===f.bytes&&hash(data)===f.sha256,'Original collection member changed: '+f.path);
   if(f.kind==='companion')need(f.importId===undefined||f.importId===null,'A companion cannot assert a scientific import identity');
   else{
-   const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data),parsed=parseSource({kind:f.kind,text,mapping:f.mapping});
-   const importId=hash(stable([f.kind,f.sha256,parsed.mapping])),original=project.tables.imports.find(x=>x.id===importId);
+   const original=project.tables.imports.find(x=>x.id===f.importId);
+   need(original,'Original collection source is missing from the included native project');
+   const text=new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data),parsed=parseSource({kind:f.kind,text,mapping:f.mapping,lineEndings:sourceLineEndings(JSON.parse(original.summary))});
+   const importId=hash(stable([f.kind,f.sha256,parsed.mapping]));
    need(f.importId===importId&&stable(parsed.mapping)===stable(f.mapping),'Original collection import identity differs from its actual source interpretation');
    need(original&&original.kind===f.kind&&original.sha===f.sha256&&stable(JSON.parse(original.mapping))===stable(parsed.mapping)&&
     Buffer.from(original.content).equals(data),'Original collection source differs from the included native project');

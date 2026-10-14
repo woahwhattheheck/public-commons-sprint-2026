@@ -10,7 +10,7 @@ import {randomUUID} from 'node:crypto';
 import {MeasurementWorkspace} from './workspace.mjs';
 import {calibrationExport, calibrationCSV} from './calibration.mjs';
 import {hash, stable} from './normalise.mjs';
-import {InputError} from './parse.mjs';
+import {InputError,sourceLineEndings} from './parse.mjs';
 
 export const COLLECTION_FORMAT='upper-savannah-measurement-collection/v1';
 const EDITION_FORMAT='upper-savannah-measurement-edition/v1';
@@ -40,8 +40,13 @@ function decode(file){
   }
   throw new InputError('Each source must contain exactly one UTF-8 text or canonical base64 body');
 }
-function inputFor(file,data){return {kind:file.kind,label:file.label,text:new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data),mapping:file.mapping,contentSha:file.sha256,origin:file.origin};}
-function prepare(workspace,input){
+function inputFor(file,data,lineEndings){
+  // A retained collection binds its original import identity and resolved mapping.
+  // New selections have no importId and keep the parser's physical-line default.
+  if(lineEndings===undefined&&file.importId!==undefined)lineEndings=sourceLineEndings(Object.hasOwn(file.mapping??{},'_csv_lines')?{sourceLineEdition:file.mapping._csv_lines}:{});
+  return {kind:file.kind,label:file.label,text:new TextDecoder('utf-8',{fatal:true,ignoreBOM:true}).decode(data),mapping:file.mapping,contentSha:file.sha256,origin:file.origin,lineEndings};
+}
+function prepare(workspace,input,{lineEndings}={}){
   if(input?.format!==COLLECTION_FORMAT||typeof input.title!=='string'||!input.title.trim()||!Array.isArray(input.files)||!input.files.length)throw new InputError('A collection requires its format, title and complete file list');
   const seen=new Set(),files=[];
   for(const item of input.files){
@@ -54,22 +59,27 @@ function prepare(workspace,input){
     const file={path:name,kind,sha256,bytes:data.length,label:typeof item.label==='string'&&item.label.trim()?item.label:name,mapping:item.mapping??{},origin:item.origin??{type:'collection-file'}};
     let preview=null;
     if(kind!=='companion'){
-      preview=workspace.preview(inputFor(file,data));
+      if(item.importId!==undefined){
+        if(!identifier(item.importId)||item.importId!==hash(stable([kind,sha256,file.mapping])))throw new InputError('Retained collection import identity differs from its original mapping',409);
+        file.importId=item.importId;
+      }
+      preview=workspace.preview(inputFor(file,data,lineEndings));
       if(!preview.rows)throw new InputError('No importable rows in '+name+'; preserve it as a companion or correct its interpretation');
       file.mapping=preview.mapping;
       file.importId=hash(stable([kind,sha256,preview.mapping]));
+      if(item.importId!==undefined&&item.importId!==file.importId)throw new InputError('Retained collection source interpretation changed',409);
     }
     files.push({file,data,preview});
   }
   const document={format:COLLECTION_FORMAT,title:input.title.trim(),files:files.map(x=>x.file)};
   return {id:hash(stable(document)),document,files};
 }
-export function previewCollection(workspace,input){
-  const prepared=prepare(workspace,input);
+export function previewCollection(workspace,input,options={}){
+  const prepared=prepare(workspace,input,options);
   return {id:prepared.id,...prepared.document,inspection:prepared.files.map(({file,preview})=>({path:file.path,kind:file.kind,bytes:file.bytes,preview})),workspaceRevision:workspace.revision()};
 }
-export function receiveCollection(workspace,input){
-  const prepared=prepare(workspace,input);
+export function receiveCollection(workspace,input,options={}){
+  const prepared=prepare(workspace,input,options);
   if(input.expectedId!==undefined&&input.expectedId!==prepared.id)throw new InputError('Collection differs from its reviewed inspection',409);
   const root=rootFor(workspace,prepared.id);
   // Preview every source first; a bad final file cannot cause a half-imported first pass.
@@ -78,7 +88,7 @@ export function receiveCollection(workspace,input){
   const results=[];
   for(const {file,data} of prepared.files){
     if(file.kind==='companion'){results.push({path:file.path,kind:file.kind,sha256:file.sha256});continue;}
-    const result=workspace.import(inputFor(file,data));
+    const result=workspace.import(inputFor(file,data,options.lineEndings));
     if(result.id!==file.importId)throw new InputError('Native source identity changed during receiving',409);
     results.push({path:file.path,kind:file.kind,sha256:file.sha256,...result});
   }

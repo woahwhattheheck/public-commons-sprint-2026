@@ -2,6 +2,12 @@
 export class InputError extends Error {
   constructor(message, status = 400) { super(message); this.name = 'InputError'; this.status = status; }
 }
+export const SOURCE_LINE_EDITION = 'physical-crlf/v2';
+export function sourceLineEndings(summary) {
+  if (summary?.sourceLineEdition === undefined) return 'legacy';
+  if (summary.sourceLineEdition !== SOURCE_LINE_EDITION) throw new InputError('Unsupported retained CSV source-line edition');
+  return 'physical';
+}
 export const clean = value => value == null ? '' : String(value).trim();
 export function number(value) {
   const text = clean(value);
@@ -15,8 +21,9 @@ export function day(value) {
   if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10) !== text) throw new InputError('Invalid calendar date: ' + text);
   return text;
 }
-export function parseCSV(text, {maxRows = 1_000_000, maxCell = 1_000_000} = {}) {
+export function parseCSV(text, {maxRows = 1_000_000, maxCell = 1_000_000, lineEndings = 'physical'} = {}) {
   if (typeof text !== 'string') throw new InputError('CSV content must be UTF-8 text');
+  if (!['physical','legacy'].includes(lineEndings)) throw new InputError('Unknown CSV source-line interpretation');
   text = text.replace(/^\uFEFF/, '');
   let field = '', record = [], inQuotes = false, afterQuote = false, line = 1, startLine = 1;
   const records = [];
@@ -31,7 +38,7 @@ export function parseCSV(text, {maxRows = 1_000_000, maxCell = 1_000_000} = {}) 
     const char = text[i];
     if (inQuotes) {
       if (char === '"') { if (text[i+1] === '"') { field += '"'; i++; } else {inQuotes=false;afterQuote=true;} }
-      else {field += char; if (char === '\r' || (char === '\n' && text[i-1] !== '\r')) line++;}
+      else {field += char; if (lineEndings === 'legacy' ? char === '\n' : char === '\r' || (char === '\n' && text[i-1] !== '\r')) line++;}
     } else if (char === ',') endField();
     else if (char === '\n' || char === '\r') {endRecord();if(char==='\r'&&text[i+1]==='\n') i++;line++;}
     else if (afterQuote) throw new InputError(`Unexpected character after closing quote at line ${line}`);

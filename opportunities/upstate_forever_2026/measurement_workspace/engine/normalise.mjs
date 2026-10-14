@@ -1,5 +1,5 @@
 import {createHash} from 'node:crypto';
-import {clean, number, day, InputError, parseCSV, safeJSON} from './parse.mjs';
+import {clean, number, day, InputError, parseCSV, safeJSON, SOURCE_LINE_EDITION} from './parse.mjs';
 import {WQP_CHARACTERISTIC_EDITIONS,CHARACTERISTIC_MAPPING,CHARACTERISTIC_FIELDS,characteristicUnit,interpretCharacteristic,compatibleCharacteristicLimit} from './characteristics.mjs';
 export const hash = text => createHash('sha256').update(text).digest('hex');
 export const stable = value => JSON.stringify(value, (key, val) => val && !Array.isArray(val) && typeof val==='object' ? Object.fromEntries(Object.keys(val).sort().map(k=>[k,val[k]])) : val);
@@ -91,14 +91,21 @@ export const FIELDS = {
  datum:['Location_HorizontalDatum','HorizontalCoordinateReferenceSystemDatumName','datum'],
  comment:['Result_Comment','ResultCommentText','notes']
 };
+export function sourceLineMapping(mapping={},lineEndings='physical') {
+  if(!mapping||typeof mapping!=='object'||Array.isArray(mapping))throw new InputError('Column mapping must be an object');
+  if(!['physical','legacy'].includes(lineEndings))throw new InputError('Unknown CSV source-line interpretation');
+  if(Object.hasOwn(mapping,'_csv_lines')&&(mapping._csv_lines!==SOURCE_LINE_EDITION||lineEndings!=='physical'))throw new InputError('CSV mapping and source-line edition differ');
+  return lineEndings==='physical'?{...mapping,_csv_lines:SOURCE_LINE_EDITION}:mapping;
+}
 export function fieldReader(headers, overrides={}) {
   if(!overrides || typeof overrides!=='object' || Array.isArray(overrides)) throw new InputError('Column mapping must be an object');
   if(Object.hasOwn(overrides,DETECTION_MAPPING)&&overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION)throw new InputError('Unsupported WQP detection interpretation edition');
+  if(Object.hasOwn(overrides,'_csv_lines')&&overrides._csv_lines!==SOURCE_LINE_EDITION)throw new InputError('Unsupported CSV source-line edition');
   const characteristics=Object.hasOwn(overrides,CHARACTERISTIC_MAPPING);
   if(characteristics&&(!WQP_CHARACTERISTIC_EDITIONS.includes(overrides[CHARACTERISTIC_MAPPING])||overrides[DETECTION_MAPPING]!==WQP_DETECTION_EDITION))throw new InputError('Choose the supported WQP characteristic and detection interpretation editions together');
   const fields=characteristics?{...FIELDS,...CHARACTERISTIC_FIELDS}:FIELDS;
   for (const [key,name] of Object.entries(overrides)) {
-    if(key===DETECTION_MAPPING||key===CHARACTERISTIC_MAPPING)continue;
+    if(key===DETECTION_MAPPING||key===CHARACTERISTIC_MAPPING||key==='_csv_lines')continue;
     if(typeof name!=='string') throw new InputError('Mapped column names must be strings; use an empty string to disable a field');
     if(!Object.hasOwn(fields,key)) throw new InputError('Unknown mapping field: '+key);
     if(name && !headers.includes(name)) throw new InputError('Mapped column is absent: '+name);
@@ -106,9 +113,10 @@ export function fieldReader(headers, overrides={}) {
   const mapping = Object.fromEntries(Object.entries(fields).map(([key, aliases])=>[key,Object.hasOwn(overrides,key) ? overrides[key] : aliases.find(x=>headers.includes(x)) || '']));
   if(Object.hasOwn(overrides,DETECTION_MAPPING))mapping[DETECTION_MAPPING]=WQP_DETECTION_EDITION;
   if(characteristics)mapping[CHARACTERISTIC_MAPPING]=overrides[CHARACTERISTIC_MAPPING];
+  if(Object.hasOwn(overrides,'_csv_lines'))mapping._csv_lines=SOURCE_LINE_EDITION;
   // The directive travels inside the resolved mapping and thus the import ID.
   // Unpinned historical imports keep their exact original normalization.
-  return {mapping, get:(row,key)=>[DETECTION_MAPPING,CHARACTERISTIC_MAPPING].includes(key)?(mapping[key]||''):clean(row[mapping[key]])};
+  return {mapping, get:(row,key)=>[DETECTION_MAPPING,CHARACTERISTIC_MAPPING,'_csv_lines'].includes(key)?(mapping[key]||''):clean(row[mapping[key]])};
 }
 function unitSpec(raw) {
   const u=clean(raw).toLowerCase().replaceAll('μ','u').replaceAll('µ','u').replaceAll('³','3').replace(/\s+/g,' ');
@@ -250,7 +258,7 @@ export function normaliseFlow(feature,edition='') {
     reportedValue:String(p.value),reportedUnit:p.unit_of_measure,detection:'',detectionLimits:[],qualifier,status,medium:'Water',activityType:'Daily statistic',valueType:'Daily mean',method:'USGS daily mean 00003',laboratory:'',comment:'',issues,
     station:{id:p.monitoring_location_id,name:p.monitoring_location_name||p.monitoring_location_id,latitude:number(coords[1]),longitude:number(coords[0]),datum:'source-GeoJSON'},raw:feature};
 }
-export function parseSource({kind, text, mapping={}}) {
+export function parseSource({kind, text, mapping={}, lineEndings='physical'}) {
   if(!['wqp','usgs-daily','stations'].includes(kind))throw new InputError('kind must be wqp, stations or usgs-daily');
   if(typeof text!=='string'||!text.trim())throw new InputError('A nonempty UTF-8 source is required');
   const rows=[],rejected=[]; let headers=[], resolved={};
@@ -264,7 +272,7 @@ export function parseSource({kind, text, mapping={}}) {
     if(data.links?.some(l=>l.rel==='next'))throw new InputError('This source has a next-page link. Acquire all pages with the provider fetch or combine all pages before importing.');
     for(let i=0;i<data.features.length;i++) {try{rows.push({line:i+1,row:normaliseFlow(data.features[i],flowEdition)});}catch(e){rejected.push({line:i+1,reason:e.message,raw:data.features[i]});}}
   } else {
-    const input=parseCSV(text);headers=input.headers;rejected.push(...input.rejected);const reader=fieldReader(headers,mapping);resolved=reader.mapping;
+    const input=parseCSV(text,{lineEndings});headers=input.headers;rejected.push(...input.rejected);const reader=fieldReader(headers,sourceLineMapping(mapping,lineEndings));resolved=reader.mapping;
     if(!resolved.station)throw new InputError('Missing station column; choose the correct column mapping');
     if(kind==='wqp'&&(!resolved.characteristic||(!resolved.date&&!resolved.datetime)))throw new InputError('Missing characteristic/date columns; choose the correct column mapping');
     for(const item of input.rows) {try{
@@ -277,5 +285,5 @@ export function parseSource({kind, text, mapping={}}) {
       } else rows.push({line:item.line,row:normaliseWQP(item.raw,get)});
     }catch(e){rejected.push({line:item.line,reason:e.message,raw:item.raw});}}
   }
-  return {kind,rows,rejected,headers,mapping:resolved};
+  return {kind,rows,rejected,headers,mapping:resolved,lineEndings};
 }

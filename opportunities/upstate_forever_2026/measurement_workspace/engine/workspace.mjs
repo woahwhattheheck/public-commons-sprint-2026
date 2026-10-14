@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {randomUUID} from 'node:crypto';
 import {parseSource, hash, stable, FIELDS} from './normalise.mjs';
-import {InputError, clean, csv} from './parse.mjs';
+import {InputError, clean, csv, SOURCE_LINE_EDITION, sourceLineEndings} from './parse.mjs';
 
 export class MeasurementWorkspace {
   constructor(directory = path.resolve(process.env.DATA_DIR || './data')) {
@@ -67,7 +67,7 @@ export class MeasurementWorkspace {
   describe(parsed) {
     const parameters={},issues={},stations=new Set();let censored=0;
     for(const {row} of parsed.rows){stations.add(row.stationId||row.id);if(row.parameter)parameters[row.parameter]=(parameters[row.parameter]||0)+1;if(row.censor&&row.censor!=='none')censored++;for(const issue of row.issues||[])issues[issue]=(issues[issue]||0)+1;}
-    return {rows:parsed.rows.length,rejectedCount:parsed.rejected.length,stationCount:stations.size,censored,parameters,issues};
+    return {rows:parsed.rows.length,rejectedCount:parsed.rejected.length,stationCount:stations.size,censored,parameters,issues,...(parsed.kind!=='usgs-daily'&&parsed.lineEndings==='physical'?{sourceLineEdition:SOURCE_LINE_EDITION}:{})};
   }
   import(input) {
     const label=clean(input.label);if(!label)throw new InputError('Name this source before importing');
@@ -247,7 +247,7 @@ export class MeasurementWorkspace {
     const expectedRecords=new Map(),expectedLinks=new Set();
     for(const source of tables.imports){
       if(hash(source.content)!==source.sha)throw new InputError('Original source checksum mismatch');
-      const parsed=parseSource({kind:source.kind,text:source.content,mapping:JSON.parse(source.mapping)});
+      const parsed=parseSource({kind:source.kind,text:source.content,mapping:JSON.parse(source.mapping),lineEndings:sourceLineEndings(JSON.parse(source.summary))});
       if(hash(stable([source.kind,source.sha,parsed.mapping]))!==source.id)throw new InputError('Original import identity mismatch');
       if(stable(this.describe(parsed))!==stable(JSON.parse(source.summary))||stable(parsed.rejected)!==stable(JSON.parse(source.rejected)))throw new InputError('Source parse accounting mismatch');
       const origin=JSON.parse(source.origin);
