@@ -56,6 +56,21 @@ def _failure(path=None):
         return BlockingIOError(errno.EAGAIN, ctypes.FormatError(error), str(path))
     return ctypes.WinError(error)
 
+def native_path(path):
+    """Use the Win32 extended path namespace without resolving reparse points.
+
+    Original relative member names and identities remain unchanged. This
+    enables deep retained source views and their original filenames without
+    requiring a machine registry change or shortening scientific identifiers.
+    """
+    value = str(Path(path).absolute())
+    if value.startswith("\\\\?\\"):
+        return Path(value)
+    if value.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + value[2:])
+    return Path("\\\\?\\" + value)
+
+
 def _attributes(handle, path):
     info = _AttributeTag()
     if not _kernel.GetFileInformationByHandleEx(handle, 9, ctypes.byref(info), ctypes.sizeof(info)):
@@ -69,7 +84,7 @@ def no_follow_open(path, flags, mode=0o600):
     access_mode = flags & (os.O_WRONLY | os.O_RDWR)
     access = 0xC0000000 if access_mode == os.O_RDWR else (0x40000000 if access_mode == os.O_WRONLY else 0x80000000)
     creation = 1 if flags & os.O_EXCL else (4 if flags & os.O_CREAT else 3)
-    handle = _kernel.CreateFileW(str(Path(path).absolute()), access, 7, None,
+    handle = _kernel.CreateFileW(str(native_path(path)), access, 7, None,
         creation, 0x00200000 | 0x02000000, None)
     if handle == _invalid:
         raise _failure(path)
@@ -127,12 +142,12 @@ def path_stat(path):
         os.close(descriptor)
 
 def replace(source, destination):
-    if not _kernel.MoveFileExW(str(Path(source).absolute()), str(Path(destination).absolute()), 1 | 8):
+    if not _kernel.MoveFileExW(str(native_path(source)), str(native_path(destination)), 1 | 8):
         raise _failure(destination)
 
 def sync_directory(path):
     """Validate the publish directory; body fsync/write-through rename precedes it."""
-    handle = _kernel.CreateFileW(str(Path(path).absolute()), 0, 7, None, 3,
+    handle = _kernel.CreateFileW(str(native_path(path)), 0, 7, None, 3,
         0x00200000 | 0x02000000, None)
     if handle == _invalid:
         raise _failure(path)
