@@ -94,8 +94,12 @@ def table_records(path, selected, sheet=None):
                                      keep_links=False)
         try:
             need(sheet in book.sheetnames, "Choose an original worksheet.")
-            for number, row in enumerate(book[sheet].iter_rows(values_only=True), 1):
-                yield {"row": number, "line_start": number, "line_end": number, "values": list(row)}
+            for number, row in enumerate(book[sheet].iter_rows(values_only=False), 1):
+                yield {"row": number, "line_start": number, "line_end": number,
+                       "values": [cell.value for cell in row],
+                       "cell_metadata": [{"data_type": getattr(cell, "data_type", None),
+                                          "number_format": getattr(cell, "number_format", None)}
+                                         for cell in row]}
         finally:
             book.close()
         return
@@ -131,21 +135,26 @@ def table_rows(path, selected, sheet=None):
 
 
 def table_preview(path, opts, sheet=None):
-    iterator = table_rows(path, opts, sheet)
+    iterator = table_records(path, opts, sheet)
     header_number = opts["header_row"]
     try:
         first = list(itertools.islice(iterator, header_number))
         need(len(first) == header_number, "The selected header row is beyond this " +
              ("worksheet." if sheet is not None else "file."))
-        fields = headers(first[-1][1])
+        fields = headers(first[-1]["values"])
+        def preview_row(record):
+            value = {"row": record["row"], "cells": [scalar(x) for x in record["values"]]}
+            if "cell_metadata" in record:
+                value["cell_metadata"] = record["cell_metadata"]
+            return value
         rows = list(itertools.islice(iterator, PREVIEW_ROWS + 1))
         return {"kind": "table", "name": sheet or Path(path).name, "sheet": sheet,
                 "fields": fields, "header_row": header_number,
                 "suggested_mapping": {name: matches[0]["id"] for name in TABLE_FIELDS
                                       if len(matches := [field for field in fields
                                           if re.sub(r"[\s-]+", "_", field["label"].strip().lower()) == name]) == 1},
-                "preamble": [{"row": n, "cells": [scalar(x) for x in row]} for n, row in first[:-1]],
-                "rows": [{"row": n, "cells": [scalar(x) for x in row]} for n, row in rows[:PREVIEW_ROWS]],
+                "preamble": [preview_row(record) for record in first[:-1]],
+                "rows": [preview_row(record) for record in rows[:PREVIEW_ROWS]],
                 "more_rows": len(rows) > PREVIEW_ROWS,
                 "sample_limit": PREVIEW_ROWS,
                 "formula_mode": opts["formula_mode"],

@@ -13,7 +13,7 @@ export function initialiseLineage(s){
 }
 export function validateOriginal(file){
   need(object(file)&&sha(file.sha256)&&integer(file.bytes)&&typeof file.data==='string','The complete original workbook identity is invalid.');
-  need(/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(file.data),'The original binary encoding is invalid.');
+  need(file.data.length%4===0&&/^[A-Za-z0-9+/]*={0,2}$/.test(file.data),'The original binary encoding is invalid.');
   const raw=Buffer.from(file.data,'base64');
   need(raw.length===file.bytes&&raw.toString('base64')===file.data&&digest(raw)===file.sha256,'The complete original workbook bytes changed.');
   return raw;
