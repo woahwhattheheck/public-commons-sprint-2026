@@ -1,12 +1,34 @@
 # Complete, incremental project handover
 
-TokenJunkieLabs · Upper Savannah · ASTRA-TRANSFER12 · 2026-10-12
+TokenJunkieLabs · Upper Savannah · 2026-10-14
 
 The transfer service moves a **complete original scientific Workspace** without
 repeatedly sending all of its large source and result files. It retains original
 application files, source editions, model inputs, runs, maps, reports, review
 history and the original `ARCHIVE.json`. A receiver can stop, reopen, ask for only
 its missing blocks, and receive a new independently editable working copy.
+
+## Windows and Mac workbench
+
+Open the packaged collection with `Open_Workbench.cmd` on Windows or
+`Open_Workbench.command` on Mac, then choose **Transfer and restore** in the
+workbench. This uses the existing scientific workspace, queue and downloads.
+The standalone desk below is an optional file-transfer surface, not a replacement
+for the collection launcher. Use the application's selected interpreter for CLI
+commands; the packaged workbench does not require installing another Python.
+
+The sender's snapshot and block identities are the same on all three platforms.
+Original member names, bytes, executable modes and scientific metadata remain
+intact. Receiving into an independent directory checks Windows reserved names
+and destination aliases before writing. Mac receiving also detects case and
+Unicode aliases. Archives can still retain every original member unchanged.
+
+Cache records, range uploads, part archives and report downloads use the shared
+native file-handle and locking layer. A filesystem without hard links uses a
+verified, flushed copy and create-only publication instead. Windows I/O uses its
+long-path namespace, while saved operation paths retain their original readable
+form. Keep `model/portable_fs.py` and `model/windows_fs.py` with this source when
+receiving a developer installation; both are bundled in the complete release.
 
 ## Start the handover desk
 
@@ -199,8 +221,8 @@ assembly are hashed. A corrupt cached block becomes missing and can be received
 again; the original project and unaffected blocks remain intact.
 
 Use a local filesystem with normal durable writes and atomic file operations.
-Receiving publication supports Linux `renameat2(RENAME_NOREPLACE)`, macOS
-`renamex_np(RENAME_EXCL)` and Windows no-replace rename. On another platform,
+Receiving publication uses the shared Linux, macOS and Windows native
+create-only directory publication. On another platform,
 assemble the native ZIP and use the original receiving method. Transfer integrity
 is not encryption or a sender signature: continue using approved private transport
 for nonpublic project data. The local HTTP desk is intentionally not an
@@ -212,28 +234,25 @@ native ZIP consumes additional disk. No automatic pruning removes scientific fil
 or earlier copies. Delete transport cache only after preserving the completed
 working copy and any snapshots needed for later incremental updates.
 
-## Focused operating exercises
+## Windows command-line paths
 
-```sh
-python checks/transfer_journey.py /tmp/transfer-journey
-python checks/browser_journey.py /tmp/transfer-browser
-python checks/integration_check.py
+The examples above use POSIX shell paths. With PowerShell, keep paths quoted,
+use the bundled interpreter in `$Python`, and pass selected part files as an array
+rather than relying on the shell to expand a wildcard:
+
+```powershell
+$Parts = @(Get-ChildItem -LiteralPath $Incoming -Filter '*.uptransfer.zip' -File |
+    Select-Object -ExpandProperty FullName)
+& $Python -m model.project_transfer_cli --store $Store receive @Parts
+& $Python -m model.project_transfer_cli --store $Store needs $ID
+& $Python -m model.project_transfer_cli --store $Store open-copy $ID $NewProject
 ```
 
-The native transport exercise uses more than 256 MiB of explicitly generated
-transport load in the original archive layout. It tests cross-process partial
-receiving, out-of-order parts, repeated parts, exact original-member reconstruction,
-interrupted directory receiving, changed editions, independent recipient edits,
-corrupt-cache repair and tampered-input rejection. It does not represent a
-hydrological simulation or regional model result.
-
-The browser exercise operates two real HTTP services and the actual HTML/CSS/JS.
-This container's managed Chromium rejects direct loopback navigation. Its recorded
-exercise therefore loads the served DOM and bridges requests to those actual HTTP
-services; returned task states and downloaded files are real. Reports identify
-this execution method rather than treating it as unrestricted browser navigation.
-The native Workspace adapter is bound to the inspected original interfaces; a
-complete cumulative scientific application is required to run its semantic restore.
+Use the same cache and snapshot after interruption. Reopening a completed receive
+returns its existing operation without replacing subsequent recipient edits.
+A physically moved completed copy can be opened normally and checked against its
+original snapshot using `verify-copy` at the new location. These actions operate
+the retained original files; they do not restart scientific calculations.
 
 Original integration references: `model/portable.py` Git blob
 `720dd74b35352c09e0248e87ce2c604052d0f476`, original Workspace/common schema

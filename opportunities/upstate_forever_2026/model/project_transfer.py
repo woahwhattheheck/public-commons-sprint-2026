@@ -20,6 +20,8 @@ import uuid
 import zipfile
 from typing import Any, BinaryIO, Callable, Iterable, Iterator
 
+from . import portable_fs as _fs
+
 FORMAT = "upstate.project-transfer/v1"
 ARCHIVE_FORMAT = "upstate.scientific-workspace-archive/v1"
 WORKSPACE_SCHEMA = "upstate.scientific-workbench/v1"
@@ -75,6 +77,17 @@ def member_name(value: Any) -> str:
     return value
 
 
+def _path_text(path: Path) -> str:
+    """Keep saved operation paths independent of the Win32 I/O namespace."""
+    value = str(path)
+    if os.name == "nt":
+        if value.startswith("\\\\?\\UNC\\"):
+            return "\\\\" + value[8:]
+        if value.startswith("\\\\?\\"):
+            return value[4:]
+    return value
+
+
 def file_hash(path: Path) -> str:
     h = hashlib.sha256()
     with regular_reader(path) as f:
@@ -85,7 +98,7 @@ def file_hash(path: Path) -> str:
 
 @contextlib.contextmanager
 def regular_reader(path: Path) -> Iterator[BinaryIO]:
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    fd = _fs.open_file(_fs.native_path(path), os.O_RDONLY)
     try:
         if not stat.S_ISREG(os.fstat(fd).st_mode):
             raise TransferError("Expected a regular retained file")
@@ -96,15 +109,11 @@ def regular_reader(path: Path) -> Iterator[BinaryIO]:
 
 
 def _sync_dir(path: Path) -> None:
-    if os.name == "posix":
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+    _fs.sync_directory(_fs.native_path(path))
 
 
 def _atomic(path: Path, data: bytes, *, replace: bool = False) -> None:
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, name = tempfile.mkstemp(prefix=".write-", dir=path.parent)
     tmp = Path(name)
@@ -116,10 +125,10 @@ def _atomic(path: Path, data: bytes, *, replace: bool = False) -> None:
         if replace:
             if path.is_symlink():
                 raise TransferError("Refusing a cache symlink")
-            os.replace(tmp, path)
+            _fs.replace(tmp, path)
         else:
             try:
-                os.link(tmp, path)
+                _fs.publish_file(tmp, path)
             except FileExistsError:
                 with regular_reader(path) as existing:
                     if existing.read(len(data) + 1) != data:
@@ -156,7 +165,7 @@ def parse_json(data: bytes) -> _JSON:
 
 
 def _identity(path: Path) -> tuple[int, ...]:
-    s = path.lstat()
+    s = _fs.path_stat(_fs.native_path(path))
     if not stat.S_ISREG(s.st_mode):
         raise TransferError("Input must be an original regular archive")
     return s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns
@@ -278,7 +287,7 @@ class TransferStore:
     a transfer cannot discard a receiver's independently retained project.
     """
     def __init__(self, root: str | Path):
-        self.root = Path(root).absolute()
+        self.root = _fs.native_path(Path(root).absolute())
         self._verified: dict[str, tuple[int, ...]] = {}
         if self.root.is_symlink():
             raise TransferError("Store root must not be a symlink")
@@ -364,7 +373,7 @@ class TransferStore:
         No complete snapshot appears until every declared file matches.
         """
         chunk_bytes = integer(chunk_bytes, minimum=65536, maximum=MAX_BLOCK)
-        path = Path(archive_path).absolute()
+        path = _fs.native_path(Path(archive_path).absolute())
         before = _identity(path)
         members: _JSON = {}
         start = time.monotonic()
@@ -475,10 +484,12 @@ class TransferStore:
             path = self.root / "partials" / (key + ".part")
             if path.is_symlink():
                 raise TransferError("Partial block must not be a symlink")
-            actual = path.stat().st_size if path.exists() else 0
-            if actual != offset:
-                raise TransferError("Resume offset differs; refresh the receiver request")
-            with path.open("ab") as out:
+            descriptor = _fs.open_file(path, os.O_CREAT | os.O_RDWR)
+            with os.fdopen(descriptor, "r+b") as out:
+                actual = _fs.fd_stat(out.fileno()).st_size
+                if actual != offset:
+                    raise TransferError("Resume offset differs; refresh the receiver request")
+                out.seek(actual)
                 remaining = expected_size - actual if length is None else length
                 while remaining:
                     block = source.read(min(READ_SIZE, remaining))
@@ -499,7 +510,7 @@ class TransferStore:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 if target.is_symlink():
                     raise TransferError("Retained block is a symlink")
-                os.replace(path, target)
+                _fs.replace(path, target)
                 _sync_dir(target.parent)
                 complete = True
             value = {"sha256": key, "bytes": expected_size, "offset": actual, "complete": complete, "reused": False}
@@ -510,21 +521,8 @@ class TransferStore:
     @contextlib.contextmanager
     def _block_lock(self, identity: str):
         path = self.root / "partials" / (digest_id(identity) + ".lock")
-        flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
-        fd = os.open(path, flags, 0o600)
-        try:
-            if os.name == "posix":
-                import fcntl
-                fcntl.flock(fd, fcntl.LOCK_EX)
-            elif os.name == "nt":
-                import msvcrt
-                if os.fstat(fd).st_size == 0:
-                    os.write(fd, b"0")
-                os.lseek(fd, 0, 0)
-                msvcrt.locking(fd, msvcrt.LK_LOCK, 1)
+        with _fs.locked(path):
             yield
-        finally:
-            os.close(fd)
 
     def write_pack(self, identity: str, destination: str | Path, *, request: _JSON | None = None,
                    block_ids: Iterable[str] | None = None) -> _JSON:
@@ -546,7 +544,7 @@ class TransferStore:
         wanted = sorted(set(wanted))
         if any(key not in inventory for key in wanted):
             raise TransferError("Receiver asked for undeclared data")
-        path = Path(destination).absolute()
+        path = _fs.native_path(Path(destination).absolute())
         if path.exists():
             raise TransferError("Choose a new pack path")
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -560,13 +558,13 @@ class TransferStore:
                                                   "blocks": {key: inventory[key] for key in wanted}}) + b"\n")
                 for key in wanted:
                     z.writestr("blocks/" + key, self.get_block(key, inventory[key]))
-            with tmp.open("rb") as f:
+            with os.fdopen(_fs.open_file(tmp, os.O_RDWR), "r+b") as f:
                 os.fsync(f.fileno())
-            os.link(tmp, path)
+            _fs.publish_file(tmp, path)
             _sync_dir(path.parent)
         finally:
             tmp.unlink(missing_ok=True)
-        return {"snapshot_id": identity, "path": str(path), "bytes": path.stat().st_size,
+        return {"snapshot_id": identity, "path": _path_text(path), "bytes": path.stat().st_size,
                 "sha256": file_hash(path), "blocks": len(wanted),
                 "payload_bytes": sum(inventory[key] for key in wanted)}
 
@@ -590,7 +588,7 @@ class TransferStore:
             raise TransferError("Receiver asked for undeclared blocks")
         if any(inventory[key] > payload_bytes for key in wanted):
             raise TransferError("Part payload limit must be at least the largest selected block")
-        output = Path(directory).absolute()
+        output = _fs.native_path(Path(directory).absolute())
         output.mkdir(parents=True, exist_ok=True)
         _atomic(output / (identity + ".transfer.json"), canonical(snapshot) + b"\n")
         groups: list[list[str]] = []
@@ -613,7 +611,7 @@ class TransferStore:
                 actual_snapshot, declared = self.inspect_pack(path, verify=True)
                 if actual_snapshot["id"] != identity or set(declared) != set(group):
                     raise TransferError("Existing deterministic pack differs")
-                result = {"snapshot_id": identity, "path": str(path), "bytes": path.stat().st_size,
+                result = {"snapshot_id": identity, "path": _path_text(path), "bytes": path.stat().st_size,
                           "sha256": file_hash(path), "blocks": len(group),
                           "payload_bytes": sum(inventory[key] for key in group), "reused": True}
             else:
@@ -656,7 +654,7 @@ class TransferStore:
 
     def receive_pack(self, path: str | Path, *, progress: Progress | None = None,
                      cancel: Callable[[], bool] | None = None) -> _JSON:
-        path = Path(path).absolute()
+        path = _fs.native_path(Path(path).absolute())
         before = _identity(path)
         snapshot, declared = self.inspect_pack(path, verify=False)
         self.accept_snapshot(snapshot)
@@ -690,12 +688,12 @@ class TransferStore:
         needs = self.needs(identity)
         if not needs["complete"]:
             raise TransferError("Receive the missing blocks before rebuilding the native archive")
-        target = Path(destination).absolute()
+        target = _fs.native_path(Path(destination).absolute())
         target.parent.mkdir(parents=True, exist_ok=True)
         if target.exists():
             # An exact previous reconstruction is a safe replay, not an overwrite.
             self.verify_archive(identity, target)
-            return {"snapshot_id": identity, "path": str(target), "bytes": target.stat().st_size,
+            return {"snapshot_id": identity, "path": _path_text(target), "bytes": target.stat().st_size,
                     "sha256": file_hash(target), "identity": "MATCH", "reused": True}
         fd, name = tempfile.mkstemp(prefix=".native-archive-", dir=target.parent)
         os.close(fd)
@@ -725,13 +723,13 @@ class TransferStore:
                         progress({"phase": "assembling", "path": name, "files_done": done,
                                   "files_total": len(snapshot["members"])})
             self.verify_archive(identity, pending)
-            with pending.open("rb") as f:
+            with os.fdopen(_fs.open_file(pending, os.O_RDWR), "r+b") as f:
                 os.fsync(f.fileno())
-            os.link(pending, target)
+            _fs.publish_file(pending, target)
             _sync_dir(target.parent)
         finally:
             pending.unlink(missing_ok=True)
-        return {"snapshot_id": identity, "path": str(target), "bytes": target.stat().st_size,
+        return {"snapshot_id": identity, "path": _path_text(target), "bytes": target.stat().st_size,
                 "sha256": file_hash(target), "identity": "MATCH", "reused": False}
 
     def verify_archive(self, identity: str, path: str | Path) -> None:
@@ -775,32 +773,8 @@ class TransferStore:
 
 
 def _publish_directory(source: Path, target: Path) -> None:
-    """Atomic no-replace publication; never replace even an empty directory."""
-    if os.name == "nt":
-        os.rename(source, target)  # Windows rename refuses an existing target.
-    elif __import__("sys").platform.startswith("linux"):
-        import ctypes
-        libc = ctypes.CDLL(None, use_errno=True)
-        rename = getattr(libc, "renameat2", None)
-        if rename is None:
-            raise TransferError("This system needs native archive receiving: renameat2 is unavailable")
-        rename.argtypes = [ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint]
-        rename.restype = ctypes.c_int
-        if rename(-100, os.fsencode(source), -100, os.fsencode(target), 1):
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), str(target))
-    elif __import__("sys").platform == "darwin":
-        import ctypes
-        libc = ctypes.CDLL(None, use_errno=True)
-        rename = libc.renamex_np
-        rename.argtypes = [ctypes.c_char_p, ctypes.c_char_p, ctypes.c_uint]
-        rename.restype = ctypes.c_int
-        if rename(os.fsencode(source), os.fsencode(target), 4):  # RENAME_EXCL
-            err = ctypes.get_errno()
-            raise OSError(err, os.strerror(err), str(target))
-    else:
-        raise TransferError("Use native archive receiving on this operating system")
-    _sync_dir(target.parent)
+    """Publish the complete original tree without replacing a recipient directory."""
+    _fs.publish_directory(source, target)
 
 
 def receive_directory(store: TransferStore, identity: str, destination: str | Path, *,
@@ -814,7 +788,11 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
     a pre-existing unrelated directory is never adopted or replaced.
     """
     snapshot = store.snapshot(identity)
-    target = Path(destination).absolute()
+    try:
+        _fs.validate_members(snapshot["members"])
+    except ValueError as error:
+        raise TransferError(str(error)) from error
+    target = _fs.native_path(Path(destination).absolute())
     if target.is_symlink():
         raise TransferError("Receiving destination must not be a symlink")
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -822,9 +800,9 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
     root = store.root.resolve()
     if target == root or root in target.parents or target in root.parents:
         raise TransferError("Receiving copy and transfer cache must be separate directories")
-    operation_id = sha(canonical({"snapshot_id": identity, "destination": str(target)}))
+    operation_id = sha(canonical({"snapshot_id": identity, "destination": _path_text(target)}))
     operation_path = store.root / "operations" / (operation_id + ".receive.json")
-    lock_id = sha(str(target).encode("utf-8"))
+    lock_id = sha(_path_text(target).encode("utf-8"))
     staging = target.parent / (".transfer-receive-" + operation_id)
     with store._block_lock(lock_id):
         operation = load_json(operation_path) if operation_path.exists() else None
@@ -832,10 +810,10 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
             if target.exists() or staging.exists():
                 raise TransferError("Choose a new receiving directory; existing work is preserved")
             operation = {"schema": "upstate.project-transfer-receiving/v1", "operation_id": operation_id,
-                         "snapshot_id": identity, "destination": str(target), "state": "receiving",
+                         "snapshot_id": identity, "destination": _path_text(target), "state": "receiving",
                          "project": snapshot["archive"]["project"], "created_at": time.time()}
             _atomic(operation_path, canonical(operation) + b"\n")
-        elif operation.get("snapshot_id") != identity or operation.get("destination") != str(target):
+        elif operation.get("snapshot_id") != identity or operation.get("destination") != _path_text(target):
             raise TransferError("Saved receiving operation differs")
         if operation["state"] == "complete":
             # Return the original receipt without replacing recipient edits.
@@ -858,6 +836,7 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
             staging.mkdir(mode=0o700, exist_ok=True)
             if staging.is_symlink():
                 raise TransferError("Receiving stage must be an owned directory")
+            _sync_dir(staging)
             # A killed process can leave mkstemp files before its finally block.
             # Remove only unpublished receiver temporaries, never a declared
             # original member or anything in the recipient's completed copy.
@@ -865,45 +844,47 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
             for pending in staging.rglob(".transfer-file-*"):
                 relative = pending.relative_to(staging).as_posix()
                 if relative not in declared_names and pending.is_file() and not pending.is_symlink():
-                    pending.unlink()
-                    _sync_dir(pending.parent)
+                    with _fs.parent_directory(staging, relative) as (directory, leaf):
+                        directory.unlink(leaf)
+                        directory.sync()
             done = 0
             reused = 0
             for name, record in sorted(snapshot["members"].items()):
                 if cancel and cancel():
                     raise Cancelled("Project receiving paused; completed files and blocks remain retained")
-                output = staging.joinpath(*PurePosixPath(member_name(name)).parts)
-                output.parent.mkdir(parents=True, exist_ok=True)
-                for parent in (output, *output.parents):
-                    if parent == staging.parent:
-                        break
-                    if parent.is_symlink():
-                        raise TransferError("Receiving stage contains a symlink")
-                if output.exists() and output.stat().st_size == record["bytes"] and file_hash(output) == record["sha256"]:
-                    reused += 1
-                else:
-                    fd, pending_name = tempfile.mkstemp(prefix=".transfer-file-", dir=output.parent)
-                    pending = Path(pending_name)
-                    try:
-                        h = hashlib.sha256()
-                        with os.fdopen(fd, "wb") as sink:
-                            for block in record["blocks"]:
-                                if cancel and cancel():
-                                    raise Cancelled("Receiving paused; complete files remain retained")
-                                data = store.get_block(block["sha256"], block["bytes"])
-                                sink.write(data)
-                                h.update(data)
-                            sink.flush()
-                            os.fsync(sink.fileno())
-                        if pending.stat().st_size != record["bytes"] or h.hexdigest() != record["sha256"]:
-                            raise TransferError("Received member differs from original bytes")
-                        os.replace(pending, output)  # Only this operation's private stage.
-                        _sync_dir(output.parent)
-                    finally:
-                        pending.unlink(missing_ok=True)
-                mode = archive_member_mode(snapshot, name)
-                if mode is not None:
-                    output.chmod(mode & 0o777)
+                with _fs.parent_directory(staging, name, create=True):
+                    output = staging.joinpath(*PurePosixPath(member_name(name)).parts)
+                    output.parent.mkdir(parents=True, exist_ok=True)
+                    for parent in (output, *output.parents):
+                        if parent == staging.parent:
+                            break
+                        if parent.is_symlink():
+                            raise TransferError("Receiving stage contains a symlink")
+                    if output.exists() and output.stat().st_size == record["bytes"] and file_hash(output) == record["sha256"]:
+                        reused += 1
+                    else:
+                        fd, pending_name = tempfile.mkstemp(prefix=".transfer-file-", dir=output.parent)
+                        pending = Path(pending_name)
+                        try:
+                            h = hashlib.sha256()
+                            with os.fdopen(fd, "wb") as sink:
+                                for block in record["blocks"]:
+                                    if cancel and cancel():
+                                        raise Cancelled("Receiving paused; complete files remain retained")
+                                    data = store.get_block(block["sha256"], block["bytes"])
+                                    sink.write(data)
+                                    h.update(data)
+                                sink.flush()
+                                os.fsync(sink.fileno())
+                            if pending.stat().st_size != record["bytes"] or h.hexdigest() != record["sha256"]:
+                                raise TransferError("Received member differs from original bytes")
+                            _fs.replace(pending, output)  # Only this operation's private stage.
+                            _sync_dir(output.parent)
+                        finally:
+                            pending.unlink(missing_ok=True)
+                    mode = archive_member_mode(snapshot, name)
+                    if mode is not None:
+                        output.chmod(mode & 0o777)
                 done += 1
                 if progress:
                     progress({"phase": "receiving_project", "path": name, "files_done": done,
@@ -912,8 +893,8 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
             operation.update(state="publishing", files=len(snapshot["members"]), reused_files=reused)
             _atomic(operation_path, canonical(operation) + b"\n", replace=True)
             _publish_directory(staging, target)
-        operation.update(state="complete", completed_at=time.time(), directory=str(target),
-                         workspace=str(target / "workspace"), application=str(target / "application"),
+        operation.update(state="complete", completed_at=time.time(), directory=_path_text(target),
+                         workspace=_path_text(target / "workspace"), application=_path_text(target / "application"),
                          identity="MATCH", native_cli_present=(target / "application/model/cli.py").is_file(),
                          validation="Every retained original member matched when receiving completed; no application code executed.")
         _atomic(operation_path, canonical(operation) + b"\n", replace=True)
@@ -922,14 +903,21 @@ def receive_directory(store: TransferStore, identity: str, destination: str | Pa
 
 def verify_directory(store: TransferStore, identity: str, directory: str | Path) -> _JSON:
     snapshot = store.snapshot(identity)
-    root = Path(directory).absolute()
+    try:
+        _fs.validate_members(snapshot["members"])
+    except ValueError as error:
+        raise TransferError(str(error)) from error
+    root = _fs.native_path(Path(directory).absolute())
     if root.is_symlink():
         raise TransferError("Receiving copy must not be a symlink")
+    _sync_dir(root)
     received_names = set()
     for path in root.rglob("*"):
         if path.is_symlink():
             raise TransferError("Received project contains a file alias")
-        if not path.is_dir():
+        if path.is_dir():
+            _sync_dir(path)  # Reject native directory aliases before descending.
+        else:
             received_names.add(path.relative_to(root).as_posix())
     if received_names != set(snapshot["members"]):
         raise TransferError("Received project member inventory differs from the original snapshot")
@@ -947,4 +935,4 @@ def verify_directory(store: TransferStore, identity: str, directory: str | Path)
             raise TransferError("Received copy has a different original file mode: " + name)
     if load_json(root / "workspace" / "workspace.json") != snapshot["archive"]["project"]:
         raise TransferError("Received project identity differs")
-    return {"snapshot_id": identity, "directory": str(root), "files": len(snapshot["members"]), "identity": "MATCH"}
+    return {"snapshot_id": identity, "directory": _path_text(root), "files": len(snapshot["members"]), "identity": "MATCH"}

@@ -9,15 +9,16 @@ from pathlib import Path
 import os
 import stat
 import time
+from . import portable_fs as _fs
 from .project_transfer import (TransferStore, TransferError, _atomic, canonical,
-                               digest_id, load_json, sha)
+                               digest_id, load_json, sha, _path_text)
 
 
 class NativeProjectTransfer:
     def __init__(self, workspace, store_root):
         self.workspace = workspace
         self.store = TransferStore(store_root)
-        wsroot = Path(workspace.root).resolve()
+        wsroot = _fs.native_path(workspace.root).resolve()
         cache = self.store.root.resolve()
         if cache == wsroot or wsroot in cache.parents or cache in wsroot.parents:
             raise TransferError("Keep transfer cache separate from the scientific workspace")
@@ -37,7 +38,7 @@ class NativeProjectTransfer:
             raise TransferError("Capture requires its original operation ID")
         key = sha(operation_id.encode("utf-8"))
         selection = {"operation_id": operation_id, "project_id": self.workspace.project["id"],
-                     "workspace": str(Path(self.workspace.root).resolve()),
+                     "workspace": _path_text(_fs.native_path(self.workspace.root).resolve()),
                      "include_intermediates": bool(include_intermediates),
                      "include_deliveries": bool(include_deliveries), "chunk_bytes": chunk_bytes}
         record_path = self.store.root / "operations" / (key + ".capture.json")
@@ -63,7 +64,7 @@ class NativeProjectTransfer:
                 with backup_context() if backup_context is not None else nullcontext():
                     portable.backup(self.workspace, archive, include_intermediates=include_intermediates,
                                     include_deliveries=include_deliveries)
-            record.update(state="indexing", archive=str(archive))
+            record.update(state="indexing", archive=_path_text(archive))
             _atomic(record_path, canonical(record) + b"\n", replace=True)
             snapshot = self.store.capture_archive(archive, chunk_bytes=chunk_bytes, progress=progress, cancel=cancel)
             record.update(state="complete", snapshot_id=snapshot["id"], completed_at=time.time())
@@ -79,10 +80,10 @@ class NativeProjectTransfer:
         """
         from . import portable
         snapshot_id = digest_id(snapshot_id)
-        target = Path(destination).absolute()
+        target = _fs.native_path(Path(destination).absolute())
         if target.is_symlink():
             raise TransferError("Receiving destination is a symlink")
-        key = sha(canonical({"native_restore": snapshot_id, "destination": str(target)}))
+        key = sha(canonical({"native_restore": snapshot_id, "destination": _path_text(target)}))
         record_path = self.store.root / "operations" / (key + ".native-restore.json")
         with self.store._block_lock(key):
             record = load_json(record_path) if record_path.exists() else None
@@ -98,7 +99,7 @@ class NativeProjectTransfer:
             if record is None and target.exists():
                 raise TransferError("Choose a new native receiving directory")
             record = record or {"schema": "upstate.project-transfer-native-restore/v1",
-                                "snapshot_id": snapshot_id, "destination": str(target), "state": "assembling"}
+                                "snapshot_id": snapshot_id, "destination": _path_text(target), "state": "assembling"}
             _atomic(record_path, canonical(record) + b"\n", replace=record_path.exists())
             # Earlier reconstructions omitted original Unix modes. Keep that cache
             # file intact and rebuild the same immutable snapshot in the current edition.
@@ -138,8 +139,8 @@ class NativeProjectTransfer:
                 retained_studies = snapshot["archive"].get("parameter_studies")
                 if retained_studies is not None and retained_studies != parameter_studies:
                     raise TransferError("Receiving changed the original parameter study results")
-                result = {"project": snapshot["archive"]["project"], "directory": str(target),
-                          "workspace": str(target / "workspace"), "application": str(target / "application"),
+                result = {"project": snapshot["archive"]["project"], "directory": _path_text(target),
+                          "workspace": _path_text(target / "workspace"), "application": _path_text(target / "application"),
                           "identity": "MATCH", "recovered_after_lost_reply": True,
                           "source_acquisitions": source_acquisitions,
                           "implementation": implementation,
@@ -148,6 +149,9 @@ class NativeProjectTransfer:
                 record["state"] = "restoring"
                 _atomic(record_path, canonical(record) + b"\n", replace=True)
                 result = portable.restore(archive, target)
+            for field in ("directory", "workspace", "application"):
+                if field in result:
+                    result[field] = _path_text(Path(result[field]))
             result.update(snapshot_id=snapshot_id, transport="incremental-original-members")
             record.update(state="complete", result=result, completed_at=time.time())
             _atomic(record_path, canonical(record) + b"\n", replace=True)
