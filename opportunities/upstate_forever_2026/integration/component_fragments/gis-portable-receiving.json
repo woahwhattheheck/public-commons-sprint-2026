@@ -1,0 +1,28 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "gis-portable-receiving",
+  "extend_components": {
+    "gis-projects": {
+      "paths": [
+        "model/gis_project.py",
+        "model/gis_project_cli.py",
+        "model/gis_project_native.py",
+        "model/gis_project_portable.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
+        "model/__init__.py",
+        "docs/GIS_OPENING_WINDOWS_MAC.md"
+      ]
+    }
+  },
+  "required_components": [
+    "gis-projects"
+  ],
+  "source_reference": {
+    "repository": "woahwhattheheck/public-commons-sprint-2026",
+    "branch": "eco-q47-native-gis-receiving-20261014",
+    "original_gis_blob": "e63cbf9b12893009eca6b3806d51296230142978",
+    "complete_gis_blob": "b94f2576e4fa39fd4b5b34368954c2999b728517",
+    "scope": "Existing editable GIS package: native filesystem publication, independent receiving, complete shipped tools and recipient opening"
+  }
+}
