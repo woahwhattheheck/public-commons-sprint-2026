@@ -12,6 +12,7 @@ from pathlib import Path
 from .client_source_files import headers, need, options, scalar, table_records
 
 SCHEMA = "upstate.client-source-rows/v1"
+EXPORT_VIEWER_REVISION = "original-table-offline/2"
 PAGE_SIZE = 100
 MAX_PAGE_SIZE = 250
 MAX_PAGE_BYTES = 4 * 1024 * 1024
@@ -124,17 +125,20 @@ def _offline_start(stream, metadata):
                  '<title>Complete original table</title><style>'
                  'body{margin:24px;font:15px Arial,sans-serif;color:#202428;background:white}'
                  'h1{font-size:26px}p{line-height:1.5;overflow-wrap:anywhere}'
+                 'pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}'
+                 'label,input,select{box-sizing:border-box;min-width:0;max-width:100%}'
                  'button,input,select{font:inherit;padding:9px;border:1px solid #858d94;background:#fff;border-radius:3px}'
                  'form,.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:18px 0}'
                  'label{display:flex;flex-direction:column;gap:6px}'
-                 '.ci-scroll{overflow:auto;max-width:100%;border:1px solid #ccd0d3}'
+                 '.ci-scroll{overflow:auto;max-width:100%;max-height:65vh;border:1px solid #ccd0d3}'
                  'table{border-collapse:collapse;min-width:100%;width:max-content}'
                  'th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #ddd;white-space:pre-wrap;min-width:130px;max-width:500px;overflow-wrap:anywhere}'
-                 'th{background:#f0f2f3}caption{text-align:left;padding:10px;font-weight:bold}'
+                 'th{background:#f0f2f3}th[scope=col]{position:sticky;top:0}'
+                 'caption{text-align:left;padding:10px;font-weight:bold}'
                  'details{margin-top:8px}dd{margin:5px 0 12px}dt{font-weight:bold}'
                  '.ci-row-empty{color:#60676c;font-style:italic}'
                  '@media(max-width:600px){body{margin:12px}button{min-height:44px}}'
-                 '@media print{form,.controls{display:none}.ci-scroll{overflow:visible}table{width:100%}th,td{min-width:0;max-width:none;font-size:10px}}'
+                 '@media print{form,.controls{display:none}.ci-scroll{overflow:visible;max-height:none}table{width:100%}th,td{min-width:0;max-width:none;font-size:10px}th[scope=col]{position:static}}'
                  '</style><h1>Complete original table</h1><p>' +
                  escape(str(source.get("filename", "Original file"))) + ' · worksheet ' +
                  escape(str(metadata["sheet"] or "CSV / delimited table")) +
@@ -147,11 +151,14 @@ def _offline_start(stream, metadata):
                  escape(json.dumps(metadata, ensure_ascii=False, indent=2)) +
                  '</pre></details><form id="search"><label>Search all original values<input id="query" maxlength="2000" type="search"></label>'
                  '<label><span>Case sensitive</span><input id="case" type="checkbox"></label>'
-                 '<button type="submit">Search all rows</button></form>'
-                 '<div class="controls"><button id="previous">Previous 100</button><button id="next">Next 100</button>'
+                 '<button type="submit">Search all rows</button><button id="cancel-search" type="button" hidden>Cancel search</button></form>'
+                 '<div class="controls"><button id="previous" data-offline-page="previous">Previous 100</button><button id="next" data-offline-page="next">Next 100</button>'
+                 '<label>Rows per page<select id="page-size"><option>50</option><option selected>100</option><option>250</option></select></label>'
                  '<label>Cell values<select id="mode"><option value="displayed">Selected-reader values</option>'
                  '<option value="stored">Stored values</option></select></label></div>'
-                 '<p id="status" role="status" aria-live="polite"></p><div id="table"></div>'
+                 '<form id="jump"><label>Go to original row<input id="original-row" type="number" min="1" step="1" required></label><button type="submit">Go to row</button></form>'
+                 '<p id="status" role="status" aria-live="polite"></p><p id="offline-error" role="alert"></p><div id="table"></div>'
+                 '<div class="controls"><button data-offline-page="previous">Previous 100</button><button data-offline-page="next">Next 100</button><span id="bottom-status"></span></div>'
                  '<script id="source-selection" type="application/json">' + _json_html(metadata) +
                  '</script><script id="source-rows" type="application/x-ndjson">\n')
 
@@ -162,7 +169,9 @@ def _offline_end(stream, fields):
     marker = "export function createOriginalTableReader"
     need(marker in source, "The complete original-table reader module is missing.")
     renderer = source.split(marker, 1)[0].replace("export function originalRowsTable", "function originalRowsTable")
-    script = "\nconst meta=JSON.parse(document.querySelector('#source-selection').textContent);\nconst lines=document.querySelector('#source-rows').textContent.trim().split('\\n').filter(Boolean);\nconst fields=JSON.parse(document.querySelector('#source-fields').textContent);\nconst q=s=>document.querySelector(s);\nlet start=0,matching=null;\nfunction selected(){if(matching)return matching;return Array.from({length:lines.length},(_,i)=>i);}\nfunction draw(){\n const indices=selected(),page=indices.slice(start,start+100).map(i=>JSON.parse(lines[i]));\n q('#table').innerHTML=originalRowsTable({rows:page,fields},q('#mode').value);\n q('#status').textContent=indices.length+' matching original records of '+lines.length+'; showing '+(page.length?start+1:0)+'–'+(start+page.length)+'.';\n q('#previous').disabled=start===0;q('#next').disabled=start+100>=indices.length;\n}\nq('#search').addEventListener('submit',e=>{\n e.preventDefault();const text=q('#query').value,needle=q('#case').checked?text:text.toLowerCase();\n matching=needle?lines.map((line,i)=>[JSON.parse(line),i]).filter(([r])=>\n  r.search_values.some(value=>(q('#case').checked?value:value.toLowerCase()).includes(needle))).map(([,i])=>i):null;\n start=0;draw();\n});\nq('#previous').addEventListener('click',()=>{start=Math.max(0,start-100);draw();});\nq('#next').addEventListener('click',()=>{start+=100;draw();});\nq('#mode').addEventListener('change',draw);\ndraw();\n"
+    need("function mountOfflineOriginalTable()" in renderer,
+         "The complete offline-table reader module is missing.")
+    script = "\nmountOfflineOriginalTable();\n"
     stream.write('</script><script id="source-fields" type="application/json">' +
                  _json_html(fields) + '</script><script>' + renderer + script +
                  '</script></html>')

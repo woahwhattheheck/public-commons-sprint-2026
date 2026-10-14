@@ -3,11 +3,9 @@ from __future__ import annotations
 
 from copy import deepcopy
 import csv
-import errno
 import json
 import os
 from pathlib import Path
-import shutil
 import tempfile
 
 from model.common import (atomic_json, describe_file, digest, file_digest, held,
@@ -17,6 +15,7 @@ from model.client_source_files import (ROLES, TABLE_FIELDS, TARGET_UNITS, checke
                                        inspect_file, need, options, project_table,
                                        select_band, text)
 from model.model_selection import required_table_fields
+from model import portable_fs as _fs
 
 ACTIONS = {"client-source.inspect", "client-source.commit"}
 SCHEMA = "upstate.client-source-operation/v1"
@@ -42,33 +41,16 @@ class ClientSourceIntake:
         source = self._raw(ws, body)
         need(Path(filename).name == filename and "\\" not in filename and filename,
              "Keep an ordinary original filename.")
-        path = directory / filename
+        if os.name == "nt":
+            _fs.relative_name(filename, windows=True)
+        path = _fs.native_path(directory) / filename
         path.parent.mkdir(parents=True, exist_ok=True)
         if not path.exists() and not path.is_symlink():
             try:
-                os.link(source, path)
+                _fs.publish_file(source, path)
             except FileExistsError:
                 pass
-            except OSError as error:
-                if error.errno != errno.EXDEV:
-                    raise
-                pending = None
-                try:
-                    with tempfile.NamedTemporaryFile(dir=directory, prefix=".original-", delete=False) as dst:
-                        pending = Path(dst.name)
-                        with source.open("rb") as src:
-                            shutil.copyfileobj(src, dst, 1024 * 1024)
-                        dst.flush()
-                        os.fsync(dst.fileno())
-                    need(pending.stat().st_size == body["bytes"] and file_digest(pending) == body["sha256"],
-                         "The complete original copy changed before publication.")
-                    try:
-                        os.link(pending, path)
-                    except FileExistsError:
-                        pass
-                finally:
-                    if pending is not None:
-                        pending.unlink(missing_ok=True)
+            _fs.sync_directory(path.parent)
         need(path.is_file() and not path.is_symlink() and path.stat().st_size == body["bytes"] and
              file_digest(path) == body["sha256"],
              "An existing original view differs; retain it and restore the complete intake.")
@@ -150,7 +132,7 @@ class ClientSourceIntake:
         return record, item, part, path, identity
 
     def _table_read(self, workspace_key, ws, operation, payload):
-        from model.client_source_rows import read_rows, export_table
+        from model.client_source_rows import read_rows, export_table, EXPORT_VIEWER_REVISION
         record, item, part, path, identity = self._table_source(ws, payload)
         if operation == "rows":
             result = read_rows(path, item["options"], part.get("sheet"),
@@ -161,7 +143,8 @@ class ClientSourceIntake:
             result.update(identity)
             return result
         selection = {**identity, "sheet": part.get("sheet"), "reading": options(item["options"]),
-                     "schema": "upstate.client-source-table-export/v1"}
+                     "schema": "upstate.client-source-table-export/v1",
+                     "viewer_revision": EXPORT_VIEWER_REVISION}
         directory = self.directory(ws, record["id"]) / "table-exports" / digest(selection)
         directory.mkdir(parents=True, exist_ok=True)
         saved = directory / "manifest.json"
@@ -240,9 +223,13 @@ class ClientSourceIntake:
                 selected = exported["selection"]
                 _, item, part, _, identity = self._table_source(workspace, {"id": record["id"],
                     "file_index": selected["file_index"], "part_index": selected["part_index"]})
-                need(selected == {**identity, "sheet": part.get("sheet"),
-                                  "reading": options(item["options"]),
-                                  "schema": "upstate.client-source-table-export/v1"},
+                expected = {**identity, "sheet": part.get("sheet"),
+                            "reading": options(item["options"]),
+                            "schema": "upstate.client-source-table-export/v1"}
+                if "viewer_revision" in selected:
+                    from model.client_source_rows import EXPORT_VIEWER_REVISION
+                    expected["viewer_revision"] = EXPORT_VIEWER_REVISION
+                need(selected == expected,
                      "A whole-table export belongs to a different retained source.")
                 for body in exported["artifacts"]:
                     self._raw(workspace, body)
