@@ -13,6 +13,7 @@ from pathlib import Path
 import tempfile
 
 from .common import atomic_json, describe_file, digest, file_digest, read_json, verify_file
+from . import portable_fs
 
 SCHEMA = "upstate.geographic-scenario-allocation/v1"
 EDITION = "geographic-scenario-allocation-report/1"
@@ -361,7 +362,7 @@ def _balance_plot(report, key, rows, descriptor, index):
 
 
 def _bytes(path, body):
-    path = Path(path)
+    path = portable_fs.native_path(path)
     body = body.encode("utf-8") if isinstance(body, str) else body
     path.parent.mkdir(parents=True, exist_ok=True)
     if path.exists():
@@ -376,16 +377,11 @@ def _bytes(path, body):
             stream.flush()
             os.fsync(stream.fileno())
         try:
-            os.link(pending, path)
+            portable_fs.publish_file(pending, path)
         except FileExistsError:
             if path.read_bytes() != body:
                 raise ValueError("Concurrent allocation figure differs")
-        if os.name != "nt":
-            fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-            try:
-                os.fsync(fd)
-            finally:
-                os.close(fd)
+        portable_fs.sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)

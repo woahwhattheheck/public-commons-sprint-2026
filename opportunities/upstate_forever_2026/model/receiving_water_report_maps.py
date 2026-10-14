@@ -11,6 +11,7 @@ import tempfile
 from pathlib import Path
 
 from .common import atomic_json, describe_file, digest, file_digest, read_json, verify_file
+from . import portable_fs
 
 SCHEMA = "upstate.receiving-water-report-maps/v1"
 SPEC = "figures/source-map-spec.json"
@@ -19,7 +20,7 @@ INVENTORY = "figures/source-map-members.json"
 
 def _bytes(path, body):
     """Publish immutable rendered bytes atomically; interrupted writes never count."""
-    path = Path(path)
+    path = portable_fs.native_path(path)
     if isinstance(body, str):
         body = body.encode("utf-8")
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -35,15 +36,11 @@ def _bytes(path, body):
             out.flush()
             os.fsync(out.fileno())
         try:
-            os.link(pending, path)
+            portable_fs.publish_file(pending, path)
         except FileExistsError:
             if path.read_bytes() != body:
                 raise ValueError("Concurrent source map differs")
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        portable_fs.sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)

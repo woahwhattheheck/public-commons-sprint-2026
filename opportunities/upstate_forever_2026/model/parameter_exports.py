@@ -13,6 +13,7 @@ from .common import atomic_json, describe_file, digest, file_digest, identifier,
 from .model_selection import required_outputs, run_models
 from .rasters import MASS_UNITS
 from .reuse import copy_verified
+from . import portable_fs
 
 EDITION = "parameter-study-exports/3"
 
@@ -124,8 +125,8 @@ def _identity(value):
 def _checked_file(path, expected=None, *, progress=None):
     """Hash one regular body with before/after identity checks, without buffering it."""
     checksum, size = hashlib.sha256(), 0
-    with Path(path).open("rb") as source:
-        before = os.fstat(source.fileno())
+    with os.fdopen(portable_fs.open_file(path, os.O_RDONLY), "rb") as source:
+        before = portable_fs.fd_stat(source.fileno())
         if not stat.S_ISREG(before.st_mode):
             raise ValueError("A parameter archive body must be a regular file")
         for block in iter(lambda: source.read(1024 * 1024), b""):
@@ -133,8 +134,8 @@ def _checked_file(path, expected=None, *, progress=None):
             size += len(block)
             if progress:
                 progress(len(block), size)
-        if (_identity(before) != _identity(os.fstat(source.fileno()))
-                or _identity(before) != _identity(Path(path).stat())):
+        if (_identity(before) != _identity(portable_fs.fd_stat(source.fileno()))
+                or _identity(before) != _identity(portable_fs.path_stat(path))):
             raise ValueError("A parameter archive body changed during verification")
     actual = {"bytes": size, "sha256": checksum.hexdigest()}
     if expected is not None and any(actual[key] != expected.get(key) for key in actual):
@@ -145,7 +146,7 @@ def _checked_file(path, expected=None, *, progress=None):
 def write_archive(directory, destination, descriptors, *, progress=None):
     """Stream exact retained members, including large GeoTIFFs, into one ZIP."""
     directory = Path(directory).resolve()
-    destination = Path(destination)
+    destination = portable_fs.native_path(destination)
     members = member_descriptors(directory, descriptors)
     checkpoint = destination.with_name("." + destination.name + ".members.json")
     selection = {
@@ -212,8 +213,8 @@ def write_archive(directory, destination, descriptors, *, progress=None):
             for name, item in sorted(members.items()):
                 original = relative_file(directory, name)
                 report(phase="streaming", current_member=name, current_member_bytes=0)
-                with original.open("rb") as source:
-                    before = os.fstat(source.fileno())
+                with os.fdopen(portable_fs.open_file(original, os.O_RDONLY), "rb") as source:
+                    before = portable_fs.fd_stat(source.fileno())
                     if not stat.S_ISREG(before.st_mode):
                         raise ValueError("Parameter archive member is no longer a regular file")
                     info = zipfile.ZipInfo(name)
@@ -228,21 +229,17 @@ def write_archive(directory, destination, descriptors, *, progress=None):
                             size += len(block)
                             observation["source_bytes_processed"] += len(block)
                             report(current_member_bytes=size)
-                    if (_identity(before) != _identity(os.fstat(source.fileno()))
+                    if (_identity(before) != _identity(portable_fs.fd_stat(source.fileno()))
                             or size != item["bytes"] or checksum.hexdigest() != item["sha256"]):
                         raise ValueError("Parameter archive source changed: " + name)
                 observation["members_completed"] += 1
                 report(current_member=None, current_member_bytes=0)
         report(phase="publishing", current_member=None)
-        with pending.open("rb") as original:
+        with pending.open("r+b") as original:
             os.fsync(original.fileno())
-        os.replace(pending, destination)
+        portable_fs.replace(pending, destination)
         pending = None
-        fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        portable_fs.sync_directory(destination.parent)
         archive_identity = _checked_file(destination)
         atomic_json(checkpoint, {"schema": "upstate.parameter-archive-checkpoint/v1",
                                  "selection": selection, "archive": archive_identity})

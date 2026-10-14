@@ -16,6 +16,7 @@ from pathlib import Path, PurePosixPath
 
 from .common import (atomic_json, describe_file, digest, file_digest, held,
                      identifier, now, read_json, relative_file, verify_file)
+from . import portable_fs
 
 SCHEMA = "upstate.receiving-water-report-source/v1"
 EDITION = "receiving-water-report-source/5-source-origin"
@@ -60,7 +61,7 @@ def _record_hash(record):
 
 def _copy_file(source, destination):
     """Publish an immutable full file without loading a source raster into memory."""
-    source, destination = Path(source), Path(destination)
+    source, destination = portable_fs.native_path(source), portable_fs.native_path(destination)
     size, checksum = source.stat().st_size, file_digest(source)
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists():
@@ -78,15 +79,11 @@ def _copy_file(source, destination):
         if pending.stat().st_size != size or file_digest(pending) != checksum:
             raise ValueError("Source changed during receiving-water report capture")
         try:
-            os.link(pending, destination)
+            portable_fs.publish_file(pending, destination)
         except FileExistsError:
             if destination.stat().st_size != size or file_digest(destination) != checksum:
                 raise ValueError("Concurrent report member differs")
-        fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        portable_fs.sync_directory(destination.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -122,7 +119,9 @@ def _implementation(analysis):
     modules = {"producer": Path(__file__), "plan_reader": Path(receiving_waters.__file__),
                "map_capture": Path(receiving_water_report_maps.__file__),
                "map_renderer": Path(scientific_map_figures.__file__),
-               "scientific_figures": Path(scientific_figures.__file__)}
+               "scientific_figures": Path(scientific_figures.__file__),
+               "portable_filesystem": Path(portable_fs.__file__),
+               "windows_filesystem": Path(portable_fs.__file__).with_name("windows_fs.py")}
     if analysis is not None:
         from . import receiving_water_delivery, scientific_report, client_receiving_waters
         modules.update(exporter=Path(receiving_water_delivery.__file__),
