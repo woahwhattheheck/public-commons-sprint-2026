@@ -2,9 +2,16 @@
 """Prepare and compose original regional sources through a running native operator."""
 from __future__ import annotations
 
+import sys as _platform_sys
+from pathlib import Path as _PlatformPath
+_platform_root = str(_PlatformPath(__file__).resolve().parents[1])
+if _platform_root not in _platform_sys.path:
+    _platform_sys.path.insert(0, _platform_root)
+from model import portable_fs as _fs
+
 import argparse
 import datetime as dt
-import fcntl
+fcntl = _fs.file_locks
 import hashlib
 import ipaddress
 import json
@@ -292,13 +299,9 @@ def save(path, value):
             handle.write(canonical(value) + b"\n")
             handle.flush()
             os.fsync(handle.fileno())
-        os.replace(pending, path)
+        _fs.replace(pending, path)
         pending = None
-        fd = os.open(path.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _fs.sync_directory(path.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -461,7 +464,7 @@ def run(client, args, state, project, catalog):
     output = Path(os.path.abspath(args.output))
     output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     lock_path = output.with_name(output.name + ".lock")
-    fd = os.open(lock_path, os.O_CREAT | os.O_RDWR | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    fd = _fs.open_file(lock_path, os.O_CREAT | os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if output.is_symlink():
@@ -779,8 +782,8 @@ def run_source_plan(client, args, state, project, catalog):
                  "registered_ids": manifests, "operation_id": args.operation_id, "title": title}
     output = Path(os.path.abspath(args.output))
     output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-    fd = os.open(output.with_name(output.name + ".lock"),
-                 os.O_CREAT | os.O_RDWR | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0), 0o600)
+    fd = _fs.open_file(output.with_name(output.name + ".lock"),
+                 os.O_CREAT | os.O_RDWR | getattr(os, "O_CLOEXEC", 0) | getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
         fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         if output.is_symlink():
