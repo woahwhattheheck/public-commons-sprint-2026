@@ -2,17 +2,22 @@
 from __future__ import annotations
 
 from collections import Counter, defaultdict
+from contextlib import contextmanager
 from datetime import date, datetime, time
 import base64
 import csv
 import html
 import json
 import math
+import os
 from pathlib import Path
+import shutil
+import tempfile
 import zipfile
 
 from . import gis_project as gis
 from . import gis_workspace
+from . import portable_fs as fs
 from .common import identifier
 
 SCHEMA = "upstate.gis-vector-review/v1"
@@ -322,10 +327,20 @@ def _html(report):
     return "".join(parts)
 
 
+@contextmanager
+def _durable_output(path, mode, **options):
+    """Keep writable handles through fsync, then release them before publication."""
+    descriptor = fs.open_file(path, os.O_RDWR | os.O_CREAT | os.O_EXCL)
+    with os.fdopen(descriptor, mode, **options) as stream:
+        yield stream
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def build(workspace, payload):
     root, project, layers, selection = _selection(workspace, payload)
     key = gis.fingerprint(selection)
-    directory = workspace.root / FOLDER / key
+    directory = fs.native_path(workspace.root) / FOLDER / key
     directory.mkdir(parents=True, exist_ok=True)
     with gis.locked(directory / ".review.lock"):
         if (directory / "summary.json").is_file():
@@ -333,44 +348,60 @@ def build(workspace, payload):
         reviews = [compare_layer(root, project, layers[layer_id]) for layer_id in selection["layer_ids"]]
         report = {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"],
                   "selection": selection, "layers": reviews}
-        gis.save(directory / "review.json", report)
-        with (directory / "feature-changes.csv").open("w", encoding="utf-8", newline="") as stream:
-            fields = ("layer_id", "source_id", "status", "original_feature_id", "working_feature_id",
-                      "attribute_changes_json", "geometry_json", "feature_context_json")
-            writer = csv.DictWriter(stream, fieldnames=fields)
-            writer.writeheader()
-            for layer in reviews:
-                for row in layer["rows"]:
-                    writer.writerow({"layer_id": layer["layer_id"], "source_id": row["source_id"],
-                        "status": row["status"], "original_feature_id": row.get("original_feature_id", ""),
-                        "working_feature_id": row.get("working_feature_id", ""),
-                        "attribute_changes_json": json.dumps(row.get("attributes", []), ensure_ascii=False),
-                        "geometry_json": json.dumps(row.get("geometry"), ensure_ascii=False),
-                        "feature_context_json": json.dumps({k: v for k, v in row.items()
-                            if k not in ("attributes", "geometry")}, ensure_ascii=False)})
-        (directory / "review.html").write_text(_html(report), encoding="utf-8")
-        # Complete original review files travel together for ordinary offline opening.
-        with zipfile.ZipFile(directory / "vector-review.zip", "w",
-                             compression=zipfile.ZIP_DEFLATED) as archive:
-            for name in ("review.json", "feature-changes.csv", "review.html"):
-                entry = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
-                entry.compress_type = zipfile.ZIP_DEFLATED
-                entry.external_attr = 0o100644 << 16
-                archive.writestr(entry, (directory / name).read_bytes())
-        files = {name: gis.record(workspace.root, directory / name)
-                 for name in ("review.json", "feature-changes.csv", "review.html", "vector-review.zip")}
+        names = ("review.json", "feature-changes.csv", "review.html", "vector-review.zip")
+        # An unfinished attempt has no summary and is rebuilt under the same
+        # lock. Staging never replaces or mutates an already complete edition.
+        with tempfile.TemporaryDirectory(prefix=".pending-review-", dir=directory) as temporary:
+            staging = fs.native_path(temporary)
+            gis.save(staging / "review.json", report)
+            with _durable_output(staging / "feature-changes.csv", "w", encoding="utf-8", newline="") as stream:
+                fields = ("layer_id", "source_id", "status", "original_feature_id", "working_feature_id",
+                          "attribute_changes_json", "geometry_json", "feature_context_json")
+                writer = csv.DictWriter(stream, fieldnames=fields)
+                writer.writeheader()
+                for layer in reviews:
+                    for row in layer["rows"]:
+                        writer.writerow({"layer_id": layer["layer_id"], "source_id": row["source_id"],
+                            "status": row["status"], "original_feature_id": row.get("original_feature_id", ""),
+                            "working_feature_id": row.get("working_feature_id", ""),
+                            "attribute_changes_json": json.dumps(row.get("attributes", []), ensure_ascii=False),
+                            "geometry_json": json.dumps(row.get("geometry"), ensure_ascii=False),
+                            "feature_context_json": json.dumps({k: v for k, v in row.items()
+                                if k not in ("attributes", "geometry")}, ensure_ascii=False)})
+            with _durable_output(staging / "review.html", "w", encoding="utf-8") as stream:
+                stream.write(_html(report))
+            # Stream complete members instead of making another in-memory copy
+            # of each potentially large scientific review report.
+            with _durable_output(staging / "vector-review.zip", "w+b") as stream:
+                with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+                    for name in names[:-1]:
+                        entry = zipfile.ZipInfo(name, (1980, 1, 1, 0, 0, 0))
+                        entry.compress_type = zipfile.ZIP_DEFLATED
+                        entry.external_attr = 0o100644 << 16
+                        descriptor = fs.open_file(staging / name, os.O_RDONLY)
+                        with os.fdopen(descriptor, "rb") as reader, archive.open(entry, "w", force_zip64=True) as writer:
+                            shutil.copyfileobj(reader, writer, 1024 * 1024)
+            _, _, _, current = _selection(workspace, payload)
+            if current != selection:
+                raise ValueError("The received vector edition changed during review; retry its current edition.")
+            for name in names:
+                fs.replace(staging / name, directory / name)
+            fs.sync_directory(directory)
+        files = {name: gis.record(workspace.root, directory / name) for name in names}
         summary = {"schema": SCHEMA, "id": key, "project_id": workspace.project["id"], "state": "complete",
                    "title": project["title"] + " · working vector review", "selection": selection,
                    "layers": [{k: row[k] for k in ("layer_id", "title", "counts", "crs",
                               "identity_field_missing", "source_identity_field")} for row in reviews],
                    "files": files}
+        # The normal catalogue only exposes this edition after every output is
+        # flushed, closed, published and bound to its unchanged received input.
         gis.save(directory / "summary.json", summary)
         return summary
 
 
 def inspect(workspace, key):
     key = identifier(key)
-    summary = gis.load(workspace.root / FOLDER / key / "summary.json")
+    summary = gis.load(fs.native_path(workspace.root) / FOLDER / key / "summary.json")
     selection = summary["selection"]
     if (summary.get("schema") != SCHEMA or summary.get("id") != key or
             summary.get("project_id") != workspace.project["id"] or
@@ -399,7 +430,7 @@ def inspect(workspace, key):
 
 def catalog(workspace):
     rows = []
-    for path in sorted((workspace.root / FOLDER).glob("*/summary.json")):
+    for path in sorted((fs.native_path(workspace.root) / FOLDER).glob("*/summary.json")):
         value = gis.load(path)
         if (value.get("schema") != SCHEMA or value.get("id") != path.parent.name
                 or value.get("project_id") != workspace.project["id"]
