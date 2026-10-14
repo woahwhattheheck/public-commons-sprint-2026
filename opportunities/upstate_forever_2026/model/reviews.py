@@ -22,6 +22,8 @@ import zipfile
 
 from .common import (atomic_json, canonical, describe_file, digest, file_digest,
                      held, identifier, now, read_json, relative_file, verify_file)
+from .portable_fs import (publish_file as _publish_file, publish_directory as _publish_directory,
+                          sync_directory as _sync_directory)
 
 SELECTION_SCHEMA = "upstate.customer-review-selection/v1"
 PACKET_SCHEMA = "upstate.customer-review-packet/v1"
@@ -822,7 +824,7 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
                     # Keep every original path while avoiding a second disk copy.
                     target.parent.mkdir(parents=True, exist_ok=True)
                     try:
-                        os.link(original, target)
+                        _publish_file(original, target)
                     except OSError:
                         _copy_file(path, target, item)
                 else:
@@ -838,7 +840,7 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
             inspect_packet(pending)
             if destination.exists():
                 raise ValueError("Review destination appeared during export")
-            os.rename(pending, destination)
+            _publish_directory(pending, destination)
             pending = None
         result = _export_result(destination, manifest, packet)
         if archive is not None:
@@ -964,21 +966,23 @@ def archive_packet(directory, destination):
     if destination.resolve().is_relative_to(directory) or destination.exists() or destination.is_symlink():
         raise ValueError("Choose a new review archive path outside its exported directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    pending = destination.parent / (".review-archive-" + destination.name + ".pending")
-    created = False
+    descriptor, name = tempfile.mkstemp(prefix=".review-archive-", suffix=".zip", dir=destination.parent)
+    pending = Path(name)
     try:
-        with zipfile.ZipFile(pending, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=3,
-                             allowZip64=True) as archive:
-            created = True
-            for name in sorted(set(inspected["manifest"]["members"]) | {"review-manifest.json"}):
-                archive.write(_regular(directory, name), name)
+        with os.fdopen(descriptor, "w+b") as output:
+            with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3,
+                                 allowZip64=True) as archive:
+                for member in sorted(set(inspected["manifest"]["members"]) | {"review-manifest.json"}):
+                    archive.write(_regular(directory, member), member)
+            output.flush()
+            os.fsync(output.fileno())
         inspect_packet(pending)
-        os.link(pending, destination)
+        _publish_file(pending, destination)
+        _sync_directory(destination.parent)
         return {"path": str(destination), "bytes": destination.stat().st_size,
                 "sha256": file_digest(destination), "package_sha256": inspected["manifest"]["package_sha256"]}
     finally:
-        if created:
-            pending.unlink(missing_ok=True)
+        pending.unlink(missing_ok=True)
 
 
 def receive_packet(path, destination, *, workspace=None):
@@ -1010,7 +1014,7 @@ def receive_packet(path, destination, *, workspace=None):
             joined = import_packet(workspace, inspected["packet"])
         if destination.exists():
             raise ValueError("Review receiving destination appeared during intake")
-        os.rename(pending, destination)
+        _publish_directory(pending, destination)
         pending = None
         return {"schema": PACKAGE_SCHEMA, "directory": str(destination), "index": str(destination / "index.html"),
                 "review_id": inspected["manifest"]["review_id"], "package_sha256": inspected["manifest"]["package_sha256"],
