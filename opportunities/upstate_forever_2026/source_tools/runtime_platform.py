@@ -160,13 +160,13 @@ def stamp_file(value) -> list[int]:
 def file_hash(path: Path) -> tuple[str, list[int]]:
     fd = open_file(path, os.O_RDONLY)
     with os.fdopen(fd, 'rb') as stream:
-        before = os.fstat(stream.fileno())
+        before = windows_fs().fd_stat(stream.fileno()) if os.name == 'nt' else os.fstat(stream.fileno())
         if not stat.S_ISREG(before.st_mode):
             raise ValueError(f'Runtime member is not a regular file: {path}')
         digest = hashlib.sha256()
         for block in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(block)
-        after = os.fstat(stream.fileno())
+        after = windows_fs().fd_stat(stream.fileno()) if os.name == 'nt' else os.fstat(stream.fileno())
         if stamp_file(before) != stamp_file(after):
             raise ValueError(f'Runtime member changed while being read: {path}')
         return digest.hexdigest(), stamp_file(after)

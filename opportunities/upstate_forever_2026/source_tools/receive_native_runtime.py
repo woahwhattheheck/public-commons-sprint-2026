@@ -478,7 +478,8 @@ def inspect_inventory(prefix: Path, saved: dict | None = None) -> dict:
                 continue
             elif stat.S_ISREG(value.st_mode):
                 old = previous.get(key,{})
-                signature = rp.stamp_file(value)
+                # Keep Windows path and opened-handle signatures on native ChangeTime.
+                signature = rp.stamp_file(rp.windows_fs().path_stat(path) if os.name == 'nt' else value)
                 if old.get('kind') == 'file' and old.get('stat') == signature:
                     entry = old
                 else:
