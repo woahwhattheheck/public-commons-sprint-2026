@@ -106,10 +106,10 @@ environment `NATIVE_WORKSPACE_KEY` remains authoritative.
 
 Request execution, original TaskRequests and full input/response bytes remain
 durable in the original native connector's private journal and fsynced spool.
-The edge's connection metadata is transient. It uses a bounded24 MiB metadata
-cache plus the existing24 binary chunk slots; complete files remain on native
-disk and move in1 MiB chunks. Completed and failed connection records can be evicted,
-leaving same-instance ID tombstones. Active and uncertain request metadata remains admitted
+The edge's connection metadata is transient. It uses the actual deployed metadata bounds of 40 MiB estimated metadata,
+4,096 request records and 65,536 chunk identities, plus the existing 24 binary
+chunk slots. Complete files remain on native disk and move in 1 MiB chunks.
+Completed and failed connection records and their chunk metadata can be retired. Active and uncertain request metadata remains admitted
 until completion and receives ordinary backpressure if physical capacity fills.
 A cache or epoch loss never establishes that an upstream action did not execute.
 
@@ -146,7 +146,9 @@ Missing or released preview request state returns HTTP409
 `PREVIEW_STATE_LOST`, `X-Eco-Uncertain: 1` and the original
 `X-Eco-Request-ID`. An input chunk waiting for an original request that becomes
 uncertain also exits with409 and the same uncertain-outcome header. It does not
-repeat503 INPUT_PENDING indefinitely.
+repeat503 INPUT_PENDING indefinitely. Marking a request uncertain also releases
+its staged edge input slot, and delayed input ACK or seal calls preserve that
+terminal outcome rather than returning it to the native dispatch queue.
 
 The native connector recognizes a retained ready/response/delivered journal
 entry paired with regressed edge offsets or a missing execution owner. It uses
@@ -162,9 +164,9 @@ reads the same result on reentry. It must not silently restage, substitute a new
 ID or repeat an unknown native mutation. Recover scientific work through its
 original native task, operation, project or retained response file.
 
-Within a live instance, tombstones reject recreating evicted IDs. After a complete
-instance loss, edge memory alone cannot distinguish an old manifest from a new
-one; manifest acceptance is therefore not execution authority. The original
+After metadata retirement or a complete instance loss, edge memory alone cannot
+distinguish an old manifest from a new one; manifest acceptance is therefore not
+execution authority. Status/result reads of missing records report state loss. The original
 native journal validates immutable request identity and governs recovery. No
 seal or execution marker is inferred from a locally ready native input file.
 

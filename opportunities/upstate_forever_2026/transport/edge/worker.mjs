@@ -1,5 +1,5 @@
 /* Ecosystem HTTPS transport v1. Edge metadata only; original native operator remains authoritative. */
-import {previewStorage,signPreviewSession,readPreviewSession,PreviewStateError} from "./preview_storage.mjs";
+import {previewStorage,signPreviewSession,readPreviewSession} from "./preview_storage.mjs";
 const VERSION = "upstate.eco-relay/v1";
 const CHUNK_BYTES = 1048576;
 const META_BYTES = 65536;
@@ -306,6 +306,7 @@ export class EcoRelay {
   }
   acknowledgeInput(id,value) {
     const record=this.require(id),offset=integer(value.offset,"offset"),count=integer(value.bytes,"chunk byte count");
+    this.assertInputOutcome(record);
     if(!TOKEN_RE.test(value.sha256||""))problem(400,"CHUNK_HASH","Retain the original chunk hash.");
     if(offset<record.input_offset) {
       const old=this.chunk(id,"input",offset);
@@ -326,6 +327,7 @@ export class EcoRelay {
   }
   seal(id,value) {
     const record=this.require(id),size=integer(value.body_bytes,"body byte count");
+    this.assertInputOutcome(record);
     if(record.input_offset!==size||(record.body_bytes!==null&&record.body_bytes!==size))
       problem(409,"INPUT_INCOMPLETE","Seal only the complete natively acknowledged original body.");
     if(value.body_sha256!==undefined&&!TOKEN_RE.test(value.body_sha256))problem(400,"BODY_HASH","Use the original complete body hash.");
@@ -532,7 +534,7 @@ export class EcoRelay {
         ...(/^[A-Za-z0-9_-]{16,100}$/.test(value.operation_id||"")?{operation_id:value.operation_id}:{}),
         ...(/^[A-Za-z0-9_-]{1,200}$/.test(value.workspace||"")?{workspace:value.workspace}:{}),
         ...(TOKEN_RE.test(value.task_id||"")&&value.lookup_path==="/api/task?id="+value.task_id?{lookup_path:value.lookup_path}:{})};
-      this.save(record);return json(metadata(record));
+      this.save(record);this.inputs.delete(id);this.wake(id);this.wake("poll");return json(metadata(record));
     }
     if(action==="response"&&method==="POST") {
       const value=await readJSON(request),status=integer(value.status,"HTTP status");record=this.require(id);
@@ -650,7 +652,7 @@ export class EcoRelay {
       }
       return await this.publicRoute(request,url);
     } catch(error) {
-      if(error instanceof RelayError||error instanceof PreviewStateError) {
+      if(error instanceof RelayError||error?.code==="TRANSPORT_BACKPRESSURE") {
         const uncertain=["PREVIEW_STATE_LOST","EDGE_STATE_LOST","UPSTREAM_UNCERTAIN"].includes(error.code);
         const candidate=error.id||new URL(request.url).pathname.match(/\/requests\/([A-Za-z0-9_-]{8,128})(?:\/|$)/)?.[1]||request.headers.get("X-Eco-Request-ID");
         const id=ID_RE.test(candidate||"")?candidate:null;
