@@ -19,7 +19,7 @@ import urllib.request
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 from discovery_engine import DiscoveryError, require, parse_json_bytes, json_bytes, read_json
-from forms_workspace import Workspace, identifier, measured, immutable, relative, regular_under, RAW_LIMIT
+from forms_workspace import Workspace, identifier, measured, immutable, relative, regular_under, RAW_LIMIT, selected_program
 from forms_workspace_report import render_html
 
 HERE = Path(__file__).resolve().parent
@@ -65,15 +65,28 @@ class Service:
         return {"schema":SERVER_SCHEMA,"workspace_id":self.workspace.meta["workspace_id"],
                 "workspace":str(self.root),"origin":self.origin+self.prefix,
                 "pid":os.getpid(),"source_files":self.workspace.meta["source_files"],
+                "runtime_source_files":self.workspace.runtime_source_files,
                 "upload_limit_bytes":MAX_UPLOAD,"request_limit_bytes":MAX_RPC}
 
     def upload_descriptor(self,upload_id):
         name=identifier(upload_id,"capture upload identity")+".zip"
-        path=regular_under(self.root/"incoming",name)
-        value=read_json(self.root/"incoming"/(name+".json"))
-        require(value["archive_name"]==name and value["file"]==measured(path),
-                "Original completed upload differs")
-        return value
+        # PUT links the original and its receipt under these same locks. A reader
+        # must not mistake that short publication interval for a missing upload.
+        with self.lock, self.workspace.mutex:
+            incoming=self.root/"incoming"
+            require(incoming.is_dir() and not incoming.is_symlink(),"Original incoming directory differs")
+            body=incoming/name;receipt=incoming/(name+".json")
+            require(not body.is_symlink() and not receipt.is_symlink(),"Upload members cannot be symbolic links")
+            if not body.exists() and not receipt.exists():
+                raise FileNotFoundError(name)
+            require(body.is_file() and receipt.is_file(),"Original upload is incomplete; retain its same identity")
+            path=regular_under(incoming,name)
+            value=read_json(regular_under(incoming,name+".json"))
+            require(value.get("schema")=="tjlabs.forms-workspace.upload.v1" and
+                    value.get("workspace_id")==self.workspace.meta["workspace_id"] and
+                    value.get("upload_id")==upload_id and value.get("archive_name")==name and
+                    value.get("file")==measured(path),"Original completed upload differs")
+            return value
 
 
     def process_identity(self,pid):
@@ -186,8 +199,10 @@ class Service:
             receipt=self.http_root/("inspector-"+key+"-"+uuid.uuid4().hex+".json")
             log=self.http_root/(receipt.stem+".log")
             stream=log.open("xb")
+            project_source=selected_program(self.workspace.sources,read_json(project/"result.json")["source_files"])
             argv=[sys.executable,str(HERE/"forms_server.py"),"--project",str(project),
-                  "--archive",str(archive),"--receipt",str(receipt),"--port","0"]
+                  "--archive",str(archive),"--receipt",str(receipt),"--port","0",
+                  "--selected-software",str(project_source)]
             new_json(receipt.with_suffix(".opening.json"),{"workspace_id":self.workspace.meta["workspace_id"],"hostname":socket.gethostname(),
                      "source_files":self.workspace.meta["source_files"],"project_identity":run["project_identity"],
                      "argv":argv,"receipt_name":receipt.name})
