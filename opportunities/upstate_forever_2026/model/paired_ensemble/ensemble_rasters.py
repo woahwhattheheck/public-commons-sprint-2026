@@ -15,6 +15,7 @@ import time
 import numpy as np
 import rasterio
 from rasterio.windows import Window, transform as window_transform
+from .. import portable_fs as _fs
 from .ensemble_store import atomic, canonical, digest, fingerprint, held, now, read, verify
 
 SCHEMA = 'upstate.paired-raster-ensemble/v1'
@@ -58,7 +59,7 @@ def _same_grid(ds, grid):
 
 
 def _grid(path):
-    with rasterio.open(path) as ds:
+    with rasterio.open(_fs.native_path(path)) as ds:
         if ds.crs is None or ds.count != 1:
             raise ValueError('Select a single-band reporting mask with a defined CRS')
         transform = list(ds.transform)[:6]
@@ -84,7 +85,7 @@ class RasterPool:
         self.items = OrderedDict()
 
     def get(self, path):
-        name = str(path)
+        name = str(_fs.native_path(path))
         if name in self.items:
             item = self.items.pop(name)
             self.items[name] = item
@@ -212,12 +213,16 @@ def _profile(grid, width, height, transform, count=1):
 
 
 def _fsync(path):
-    with Path(path).open('rb') as f:
+    # Windows requires a writable handle to flush the just-completed TIFF.
+    flags = os.O_RDWR if os.name == 'nt' else os.O_RDONLY
+    with os.fdopen(_fs.open_file(_fs.native_path(path), flags),
+                   'r+b' if os.name == 'nt' else 'rb') as f:
         os.fsync(f.fileno())
 
 
 def _write_tile(directory, key, grid, window, products, summaries, bands):
     """Close+sync native file before publishing its complete tile record."""
+    directory = _fs.native_path(directory)
     tile_dir = directory / 'tiles'
     tile_dir.mkdir(exist_ok=True)
     final = tile_dir / (key + '.tif')
@@ -234,7 +239,8 @@ def _write_tile(directory, key, grid, window, products, summaries, bands):
                 ds.set_band_unit(index, band['units'])
             ds.update_tags(effect_direction='baseline minus alternative', ensemble_schema=SCHEMA)
         _fsync(pending)
-        os.replace(pending, final)
+        _fs.replace(pending, final)
+        _fs.sync_directory(tile_dir)
         record = {'window': [int(window.col_off), int(window.row_off), int(window.width), int(window.height)],
                   'path': final.relative_to(directory).as_posix(), **fingerprint(final),
                   'summaries': summaries}
@@ -272,7 +278,7 @@ def _bind(spec):
         raise ValueError('Select at least one explicitly paired model member')
     if len(members) >= COUNT_NODATA:
         raise ValueError('The selected cohort exceeds uint32 count storage')
-    reporting = Path(spec['reporting_mask']).resolve(strict=True)
+    reporting = _fs.native_path(spec['reporting_mask']).resolve(strict=True)
     grid = _grid(reporting)
     sources, seen = [], set()
     for member in members:
@@ -292,7 +298,7 @@ def _bind(spec):
                 record = selection[side]
                 if isinstance(record, str):
                     record = {'path': record}
-                path = Path(record['path']).resolve(strict=True)
+                path = _fs.native_path(record['path']).resolve(strict=True)
                 if not path.is_file():
                     raise ValueError('A selected result is not a regular file')
                 actual = fingerprint(path)
@@ -410,7 +416,7 @@ def analyze(spec, output, *, memory_mb=256, tile_size=256, max_open_datasets=48,
         raise ValueError('Select a tile edge between 1 and 2048 pixels')
     selected, members, reporting_path = _bind(spec)
     key = digest(selected)
-    root = Path(output).resolve()
+    root = _fs.native_path(output).resolve()
     root.mkdir(parents=True, exist_ok=True)
     directory = root / key
     directory.mkdir(parents=True, exist_ok=True)
@@ -552,6 +558,7 @@ def analyze(spec, output, *, memory_mb=256, tile_size=256, max_open_datasets=48,
 
 
 def _materialize(directory, selected, bands, record_paths, *, on_progress=None):
+    directory = _fs.native_path(directory)
     grid = selected['grid']
     transform = rasterio.Affine(*grid['transform'])
     artifacts = {}
@@ -584,7 +591,8 @@ def _materialize(directory, selected, bands, record_paths, *, on_progress=None):
                         array = values.filled(FLOAT_NODATA)
                     dst.write(array, 1, window=Window(*record['window']))
             _fsync(pending)
-            os.replace(pending, destination)
+            _fs.replace(pending, destination)
+            _fs.sync_directory(directory)
             artifacts[name] = {'path': destination.name, **fingerprint(destination),
                                'pollutant': band['pollutant'], 'statistic': band['name'], 'units': band['units']}
             if on_progress:
