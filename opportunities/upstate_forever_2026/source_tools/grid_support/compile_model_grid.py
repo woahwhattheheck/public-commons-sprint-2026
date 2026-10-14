@@ -24,7 +24,7 @@ from rasterio.windows import Window,bounds as window_bounds
 from rasterio.features import rasterize
 from shapely import STRtree
 from shapely.geometry import box
-from compile_grid_support import read_retained,polygons_only,SCOPES,save_json,save_csv,digest
+from compile_grid_support import read_retained,read_vector,write_geopackage,vector_runtime,polygons_only,SCOPES,save_json,save_csv,digest
 
 def compile_model_grid(geo,shp,gridfile,out,tile=512):
     start=datetime.now(timezone.utc).isoformat();tick=time.monotonic()
@@ -37,7 +37,7 @@ def compile_model_grid(geo,shp,gridfile,out,tile=512):
       'intakes':'scdes-public-surface-intakes-20261012','protection':'scdes-arjws-prwd-swpa-20261012',
       'arjws_upstream':'upstream-57ec79c39ad77b0d030c7d53','prwd_upstream':'upstream-cae87067e9e9267765622747'}
     native={k:read_retained(geo,sel[sid]) for k,sid in ids.items()}
-    report=gpd.read_file(shp);native['sc_reporting']=report.loc[report.Basin.eq('Upper Savannah')].copy()
+    report=read_vector(shp);native['sc_reporting']=report.loc[report.Basin.eq('Upper Savannah')].copy()
     if len(native['sc_reporting'])!=1:raise ValueError('Exact reporting selector must select one feature')
     working={};repairs=[]
     for key,df in native.items():
@@ -116,9 +116,9 @@ def compile_model_grid(geo,shp,gridfile,out,tile=512):
           **{k+'_distance_m':float(geoms[k].distance(p)) for k in ('swpa_11','swpa_12','swpa_131','swpa_132')}})
     save_csv(out/'tables/original-intakes.csv',ir);save_json(out/'tables/geometry-working-repairs.json',repairs)
     gpkg=out/'vectors/geographic-support.gpkg'
-    for k,df in native.items():df.to_file(gpkg,layer=k+'_original',driver='GPKG',engine='pyogrio',append=gpkg.exists())
+    for k,df in native.items():write_geopackage(df,gpkg,k+'_original',append=gpkg.exists())
     working['model_domain']=hucs
-    for k,df in working.items():df.to_file(gpkg,layer=k+'_working',driver='GPKG',engine='pyogrio',append=True)
+    for k,df in working.items():write_geopackage(df,gpkg,k+'_working',append=True)
     # Complete original source closure, including original invalid protection geometry.
     shutil.copytree(geo,out/'originals/geography',dirs_exist_ok=True)
     shutil.copytree(shp.parent,out/'originals/planning_basins2023',dirs_exist_ok=True)
@@ -144,7 +144,7 @@ def compile_model_grid(geo,shp,gridfile,out,tile=512):
       'method_references':['https://rasterio.readthedocs.io/en/stable/api/rasterio.features.html','https://gdal.org/en/stable/drivers/vector/esrijson.html'],
       'runtime':{'started_at_utc':start,'finished_at_utc':datetime.now(timezone.utc).isoformat(),'elapsed_seconds':round(time.monotonic()-tick,3),
         **memory,'peak_rss_mb':memory['peak_rss_mib'],'tile_size':tile,'python':sys.version.split()[0],
-        'rasterio':rasterio.__version__,'shapely':shapely.__version__}}
+        'rasterio':rasterio.__version__,'shapely':shapely.__version__,**vector_runtime()}}
     save_json(out/'support-summary.json',result)
     print(json.dumps({'status':'complete','runtime':result['runtime'],'same_grid_counts':result['retained_grid_counts_match'],'scopes':rows}),flush=True)
     return result
