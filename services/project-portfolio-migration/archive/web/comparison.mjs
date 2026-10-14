@@ -35,7 +35,13 @@ async function validateSnapshot(s,hash){
  need(object(s)&&s.schema==="portfolio.archive-comparison-source.v1","Select a complete original publication capture.");
  const p=s.publication,d=s.definition,r=s.review;
  need(object(p)&&p.schema==="portfolio.archive-publication.v1"&&sha(p.id)&&sha(p.cohort_id)&&sha(p.definition_sha256)&&sha(p.review_sha256),"Retain the exact publication identity.");
- need(object(d)&&object(r)&&r.schema==="portfolio.archive-review.v1"&&r.cohort_id===p.cohort_id&&r.definition_sha256===p.definition_sha256,"Publication and original review bindings differ.");
+ need(object(d)&&object(r)&&r.schema==="portfolio.archive-review.v1"&&sha(own(p,"source_cohort_id")?p.source_cohort_id:p.cohort_id)&&r.cohort_id===(own(p,"source_cohort_id")?p.source_cohort_id:p.cohort_id)&&r.definition_sha256===p.definition_sha256,"Publication and original review bindings differ.");
+ need(object(s.original_objects),"Retain the exact original definition and review object bytes.");
+ for(const [name,value,expected] of [["definition",d,p.definition_sha256],["review",r,p.review_sha256]]){
+  const text=s.original_objects[name+"_text"];
+  need(typeof text==="string"&&await hash(text)===expected,"The original "+name+" bytes differ from their retained object identity.");
+  need(stable(JSON.parse(text))===stable(value),"The parsed "+name+" differs from its exact original bytes.");
+ }
  need(stable(d.members)===stable(r.members)&&stable(d.profile)===stable(r.profile),"Retain the reviewed member and profile selection.");
  need(object(p.dataset)&&stable(p.dataset.columns)===stable(r.columns)&&stable(p.dataset.tables)===stable(r.tables)&&stable(p.dataset.table_sha256)===stable(r.table_sha256),"Publication reporting dataset differs from its exact original review.");
  need(p.approval?.review_sha256===p.review_sha256&&sha(p.archive?.sha256)&&Number.isSafeInteger(p.archive?.bytes),"Retain the original approval and complete source archive.");
@@ -122,7 +128,14 @@ export async function loadPublication(api,cohortId,publicationId,{isCurrent=()=>
  const cohort=await api("/api/cohorts/"+cohortId);check();
  const matches=cohort.publications.filter(x=>x.id===publicationId);need(matches.length===1,"The selected publication is not retained in this cohort.");
  const publication=matches[0];
- const [definition,review]=await Promise.all([api("/api/objects/"+publication.definition_sha256),api("/api/objects/"+publication.review_sha256)]);check();
+ const originals=await Promise.all([api("/api/objects/"+publication.definition_sha256+"?representation=source"),api("/api/objects/"+publication.review_sha256+"?representation=source")]);check();
+ const original_objects={};
+ for(const [i,name] of ["definition","review"].entries()){
+  const raw=originals[i],expected=publication[name+"_sha256"];
+  need(object(raw)&&raw.schema==="portfolio.original-json-source.v1"&&raw.sha256===expected&&typeof raw.text==="string","Retain the original "+name+" object bytes.");
+  original_objects[name+"_text"]=raw.text;
+ }
+ const definition=JSON.parse(original_objects.definition_text),review=JSON.parse(original_objects.review_text);
  const tables={};
  for(const table of TABLES){
   const columns=publication.dataset.columns[table];if(!columns)continue;
@@ -140,7 +153,7 @@ export async function loadPublication(api,cohortId,publicationId,{isCurrent=()=>
   }while(true);
   tables[table]={columns:clone(columns),rows:all};
  }
- check();return{schema:"portfolio.archive-comparison-source.v1",publication,definition,review,tables};
+ check();return{schema:"portfolio.archive-comparison-source.v1",publication,definition,review,original_objects,tables};
 }
 const esc=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const label=x=>String(x||"").replace(/_/g," ");

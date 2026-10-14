@@ -36,6 +36,8 @@ No cross-project grand total is produced. This avoids combining independently se
 
 ## Source integrity and full reopening
 
+The original object read can return its exact verified UTF-8 source text through `representation=source`; the default JSON read is unchanged. The comparison hashes both original definition/review texts and checks their parsed values, retaining numeric spellings from the original Python writer.
+
 The reader checks complete pagination against the selected publication's row counts and column order. Before calculation or reopening it checks the original per-table SHA-256, using the same ASCII JSON header/row sequence as the original Python reporting writer. A truncated table, changed cell, duplicate project correspondence or altered saved comparison is rejected.
 
 The comparison JSON contains both complete captured definitions/reviews, publication/archive descriptors, every selected original reporting table, the explicit correspondence and every comparison row. **Open saved comparison JSON** recomputes the comparison from those retained tables and checks the whole result identity. It needs no native JVM or remote target call.

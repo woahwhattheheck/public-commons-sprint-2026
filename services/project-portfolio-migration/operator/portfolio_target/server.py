@@ -273,7 +273,15 @@ class Desk:
                         self._json(200, desk.workspace.request_result(checked_id(path.removeprefix("/api/requests/"))))
                     elif path.startswith("/api/objects/"):
                         identity = checked_id(path.removeprefix("/api/objects/"))
-                        self._json(200, desk.workspace.store.read(identity))
+                        representation = one("representation", "json")
+                        if representation == "source":
+                            raw = desk.workspace.store.read_bytes(identity)
+                            self._json(200, {"schema": "portfolio.original-json-source.v1",
+                                             "sha256": identity, "text": raw.decode("utf-8")})
+                        elif representation == "json":
+                            self._json(200, desk.workspace.store.read(identity))
+                        else:
+                            raise TargetError("OBJECT_REPRESENTATION", "Choose the original JSON or source representation.")
                     elif path.startswith("/api/archives/"):
                         identity = checked_id(path.removeprefix("/api/archives/"))
                         request = desk.workspace.request_result(identity)

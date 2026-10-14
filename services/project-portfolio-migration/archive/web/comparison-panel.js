@@ -9,7 +9,7 @@ export function createPublicationComparisonPanel(C){
  if(!document.getElementById("archive-comparison-style")){const link=el("link");link.id="archive-comparison-style";link.rel="stylesheet";link.href="/assets/comparison.css";document.head.append(link);}
  const status=el("p","Select the left and right publications.","hint"),error=el("p",undefined,"error"),choices=el("div",undefined,"columns"),mapping=el("div"),actions=el("div",undefined,"actions"),result=el("div");
  status.setAttribute("role","status");error.setAttribute("role","alert");
- const state={epoch:0,rows:[],selection:{left:{cohort_id:"",publication_id:""},right:{cohort_id:"",publication_id:""}},cohorts:{},sources:null,pairs:[],result:null,busy:false,page:0};
+ const state={epoch:0,metadataEpoch:{left:0,right:0},rows:[],selection:{left:{cohort_id:"",publication_id:""},right:{cohort_id:"",publication_id:""}},cohorts:{},sources:null,pairs:[],result:null,busy:false,page:0};
  const controls={};
  const read=node=>{node.dataset.read="";return node;};
  function button(label,fn){const b=read(el("button",label));b.type="button";b.onclick=()=>run(fn);return b;}
@@ -24,12 +24,12 @@ export function createPublicationComparisonPanel(C){
   cohort.dataset.pcCohort=side;publication.dataset.pcPublication=side;
   const cl=el("label","Saved cohort"),pl=el("label","Completed publication");cl.append(cohort);pl.append(publication);box.append(legend,cl,pl);choices.append(box);controls[side]={cohort,publication};
   cohort.onchange=()=>run(async()=>{
-   invalidate();state.selection[side]={cohort_id:cohort.value,publication_id:""};persist();
+   invalidate();const request=++state.metadataEpoch[side];state.selection[side]={cohort_id:cohort.value,publication_id:""};delete state.cohorts[side];persist();
    chooseOptions(publication,[],"","Reading original publications…");
    if(!cohort.value){enable();return;}
-   const id=cohort.value,epoch=state.epoch,workspace=C.workspaceId();
-   try{const value=await api("/api/cohorts/"+id);if(!current(epoch,workspace)||state.selection[side].cohort_id!==id)return;state.cohorts[side]=value;fillPublications(side);}
-   catch(e){if(current(epoch,workspace))throw e;}
+   const id=cohort.value,workspace=C.workspaceId(),active=()=>request===state.metadataEpoch[side]&&workspace===C.workspaceId()&&root.isConnected&&state.selection[side].cohort_id===id;
+   try{const value=await api("/api/cohorts/"+id);if(!active())return;state.cohorts[side]=value;fillPublications(side);}
+   catch(e){if(active())throw e;}
   });
   publication.onchange=()=>run(()=>{invalidate();state.selection[side].publication_id=publication.value;persist();enable();});
  }
@@ -104,17 +104,19 @@ export function createPublicationComparisonPanel(C){
  const file=read(el("input"));file.type="file";file.accept=".json,application/json";file.dataset.pcImport="";
  const open=button("Open saved comparison JSON",async()=>{
   const selected=file.files[0];if(!selected)throw new Error("Choose the complete saved comparison JSON.");
-  const epoch=++state.epoch,workspace=C.workspaceId();state.busy=true;enable();status.textContent="Checking the complete saved comparison…";
+  const epoch=++state.epoch,workspace=C.workspaceId();state.metadataEpoch.left++;state.metadataEpoch.right++;state.busy=true;enable();status.textContent="Checking the complete saved comparison…";
   try{const value=await reopenComparison(JSON.parse(await selected.text()));if(!current(epoch,workspace))return;
    state.selection={left:{cohort_id:value.left.publication.cohort_id,publication_id:value.left.publication.id},right:{cohort_id:value.right.publication.cohort_id,publication_id:value.right.publication.id}};
-   state.sources={left:value.left,right:value.right};state.pairs=value.selection.pairs;state.result=value;state.page=0;fillCohorts();renderPairs();paintResult();persist();
+   state.sources={left:value.left,right:value.right};state.pairs=value.selection.pairs;state.result=value;state.page=0;
+   for(const side of ["left","right"])state.cohorts[side]={publications:[value[side].publication]};
+   fillCohorts();for(const side of ["left","right"])fillPublications(side);renderPairs();paintResult();persist();
   }catch(e){if(current(epoch,workspace))throw e;}finally{if(current(epoch,workspace)){state.busy=false;enable();}}
  });
  actions.append(loadButton,compareButton,cancelButton,file,open);root.append(choices,actions,status,error,mapping,result);enable();
  return{
   updateCohorts(rows){state.rows=rows;fillCohorts();},
   snapshot(){return{schema:"portfolio.archive-comparison-draft.v1",selection:structuredClone(state.selection),pairs:structuredClone(state.pairs)};},
-  restore(value){invalidate();state.cohorts={};state.selection={left:{cohort_id:"",publication_id:""},right:{cohort_id:"",publication_id:""}};state.pairs=[];
+  restore(value){invalidate();state.metadataEpoch.left++;state.metadataEpoch.right++;state.cohorts={};state.selection={left:{cohort_id:"",publication_id:""},right:{cohort_id:"",publication_id:""}};state.pairs=[];
    if(value?.schema==="portfolio.archive-comparison-draft.v1"){for(const side of ["left","right"]){const s=value.selection?.[side];if(s&&["cohort_id","publication_id"].every(k=>typeof s[k]==="string"&&(!s[k]||/^[0-9a-f]{64}$/.test(s[k]))))state.selection[side]=structuredClone(s);}if(Array.isArray(value.pairs))state.pairs=value.pairs.filter(x=>x&&typeof x.left==="string"&&typeof x.right==="string").map(x=>({left:x.left,right:x.right}));}
    fillCohorts();for(const side of ["left","right"])fillPublications(side);
   }
