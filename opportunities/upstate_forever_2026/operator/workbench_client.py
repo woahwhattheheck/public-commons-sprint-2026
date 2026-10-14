@@ -22,6 +22,7 @@ import uuid
 APP = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APP))
 from model.common import atomic_json, canonical, identifier, read_json
+from model import portable_fs as _fs
 from model.retained_download import (OperatorTransport, download as receive_download,
                                      receive_cohort)
 from model.staged_transport import stage_file, StagedPending
@@ -250,14 +251,14 @@ class WorkbenchClient:
 
     def upload(self, filename, *, media_type=None):
         path = Path(filename)
-        if not path.is_file() or path.is_symlink():
+        if not _fs.native_path(path).is_file() or _fs.native_path(path).is_symlink():
             raise ValueError("Choose a complete original regular file.")
         media_type = media_type or mimetypes.guess_type(path.name)[0] or "application/octet-stream"
         if any(ord(c) < 32 or ord(c) == 127 for c in media_type):
             raise ValueError("Choose an ordinary original content type.")
         digest = hashlib.sha256()
-        with path.open("rb") as original:
-            before = os.fstat(original.fileno())
+        with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as original:
+            before = _fs.fd_stat(original.fileno())
             for block in iter(lambda: original.read(1024 * 1024), b""):
                 digest.update(block)
             original.seek(0)
@@ -277,7 +278,7 @@ class WorkbenchClient:
                 raise
             finally:
                 connection.close()
-            after = os.fstat(original.fileno())
+            after = _fs.fd_stat(original.fileno())
         signature = lambda s: (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
         if (signature(before) != signature(after) or value.get("bytes") != before.st_size
                 or value.get("sha256") != digest.hexdigest() or value.get("filename") != path.name):

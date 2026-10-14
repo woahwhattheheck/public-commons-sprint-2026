@@ -18,6 +18,8 @@ import time
 import urllib.parse
 import uuid
 
+from . import portable_fs as _fs
+
 from .retained_download import (OperatorTransport, _open, _sync_directory,
                                 atomic_json, canonical, held, read_json)
 
@@ -185,9 +187,9 @@ def _control(transport, method, path, request_id, *, value=None, body=None,
 
 def _file_identity(path):
     with _open(path, os.O_RDONLY, "rb") as original:
-        before = os.fstat(original.fileno())
+        before = _fs.fd_stat(original.fileno())
         sha256 = _sha(original)
-        if _signature(before) != _signature(os.fstat(original.fileno())):
+        if _signature(before) != _signature(_fs.fd_stat(original.fileno())):
             raise ValueError("The original input changed while its complete identity was read.")
     return {"bytes": before.st_size, "sha256": sha256}
 
@@ -206,7 +208,7 @@ def _verify_result(result, destination, binding):
 def _publish(source, destination, expected):
     """Create only; an interrupted publication can match an existing same body."""
     try:
-        os.link(source, destination)
+        _fs.publish_file(source, destination)
     except FileExistsError:
         if _file_identity(destination) != expected:
             raise ValueError("The original result destination already contains different bytes.")
@@ -230,8 +232,8 @@ def _save_response(response, destination, binding, *, upload=None):
             if lower in headers and headers[lower] != value:
                 raise ValueError("The relay returned conflicting original result headers.")
             headers[lower] = value
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    fd, temporary = tempfile.mkstemp(prefix=".staged-result-", dir=destination.parent)
+    _fs.native_path(destination.parent).mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix=".staged-result-", dir=_fs.native_path(destination.parent))
     count, digest = 0, hashlib.sha256()
     try:
         with os.fdopen(fd, "wb") as output:
@@ -297,7 +299,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
     lock_path = Path(str(journal_path) + ".lock")
     if len({p.resolve() for p in (source_path, journal_path, destination, complete_path, state_path, lock_path)}) != 6:
         raise ValueError("Original input, transfer records and result must be distinct files.")
-    journal_path.parent.mkdir(parents=True, exist_ok=True)
+    _fs.native_path(journal_path.parent).mkdir(parents=True, exist_ok=True)
     with held(lock_path, blocking=False):
         identity = _file_identity(source_path)
         if upload_name is not None and (method != "POST" or path != "/api/upload"
@@ -349,7 +351,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
         try:
             if state.get("state") not in {"sealed", "uncertain", "complete"}:
                 with _open(source_path, os.O_RDONLY, "rb") as original:
-                    before = os.fstat(original.fileno())
+                    before = _fs.fd_stat(original.fileno())
                     if before.st_size != identity["bytes"] or _sha(original) != identity["sha256"]:
                         raise ValueError("The selected source changed before transfer.")
                     original.seek(0)
@@ -377,7 +379,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                         offset += len(block); sent_hash.update(block)
                         checkpoint("staging", confirmed_bytes=offset)
                     if (sent_hash.hexdigest() != identity["sha256"]
-                            or _signature(before) != _signature(os.fstat(original.fileno()))):
+                            or _signature(before) != _signature(_fs.fd_stat(original.fileno()))):
                         raise ValueError("The original input changed; its native request was not sealed.")
                     seal = {"body_bytes": identity["bytes"]}
                     if "body_sha256" in metadata:
