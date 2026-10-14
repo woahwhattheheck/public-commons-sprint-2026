@@ -97,6 +97,15 @@ function preserveWorking(candidate,previous,reason){
   const unique=new Map(history.map(row=>[row.raw,row]));
   return validateDraft({...candidate,recovery:[...unique.values()]},candidate.workspace_key);
 }
+function readingRecipe(uploads){
+  return canonical(uploads.map(file=>({id:file.id,filename:file.filename,sha256:file.sha256,bytes:file.bytes,
+    options:{encoding:file.options.encoding,header_row:file.options.header_row,
+      formula_mode:file.options.formula_mode,...(file.options.delimiter?{delimiter:file.options.delimiter}:{})}})));
+}
+function inspectedUploads(value){
+  return value.files.map(file=>({id:file.upload_id,filename:file.filename,
+    sha256:file.original.sha256,bytes:file.original.bytes,options:clone(file.options)}));
+}
 export function createClientSourceIntake(host){
   let root=null,workspace=null,state=null,generation=0,busy=false,notice='',problem='',storageProblem='';
   let draft=fresh(),catalog=null,inspection=null,result=null,controller=null,invalidRaw=null,reading=0,acceptedTask=null;
@@ -154,6 +163,8 @@ export function createClientSourceIntake(host){
     need(value?.action==='client-source.inspect'&&value.id===candidate.inspection_id&&value.project_id===catalog?.project_id,
       'The retained inspection does not match this original Workspace.');
     need(value.state==='complete'&&Array.isArray(value.files),'Wait for the complete original inspection.');
+    need(!candidate.uploads.length||readingRecipe(candidate.uploads)===readingRecipe(inspectedUploads(value)),
+      'The selected files or reading choices differ from this inspection. Inspect the current files, or deliberately reopen the retained original result.');
     for(const choice of candidate.selections){
       const file=value.files[choice.file_index],part=file?.inspection?.parts?.[choice.part_index];
       need(part&&!file.error&&!part.error&&roles[part.kind]?.includes(choice.role),'A saved choice does not match an inspected original part.');
@@ -179,10 +190,26 @@ export function createClientSourceIntake(host){
     a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   }
   function documentCopy(){return encoded(draft);}
+  function applyChoices(candidate){
+    validateDraft(candidate,workspace);
+    const changed=readingRecipe(candidate.uploads)!==readingRecipe(draft.uploads);
+    if(changed){
+      if(draft.inspection_id||draft.selections.length)
+        candidate=preserveWorking(candidate,draft,'Changed original files or reading choices');
+      candidate.inspection_id=null;candidate.selections=[];
+      if(candidate.selected_result===inspection?.id||candidate.selected_result===draft.inspection_id)
+        candidate.selected_result=null;
+      if(candidate.selected_task===draft.inspection_id)candidate.selected_task=null;
+      inspection=null;reading++;
+      notice='Files or reading choices changed. Inspect the current selection and review its source meaning before saving. Previous choices remain in the complete working copy.';
+    }
+    draft=validateDraft(candidate,workspace);retain();problem='';
+    if(changed){renderInspection();renderChoices();}
+    messages();
+  }
   function saveChange(change){
     if(busy)throw Error('Wait for this original intake operation to return.');
-    const candidate=clone(draft);change(candidate);validateDraft(candidate,workspace);
-    draft=candidate;retain();problem='';messages();
+    const candidate=clone(draft);change(candidate);applyChoices(candidate);
   }
   function option(value,label,selected){return '<option value="'+esc(value)+'"'+(value===selected?' selected':'')+'>'+esc(label)+'</option>';}
   function inputField(label,field,value,type='text',extra=''){
@@ -435,21 +462,33 @@ export function createClientSourceIntake(host){
     catalog=value;renderHistory();
   }
   async function openResult(id,adopt=true){
-    const expected=workspace,epoch=generation,version=++reading;
+    const expected=workspace,epoch=generation,version=++reading,recipe=readingRecipe(draft.uploads);
     const value=await host.api('/api/client-source/result',{method:'POST',body:{workspace:expected,id}});
-    if(!current(expected,epoch)||version!==reading)return;
+    if(!current(expected,epoch)||version!==reading||recipe!==readingRecipe(draft.uploads))return;
     need(value.id===id&&value.project_id===catalog?.project_id,'The retained result belongs to another original project.');
     if(value.action==='client-source.inspect'){
       let candidate=clone(draft);
-      if(adopt&&draft.inspection_id!==id){
-        if(draft.selections.length&&!confirm('Open this original inspection? Your complete previous source choices remain in the working-copy history.'))return;
-        candidate.inspection_id=id;candidate.selections=[];
-        candidate=preserveWorking(candidate,draft,'Opened another original inspection');
+      if(adopt){
+        need(value.state==='complete'&&Array.isArray(value.files),'Wait for the complete original inspection.');
+        const originals=inspectedUploads(value);
+        const known=new Map([...draft.uploads,...availableUploads()].map(file=>[file.id,file]));
+        // Retained inspections keep their original files even after Study transfer.
+        // Only local retained receipts can be submitted for another inspection.
+        const selected=originals.every(file=>known.has(file.id))?originals:[];
+        const different=draft.inspection_id!==id||readingRecipe(draft.uploads)!==readingRecipe(selected);
+        if(different){
+          if(draft.selections.length&&!confirm('Open this original inspection and its reading choices? Your complete previous source choices remain in the working-copy history.'))return;
+          candidate.inspection_id=id;candidate.selections=[];candidate.uploads=selected;
+          candidate=preserveWorking(candidate,draft,'Opened the retained original inspection and reading choices');
+        }
       }
       need(candidate.inspection_id===id,'The selected inspection differs from this working copy.');
       boundInspection(candidate,value);
+      if(!candidate.title.trim()&&typeof value.title==='string'&&value.title.trim())candidate.title=value.title;
       candidate.selected_result=id;validateDraft(candidate,workspace);
-      draft=candidate;inspection=value;retain();renderInspection();renderChoices();
+      draft=candidate;inspection=value;retain();
+      const titleInput=q('[data-ci-field="title"]');if(titleInput)titleInput.value=draft.title;
+      renderFiles();renderInspection();renderChoices();
       notice='Showing the retained inspection: '+value.title+'. Review each selected source’s meaning before saving.';messages();
     }else{
       need(value.action==='client-source.commit','This is not a client-source result.');
@@ -498,11 +537,13 @@ export function createClientSourceIntake(host){
       if(!current(expected,epoch))return;
       const candidate=clone(draft);
       if(!candidate.uploads.some(x=>x.id===receipt.id))candidate.uploads.push(receipt);
-      draft=validateDraft(candidate,workspace);retain();renderFiles();
+      applyChoices(candidate);renderFiles();
     }
     notice='Original files retained. Review reading choices, then inspect their actual contents.';messages();
   }
   function addChoice(fi,pi){
+    need(inspection&&draft.inspection_id===inspection.id,'Open the complete original inspection first.');
+    boundInspection(draft,inspection);
     const file=inspection.files[fi],part=file.inspection.parts[pi];
     need(!file.error&&!part.error,'Correct this worksheet’s reading choices and inspect again before selecting it.');
     if(draft.selections.some(x=>x.file_index===fi&&x.part_index===pi))throw Error('This source is already in your reviewed choices.');
@@ -618,6 +659,7 @@ export function createClientSourceIntake(host){
       }
       if(action==='commit'){
         if(!inspection||draft.inspection_id!==inspection.id)throw Error('Open the complete original inspection first.');
+        boundInspection(draft,inspection);
         if(!draft.selections.length||draft.selections.some(x=>!x.confirmed))throw Error('Review and confirm every selected source.');
         await request('client-source.commit',{title:draft.title,inspection_id:draft.inspection_id,selections:draft.selections.map(value=>{
           const selected=clone(value);
@@ -653,16 +695,16 @@ export function createClientSourceIntake(host){
       const file=event.target.files?.[0];event.target.value='';if(!file)return;
       await run(async()=>{
         if(file.size>64*1024*1024)throw Error('This working copy exceeds 64 MiB. Keep the original and open it with its producing application.');
-        const expected=workspace,epoch=generation;
+        const expected=workspace,epoch=generation,version=++reading;
         let candidate=validateDraft(JSON.parse(await file.text())),opened=null;
         const receiving=candidate.workspace_key!==expected;
-        if(!current(expected,epoch))return;
+        if(!current(expected,epoch)||version!==reading)return;
         if(receiving&&!candidate.inspection_id)throw Error('This unfinished copy has no saved inspection to verify here. Open it in its original Workspace, inspect the originals, then back up and restore that Workspace.');
         if(candidate.inspection_id){
           if(!catalog)await refreshCatalog();
-          if(!current(expected,epoch))return;
+          if(!current(expected,epoch)||version!==reading)return;
           opened=await host.api('/api/client-source/result',{method:'POST',body:{workspace:expected,id:candidate.inspection_id}});
-          if(!current(expected,epoch))return;
+          if(!current(expected,epoch)||version!==reading)return;
           boundInspection(candidate,opened);
         }
         if(!confirm(receiving?'Open these saved source choices against their verified restored inspection? The current and original working copies remain in history. Choose the original files again only when you need a new inspection.':'Open this complete working copy? The current unfinished choices will remain in its retained history. Original native sources and operations stay saved.'))return;

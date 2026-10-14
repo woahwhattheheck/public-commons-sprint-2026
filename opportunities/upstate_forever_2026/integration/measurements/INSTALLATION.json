@@ -278,7 +278,11 @@
       "guide": "operator/CLIENT_SOURCE_INTAKE.md",
       "scope": "Exact original-header reuse with per-file preview and fresh scientific confirmation.",
       "recovered_against": "6e91cd9e9b9ac44b1bd51f915eefa14faf504b35",
-      "original_pr": 4880
+      "original_pr": 4880,
+      "current_input_binding": {
+        "source": "ECO2319-CURRENT-INPUT-BOUND-INTAKE-20261014",
+        "sha256": "b625bbcf49a8be83a09c45d7128a7b8f06195724d03d24fa4cba4dc3117e2ea0"
+      }
     }
   },
   "files": [
@@ -1579,8 +1583,8 @@
     },
     {
       "path": "operator/web/client_source_intake.mjs",
-      "bytes": 60355,
-      "sha256": "26349f94d0717ac4b318dcd609a7da000b8da1cc60f458bda98d4ac5fda89e6e"
+      "bytes": 63315,
+      "sha256": "f2ca000523cafa3b041c16bdb432e0fbbff0e53602bbd5d469cd87bb8180a91f"
     },
     {
       "path": "operator/web/collection_folder.mjs",
@@ -2530,7 +2534,10 @@
       "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8",
       "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190",
       "3ae2d6d5bfa07b62618e77214711250f6375f30f090bf440afa8997449852a7d",
-      "db96c05f50a8c109207567d530b9f61eb2cf0bf295bb9c640ec37314cc462989"
+      "db96c05f50a8c109207567d530b9f61eb2cf0bf295bb9c640ec37314cc462989",
+      "b625bbcf49a8be83a09c45d7128a7b8f06195724d03d24fa4cba4dc3117e2ea0",
+      "7f44ce09e95d268af546b55b1916105689abcd43cdf34ad397650ffcb46d009f",
+      "26349f94d0717ac4b318dcd609a7da000b8da1cc60f458bda98d4ac5fda89e6e"
     ],
     "measurement_workspace/engine/intake.mjs": [
       "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a",
