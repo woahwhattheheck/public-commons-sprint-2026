@@ -70,7 +70,7 @@ def _table(headers, rows) -> str:
             + '</tbody></table></div>')
 
 
-def _evidence_summary(evidence: dict, original_headers=None) -> str:
+def _evidence_summary(evidence: dict, original_headers=None, column_roles=None) -> str:
     result = evidence.get('result', {})
     operation = evidence.get('operation', {}).get('operation', 'Retained analysis')
     sources = evidence.get('sources', [])
@@ -116,9 +116,10 @@ def _evidence_summary(evidence: dict, original_headers=None) -> str:
             rows = []
             for name, values in columns.items():
                 numeric = values.get('numeric', {})
-                rows.append([name, values.get('missing'), values.get('non_numeric_or_nonfinite'), numeric.get('count'),
-                             numeric.get('min'), numeric.get('max'), numeric.get('mean')])
-            pieces.append(_table(['Original column', 'Missing', 'Other literal cells', 'Finite numeric cells', 'Minimum', 'Maximum', 'Mean'], rows))
+                role=(column_roles or {}).get(name)
+                aggregate=[None,None,None] if role in {'Identifier','Label'} else [numeric.get('min'),numeric.get('max'),numeric.get('mean')]
+                rows.append([name,role or 'Not declared',values.get('missing'),values.get('non_numeric_or_nonfinite'),numeric.get('count'),*aggregate])
+            pieces.append(_table(['Original column','Declared role','Missing','Other literal cells','Parsed numeric cells','Minimum','Maximum','Mean'],rows))
     else:
         scalars = {k: v for k, v in result.items() if isinstance(v, (str, int, float, bool)) or v is None} if isinstance(result, dict) else {}
         if scalars:
@@ -144,6 +145,7 @@ def report(session: dict) -> str:
                             +_prose(body.get('text', body.get('error', '')))+'<details><summary>Original retained text</summary><pre>'
                             +html.escape(body.get('text', body.get('error', '')))+'</pre></details></section>')
     original_orders={}
+    column_roles={}
     for evidence in session['evidence']:
         for source in evidence.get('sources',[]):
             metadata=source.get('metadata',{});record=metadata.get('source',{})
@@ -151,13 +153,22 @@ def report(session: dict) -> str:
             if fields and all(isinstance(field.get('index'),int) and isinstance(field.get('label'),str) for field in fields):
                 labels=[field['label'] for field in sorted(fields,key=lambda field:field['index'])]
                 if len(set(labels))==len(labels):
-                    original_orders[(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))]=labels
+                    key=(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))
+                    original_orders[key]=labels
+                    identifiers={field.get('id'):field['label'] for field in fields}
+                    selections=[record.get('client_source',{}).get('selection',{})]
+                    if evidence.get('result',{}).get('format')=='structured_json':
+                        selections.extend(evidence.get('result',{}).get('data',{}).get('selections',[]))
+                    for selection in selections:
+                        for field,role in [('identifier_field','Identifier'),('label_field','Label')]:
+                            label=identifiers.get(selection.get(field))
+                            if label: column_roles.setdefault(key,{})[label]=role
     order = {'table_rows': 0, 'profile': 1, 'inventory': 2}
     for evidence in sorted(session['evidence'], key=lambda e: order.get(e.get('operation', {}).get('operation'), 3)):
         source=next(iter(evidence.get('sources',[])),{})
         metadata=source.get('metadata',{});record=metadata.get('source',{})
         key=(metadata.get('source_binding',{}).get('collection_id'),record.get('body',{}).get('sha256'))
-        sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key))+'</section>')
+        sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key),column_roles.get(key))+'</section>')
     for plan in session['plans']:
         sections.append('<section><h2>Guided action - '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')
     history = []

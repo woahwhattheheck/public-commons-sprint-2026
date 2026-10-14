@@ -401,6 +401,13 @@ export function createInvestigationClient(options) {
   saveDraft(draft,w=getWorkspace()){const c=context(w);c.draft=clone(draft);persist(c);},
   async acceptState(state){
    const c=context(workspaceId(state));
+   if(!c.pending){
+    const active=(state.tasks||[]).filter(t=>t.workspace===c.workspace&&t.action==='intelligence.ask'
+      &&t.payload?.session_id===c.sessionId&&['queued','running'].includes(t.state));
+    const resumed=active.find(t=>t.id===c.lastTask?.id)||(active.length===1?active[0]:null);
+    if(resumed){c.pending={body:{workspace:resumed.workspace,action:resumed.action,operation_id:resumed.operation_id,payload:clone(resumed.payload)},
+      taskId:resumed.id,acceptedOperationId:resumed.operation_id,taskState:resumed.state,providerWait:clone(resumed.provider_wait||null),error:null};changed(c);}
+   }
    if(c.pending?.taskId){const t=state.tasks?.find(x=>x.id===c.pending.taskId);
     if(t && (t.state!==c.pending.taskState||stable(t.provider_wait||null)!==stable(c.pending.providerWait||null)))await poll(c.workspace);}
    if(c.diagnosticIntake && !c.pending && ['staged','waiting','submitted','received','receiving'].includes(c.diagnosticIntake.phase))await resumeDiagnostic(c.workspace);
