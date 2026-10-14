@@ -153,10 +153,15 @@ def native_batch_lease(path):
     """Keep the existing batch lease alive in an explicitly inherited child."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    fd = _open_original(path, os.O_CREAT | os.O_RDWR |
-                        getattr(os, "O_NOFOLLOW", 0), 0o600)
+    if os.name == "nt":
+        from .windows_process import open_batch_lease
+        fd = open_batch_lease(path)
+    else:
+        fd = _open_original(path, os.O_CREAT | os.O_RDWR |
+                            getattr(os, "O_NOFOLLOW", 0), 0o600)
     try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        if os.name != "nt":
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
         yield fd
     finally:
         # Closing this descriptor keeps a surviving child's inherited lease.
@@ -180,6 +185,7 @@ def process_interrupted(error):
         if (isinstance(failure, dict)
                 and failure.get("kind") == "native_process_interrupted"
                 and ((type(failure.get("return_code")) is int and failure["return_code"] < 0)
+                     or failure.get("platform_status", {}).get("abnormal_terminal_status") is True
                      or (failure.get("return_code") is None
                          and failure.get("exit_observation") == "worker_missing_without_result"))):
             return True
@@ -212,8 +218,15 @@ def _memory_event_delta(before, after):
 def process_failure(return_code, *, run_id, process, before=None, after=None,
                     native_state=None, missing_result=False):
     """Describe an observed signal; a group OOM event is not child attribution."""
-    observed_signal = type(return_code) is int and return_code < 0
-    if not observed_signal and not (return_code is None and missing_result):
+    platform_status = None
+    if os.name == "nt":
+        from .windows_process import exit_status
+        platform_status = exit_status(return_code)
+    observed_signal = os.name != "nt" and type(return_code) is int and return_code < 0
+    observed_windows = platform_status is not None and platform_status["raw_status"] != 0
+    interrupted = (observed_signal or bool(platform_status and platform_status["abnormal_terminal_status"])
+                   or (return_code is None and missing_result))
+    if not observed_signal and not observed_windows and not (return_code is None and missing_result):
         return None
     import signal
     signum, name = None, None
@@ -227,11 +240,17 @@ def process_failure(return_code, *, run_id, process, before=None, after=None,
                + " (process exit " + str(return_code) + ")." if observed_signal else
                "The original native worker is no longer alive and has no completed result; "
                "its process exit code is unavailable after reconnection.")
+    if observed_windows:
+        message = ("Native run " + run_id + " ended with Windows process status "
+                   + platform_status["hex_status"] + " (" + str(platform_status["raw_status"]) + ").")
     memory = _memory_event_delta(before, after)
     failure = {
-        "kind": "native_process_interrupted", "type": "NativeProcessInterrupted",
+        "kind": "native_process_interrupted" if interrupted else "native_process_exit",
+        "type": "NativeProcessInterrupted" if interrupted else "NativeProcessExit",
         "message": message,
-        "exit_observation": "signal" if observed_signal else "worker_missing_without_result",
+        "exit_observation": ("signal" if observed_signal else "windows_terminal_status" if observed_windows
+                             else "worker_missing_without_result"),
+        **({"platform_status": platform_status} if platform_status is not None else {}),
         "run_id": run_id, "return_code": return_code,
         "signal": {"number": signum, "name": name},
         "process": copy.deepcopy(process), "observed_at": now(),
@@ -256,6 +275,8 @@ def process_failure(return_code, *, run_id, process, before=None, after=None,
 
 def record_process_interruption(workspace, run_id, failure, *, pid):
     """Reconcile only the original dead child's journal under its native lock."""
+    if failure.get("kind") != "native_process_interrupted":
+        return False
     directory = workspace.root / "runs" / run_id
     with held(directory / ".run.lock", blocking=False):
         state = workspace.inspect_run(run_id)
