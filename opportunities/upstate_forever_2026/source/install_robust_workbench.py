@@ -1582,6 +1582,11 @@ ALLOWED = ALLOWED | frozenset({
     "source_tools/native_runtime/platform_runtime.py",
     "source_tools/receiving_process.py",
     "source_tools/runtime_platform.py",
+    "integration/component_fragments/native-payload-completion.json",
+    "model/portable_reopening.py",
+    "source_tools/NATIVE_PAYLOAD_COMPLETION.md",
+    "source_tools/native_runtime/binary_dependencies.py",
+    "source_tools/native_runtime/payload_closure.py",
 })
 
 HASH = re.compile(r"[0-9a-f]{64}")
