@@ -1,0 +1,233 @@
+--- a/model/native_worker.py
++++ b/model/native_worker.py
+@@ -13,6 +13,8 @@
+ 
+ from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
+ from .native_execution import resource_status
++from .native_supervision import (StopProgress, bound_record, dispatch_signal,
++                                 startup_abandoned)
+ 
+ SCHEMA = "upstate.native-worker-request/v1"
+ 
+@@ -41,18 +43,18 @@
+ 
+ 
+ def signal_owned(directory, identity, execution_id, request_sha256, signum):
+-    """Share signal receipts between a connected supervisor and its detached worker."""
+-    directory = Path(directory)
+-    with held(directory / ".stop.lock"):
+-        receipt = directory / ("signal-" + str(int(signum)) + ".json")
+-        if receipt.exists() or not identity_matches(identity):
++    """Share retryable stop delivery between the supervisor and its original worker."""
++    def send(current, number):
++        if os.name == "nt":
++            from .windows_process import signal_owned as platform_signal
++            return platform_signal(current, number)
++        if not identity_matches(current):
+             return False
+-        atomic_json(receipt, {"execution_id": execution_id,
+-                             "request_sha256": request_sha256,
+-                             "signal_requested": int(signum), "at": now(),
+-                             "identity": identity}, immutable=True)
+-        os.killpg(identity["process_group"], signum)
++        os.killpg(current["process_group"], number)
+         return True
++
++    return dispatch_signal(directory, identity, execution_id, request_sha256, signum,
++                           identity_matches=identity_matches, dispatch=send)
+ 
+ 
+ class NativeStop(BaseException):
+@@ -157,39 +159,40 @@
+     signal.signal(signal.SIGTERM, interrupt)
+ 
+     def heartbeat():
+-        first_stop = None
+-        sent = set()
++        stop_progress = StopProgress()
++        stop_acknowledged = False
+         while not stopped.is_set():
+             with contextlib.suppress(OSError):
+                 atomic_json(directory / "heartbeat.json", {
+                     "schema": "upstate.native-heartbeat/v1", "execution_id": execution_id,
+                     "at": now(), "elapsed_seconds": time.monotonic() - started,
++                    "request_sha256": request["request_sha256"],
+                     "identity": identity, "resources": resource_status()})
+-            stop_path = directory / "stop.json"
+-            if stop_path.exists():
+-                try:
+-                    stop = read_json(stop_path)
+-                    selected = (stop.get("execution_id") == execution_id
+-                                and stop.get("request_sha256") == request["request_sha256"])
+-                except (OSError, ValueError):
+-                    selected = False
+-                if selected:
+-                    if first_stop is None:
+-                        first_stop = time.monotonic()
+-                        with contextlib.suppress(OSError):
+-                            atomic_json(directory / "stop-acknowledged.json", {
+-                                "execution_id": execution_id, "at": now(),
+-                                "request_sha256": request["request_sha256"]})
+-                    elapsed = time.monotonic() - first_stop
+-                    stage = signal.SIGKILL if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
+-                    if stage not in sent:
+-                        sent.add(stage)
+-                        # This process owns the fresh session and every signaled child.
+-                        with contextlib.suppress(ProcessLookupError):
+-                            signal_owned(directory, identity, execution_id, request["request_sha256"], stage)
++            try:
++                stop = bound_record(directory, "stop.json", request)
++            except (OSError, ValueError):
++                # Preserve the live calculation and its heartbeat. The operator
++                # reads the same original receipt and displays its exact fault.
++                stop = None
++            if stop is not None:
++                if not stop_acknowledged:
++                    with contextlib.suppress(OSError):
++                        atomic_json(directory / "stop-acknowledged.json", {
++                            "execution_id": execution_id, "at": now(),
++                            "request_sha256": request["request_sha256"]})
++                        stop_acknowledged = True
++                stage = stop_progress.signal(stop)
++                # Confirmed sends are deduplicated across both original writers;
++                # failed attempts remain retryable after reconnect.
++                with contextlib.suppress(ProcessLookupError):
++                    signal_owned(directory, identity, execution_id,
++                                 request["request_sha256"], stage)
+             stopped.wait(1)
+ 
+     with held(directory / ".worker.lock", blocking=False):
++        if startup_abandoned(directory, request):
++            print("Original launcher ended before registration; retained task is available to resume.", flush=True)
++            return 130
+         atomic_json(directory / "worker.json", worker, immutable=True)
+         ticker = threading.Thread(target=heartbeat, name="native-worker-heartbeat", daemon=True)
+         try:
+--- a/operator/native_jobs.py
++++ b/operator/native_jobs.py
+@@ -17,6 +17,10 @@
+ from model.native_worker import SCHEMA, identity_matches, process_identity, signal_owned
+ from model.native_execution import (process_failure, record_process_interruption,
+                                     resource_status, storage_exhausted)
++
++from model.native_supervision import (PROTOCOL, StopProgress, bound_record, cancellation_state,
++                                      reconcile_start, refresh_execution,
++                                      worker_lease_held)
+ 
+ APPLICATION = Path(__file__).resolve().parents[1]
+ 
+@@ -166,12 +170,9 @@
+         if not candidates:
+             return None
+         _, directory, request = max(candidates, key=lambda value: value[0])
+-        identity_record = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
+-        if identity_record.get("request_sha256") not in (None, request["request_sha256"]):
+-            raise NativeJobError("NATIVE_WORKER_CHANGED", "The original worker receipt changed.")
+-        return {"directory": directory, "request": request,
+-                "identity": identity_record.get("identity"),
+-                "worker": identity_record, "run": run, "workspace": ws}
++        return refresh_execution({"directory": directory, "request": request,
++                                  "identity": None, "worker": {},
++                                  "run": run, "workspace": ws})
+ 
+     @staticmethod
+     def _alive(execution):
+@@ -183,7 +184,7 @@
+         record = {"schema": "upstate.native-stop/v1", "execution_id": request["execution_id"],
+                   "request_sha256": request["request_sha256"],
+                   "task_id": request["task_id"], "requested_at": now()}
+-        old = _read(directory / "stop.json")
++        old = bound_record(directory, "stop.json", request)
+         if old and (old.get("execution_id"), old.get("request_sha256")) == (
+                 request["execution_id"], request["request_sha256"]):
+             return old
+@@ -218,7 +219,7 @@
+     def _new(self, task, ws, run):
+         source_paths = ("model/native_worker.py", "operator/native_jobs.py",
+                         "model/native.py", "model/workspace.py", "model/common.py",
+-                        "model/verified_files.py")
++                        "model/verified_files.py", "model/native_supervision.py")
+         if "reuse_source_run_ids" in task["payload"]:
+             source_paths += ("model/stage_cache.py", "model/native_equivalence.py",
+                              "model/native_arguments.py", "model/reuse.py",
+@@ -227,7 +228,7 @@
+             source_paths += ("model/climate_forcing.py", "model/forcing_sources.py",
+                              "model/native_versions.py", "model/model_selection.py")
+         source = {name: file_digest(APPLICATION / name) for name in source_paths}
+-        request = {"schema": SCHEMA, "task_id": task["id"],
++        request = {"schema": SCHEMA, "supervision_protocol": PROTOCOL, "task_id": task["id"],
+                    "operation_id": task["operation_id"], "attempt": len(task["attempts"]),
+                    "project_id": ws.project["id"], "workspace": str(ws.root),
+                    "run_id": run["id"], "selection": run["selection"],
+@@ -390,7 +391,8 @@
+ 
+     def _wait_for_exit(self, execution, process):
+         """Drain the exact owned process before its inherited lease is reacquired."""
+-        while (process.poll() is None if process else self._alive(execution)):
++        while (process.poll() is None if process else
++               self._alive(execution) or worker_lease_held(execution["directory"])):
+             if self.operator.closing:
+                 error = NativeJobDetached(
+                     "NATIVE_DETACHED",
+@@ -496,28 +498,26 @@
+ 
+     def _monitor(self, execution, process):
+         directory, request = execution["directory"], execution["request"]
+-        stop_started = None
+-        signals_sent = set()
++        stop_progress = StopProgress()
+         while True:
+             complete = self._complete(execution)
+             if complete:
+                 return self._completed_exit(execution, process, complete)
+-            worker = _read(directory / "worker.json") or _read(directory / "launch.json") or {}
+-            if worker.get("identity"):
+-                execution["identity"] = worker["identity"]
++            refresh_execution(execution)
++            worker = execution["worker"]
+             returncode = process.poll() if process else None
+             alive = (returncode is None) if process else self._alive(execution)
+-            stop = _read(directory / "stop.json")
++            if not process and not alive:
++                registration = reconcile_start(execution, identity_matches)
++                alive = registration in {"registered", "registering"}
++            stop = bound_record(directory, "stop.json", request)
+             selected_stop = bool(stop and stop.get("execution_id") == request["execution_id"]
+                                  and stop.get("request_sha256") == request["request_sha256"])
+             if selected_stop and alive:
+-                if stop_started is None:
+-                    stop_started = time.monotonic()
+-                elapsed = time.monotonic() - stop_started
+-                sig = signal.SIGKILL if elapsed >= 30 else signal.SIGTERM if elapsed >= 15 else signal.SIGINT
+-                if sig not in signals_sent and self._alive(execution):
+-                    signals_sent.add(sig)
+-                    # Identity and session membership are checked before every signal.
++                sig = stop_progress.signal(stop)
++                if self._alive(execution):
++                    # The original stop age survives reopen. Successful delivery
++                    # is shared with the worker; unsuccessful sends are retried.
+                     with contextlib.suppress(ProcessLookupError):
+                         signal_owned(directory, execution["identity"], request["execution_id"],
+                                      request["request_sha256"], sig)
+@@ -682,16 +682,17 @@
+         if not execution:
+             return value
+         request, directory = execution["request"], execution["directory"]
+-        heartbeat = _read(directory / "heartbeat.json") or {}
+-        finished = _read(directory / "finished.json") or {}
+-        supervision = _read(directory / "supervision.json") or {}
+-        stop = _read(directory / "stop.json")
++        heartbeat = bound_record(directory, "heartbeat.json", request, digest_required=False) or {}
++        finished = bound_record(directory, "finished.json", request) or {}
++        supervision = bound_record(directory, "supervision.json", request) or {}
++        stop = bound_record(directory, "stop.json", request)
+         value.update(execution_id=request["execution_id"], created_at=request["created_at"],
+                      alive=self._alive(execution), worker=execution["worker"],
+                      heartbeat_at=heartbeat.get("at"),
+                      elapsed_seconds=finished.get("elapsed_seconds", heartbeat.get("elapsed_seconds")),
+                      stop_requested=value["stop_requested"] or bool(stop),
+                      stop_requested_at=(stop or {}).get("requested_at"),
++                     cancellation=cancellation_state(directory, request, stop),
+                      reconnected=_read(directory / "reconnected.json"),
+                      supervision=supervision, failure=_read(directory / "failure.json"),
+                      resources=self._resources(execution.get("identity")),
