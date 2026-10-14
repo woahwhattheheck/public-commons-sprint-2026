@@ -1,14 +1,16 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "native-payload-completion",
-  "source_reference": "ECO-PORT-PAYLOAD-LINK-A9E1/1.0.1 + ECO-NATIVE-PACK-RECOVERY-C72E/1.0.0",
+  "source_reference": "ECO-PORT-PAYLOAD-LINK-A9E1/1.0.1 + ECO-NATIVE-PACK-RECOVERY-C72E/1.0.0 + ECO-WINDOWS-PACK-CLOUD-W64/1.0.0",
   "components": {
     "native-payload-completion": {
       "paths": [
         "source_tools/native_runtime/binary_dependencies.py",
         "source_tools/native_runtime/payload_closure.py",
         "source_tools/native_runtime/prefix_pack.py",
+        "source_tools/native_runtime/windows_packing.py",
         "source_tools/NATIVE_PAYLOAD_COMPLETION.md",
+        "source_tools/WINDOWS_CLOUD_PACKING.md",
         "integration/component_fragments/native-payload-completion.json"
       ],
       "requires": [],
