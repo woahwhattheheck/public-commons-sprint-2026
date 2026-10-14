@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "project-transfer-portability",
+  "extend_components": {
+    "project-transfer": {
+      "paths": [
+        "model/portable_fs.py",
+        "model/windows_fs.py",
+        "model/project_transfer.py",
+        "model/project_transfer_workspace.py",
+        "model/project_transfer_cli.py",
+        "model/project_transfer_desk.py",
+        "operator/project_transfer.py",
+        "model/PROJECT_TRANSFER.md",
+        "integration/component_fragments/project-transfer-portability.json"
+      ]
+    }
+  }
+}

@@ -5,17 +5,16 @@ the authorities. Completed study capture resolves its server-owned export task.
 """
 from __future__ import annotations
 from contextlib import contextmanager
-import os
 from pathlib import Path
 import time
-import zipfile
 
 from model.common import atomic_json, held, now, read_json
+from model import portable_fs as _fs
 from model.project_transfer import (
-    TransferStore, TransferError, canonical, digest_id, file_hash, load_json, integer, _atomic,
+    TransferStore, TransferError, canonical, digest_id, file_hash, load_json, integer, _atomic, _path_text,
 )
 from model.project_transfer_workspace import NativeProjectTransfer
-from model.project_transfer_cli import export_report
+from model.project_transfer_cli import export_report, archive_report
 
 ACTIONS = frozenset({
     "project.transfer.capture", "project.transfer.capture-study",
@@ -40,7 +39,7 @@ class ProjectTransfers:
         return self.stores[key]
 
     def _output(self, task_id):
-        return self.operator.root / "outputs" / "project-transfers" / digest_id(task_id)
+        return _fs.native_path(self.operator.root) / "outputs" / "project-transfers" / digest_id(task_id)
 
     def _progress(self, task):
         destination = self._output(task["id"]) / "progress.json"
@@ -125,8 +124,8 @@ class ProjectTransfers:
         ws = self.operator.ws(workspace_key)
         if (result.get("study") or {}).get("identity", {}).get("project_id") != ws.project["id"]:
             raise self.Fault("STUDY_PROJECT", "The retained export belongs to another original project.", 409)
-        expected = self.operator.root / "outputs" / (source["id"] + ".study.zip")
-        path = Path(result.get("path", ""))
+        expected = _fs.native_path(self.operator.root) / "outputs" / (source["id"] + ".study.zip")
+        path = _fs.native_path(result.get("path", ""))
         if path.is_symlink() or path.resolve() != expected.resolve():
             raise self.Fault("STUDY_ARCHIVE", "Choose the original retained archive of this export task.", 409)
         # The browser's archive ticket/path/hash is presentation data. Resolve the
@@ -252,22 +251,15 @@ class ProjectTransfers:
             return {**result, "artifacts": [self.describe(path, "Complete original-file difference")]}
         if action == "project.transfer.report":
             export_report(store, value["snapshot_id"], out / "report")
-            path = out / "transfer-inventory.zip"
-            if not path.exists():
-                pending = out / ".report.pending.zip"
-                with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-                    for member in sorted((out / "report").iterdir()):
-                        archive.write(member, member.name)
-                os.link(pending, path)
-                pending.unlink()
+            path = archive_report(out / "report", out / "transfer-inventory.zip")
             return {"snapshot_id": value["snapshot_id"],
                     "artifacts": [self.describe(path, "Complete HTML, CSV and JSON file inventory")]}
         raise self.Fault("TRANSFER_ACTION", "Choose a supported project transfer operation.")
 
     @staticmethod
     def describe(path, label):
-        path = Path(path)
-        return {"path": str(path), "bytes": path.stat().st_size, "sha256": file_hash(path),
+        path = _fs.native_path(path)
+        return {"path": _path_text(path), "bytes": path.stat().st_size, "sha256": file_hash(path),
                 "filename": path.name, "label": label}
 
     def decorate_task(self, task):
@@ -282,7 +274,7 @@ class ProjectTransfers:
         expected = self._output(task["id"])
         tickets = []
         for row in (task.get("result") or {}).get("artifacts", []):
-            path = Path(row["path"])
+            path = _fs.native_path(row["path"])
             if path.is_symlink() or not path.resolve().is_relative_to(expected.resolve()):
                 raise self.Fault("TRANSFER_FILE", "Choose a retained output of this transfer task.", 409)
             tickets.append(self.operator._ticket(task["workspace"], path, row, row["label"]))

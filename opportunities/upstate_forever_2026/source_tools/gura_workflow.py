@@ -7,7 +7,7 @@ Run from the application root with: python -B -m source_tools.gura_workflow --he
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
+from contextlib import ExitStack, contextmanager
 from datetime import datetime, timezone
 import hashlib
 import importlib
@@ -20,6 +20,10 @@ import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from source_tools.gura_receiving import receiving_lock
 
 APPLICATION_ROOT = Path(__file__).resolve().parents[1]
 OPERATION_ID = "GURA-NATIVE-01"
@@ -76,19 +80,10 @@ def read_json(path):
 
 
 def atomic_json(path, value):
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor, temporary = tempfile.mkstemp(prefix="." + path.name + ".", suffix=".tmp", dir=path.parent)
-    try:
-        with os.fdopen(descriptor, "w", encoding="utf-8", newline="\n") as outgoing:
-            json.dump(value, outgoing, ensure_ascii=False, sort_keys=True, indent=2, allow_nan=False)
-            outgoing.write("\n")
-            outgoing.flush()
-            os.fsync(outgoing.fileno())
-        os.replace(temporary, path)
-    finally:
-        if os.path.exists(temporary):
-            os.unlink(temporary)
+    from model.common import atomic_bytes
+    body = (json.dumps(value, ensure_ascii=False, sort_keys=True, indent=2,
+                       allow_nan=False) + "\n").encode("utf-8")
+    atomic_bytes(path, body)
 
 
 def describe(path):
@@ -174,26 +169,24 @@ def original_inputs(args):
 
 @contextmanager
 def operation_lock(source_directory):
-    import fcntl
     source_directory.mkdir(parents=True, exist_ok=True)
     path = source_directory / ".gura-workflow.lock"
-    with path.open("a+", encoding="utf-8") as handle:
+    with ExitStack() as stack:
         try:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+            descriptor = stack.enter_context(receiving_lock(path))
         except BlockingIOError:
-            handle.seek(0)
-            owner = handle.read().strip()
-            raise RuntimeError("The retained Gura workflow is already active: " + owner) from None
-        try:
+            raise RuntimeError("The retained Gura workflow is already active: " + str(path)) from None
+        # Write through a duplicate of the owned descriptor: Windows denies
+        # an unrelated second open while the transferable lease is active.
+        with os.fdopen(os.dup(descriptor), "w", encoding="utf-8") as handle:
             handle.seek(0)
             handle.truncate()
             json.dump({"operation_id": OPERATION_ID, "hostname": socket.gethostname(),
                        "pid": os.getpid(), "started_at": now()}, handle, sort_keys=True)
             handle.write("\n")
             handle.flush()
-            yield
-        finally:
-            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+            os.fsync(handle.fileno())
+        yield descriptor
 
 
 def _native_selection(args, grid=None):

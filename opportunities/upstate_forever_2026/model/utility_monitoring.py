@@ -20,6 +20,7 @@ from . import receiving_waters as water, receiving_water_monitoring as monitorin
 from . import utility_microbial_study as microbial
 from .monitoring_sources import read_source
 from . import monitoring_sources
+from .portable_fs import (native_path, publish_file, relative_name, sync_directory)
 
 SCHEMA = "upstate.utility-monitoring/v1"
 VERSION = "utility-source-monitoring/1"
@@ -36,33 +37,52 @@ METHOD = (
 
 
 def _copy_file(source, directory, member, descriptor):
-    """Retain one complete original in bounded memory and fsync before publishing."""
-    member = PurePosixPath(member)
-    if member.is_absolute() or ".." in member.parts or "\\" in str(member):
-        raise ValueError("Retain a portable original source path")
-    target = directory / member
-    expected = {"path": str(member), "bytes": descriptor["bytes"], "sha256": descriptor["sha256"]}
-    if target.exists():
+    """Retain one complete original with native create-only publication.
+
+    Interrupted and concurrent receivers cannot replace a different original.
+    Large raster and vector sources are copied in bounded memory.
+    """
+    name = relative_name(member, windows=True)
+    directory = native_path(directory)
+    target = directory.joinpath(*name.split("/"))
+    expected = {"path": name, "bytes": descriptor["bytes"],
+                "sha256": descriptor["sha256"]}
+    if target.exists() or target.is_symlink():
         verify_file(directory, expected)
+        sync_directory(target.parent)
         return expected
+    source = native_path(source)
+    if source.is_symlink() or not source.is_file():
+        raise ValueError("Original utility monitoring source is not a regular file")
     target.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix=".utility-source-", dir=target.parent)
-    path = Path(temporary)
+    pending = Path(temporary)
     try:
         size, checksum = 0, hashlib.sha256()
-        with os.fdopen(fd, "wb") as output, Path(source).open("rb") as original:
+        with os.fdopen(fd, "wb") as output, source.open("rb") as original:
+            before = os.fstat(original.fileno())
             for chunk in iter(lambda: original.read(1024 * 1024), b""):
-                output.write(chunk); size += len(chunk); checksum.update(chunk)
-            output.flush(); os.fsync(output.fileno())
+                output.write(chunk)
+                size += len(chunk)
+                checksum.update(chunk)
+            output.flush()
+            os.fsync(output.fileno())
+            after = os.fstat(original.fileno())
+        identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
+                                 info.st_mtime_ns, info.st_ctime_ns)
+        if identity(before) != identity(after):
+            raise ValueError("Original utility monitoring source changed during reading")
         if size != expected["bytes"] or checksum.hexdigest() != expected["sha256"]:
             raise ValueError("An original utility monitoring source changed")
-        os.replace(path, target)
-        if os.name != "nt":
-            parent = os.open(target.parent, os.O_RDONLY)
-            try: os.fsync(parent)
-            finally: os.close(parent)
+        try:
+            publish_file(pending, target)
+        except FileExistsError:
+            verify_file(directory, expected)
+        else:
+            verify_file(directory, expected)
+        sync_directory(target.parent)
     finally:
-        path.unlink(missing_ok=True)
+        pending.unlink(missing_ok=True)
     return expected
 
 

@@ -23,6 +23,7 @@ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest
 from . import calibration_uncertainty as uncertainty
 from . import calibration_maps as maps
 from . import observation_support, catchment_interpretation
+from .portable_fs import publish_file as _publish_file, sync_directory as _sync_directory
 
 VERSION = 1
 PRESENTATION_EDITION = "native-execution-reference-basis-catchment-yields-v3"
@@ -147,9 +148,10 @@ def _copy(root, source, target, expected):
             os.fsync(out.fileno())
         verify_file(temporary.parent, {**check, "path": temporary.name})
         try:
-            os.link(temporary, destination)
+            _publish_file(temporary, destination)
         except FileExistsError:
             verify_file(root, check)
+        _sync_directory(destination.parent)
         verify_file(root, check)
         return check
     finally:
@@ -564,7 +566,12 @@ def prepare(workspace, calibration_id, *, uncertainty_id=None, map_id=None, titl
                 expected = describe_file(directory, pending)
                 verify_file(directory, {**expected, "path": archive_path.name})
             else:
-                os.link(pending, archive_path)
+                try:
+                    _publish_file(pending, archive_path)
+                except FileExistsError:
+                    expected = describe_file(directory, pending)
+                    verify_file(directory, {**expected, "path": archive_path.name})
+            _sync_directory(archive_path.parent)
         finally:
             pending.unlink(missing_ok=True)
         # Reopen source dependencies before saving the completed retained edition.

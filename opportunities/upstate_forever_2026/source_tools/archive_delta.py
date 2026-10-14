@@ -18,6 +18,12 @@ import tempfile
 import time
 import zipfile
 
+# Import the shared original-source filesystem implementation for standalone CLI use.
+APPLICATION_ROOT = Path(__file__).resolve().parent.parent
+if str(APPLICATION_ROOT) not in sys.path:
+    sys.path.insert(0, str(APPLICATION_ROOT))
+from model import portable_fs as fs
+
 SCHEMA = 'upstate.archive-delta/v1'
 JOURNAL = 'upstate.archive-delta-receiving/v1'
 NATIVE = 'upstate.scientific-workspace-archive/v1'
@@ -51,7 +57,7 @@ def identity(path):
     path = Path(path)
     if path.is_symlink() or not path.is_file():
         raise ValueError('Select a retained regular file: ' + str(path))
-    s = path.stat()
+    s = fs.path_stat(path)
     return (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
 
 
@@ -70,9 +76,20 @@ def bytes_hash(stream, length, output=None):
 
 
 def file_hash(path):
+    """Hash one pinned regular source handle, guarding its entire original identity."""
     before = identity(path)
-    with Path(path).open('rb') as source:
+    descriptor = fs.open_file(path, os.O_RDONLY)
+    with os.fdopen(descriptor, 'rb') as source:
+        pinned = fs.fd_stat(source.fileno())
+        opened = (pinned.st_dev, pinned.st_ino, pinned.st_size,
+                  pinned.st_mtime_ns, pinned.st_ctime_ns)
+        if opened != before:
+            raise ValueError('The source changed before reading: ' + str(path))
         result = bytes_hash(source, before[2])
+        pinned = fs.fd_stat(source.fileno())
+        if (pinned.st_dev, pinned.st_ino, pinned.st_size,
+                pinned.st_mtime_ns, pinned.st_ctime_ns) != before:
+            raise ValueError('The source changed while being read: ' + str(path))
     if identity(path) != before:
         raise ValueError('The source changed while it was read: ' + str(path))
     return result
@@ -84,34 +101,25 @@ def atomic_json(path, value):
     try:
         with os.fdopen(fd, 'wb') as out:
             out.write(canonical(value) + b'\n'); out.flush(); os.fsync(out.fileno())
-        os.replace(name, path)
+        fs.replace(name, path)
         fsync_dir(path.parent)
     finally:
         Path(name).unlink(missing_ok=True)
 
 
 def fsync_dir(path):
-    if os.name != 'nt':
-        fd = os.open(path, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+    """Commit the parent on POSIX and validate the native Windows directory."""
+    fs.sync_directory(path)
 
 
 @contextlib.contextmanager
 def held(path):
-    """Keep concurrent receivers from sharing a partial output or journal."""
-    import fcntl
-    with Path(path).open('a+b') as lock:
-        try:
-            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError as error:
-            raise ValueError('Another receiver owns this output; retain its operation') from error
-        try:
+    """Own the same durable whole-file lock on Windows, macOS and Linux."""
+    try:
+        with fs.locked(path, blocking=False):
             yield
-        finally:
-            fcntl.flock(lock, fcntl.LOCK_UN)
+    except BlockingIOError as error:
+        raise ValueError('Another receiver owns this output; retain its operation') from error
 
 
 def native_module(application):
@@ -218,7 +226,7 @@ def create(base, target, output, *, application, progress=None):
     output.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp = tempfile.mkstemp(prefix='.delta-package-', dir=output.parent); os.close(fd)
     try:
-        with zipfile.ZipFile(tmp, 'w', compression=zipfile.ZIP_STORED, allowZip64=True) as package, target.open('rb') as source:
+        with zipfile.ZipFile(tmp, 'w', compression=zipfile.ZIP_STORED, allowZip64=True) as package, os.fdopen(fs.open_file(target, os.O_RDONLY), 'rb') as source:
             package.writestr('DELTA.json', raw, compress_type=zipfile.ZIP_DEFLATED, compresslevel=6)
             for key, record in payloads.items():
                 source.seek(record['offset'])
@@ -232,8 +240,9 @@ def create(base, target, output, *, application, progress=None):
                 raise ValueError('An original archive changed during packaging')
         with open(tmp, 'rb') as stream:
             os.fsync(stream.fileno())
-        # Hard-link publication is atomic and does not replace a competing file.
-        os.link(tmp, output); fsync_dir(output.parent)
+        # Create-only verified publication retains the complete staged package
+        # even on volumes without hardlink support (SMB, FAT, APFS policies).
+        fs.publish_file(tmp, output); fsync_dir(output.parent)
     finally:
         Path(tmp).unlink(missing_ok=True)
     return {'id': manifest['id'], 'delta': str(output), 'bytes': output.stat().st_size,
@@ -328,7 +337,8 @@ def receive(base, delta, output, *, progress=None):
             raise ValueError('Unowned partial output exists; preserve it and choose a new destination')
         resumed = state['completed_records']
         mode = 'r+b' if work.exists() else 'x+b'
-        with work.open(mode) as sink, base.open('rb') as source, zipfile.ZipFile(delta) as z:
+        flags = os.O_RDWR if mode == 'r+b' else os.O_RDWR | os.O_CREAT | os.O_EXCL
+        with os.fdopen(fs.open_file(work, flags), 'r+b') as sink, os.fdopen(fs.open_file(base, os.O_RDONLY), 'rb') as source, zipfile.ZipFile(delta) as z:
             cursor = 0
             for row in m['instructions'][:resumed]:
                 if bytes_hash(sink, row['bytes']) != row['sha256']:
@@ -360,7 +370,7 @@ def receive(base, delta, output, *, progress=None):
         for path in before:
             if identity(path) != before[path]:
                 raise ValueError('An input changed during receiving')
-        os.link(work, output); fsync_dir(output.parent)
+        fs.publish_file(work, output); fsync_dir(output.parent)
         work.unlink(); journal.unlink(missing_ok=True)
         return {'path': str(output), 'sha256': m['target']['sha256'], 'bytes': m['target']['bytes'],
                 'reused_completed_output': False, 'resumed_records': resumed,

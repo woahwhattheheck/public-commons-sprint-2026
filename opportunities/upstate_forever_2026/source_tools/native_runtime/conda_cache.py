@@ -7,6 +7,8 @@ and the maintained prefix_pack writer remain separate operations.
 from __future__ import annotations
 
 import argparse
+import base64
+import binascii
 from contextlib import contextmanager
 from email.utils import parsedate_to_datetime
 import hashlib
@@ -415,12 +417,153 @@ def package_reader(package, work, caches, offline):
         yield reader
 
 
+def _stream_paths(work, name):
+    return (work / ("." + name + ".streaming.partial"),
+            work / ("." + name + ".streaming.checkpoint.json"))
+
+
+def _stream_regular(path):
+    if path.is_symlink() or (path.exists() and not path.is_file()):
+        raise AcquisitionError("Unexpected streaming state path: " + str(path))
+
+
+def _stream_identity(selection, packages, limit):
+    # The original work lock binds the request. This additionally binds each
+    # resumable volume to its complete ordered package selection and byte cap.
+    value = {key: selection.get(key) for key in
+             ("target", "subdir", "solver_sha256", "environment_sha256")}
+    value.update(packages=packages, part_bytes=limit)
+    return hashlib.sha256(json.dumps(value, sort_keys=True, separators=(",", ":"),
+                                     ensure_ascii=True).encode()).hexdigest()
+
+
+def _save_stream_checkpoint(temporary, checkpoint, identity, count, limit):
+    # ZIP append overwrites the previous central directory. Retaining only that
+    # short directory lets a restart remove an unfinished member and restore the
+    # previous valid ZIP without copying any already-downloaded package body.
+    with zipfile.ZipFile(temporary) as archive:
+        if len(archive.infolist()) != count:
+            raise AcquisitionError("Streaming checkpoint member count differs")
+        boundary = archive.start_dir
+    size = temporary.stat().st_size
+    if size > limit or size < boundary:
+        raise AcquisitionError("Transfer ZIP exceeds the selected byte limit")
+    with temporary.open("r+b") as stream:
+        stream.flush()
+        os.fsync(stream.fileno())
+        stream.seek(boundary)
+        tail = stream.read()
+    # Package names in the selected plan are restricted already. A conservative
+    # bound catches damaged checkpoints without limiting ordinary volume sizes.
+    if len(tail) > 4 * BLOCK:
+        raise AcquisitionError("Streaming ZIP directory exceeds the metadata limit")
+    write_json(checkpoint, {"schema": "upstate.native-conda-stream-checkpoint/v1",
+                           "identity": identity, "count": count,
+                           "boundary": boundary, "bytes": size,
+                           "tail_sha256": hashlib.sha256(tail).hexdigest(),
+                           "tail_base64": base64.b64encode(tail).decode("ascii")})
+
+
+def _restore_stream_checkpoint(temporary, checkpoint, identity, packages, limit):
+    _stream_regular(temporary)
+    _stream_regular(checkpoint)
+    if not checkpoint.exists():
+        # A predecessor's reserved unfinished scratch file had no durable member
+        # checkpoints. Only that same owned scratch is replaced; final volumes
+        # and borrowed package caches are never touched.
+        with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_STORED,
+                             allowZip64=True):
+            pass
+        _save_stream_checkpoint(temporary, checkpoint, identity, 0, limit)
+    if not temporary.exists():
+        raise AcquisitionError("Streaming checkpoint has lost its original volume: " + str(temporary))
+    if checkpoint.stat().st_size > 8 * BLOCK:
+        raise AcquisitionError("Oversized streaming checkpoint")
+    state = json.loads(checkpoint.read_text(encoding="utf-8"))
+    count, boundary, size = (state.get(key) for key in ("count", "boundary", "bytes"))
+    if (state.get("schema") != "upstate.native-conda-stream-checkpoint/v1"
+            or state.get("identity") != identity
+            or any(not isinstance(n, int) or isinstance(n, bool) for n in (count, boundary, size))
+            or not 0 <= count <= len(packages) or not 0 <= boundary <= size <= limit):
+        raise AcquisitionError("Streaming checkpoint belongs to a changed selection or volume")
+    try:
+        tail = base64.b64decode(state["tail_base64"], validate=True)
+    except (KeyError, TypeError, ValueError, binascii.Error) as error:
+        raise AcquisitionError("Invalid streaming directory checkpoint") from error
+    if (len(tail) > 4 * BLOCK or boundary + len(tail) != size
+            or hashlib.sha256(tail).hexdigest() != state.get("tail_sha256")
+            or temporary.stat().st_size < boundary):
+        raise AcquisitionError("Streaming directory checkpoint differs from its retained volume")
+    with temporary.open("r+b") as stream:
+        stream.seek(boundary)
+        stream.write(tail)
+        stream.truncate(size)
+        stream.flush()
+        os.fsync(stream.fileno())
+    found = []
+    with zipfile.ZipFile(temporary) as archive:
+        if archive.namelist() != [p["cache_path"] for p in packages[:count]]:
+            raise AcquisitionError("Streaming checkpoint has changed package members")
+        for member, package in zip(archive.infolist(), packages):
+            if member.file_size != package["expected_bytes"]:
+                raise AcquisitionError("Streaming checkpoint package size differs")
+            with archive.open(member) as reader:
+                found.append(stream_package(reader, None, package))
+    return found
+
+
+def _stream_retry_delay(error, attempt):
+    if isinstance(error, HTTPError) and error.code not in (408, 429, 500, 502, 503, 504):
+        raise error
+    if attempt == 2:
+        raise error
+    delay = attempt + 1
+    if isinstance(error, HTTPError) and error.headers.get("Retry-After"):
+        retry = error.headers["Retry-After"]
+        try:
+            delay = max(delay, int(retry))
+        except ValueError:
+            delay = max(delay, parsedate_to_datetime(retry).timestamp() - time.time())
+        if delay > 120:
+            raise AcquisitionError("Publisher requested Retry-After " + retry
+                                   + "; resume this same work later") from error
+    return delay
+
+
+def _stream_volume(work, name, selection, packages, caches, offline, limit):
+    temporary, checkpoint = _stream_paths(work, name)
+    identity = _stream_identity(selection, packages, limit)
+    found = _restore_stream_checkpoint(temporary, checkpoint, identity, packages, limit)
+    for package in packages[len(found):]:
+        for attempt in range(3):
+            try:
+                with package_reader(package, work, caches, offline) as reader:
+                    with zipfile.ZipFile(temporary, "a", compression=zipfile.ZIP_STORED,
+                                         allowZip64=True) as archive:
+                        with archive.open(package["cache_path"], "w", force_zip64=True) as writer:
+                            observed = stream_package(reader, writer, package)
+                _save_stream_checkpoint(temporary, checkpoint, identity, len(found) + 1, limit)
+                found.append(observed)
+                print(json.dumps({"streaming_volume": name, "package": package["filename"],
+                                  "committed_packages": len(found),
+                                  "total_packages": len(packages)}), flush=True)
+                break
+            except (URLError, TimeoutError, ConnectionError) as error:
+                # A failed current package can leave a partial ZIP member. Restore
+                # the last durable directory, retaining every committed package.
+                found = _restore_stream_checkpoint(temporary, checkpoint, identity, packages, limit)
+                time.sleep(_stream_retry_delay(error, attempt))
+    os.replace(temporary, work / name)
+    checkpoint.unlink()
+    return found
+
+
 def stream_parts(work, selection, caches, offline, limit):
     """Keep one compressed copy, in final transfer volumes, on a constrained host.
 
-    Each volume is an independently committed unit. A dropped transfer retries
-    only the current unfinished volume. Completed volumes retain their names,
-    original package bodies and the existing receiver's manifest format.
+    Each complete package has a durable ZIP-directory checkpoint. A dropped
+    transfer retries only its unfinished package, including after process loss.
+    Final volumes keep their original names and the existing receiver format.
     """
     if limit < 2 * BLOCK or limit > 500 * BLOCK:
         raise AcquisitionError("Select transfer volumes between 2 and 500 MiB")
@@ -458,50 +601,7 @@ def stream_parts(work, selection, caches, offline, limit):
                     with archive.open(member) as reader:
                         found.append(stream_package(reader, None, package))
         else:
-            for attempt in range(3):
-                # This reserved scratch name belongs to the request-bound work
-                # directory and its kernel lock. Resume discards only that same
-                # unfinished volume, including after process termination.
-                temporary = work / ("." + name + ".streaming.partial")
-                if temporary.is_symlink() or (temporary.exists() and not temporary.is_file()):
-                    raise AcquisitionError("Unexpected streaming scratch path: " + str(temporary))
-                if temporary.exists():
-                    temporary.unlink()
-                fd = os.open(temporary, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
-                os.close(fd)
-                found = []
-                try:
-                    with zipfile.ZipFile(temporary, "w", compression=zipfile.ZIP_STORED, allowZip64=True) as archive:
-                        for package in packages:
-                            with package_reader(package, work, caches, offline) as reader:
-                                with archive.open(package["cache_path"], "w", force_zip64=True) as writer:
-                                    found.append(stream_package(reader, writer, package))
-                    if os.path.getsize(temporary) > limit:
-                        raise AcquisitionError("Transfer ZIP exceeds the selected byte limit")
-                    # Commit the completed volume before publishing its identity.
-                    with open(temporary, "r+b") as stream:
-                        stream.flush()
-                        os.fsync(stream.fileno())
-                    os.replace(temporary, output)
-                    break
-                except (URLError, TimeoutError, ConnectionError) as error:
-                    if isinstance(error, HTTPError) and error.code not in (408, 429, 500, 502, 503, 504):
-                        raise
-                    if attempt == 2:
-                        raise
-                    delay = attempt + 1
-                    if isinstance(error, HTTPError) and error.headers.get("Retry-After"):
-                        retry = error.headers["Retry-After"]
-                        try:
-                            delay = max(delay, int(retry))
-                        except ValueError:
-                            delay = max(delay, parsedate_to_datetime(retry).timestamp() - time.time())
-                        if delay > 120:
-                            raise AcquisitionError("Publisher requested Retry-After " + retry + "; resume this same work later") from error
-                    time.sleep(delay)
-                finally:
-                    if os.path.exists(temporary):
-                        os.unlink(temporary)
+            found = _stream_volume(work, name, selection, packages, caches, offline, limit)
         completed.extend(found)
         part = {"filename": name, **digests(output), "members": expected_members}
         parts.append(part)

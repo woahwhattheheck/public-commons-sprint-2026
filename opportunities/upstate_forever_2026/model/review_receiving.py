@@ -18,6 +18,7 @@ import zipfile
 
 from .common import atomic_json, digest, file_digest, held, identifier, retain_file
 from . import reviews
+from .portable_fs import publish_directory as _publish_directory, sync_directory as _sync_directory
 
 KIND = "review-receipts"
 VIEW_KIND = "review-packet-views"
@@ -263,9 +264,13 @@ def open_view(workspace, receipt_id, root):
                 os.fsync(file.fileno())
             if file_digest(native) != value["native_index"]["sha256"]:
                 raise ValueError("The local review application changed during publication")
+            # Persist the complete original desk, owner marker and generated viewer
+            # before publishing this exact immutable edition. Directory publication
+            # is native create-only, so a concurrent receiver cannot replace it.
+            _sync_directory(pending)
             if destination.exists() or destination.is_symlink():
                 raise ValueError("The selected original review view appeared during receiving")
-            os.rename(pending, destination)
+            _publish_directory(pending, destination)
             pending = None
             with held(workspace.root / ".workspace.lock", blocking=False):
                 retained = workspace._save(VIEW_KIND, value)

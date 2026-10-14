@@ -22,17 +22,18 @@ import urllib.parse
 import uuid
 import zipfile
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from . import portable_fs as _fs
 from .project_transfer import (TransferStore, TransferError, Cancelled, _atomic, canonical,
                               load_json, parse_json, file_hash, integer, digest_id,
-                              receive_directory, regular_reader)
-from .project_transfer_cli import export_report
+                              receive_directory, regular_reader, _path_text)
+from .project_transfer_cli import export_report, archive_report
 
 
 class Desk:
     def __init__(self, store_root, workspace=None, receive_directory=None):
         self.store = TransferStore(store_root)
         self.root = self.store.root / "desk"
-        self.received_root = Path(receive_directory).absolute() if receive_directory else self.store.root.parent / (self.store.root.name + "-received")
+        self.received_root = _fs.native_path(Path(receive_directory).absolute()) if receive_directory else self.store.root.parent / (self.store.root.name + "-received")
         self.received_root.mkdir(parents=True, exist_ok=True)
         for name in ("uploads", "tasks", "outbox", "files"):
             (self.root / name).mkdir(parents=True, exist_ok=True)
@@ -131,9 +132,9 @@ class Desk:
         self.save_task(task)
 
     def register_file(self, path, *, label=None):
-        p = Path(path).resolve(strict=True)
+        p = _fs.native_path(path).resolve(strict=True)
         if not p.is_relative_to(self.root.resolve()): raise TransferError("Download must be a retained desk output")
-        row = {"path": str(p), "name": p.name, "label": label or p.name,
+        row = {"path": _path_text(p), "name": p.name, "label": label or p.name,
                "bytes": p.stat().st_size, "sha256": file_hash(p)}
         key = hashlib.sha256(canonical(row)).hexdigest()
         _atomic(self.root / "files" / (key+".json"), canonical(row)+b"\n")
@@ -163,10 +164,11 @@ class Desk:
         length = integer(length, maximum=min(8*1024**2,row["bytes"]-offset))
         path = self.root / "uploads" / (key+".body")
         with self.store._block_lock(key):
-            current = path.stat().st_size if path.exists() else 0
-            if current != offset: raise TransferError("Upload offset changed; reselect the same file to resume")
-            if path.is_symlink(): raise TransferError("Upload path is a symlink")
-            with path.open("ab") as out:
+            descriptor = _fs.open_file(path, os.O_CREAT | os.O_RDWR)
+            with os.fdopen(descriptor, "r+b") as out:
+                current = _fs.fd_stat(out.fileno()).st_size
+                if current != offset: raise TransferError("Upload offset changed; reselect the same file to resume")
+                out.seek(current)
                 left = length
                 while left:
                     data = source.read(min(1024**2,left))
@@ -199,12 +201,7 @@ class Desk:
             return receive_directory(self.store,snapshot_id,self.received_root/name,progress=progress,cancel=cancel)
         if action == "report":
             result = export_report(self.store,snapshot_id,out/"report")
-            archive=out/"transfer-inventory.zip"
-            if not archive.exists():
-                tmp=out/".report.pending.zip"
-                with zipfile.ZipFile(tmp,"w",compression=zipfile.ZIP_DEFLATED) as z:
-                    for p in sorted((out/"report").iterdir()): z.write(p,p.name)
-                os.link(tmp,archive); tmp.unlink()
+            archive=archive_report(out/"report",out/"transfer-inventory.zip")
             return {**result,"downloads":[self.register_file(archive,label="HTML, CSV and JSON inventory")]}
         if action.startswith("native_"):
             if not self.workspace: raise TransferError("Start this desk with --workspace to use native operations")
@@ -219,7 +216,7 @@ class Desk:
 
 
 def make_handler(desk):
-    assets=Path(__file__).resolve().parent.parent/"operator"/"web"
+    assets=_fs.native_path(__file__).resolve().parent.parent/"operator"/"web"
     class Handler(BaseHTTPRequestHandler):
         server_version="ProjectTransfer/1.0"
         def log_message(self,*args): pass
@@ -268,7 +265,7 @@ def make_handler(desk):
                 if path=="/api/diff": self.json(desk.store.difference(query["before"][0],query["after"][0]));return
                 if path=="/api/task": self.json(desk.task(query["id"][0]));return
                 if path.startswith("/files/"):
-                    row=load_json(desk.root/"files"/(digest_id(path[7:])+".json"));p=Path(row["path"])
+                    row=load_json(desk.root/"files"/(digest_id(path[7:])+".json"));p=_fs.native_path(row["path"])
                     if not p.resolve().is_relative_to(desk.root.resolve()) or p.stat().st_size!=row["bytes"] or file_hash(p)!=row["sha256"]:
                         raise TransferError("The selected retained download changed")
                     self.send_response(200); self.send_header("Content-Type",mimetypes.guess_type(p.name)[0] or "application/octet-stream")

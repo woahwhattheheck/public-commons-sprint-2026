@@ -20,7 +20,12 @@ from .portable_implementation import locked_implementation, verify_implementatio
 from .portable_parameter_studies import verify_parameter_studies
 from . import joint_parameter_study_transfer as joint_transfer
 from . import client_source_recipe_portable as recipe_transfer
-from .portable_fs import publish_file as _publish_file, publish_directory as _publish_directory
+from .portable_fs import (
+    publish_file as _publish_file,
+    publish_directory as _publish_directory,
+    relative_name as _portable_relative_name,
+    validate_members as _validate_members,
+)
 
 FORMAT = "upstate.scientific-workspace-archive/v1"
 APPLICATION_FILES = (
@@ -135,45 +140,28 @@ def _retained_directory(path):
             and not (path / "pyvenv.cfg").is_file())
 
 def member_name(value):
-    if not isinstance(value, str) or "\\" in value or "\0" in value:
-        raise ValueError("Invalid archive member path")
+    """Retain original POSIX member spelling but require native Windows/Mac safety.
+
+    Linux-generated archives are also delivered to Windows/macOS. Validate
+    each member for those receivers at creation as well as at extraction,
+    rather than accepting a path that becomes a device name, alternate stream
+    or nonrepresentable filesystem name on another target.
+    """
+    _portable_relative_name(value, windows=True)
     path = PurePosixPath(value)
-    if path.is_absolute() or not path.parts or any(p in ("..", ".") for p in path.parts):
-        raise ValueError("Archive paths must remain within the receiving directory")
-    if str(path) != value:
+    if path.as_posix() != value:
         raise ValueError("Archive member path must be canonical")
-    if os.name == "nt":
-        reserved = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"}
-        for part in path.parts:
-            stem = part.split(".", 1)[0].rstrip(" ").upper()
-            device = (stem in reserved
-                      or len(stem) == 4 and stem[:3] in {"COM", "LPT"}
-                      and stem[3] in "123456789\u00b9\u00b2\u00b3")
-            if (device or part.endswith((" ", "."))
-                    or any(ord(char) < 32 or char in '<>:"|?*' for char in part)):
-                raise ValueError("Archive member has no ordinary Windows destination: " + value)
     return path
 
 
 def validate_receiving_names(names):
-    """Reject case/Unicode destination aliases before receiving original bytes.
+    """Require portable, unambiguous destination names on every build host.
 
-    Callers may include explicit directories as well as their children. File /
-    directory conflicts are checked separately for the file-only workspace ZIP.
-    Original spellings stay in the manifest; no member is silently renamed.
+    The shared native filesystem contract rejects file/directory collisions
+    and Windows/macOS case/Unicode destination aliases. It checks all files
+    before one of them is extracted; original names are never rewritten.
     """
-    if os.name != "nt" and sys.platform != "darwin":
-        return
-    seen = {}
-    for name in names:
-        parts = member_name(name).parts
-        for length in range(1, len(parts) + 1):
-            prefix = "/".join(parts[:length])
-            folded = unicodedata.normalize("NFC", prefix).casefold()
-            previous = seen.setdefault(folded, prefix)
-            if previous != prefix:
-                raise ValueError("Archive members alias the same receiving destination: "
-                                 + previous + " / " + prefix)
+    _validate_members(names, portable=True)
 
 
 def _identity(path):
@@ -310,55 +298,73 @@ def _delivery_inputs(directory, files, state=None):
     return inputs, expected, delivery
 
 
-def _retain_received_archive(archive_source, destination, before, sha256):
-    """Retain the same opened ZIP outside its own captured member inventory."""
+def _retain_received_archive(archive_source, destination, before, sha256=None):
+    """Publish the *opened* editable archive as an immutable working receipt.
+
+    Reading through the already-verified descriptor also handles an archive
+    pathname renamed during receive. A hard-link-unavailable volume is not
+    allowed to expose an interrupted/unchecked copy at the final name.
+    The temporary is verified and fsynced before shared create-only
+    publication, with the parent directory synchronized afterwards.
+    Its streaming digest also identifies the exact original ZIP for receiving,
+    avoiding a duplicate full-archive checksum pass for delivery snapshots.
+    """
     if _archive_identity(archive_source) != before:
         raise ValueError("Original archive changed before retaining its working copy")
     relative = "working/scientific-workspace.zip"
-    target = Path(destination) / "delivery" / relative
+    target = _native_fs_path(Path(destination) / "delivery" / relative)
     target.parent.mkdir(parents=True, exist_ok=True)
-    linked = False
-    if target.exists():
-        if target.is_symlink() or target.stat().st_size != before[2] or file_digest(target) != sha256:
+    def verify_target():
+        if (target.is_symlink() or not target.is_file()
+                or target.stat().st_size != before[2]
+                or file_digest(target) != sha256):
             raise ValueError("Delivery snapshot conflicts with its enclosing working archive")
-    else:
-        source_path = Path(archive_source.name)
-        try:
-            same_source = (_identity(source_path) == before)
-        except (OSError, ValueError):
-            same_source = False
-        if same_source:
-            try:
-                os.link(source_path, target)
-            except OSError as error:
-                import errno
-                if (error.errno not in {errno.EXDEV, errno.EPERM, errno.EACCES,
-                                        errno.EOPNOTSUPP, errno.ENOSYS}
-                        and getattr(error, "winerror", None) not in (1, 17, 50)):
-                    raise
-            else:
-                linked = _identity(target)[:4] == before[:4]
-                if not linked:
-                    # The pathname was replaced after the identity check. Keep the
-                    # original open descriptor and discard only our just-created link.
-                    target.unlink()
-        if not linked:
-            copied = hashlib.sha256()
+
+    if target.exists() or target.is_symlink():
+        if sha256 is None:
+            # Only a preexisting publication needs a separate hash pass.
+            sha256 = _archive_digest(archive_source, before)
+        verify_target()
+        if _archive_identity(archive_source) != before:
+            raise ValueError("Original archive changed while retaining its working copy")
+        return {"path": relative, "bytes": before[2], "sha256": sha256}
+
+    pending = None
+    try:
+        copied, size = hashlib.sha256(), 0
+        with tempfile.NamedTemporaryFile(dir=target.parent, prefix=".receive-archive-",
+                                         delete=False) as output:
+            pending = _native_fs_path(Path(output.name))
             archive_source.seek(0)
-            with target.open("xb") as outgoing:
-                for block in iter(lambda: archive_source.read(1024 * 1024), b""):
-                    outgoing.write(block)
-                    copied.update(block)
-                outgoing.flush()
-                os.fsync(outgoing.fileno())
-            if copied.hexdigest() != sha256:
-                raise ValueError("Retained working archive differs from its opened original")
-    after = _archive_identity(archive_source)
-    # Adding the safe hardlink changes ctime, but not device, inode, size or mtime.
-    if (after[:4] != before[:4] or (not linked and after != before)
-            or target.stat().st_size != before[2]):
-        raise ValueError("Original archive changed while retaining its working copy")
-    return {"path": relative, "bytes": before[2], "sha256": sha256}
+            for block in iter(lambda: archive_source.read(1024 * 1024), b""):
+                output.write(block)
+                copied.update(block)
+                size += len(block)
+            output.flush()
+            os.fsync(output.fileno())
+        actual_sha256 = copied.hexdigest()
+        if (size != before[2]
+                or (sha256 is not None and actual_sha256 != sha256)
+                or _archive_identity(archive_source) != before):
+            raise ValueError("Original working archive changed during receiving copy")
+        # The same exact byte stream both populates the immutable work ZIP
+        # and identifies the original received edition: no second full scan
+        # of a 473 MB input just to rediscover the identical fingerprint.
+        sha256 = actual_sha256
+        try:
+            _publish_file(pending, target)
+        except FileExistsError:
+            # Another simultaneous receiver may have finished first.
+            # Reuse it only when it contains this exact opened archive.
+            verify_target()
+        verify_target()
+        _sync_directory(target.parent)
+        if _archive_identity(archive_source) != before:
+            raise ValueError("Original archive changed while retaining its working copy")
+        return {"path": relative, "bytes": before[2], "sha256": sha256}
+    finally:
+        if pending is not None:
+            pending.unlink(missing_ok=True)
 
 
 def _retain_delivery_file(source, target, expected):
@@ -1214,11 +1220,13 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         details = _verify_restored_workspace(manifest, pending)
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
-        archive_sha256 = _archive_digest(archive_source, before)
         working_archive = None
         if (manifest.get("delivery") or {}).get("record") is not None:
             working_archive = _retain_received_archive(
-                archive_source, pending, before, archive_sha256)
+                archive_source, pending, before)
+            archive_sha256 = working_archive["sha256"]
+        else:
+            archive_sha256 = _archive_digest(archive_source, before)
         received_record = _register_received_delivery(manifest, pending, working_archive)
         result = _receiving_result(
             manifest, destination, archive_sha256, details, received_record)

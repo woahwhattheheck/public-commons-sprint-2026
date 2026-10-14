@@ -10,8 +10,10 @@ from datetime import datetime, timezone
 import hashlib
 import json
 import math
+import os
 from pathlib import Path, PurePosixPath
 import re
+import uuid
 import xml.etree.ElementTree as ET
 
 try:
@@ -33,25 +35,50 @@ def _digest(value):
     return hashlib.sha256(_canonical(value)).hexdigest()
 
 
+def _filesystem():
+    if __package__:
+        from . import portable_fs
+    else:
+        import importlib
+        import sys
+        parent = str(Path(__file__).resolve().parent.parent)
+        if parent not in sys.path:
+            sys.path.insert(0, parent)
+        portable_fs = importlib.import_module("model.portable_fs")
+    return portable_fs
+
+
 def _path(root, name):
-    if (not isinstance(name, str) or not name or "\\" in name or "\0" in name
-            or ":" in name or name.startswith("/")
-            or any(part in {"", ".", ".."} for part in name.split("/"))):
-        raise ValueError("Use an original portable metadata member path")
-    root = Path(root).resolve(strict=True)
+    fs = _filesystem()
+    fs.relative_name(name, windows=True)
+    root = fs.native_path(Path(root).resolve(strict=True))
     path = root / PurePosixPath(name)
-    if path.is_symlink() or not path.resolve().is_relative_to(root):
+    if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
         raise ValueError("Vector metadata member leaves its retained project")
     return path
 
 
+def _identity(info):
+    return (info.st_dev, info.st_ino, info.st_size,
+            info.st_mtime_ns, info.st_ctime_ns)
+
+
 def _record(root, path):
-    digest = hashlib.sha256()
-    with path.open("rb") as stream:
+    fs = _filesystem()
+    root = fs.native_path(Path(root).resolve(strict=True))
+    path = fs.native_path(path)
+    digest, size = hashlib.sha256(), 0
+    descriptor = fs.open_file(path, os.O_RDONLY)
+    with os.fdopen(descriptor, "rb") as stream:
+        before = fs.fd_stat(stream.fileno())
         for chunk in iter(lambda: stream.read(CHUNK), b""):
             digest.update(chunk)
-    return {"path": path.relative_to(Path(root)).as_posix(),
-            "bytes": path.stat().st_size, "sha256": digest.hexdigest()}
+            size += len(chunk)
+        after = fs.fd_stat(stream.fileno())
+    if size != before.st_size or _identity(before) != _identity(after):
+        raise ValueError("Vector metadata member changed while reading: " + str(path))
+    return {"path": path.relative_to(root).as_posix(),
+            "bytes": size, "sha256": digest.hexdigest()}
 
 
 def _checked(root, row):
@@ -64,15 +91,33 @@ def _checked(root, row):
 
 
 def _write_once(root, name, body):
+    """Publish a complete immutable edition; never write into its final name."""
+    fs = _filesystem()
     target = _path(root, name)
     target.parent.mkdir(parents=True, exist_ok=True)
+    expected = {"path": name, "bytes": len(body),
+                "sha256": hashlib.sha256(body).hexdigest()}
+    pending = target.with_name(".gis-metadata-" + uuid.uuid4().hex)
     try:
-        with target.open("xb") as out:
+        descriptor = fs.open_file(pending, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+        with os.fdopen(descriptor, "wb") as out:
             out.write(body)
-    except FileExistsError:
-        if target.read_bytes() != body:
+            out.flush()
+            os.fsync(out.fileno())
+        # Close the writable handle before Windows publication. The shared
+        # publisher supplies verified-copy fallback where hard links fail.
+        try:
+            fs.publish_file(pending, target)
+        except FileExistsError:
+            if _record(root, target) != expected:
+                raise ValueError("An immutable vector metadata edition changed: " + name)
+        fs.sync_directory(target.parent)
+        result = _record(root, target)
+        if result != expected:
             raise ValueError("An immutable vector metadata edition changed: " + name)
-    return _record(root, target)
+        return result
+    finally:
+        pending.unlink(missing_ok=True)
 
 
 def _declared_fields(layer):

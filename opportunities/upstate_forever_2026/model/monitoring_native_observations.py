@@ -13,6 +13,7 @@ from datetime import date
 import hashlib
 import json
 import math
+import os
 from pathlib import Path
 import re
 import tempfile
@@ -20,6 +21,7 @@ import tempfile
 from .common import identifier, relative_file, verify_file
 from .monitoring_common import ContractError, canonical_bytes, digest, file_sha256
 from . import monitoring_observed_context as observed
+from .portable_fs import native_path
 
 EDITION = "upstate.native-observation-monitoring-context/v1"
 OPTIONAL_COLUMNS = (
@@ -426,6 +428,26 @@ def verify_binding(workspace, binding):
         raise ContractError("The saved native observation binding differs from its original import")
 
 
+def _receive_original(source, destination, expected_sha256):
+    """Stream a byte-exact native observation copy into the fresh source workspace."""
+    source, destination = native_path(source), native_path(destination)
+    checksum, size = hashlib.sha256(), 0
+    with source.open("rb") as incoming, destination.open("xb") as outgoing:
+        before = os.fstat(incoming.fileno())
+        for chunk in iter(lambda: incoming.read(1024 * 1024), b""):
+            outgoing.write(chunk)
+            checksum.update(chunk)
+            size += len(chunk)
+        outgoing.flush()
+        os.fsync(outgoing.fileno())
+        after = os.fstat(incoming.fileno())
+    identity = lambda info: (info.st_dev, info.st_ino, info.st_size,
+                             info.st_mtime_ns, info.st_ctime_ns)
+    if (identity(before) != identity(after) or size != before.st_size
+            or checksum.hexdigest() != expected_sha256):
+        raise ContractError("The original native observation changed during source intake")
+
+
 def prepare(workspace, *, selection, expected_preview_id):
     result, document, source, record_path = _preview(workspace, selection)
     if identifier(expected_preview_id) != result["id"]:
@@ -436,8 +458,9 @@ def prepare(workspace, *, selection, expected_preview_id):
         (folder / "observed-context.json").write_bytes(canonical_bytes(document))
         original = relative_file(workspace.root, source["original"]["object"])
         # Byte-exact source files; neither the native importer nor its record is modified.
-        (folder / "original.csv").write_bytes(original.read_bytes())
-        (folder / "original-native-observation.json").write_bytes(record_path.read_bytes())
+        _receive_original(original, folder / "original.csv", source["original"]["sha256"])
+        _receive_original(record_path, folder / "original-native-observation.json",
+                          document["native_observation_binding"]["record_sha256"])
         (folder / "native-selection.json").write_bytes(canonical_bytes(result["selection"]))
         manifest = {"schema": "upstate.sources/v1", "title": result["selection"]["title"],
             "notes": document["interpretation"], "entries": [{

@@ -6,6 +6,9 @@
     "chemistry": {
       "paths": [
         "model/chemistry_reports.py",
+        "model/chemistry.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
         "model/CHEMISTRY_REPORTS.md",
         "model/reach_chemistry/reporting.py",
         "integration/component_fragments/chemistry_reports.json"
