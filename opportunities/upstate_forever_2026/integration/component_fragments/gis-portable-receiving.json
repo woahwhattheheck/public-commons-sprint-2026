@@ -5,6 +5,7 @@
     "gis-projects": {
       "paths": [
         "model/gis_project.py",
+        "model/gis_project_view.html",
         "model/gis_project_cli.py",
         "model/gis_project_native.py",
         "model/gis_project_portable.py",
