@@ -11,6 +11,31 @@
 #include <utility>
 #include <vector>
 
+// Use the native Windows Unicode entry point and native filesystem paths.  The
+// numerical algorithms and their byte protocols are unchanged.  Extended paths
+// also work when the received workbench sits below a long extraction directory.
+#include <filesystem>
+#ifdef _WIN32
+using PathCharacter = wchar_t;
+#define ECO_HELPER_MAIN wmain
+#else
+using PathCharacter = char;
+#define ECO_HELPER_MAIN main
+#endif
+static std::filesystem::path native_path(const PathCharacter* name) {
+#ifdef _WIN32
+    auto path = std::filesystem::absolute(name).lexically_normal();
+    const auto value = path.native();
+    if (value.rfind(L"\\\\?\\", 0) == 0) return path;
+    if (value.rfind(L"\\\\", 0) == 0)
+        return std::filesystem::path(L"\\\\?\\UNC\\" + value.substr(2));
+    return std::filesystem::path(L"\\\\?\\" + value);
+#else
+    return std::filesystem::path(name);
+#endif
+}
+
+
 using I = std::int64_t;
 using U = std::uint64_t;
 using N = std::uint32_t;
@@ -120,10 +145,10 @@ public:
         return total;
     }
 };
-int main(int argc, char** argv) {
+int ECO_HELPER_MAIN(int argc, PathCharacter** argv) {
     try {
         if (argc != 3) throw std::runtime_error("Usage: matched-control-exact INPUT.bin OUTPUT.bin");
-        std::ifstream input(argv[1], std::ios::binary);
+        std::ifstream input(native_path(argv[1]), std::ios::binary);
         if (!input) throw std::runtime_error("Cannot open matcher input");
         char magic[8];
         if (!input.read(magic, 8) || std::string(magic, 8) != "ECO1D01\n")
@@ -171,7 +196,7 @@ int main(int argc, char** argv) {
         if (imbalance || chosen.size() != target_count) throw std::runtime_error("Incomplete exact reconstruction");
         std::reverse(chosen.begin(), chosen.end());
         // Chosen candidates and required targets are now in precipitation/cell order.
-        std::ofstream output(argv[2], std::ios::binary | std::ios::trunc);
+        std::ofstream output(native_path(argv[2]), std::ios::binary | std::ios::trunc);
         if (!output) throw std::runtime_error("Cannot open matcher output");
         output.write("ECOPA01\n", 8); write_u64(output, target_count);
         Wide measured = 0; U j = 0;

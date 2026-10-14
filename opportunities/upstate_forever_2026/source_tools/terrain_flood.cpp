@@ -12,17 +12,42 @@
 #include <string>
 #include <vector>
 #include <cmath>
+
+// Use the native Windows Unicode entry point and native filesystem paths.  The
+// numerical algorithms and their byte protocols are unchanged.  Extended paths
+// also work when the received workbench sits below a long extraction directory.
+#include <filesystem>
+#ifdef _WIN32
+using PathCharacter = wchar_t;
+#define ECO_HELPER_MAIN wmain
+#else
+using PathCharacter = char;
+#define ECO_HELPER_MAIN main
+#endif
+static std::filesystem::path native_path(const PathCharacter* name) {
+#ifdef _WIN32
+    auto path = std::filesystem::absolute(name).lexically_normal();
+    const auto value = path.native();
+    if (value.rfind(L"\\\\?\\", 0) == 0) return path;
+    if (value.rfind(L"\\\\", 0) == 0)
+        return std::filesystem::path(L"\\\\?\\UNC\\" + value.substr(2));
+    return std::filesystem::path(L"\\\\?\\" + value);
+#else
+    return std::filesystem::path(name);
+#endif
+}
+
 struct Cell { double z; std::uint64_t i; };
 struct Greater { bool operator()(const Cell&a,const Cell&b) const {
     return a.z>b.z || (a.z==b.z && a.i>b.i);
 }};
-template<class T> std::vector<T> load(const char*path,std::uint64_t n) {
-    std::ifstream f(path,std::ios::binary|std::ios::ate);
+template<class T> std::vector<T> load(const PathCharacter*path,std::uint64_t n) {
+    std::ifstream f(native_path(path),std::ios::binary|std::ios::ate);
     if(!f || f.tellg()!=std::streamoff(n*sizeof(T))) throw std::runtime_error("Array length differs");
     std::vector<T> a(n); f.seekg(0); f.read(reinterpret_cast<char*>(a.data()), n*sizeof(T));
     if(!f) throw std::runtime_error("Incomplete input array"); return a;
 }
-int main(int argc,char**argv) { try {
+int ECO_HELPER_MAIN(int argc,PathCharacter**argv) { try {
     if(argc!=7) throw std::runtime_error("width height elevation valid seeds output required");
     const auto w=std::stoull(argv[1]), h=std::stoull(argv[2]);
     if(!w||!h||w>std::numeric_limits<std::uint64_t>::max()/h) throw std::runtime_error("Invalid grid");
@@ -56,7 +81,7 @@ int main(int argc,char**argv) { try {
         if((processed&262143)==0)std::cerr<<"cells "<<processed<<" "<<total<<"\n";
     }
     if(processed!=total) throw std::runtime_error("Some valid cells have no path to a selected boundary outlet");
-    std::ofstream out(argv[6],std::ios::binary|std::ios::trunc);
+    std::ofstream out(native_path(argv[6]),std::ios::binary|std::ios::trunc);
     out.write(reinterpret_cast<const char*>(z.data()),n*sizeof(double));out.close();
     if(!out)throw std::runtime_error("Could not write complete output");
     std::cout<<processed<<"\n"; return 0;
