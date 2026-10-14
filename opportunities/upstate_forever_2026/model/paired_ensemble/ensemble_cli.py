@@ -1,6 +1,8 @@
 """Command-line receiving and analysis of original completed Workspace runs.
 
-Uses Rasterio and the finished native artifacts; InVEST is not needed again.
+Saved-result inspect/export/receive do not load the GIS computation stack.
+Raster analysis and report regeneration use the installed scientific libraries
+and finished native artifacts; InVEST is not needed again.
 Copyright 2026 TokenJunkieLabs.
 """
 from __future__ import annotations
@@ -9,7 +11,6 @@ import json
 from pathlib import Path
 import sys
 from .ensemble_store import digest, identifier, read
-from .ensemble_workspace import EnsembleWorkspace
 
 
 class CompletedWorkspace:
@@ -80,6 +81,7 @@ def main(argv=None):
     progress = lambda value: print(json.dumps(value, allow_nan=False), file=sys.stderr, flush=True)
     try:
         if args.command in ('preview', 'build', 'resume', 'pause', 'list'):
+            from .ensemble_workspace import EnsembleWorkspace
             app = EnsembleWorkspace(CompletedWorkspace(args.workspace))
             if args.command == 'list':
                 result = app.list()
