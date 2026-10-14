@@ -53,7 +53,7 @@ def _path(root, name):
     fs.relative_name(name, windows=True)
     root = fs.native_path(Path(root).resolve(strict=True))
     path = root / PurePosixPath(name)
-    if path.is_symlink() or not path.resolve().is_relative_to(root):
+    if path.is_symlink() or not path.resolve().is_relative_to(root.resolve()):
         raise ValueError("Vector metadata member leaves its retained project")
     return path
 
