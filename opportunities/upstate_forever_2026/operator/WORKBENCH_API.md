@@ -479,3 +479,8 @@ The source review does not establish relay deduplication, TLS deployment,
 Windows filesystem execution or actual visual acceptance. Keep the exact
 original desktop390px/all-attachments/open-and-LOOK rule above, including
 normal archive extraction and independent project reopening.
+
+
+## Installed origin discovery
+
+The installed OpenAPI document advertises the explicitly configured recipient HTTPS authority from the maintained origin policy when this deployment has one. The native listener and startup capability remain private. Use that HTTPS origin with its separately issued recipient credential, or the ordinary local client with the recipient's own launcher startup JSON. No Bryce PC, account session, configuration or provider key is required. Exact Host/Origin validation, canonical /_eco/v1 transport and current staged upload/download recovery remain authoritative.
