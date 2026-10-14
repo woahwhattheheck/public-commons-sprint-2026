@@ -310,7 +310,7 @@ def validate_selection(workspace, supplied):
     inspected = qc.inspect(workspace, plan["id"], supplied.get("report_id"))
     selected = _selection(plan, inspected, supplied)
     result = _compose(plan, inspected, _batches(store, plan), selected)[2]
-    result["current_revision"] = store.get(plan["id"])["revision"]
+    result["current_revision"] = store.get(plan["id"]) ["revision"]
     result["validation_basis"] = "original_saved_revision"
     return result
 
@@ -513,33 +513,9 @@ def scientific_source(workspace, plan_id, action_report_id):
 
 def export(workspace, plan_id, action_report_id, destination):
     inspected = inspect(workspace, plan_id, action_report_id)
-    root = Path(workspace.root)
-    path = Path(destination).expanduser().absolute()
-    if path.resolve().is_relative_to(root.resolve()):
-        raise ImplementationError("Save complete quality-action exports outside the original Workspace.")
-    path.parent.mkdir(parents=True, exist_ok=True)
-    if path.exists() or path.is_symlink():
-        if path.is_symlink() or not path.is_file():
-            raise ImplementationError("The retained quality-action archive must be an ordinary file.")
-        qc._verify_archive(path, inspected["files"])
-        return {"path": str(path), "bytes": path.stat().st_size, "sha256": file_digest(path),
-                "action_report_id": action_report_id, "reused": True}
-    descriptor, staged = tempfile.mkstemp(prefix=".qc-actions-export-", dir=path.parent)
-    os.close(descriptor)
-    staged = Path(staged)
-    try:
-        with zipfile.ZipFile(staged, "w", compression=zipfile.ZIP_DEFLATED) as archive:
-            for item in inspected["files"]:
-                source = root / item["path"]
-                if describe_file(root, source) != item:
-                    raise ImplementationError("A retained quality-action export source changed.")
-                archive.write(source, source.name)
-        qc._verify_archive(staged, inspected["files"])
-        os.link(staged, path)
-        return {"path": str(path), "bytes": path.stat().st_size, "sha256": file_digest(path),
-                "action_report_id": action_report_id}
-    finally:
-        staged.unlink(missing_ok=True)
+    return {**qc._export_archive(workspace, inspected["files"], destination,
+                                label="quality-action", prefix=".qc-actions-export-"),
+            "action_report_id": action_report_id}
 
 
 def main(argv=None):
