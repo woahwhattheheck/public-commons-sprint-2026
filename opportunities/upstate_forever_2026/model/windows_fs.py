@@ -135,11 +135,28 @@ def fd_stat(descriptor):
     return SimpleNamespace(**fields)
 
 def path_stat(path):
-    descriptor = no_follow_open(path, os.O_RDONLY)
+    """Inspect the same no-follow object without requesting file-data access.
+
+    Metadata access remains compatible with an exclusive-share receiving lease.
+    The temporary owned handle still supplies the original file ID and native
+    ChangeTime, and reparse points/directories retain their existing rejection.
+    """
+    handle = _kernel.CreateFileW(str(native_path(path)), 0, 7, None, 3,
+        0x00200000 | 0x02000000, None)
+    if handle == _invalid:
+        raise _failure(path)
     try:
-        return fd_stat(descriptor)
+        if _attributes(handle, path) & 0x10:
+            raise IsADirectoryError(errno.EISDIR, "Choose an original regular file", str(path))
+        descriptor = msvcrt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY)
+        handle = None
+        try:
+            return fd_stat(descriptor)
+        finally:
+            os.close(descriptor)
     finally:
-        os.close(descriptor)
+        if handle is not None:
+            _kernel.CloseHandle(handle)
 
 def replace(source, destination):
     if not _kernel.MoveFileExW(str(native_path(source)), str(native_path(destination)), 1 | 8):
