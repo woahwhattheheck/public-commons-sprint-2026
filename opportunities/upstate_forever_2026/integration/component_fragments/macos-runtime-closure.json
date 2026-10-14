@@ -1,0 +1,19 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "macos-runtime-closure",
+  "source_reference": "ECO-MAC-CLOSURE-14-8576/1.0.0",
+  "components": {
+    "macos-runtime-closure": {
+      "paths": [
+        "source_tools/native_runtime/macos_bundle.py",
+        "source_tools/MACOS_NATIVE_CLOSURE.md",
+        "integration/component_fragments/macos-runtime-closure.json"
+      ],
+      "requires": [],
+      "retained_only": []
+    }
+  },
+  "required_components": [
+    "macos-runtime-closure"
+  ]
+}
