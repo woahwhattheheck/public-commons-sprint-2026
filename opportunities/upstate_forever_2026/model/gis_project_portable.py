@@ -219,8 +219,10 @@ def pack(root, destination):
                     raise FileExistsError("Destination contains a different GIS archive")
             reused = True
         fs.sync_directory(destination.parent)
-        return {**result, "archive": str(destination), "bytes": size,
-                "sha256": digest, "reused": reused}
+        # Preserve the original Workspace/operator response contract. `bytes`
+        # belongs to the uncompressed inventory, not to this ZIP container.
+        return {**result, "archive": str(destination), "archive_bytes": size,
+                "archive_sha256": digest, "reused": reused}
     finally:
         pending.unlink(missing_ok=True)
 
