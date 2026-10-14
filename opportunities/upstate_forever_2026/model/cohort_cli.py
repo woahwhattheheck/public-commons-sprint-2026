@@ -11,6 +11,7 @@ import sys
 import tempfile
 
 from .common import file_digest
+from .portable_fs import native_path, publish_file, sync_directory
 from .region_cli import _plan
 from .spatial import _signature
 from .spatial_cohorts import SpatialCohorts, SORTS
@@ -18,11 +19,15 @@ from .workspace import Workspace
 
 
 def _copy(source, target):
+    source, target = native_path(source), native_path(target)
     if target.is_symlink():
         raise ValueError("Choose an original cohort export path")
     before = _signature(source)
+    expected_size, expected_hash = source.stat().st_size, file_digest(source)
     if target.exists():
-        if target.stat().st_size == source.stat().st_size and file_digest(target) == file_digest(source):
+        if target.is_file() and target.stat().st_size == expected_size and file_digest(target) == expected_hash:
+            if _signature(source) != before:
+                raise ValueError("The retained cohort artifact changed during export")
             return
         raise ValueError("An unrelated cohort export already exists: " + str(target))
     pending = None
@@ -35,16 +40,27 @@ def _copy(source, target):
             os.fsync(stream.fileno())
         if _signature(source) != before:
             raise ValueError("The retained cohort artifact changed during export")
-        os.link(pending, target)
+        if pending.stat().st_size != expected_size or file_digest(pending) != expected_hash:
+            raise ValueError("The complete staged cohort artifact differs")
+        try:
+            publish_file(pending, target)
+        except FileExistsError:
+            if (target.is_symlink() or not target.is_file()
+                    or target.stat().st_size != expected_size or file_digest(target) != expected_hash):
+                raise ValueError("A concurrent cohort export differs: " + str(target))
+        if (target.is_symlink() or target.stat().st_size != expected_size
+                or file_digest(target) != expected_hash):
+            raise ValueError("The published cohort artifact differs: " + str(target))
+        sync_directory(target.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
 
 
 def export(model, result, directory):
-    folder = Path(directory).expanduser().resolve()
+    folder = native_path(Path(directory).expanduser().resolve())
     folder.mkdir(parents=True, exist_ok=True)
-    manifest = model.workspace.root / "spatial-cohorts" / (result["id"] + ".json")
+    manifest = native_path(model.workspace.root / "spatial-cohorts" / (result["id"] + ".json"))
     sources = [(manifest, manifest.name)]
     sources.extend((model._file(metadata), Path(metadata["path"]).name)
                    for metadata in [result["rows_file"], *result["files"]])

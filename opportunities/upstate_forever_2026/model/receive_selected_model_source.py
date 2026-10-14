@@ -4,12 +4,19 @@ from __future__ import annotations
 import argparse
 import ast
 import base64
-import fcntl
 import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
 import tempfile
+
+if __package__:
+    from .portable_fs import locked, native_path, relative_name, replace, sync_directory
+else:
+    # Preserve the original direct-script command as well as python -m operation.
+    import sys
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+    from model.portable_fs import locked, native_path, relative_name, replace, sync_directory
 
 FORMAT = "upstate.selected-model-source/v1"
 
@@ -19,6 +26,7 @@ def sha(value):
 
 
 def target_path(root, name):
+    relative_name(name)
     part = PurePosixPath(name)
     if (not isinstance(name, str) or not part.parts or part.is_absolute()
             or str(part) != name or ".." in part.parts or "\\" in name or "\0" in name
@@ -105,10 +113,9 @@ def prepare(root, packet):
 
 
 def apply(root, packet):
-    root = Path(root).resolve(strict=True)
+    root = native_path(Path(root).resolve(strict=True))
     lock = root / ".selected-model-receiving.lock"
-    with lock.open("a+b") as stream:
-        fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with locked(lock, blocking=False):
         selected = prepare(root, packet)
         for file in selected:
             observed = file["path"].read_bytes() if file["path"].exists() else None
@@ -130,8 +137,9 @@ def apply(root, packet):
                     observed = path.read_bytes() if path.exists() else None
                     if observed != before:
                         raise ValueError("Application source changed before publication: " + file["name"])
-                    os.replace(pending, path)
+                    replace(pending, path)
                     pending = None
+                    sync_directory(path.parent)
                 finally:
                     if pending is not None:
                         pending.unlink(missing_ok=True)

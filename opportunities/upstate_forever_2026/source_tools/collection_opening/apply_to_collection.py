@@ -5,6 +5,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import stat
 import sys
@@ -66,9 +67,10 @@ def restore_mode(path, body, mode, fs, *, created=False):
     return changed
 
 
-def apply(collection: Path, source: Path):
+def apply(collection: Path, source: Path | None = None):
     """Preflight the whole component and retain all Workspace/data selections."""
-    root, source = collection.expanduser().resolve(strict=True), source.resolve(strict=True)
+    root = Path(collection).expanduser().resolve(strict=True)
+    source = Path(source or Path(__file__).resolve().parent).resolve(strict=True)
     if not (root / 'application').is_dir() or not (root / 'STUDIES.json').is_file():
         raise ValueError('Choose the complete existing collection, not an application-only checkout')
     sys.path.insert(0, str(root / 'application'))
@@ -94,17 +96,18 @@ def apply(collection: Path, source: Path):
             name = row['path']
             incoming, destination = source / name, root / name
             body, _ = read_original(incoming, fs)
-            expected = hashlib.sha256(body).hexdigest()
-            if (expected != row.get('sha256') or type(row.get('bytes')) is not int
-                    or len(body) != row['bytes']):
+            expected, allowed = row['sha256'], row['predecessor_sha256']
+            if (not isinstance(expected, str) or not re.fullmatch('[0-9a-f]{64}', expected)
+                    or not isinstance(allowed, list)
+                    or any(not isinstance(value, str) or not re.fullmatch('[0-9a-f]{64}', value)
+                           for value in allowed)
+                    or type(row['bytes']) is not int or row['bytes'] < 0
+                    or not isinstance(row['mode'], str) or not re.fullmatch('0?[0-7]{3}', row['mode'])):
+                raise ValueError('Receive the complete opening descriptor: ' + name)
+            if len(body) != row['bytes'] or hashlib.sha256(body).hexdigest() != expected:
                 raise ValueError('Receive the complete opening source file: ' + name)
             mode = int(row['mode'], 8)
-            if mode < 0 or mode > 0o777:
-                raise ValueError('Opening file mode must contain ordinary permission bits: ' + name)
             previous, _ = read_original(destination, fs, missing=True)
-            allowed = row['predecessor_sha256']
-            if not isinstance(allowed, list):
-                raise ValueError('Opening predecessor selection must be a list: ' + name)
             if (previous is not None and previous != body
                     and hashlib.sha256(previous).hexdigest() not in allowed):
                 raise ValueError('Preserved concurrent collection edits in ' + name
@@ -150,14 +153,14 @@ def apply(collection: Path, source: Path):
                 restored.append(name)
         fs.sync_directory(root)
     return {'component': manifest['component'], 'updated': updated,
-            'restored_modes': restored, 'reused': reused}
+            'mode_repaired': restored, 'restored_modes': restored, 'reused': reused}
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('collection', type=Path)
     args = parser.parse_args()
-    print(json.dumps(apply(args.collection, Path(__file__).resolve().parent), sort_keys=True))
+    print(json.dumps(apply(args.collection), sort_keys=True))
     return 0
 
 
