@@ -278,19 +278,21 @@ def packing_environment(original_prefix: str | Path, completed_prefix: str | Pat
                         target: str, donors: Iterable[str | Path] = ()):
     """Return the official CondaEnv with preserved per-file relocation origins.
 
-    Invoke using the selected build host's conda-pack. Windows packages require
-    Windows conda-pack; the ordinary POSIX writer handles Linux/macOS packages.
+    Invoke using the selected build host's conda-pack. On a POSIX cloud host,
+    the isolated Windows writer retains Windows layout/relocation semantics.
     Previously relocated binaries without original cache/raw-prefix records
     cannot be made generally relocatable by guessing a new shorter placeholder.
     Supply the original unpacked archive or retained build package cache instead.
     """
-    import conda_pack
     import inspect as signature_inspect
-    from conda_pack.core import _scripts, load_environment
+    if __package__:
+        from .windows_packing import select_writer
+    else:
+        from windows_packing import select_writer
 
     target = target_name(target)
-    if target.startswith('windows-') != (os.name == 'nt'):
-        raise PayloadError('Use the native Windows conda-pack writer for Windows payloads and the POSIX writer for POSIX payloads')
+    conda_pack, writer_core = select_writer(target)
+    _scripts, load_environment = writer_core._scripts, writer_core.load_environment
     original = Prefix(original_prefix, target)
     completed = Prefix(completed_prefix, target)
     if original.root == completed.root:
