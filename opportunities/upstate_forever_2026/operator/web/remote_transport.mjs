@@ -77,7 +77,7 @@ async function uncertainResponse(response,id){
  const recovery={id};
  if(typeof detail.code==='string'&&/^[A-Z][A-Z0-9_]{0,95}$/.test(detail.code))recovery.code=detail.code;
  if(typeof detail.operation_id==='string'&&/^[A-Za-z0-9_-]{16,100}$/.test(detail.operation_id))recovery.operation_id=detail.operation_id;
- if(typeof detail.workspace==='string'&&/^[a-f0-9]{64}$/.test(detail.workspace))recovery.workspace=detail.workspace;
+ if(typeof detail.workspace==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(detail.workspace))recovery.workspace=detail.workspace;
  if(typeof detail.task_id==='string'&&/^[a-f0-9]{64}$/.test(detail.task_id)){
   recovery.task_id=detail.task_id;
   if(detail.lookup_path==='/api/task?id='+detail.task_id)recovery.lookup_path=detail.lookup_path;
@@ -125,15 +125,15 @@ async function outcome(id,signal){
   }
   if(response.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
   if(response.headers.get('X-Eco-Pending')==='1'){
-   await response.body?.cancel();attempt=0;await pause(retryDelay(response,0,500),signal);continue;
+   try{await response.body?.cancel();}catch{}attempt=0;await pause(retryDelay(response,0,500),signal);continue;
   }
   if((retryCodes.has(response.status)||(response.status===409&&response.headers.get('X-Eco-Transport-Error')==='RESULT_OPEN'))&&response.headers.has('X-Eco-Transport-Error')){
-   await response.body?.cancel();if(attempt++>=7)throw problem('The original request is retained but its result is temporarily unavailable.','REMOTE_INTERRUPTED',id,response.status);
+   try{await response.body?.cancel();}catch{}if(attempt++>=7)throw problem('The original request is retained but its result is temporarily unavailable.','REMOTE_INTERRUPTED',id,response.status);
    await pause(retryDelay(response,attempt),signal);continue;
   }
   if(response.headers.has('X-Eco-Transport-Error')){
    const code=response.headers.get('X-Eco-Transport-Error');
-   await response.body?.cancel();
+   try{await response.body?.cancel();}catch{}
    throw problem('The original transfer result could not be read ('+code+'). Keep its reference when reconnecting.','REMOTE_'+code,id,response.status);
   }
   return response;
@@ -236,7 +236,7 @@ export async function operatorFetch(path,options={},capability=null){
  if(response.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
  if(response.headers.get('X-Eco-Pending')==='1'){
   const returned=response.headers.get('X-Eco-Request-ID');
-  await response.body?.cancel();
+  try{await response.body?.cancel();}catch{}
   if(returned&&returned!==id)throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id);
   return completeApiResponse(await outcome(id,options.signal),id,options.signal);
  }

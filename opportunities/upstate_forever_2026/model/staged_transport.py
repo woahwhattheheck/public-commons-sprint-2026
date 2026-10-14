@@ -69,7 +69,7 @@ def _uncertain_response(response, request_id):
     recovery = {"id": request_id}
     for name, pattern in (("code", r"[A-Z][A-Z0-9_]{0,95}"),
                           ("operation_id", r"[A-Za-z0-9_-]{16,100}"),
-                          ("workspace", r"[0-9a-f]{64}"),
+                          ("workspace", r"[A-Za-z0-9_-]{1,200}"),
                           ("task_id", r"[0-9a-f]{64}")):
         field = value.get(name)
         if isinstance(field, str) and re.fullmatch(pattern, field):
