@@ -18,7 +18,7 @@ SOURCE_METADATA_FIELDS = (
 def _artifact(workspace, directory, item):
     """Translate the original describe_file contract without altering its identity."""
     path = gis.checked(directory, item)
-    result = {"path": path.relative_to(workspace.root).as_posix(),
+    result = {"path": path.relative_to(gis._portable().native_path(workspace.root)).as_posix(),
               "bytes": item["bytes"], "sha256": item["sha256"]}
     return result
 
@@ -26,15 +26,16 @@ def _artifact(workspace, directory, item):
 def _raster_companions(workspace, item):
     import rasterio
     result = []
-    primary = gis.local(workspace.root, item["path"])
+    native_root = gis._portable().native_path(workspace.root)
+    primary = gis.local(native_root, item["path"])
     with rasterio.open(primary) as src:
         for filename in src.files:
-            p = Path(filename).resolve(strict=True)
+            p = gis._portable().native_path(Path(filename).resolve(strict=True))
             if p == primary:
                 continue
-            if not p.is_relative_to(workspace.root):
+            if not p.is_relative_to(native_root):
                 raise ValueError("Raster companion is outside the retained Workspace")
-            result.append(gis.record(workspace.root, p))
+            result.append(gis.record(native_root, p))
     return result
 
 
@@ -596,6 +597,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
     if not isinstance(selection, dict):
         raise ValueError('Select retained GIS sources for adoption')
     parent,receipt,result=received(workspace,selection['receipt_id'])
+    parent=gis._portable().native_path(parent)
     root=parent/'project';project=gis.load(root/'project.json')
     reason=selection.get('reason','').strip()
     title=selection.get('title','').strip()
@@ -634,7 +636,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
                 import rasterio
                 with rasterio.open(path) as src:
                     for filename in src.files:
-                        p=Path(filename).resolve(strict=True)
+                        p=gis._portable().native_path(Path(filename).resolve(strict=True))
                         if p==path:continue
                         rec=gis.record(root,gis.local(root,p.relative_to(root).as_posix()))
                         companions.append({'path':'project/'+rec['path'],'sha256':rec['sha256']})
@@ -664,7 +666,7 @@ def adopt_sources(workspace, selection: dict) -> dict:
         seen_context=set()
         context_sources=[]
         def context(title, records, *, context_id, context_role, metadata=None, source=None, context_root=None):
-            context_root = root if context_root is None else context_root
+            context_root = gis._portable().native_path(root if context_root is None else context_root)
             context_prefix = context_root.relative_to(parent).as_posix() + '/'
             metadata = deepcopy(metadata or {"kind": "document"})
             source = deepcopy(source or {})

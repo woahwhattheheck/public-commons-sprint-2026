@@ -96,6 +96,8 @@ def local(root: Path, name: str, *, exists: bool = True) -> Path:
 
 
 def record(root: Path, path: Path) -> dict:
+    root = _portable().native_path(root)
+    path = _portable().native_path(path)
     return {"path": path.relative_to(root).as_posix(), "bytes": path.stat().st_size,
             "sha256": sha256(path)}
 
