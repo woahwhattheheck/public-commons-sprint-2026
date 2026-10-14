@@ -63,6 +63,34 @@ metadata/content batches, fetched and cached object counts, unique bytes and
 timing. These measurements are outside the archive so the same selected source
 retains the same package bytes.
 
+## Preserve a product's pinned source inventory
+
+A product may declare `pinnedSourceManifests` in its original contribution or
+source selection. Measurements declares
+`products/measurement-workspace/original-source.json`, whose
+`stellar-forge.measurement-workspace-source.v1` inventory retains every member's
+repository path, Git blob, byte count and SHA-256. The builder selects these
+explicit files through its ordinary regular-file, exclusion and size rules,
+then compares the complete final selected bytes with every declared identity.
+An absent, excluded or changed member stops the build before an output stage is
+created or materialized. A changed pin reports the inventory and source path
+with `DISTRIBUTION_SOURCE_PIN_MISMATCH`.
+
+Choose the original coherent source ref, or refresh and commit the inventory
+together with the intended scientific source before building the new edition.
+The builder never regenerates the product inventory or substitutes files from
+its provenance commit. `sourceCommit` records where that inventory's members
+were selected; it need not equal a later build commit if those members are
+unchanged. The archive retains both the original inventory bytes and the outer
+manifest's exact selected-tree identities. Installed registration loading checks
+their agreement; the product's native opening still verifies its actual source
+files.
+
+Existing products without this declaration retain their selection behavior.
+Name-only `managedSourceManifests` retain their existing schema and semantics.
+Completed `--resume` returns the verified original archive before source
+selection, so a newer inventory cannot change a historical delivery.
+
 ## Repeat the build offline
 
 After the source objects are present, use a new output directory:
