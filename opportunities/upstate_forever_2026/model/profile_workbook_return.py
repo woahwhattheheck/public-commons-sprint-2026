@@ -610,7 +610,7 @@ def create(ws, value, *, operation_id=None, context=None):
             write_json("selection", "return-selection.json", request)
             profile_path = ws.root / "profiles" / (request["profile_id"] + ".json")
             profile_body = describe_file(ws.root, profile_path)
-            _need(profile_body["sha256"] == selected_profile["profile_sha256"],
+            _need(profile_body["sha256"] == proposed["profile_sha256"],
                   "Original saved profile differs from the selected edition.")
             write("profile", "saved-profile.json",
                   _read_exact(profile_path, profile_body), "application/json")
