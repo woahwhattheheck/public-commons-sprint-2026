@@ -3700,5 +3700,21 @@ ALLOWED = ALLOWED | frozenset({
 })
 
 
+# Complete native packing, original-output and root dependency cohorts.
+# These remain optional source paths under the existing exact layer checks.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/native_runtime/windows_packing.py",
+    "source_tools/WINDOWS_CLOUD_PACKING.md",
+    "source_tools/native_runtime/conda_sources.py",
+    "source_tools/CONDA_CACHE_PACKING.md",
+    "source_tools/native_runtime/conda_cache.py",
+    "source_tools/NATIVE_CONDA_ACQUISITION.md",
+    "source_tools/collection_opening/compose_runtime_dependencies.py",
+    "model/parameter_exports.py",
+    "model/receiving_water_report_maps.py",
+    "model/delivery_archive.py",
+})
+
+
 if __name__ == "__main__":
     main()
