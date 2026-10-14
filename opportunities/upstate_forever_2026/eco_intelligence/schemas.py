@@ -19,11 +19,13 @@ class Ref(StrictModel):
         return self
 
 class Inspect(StrictModel):
-    operation: Literal['inventory','profile','job','ensemble','raster_compare','table_compare']
+    operation: Literal['inventory','profile','table_rows','job','ensemble','raster_compare','table_compare']
     ref: Ref | None = None
     other: Ref | None = None
     object_id: str | None = None
     band: int = Field(default=1,ge=1)
+    offset: int = Field(default=0,ge=0)
+    limit: int = Field(default=20,ge=1,le=1000)
     keys: list[str] = Field(default_factory=list)
     observed_column: str = 'observed_sediment'
     predicted_column: str = 'predicted_sediment'

@@ -17,7 +17,7 @@ import re
 from pydantic import ValidationError
 from model.common import (
     atomic_bytes, atomic_json, canonical, describe_file, digest, identifier,
-    read_json, verify_file,
+    read_json, verify_file, _native_fs_path,
 )
 from eco_intelligence.common import IntelligenceError
 from eco_intelligence.schemas import Action, Inspect, SessionCreate
@@ -537,7 +537,13 @@ class IntelligenceFeature:
             assistant = self.integration.assistant(workspace)
             if assistant.engine is not engine:
                 raise IntelligenceError("The assistant must share the original investigation engine.", 503)
-            asyncio.run(assistant.ask(workspace, sid, question, task["operation_id"]))
+            focus_ref = value.get("focus_ref")
+            if focus_ref is not None:
+                if (not isinstance(focus_ref, dict) or set(focus_ref) - {"kind", "id", "member"}
+                        or focus_ref.get("kind") not in {"dataset", "artifact", "job", "ensemble"}
+                        or not isinstance(focus_ref.get("id"), str) or not focus_ref["id"]):
+                    raise IntelligenceError("Choose an original registered source or native result for this question.", 422)
+            asyncio.run(assistant.ask(workspace, sid, question, task["operation_id"], focus_ref=focus_ref))
             return {"kind": "answer", "session_id": sid, "request_id": task["operation_id"]}
         if action == "intelligence.collection.export":
             record = self.collections.export(engine, task, sid)
@@ -600,7 +606,7 @@ class IntelligenceFeature:
         verified = {}
         for format_name, expected in record["files"].items():
             path = verify_file(ws.root, expected)
-            if path.resolve() != (directory / ("investigation." + format_name)).resolve():
+            if path.resolve() != _native_fs_path(directory / ("investigation." + format_name)).resolve():
                 raise IntelligenceError("The export member does not match its original operation.", 409)
             verified[format_name] = path
         return verified

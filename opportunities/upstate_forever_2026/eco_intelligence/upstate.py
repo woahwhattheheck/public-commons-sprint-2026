@@ -26,7 +26,7 @@ import threading
 import uuid
 from typing import Callable, Iterable
 
-from model.common import digest as native_digest, file_digest, identifier, read_json
+from model.common import digest as native_digest, file_digest, identifier, read_json, _native_fs_path
 from .adapters import CallbackGateway, StoreBackedRepository
 from .common import IntelligenceError, digest, dumps, now, public_metadata
 from .engine import Engine
@@ -62,10 +62,10 @@ def _member(value):
 
 
 def _inside(root, value, *, existing=False):
-    root = Path(root).resolve(strict=True)
+    root = _native_fs_path(root).resolve(strict=True)
     path = Path(value)
     path = path if path.is_absolute() else root / path
-    resolved = path.resolve(strict=existing)
+    resolved = _native_fs_path(path).resolve(strict=existing)
     if not resolved.is_relative_to(root):
         raise IntelligenceError("The registered source leaves its original workspace.", 403)
     if existing and (not resolved.is_file() or path.is_symlink()):
@@ -816,7 +816,7 @@ class UpstateInvestigations:
                        "member": locator["member"], "role": locator["role"]}
             if row["id"] != _dataset_id("source", binding):
                 raise IntelligenceError("The selected source binding changed.", 409)
-            if locator["role"] == "primary" and primary.resolve() != Path(row["path"]).resolve():
+            if locator["role"] == "primary" and _native_fs_path(primary).resolve() != _native_fs_path(row["path"]).resolve():
                 raise IntelligenceError("The original source view returned a different member.", 409)
         elif locator.get("kind") == "observation":
             record = ws._get("observations", identifier(locator["observation_id"]))
