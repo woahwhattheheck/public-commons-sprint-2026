@@ -4,6 +4,7 @@ import math
 from contextlib import contextmanager
 from pathlib import Path
 import shutil
+from . import portable_fs
 from .common import (atomic_bytes, atomic_json, describe_file, digest, file_digest,
                      finite, held, read_json, verify_file)
 
@@ -196,7 +197,7 @@ def _atomic_raster(destination):
     """Install a finished TIFF while keeping the previous destination intact."""
     import os
     import tempfile
-    destination = Path(destination)
+    destination = portable_fs.native_path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
     pending = None
     try:
@@ -204,15 +205,11 @@ def _atomic_raster(destination):
                 prefix="." + destination.name + "-", suffix=".partial.tif", delete=False) as out:
             pending = Path(out.name)
         yield pending
-        with pending.open("rb") as complete:
+        with pending.open("r+b") as complete:
             os.fsync(complete.fileno())
-        os.replace(pending, destination)
+        portable_fs.replace(pending, destination)
         pending = None
-        descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(descriptor)
-        finally:
-            os.close(descriptor)
+        portable_fs.sync_directory(destination.parent)
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
