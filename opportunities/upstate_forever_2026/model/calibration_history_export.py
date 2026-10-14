@@ -6,13 +6,15 @@ import html
 import io
 import json
 import os
-from pathlib import PurePosixPath
-import shutil
+import hashlib
+import tempfile
 import zipfile
 
 from model import calibration_history as science
+from model import portable_fs as fs
+from model.verified_files import source_identity
 from model.common import (atomic_bytes, atomic_json, describe_file, file_digest,
-                          held, identifier, read_json, verify_file)
+                          held, identifier, read_json, relative_file, verify_file)
 
 TABLES = {
     "evaluations": ("evaluation_order", "title", "selected_profile_title", "selected_models",
@@ -159,34 +161,61 @@ def render(view):
 
 
 def _copy(workspace, descriptor, destination):
+    """Receive original Calibration history members as independent immutable files."""
     actual = {"path": descriptor.get("path", descriptor.get("object")),
               "bytes": descriptor["bytes"], "sha256": descriptor["sha256"]}
-    source = verify_file(workspace.root, actual)
+    source = relative_file(workspace.root, actual["path"])
+    destination = fs.native_path(destination)
     destination.parent.mkdir(parents=True, exist_ok=True)
-    if destination.exists():
-        if destination.stat().st_size != actual["bytes"] or file_digest(destination) != actual["sha256"]:
-            raise ValueError("The existing history source member differs from the retained original")
+    expected = {"path": destination.name, "bytes": actual["bytes"],
+                "sha256": actual["sha256"]}
+    if destination.exists() or destination.is_symlink():
+        verify_file(destination.parent, expected)
         return
-    pending = destination.with_name("." + destination.name + ".pending")
+    pending = None
     try:
-        shutil.copyfile(source, pending)
-        if pending.stat().st_size != actual["bytes"] or file_digest(pending) != actual["sha256"]:
-            raise ValueError("An original history source changed during receiving")
-        pending.replace(destination)
+        with tempfile.NamedTemporaryFile(
+                dir=destination.parent, prefix=".history-source-", delete=False) as output:
+            pending = fs.native_path(output.name)
+            with os.fdopen(fs.open_file(source, os.O_RDONLY), "rb") as incoming:
+                checksum, size, unused_identity = source_identity(
+                    incoming, source, "Original Calibration history source", output=output)
+            output.flush()
+            os.fsync(output.fileno())
+        if (size, checksum) != (actual["bytes"], actual["sha256"]):
+            raise ValueError("An original Calibration source differs from its retained identity")
+        try:
+            fs.publish_file(pending, destination)
+        except FileExistsError:
+            verify_file(destination.parent, expected)
+        fs.sync_directory(destination.parent)
+        verify_file(destination.parent, expected)
     finally:
-        pending.unlink(missing_ok=True)
+        if pending is not None:
+            pending.unlink(missing_ok=True)
 
 
 def _member(value):
-    path = PurePosixPath(value)
-    if (not isinstance(value, str) or not value or "\\" in value or path.is_absolute()
-            or any(part in ("", ".", "..") for part in value.split("/"))):
-        raise ValueError("The original history source has an unsafe member name")
-    return path.as_posix()
-
+    return fs.relative_name(value, windows=True)
 
 def directory(workspace, view):
-    return workspace.root / "calibration-history-exports" / identifier(view["id"])
+    return fs.native_path(workspace.root / "calibration-history-exports" / identifier(view["id"]))
+
+
+def _saved_archive(path, expected):
+    """Reuse old original ZIP editions only if all members still match."""
+    with zipfile.ZipFile(fs.native_path(path)) as package:
+        names = package.namelist()
+        if len(names) != len(expected) or set(names) != set(expected):
+            raise ValueError("The retained Calibration history archive has another member inventory")
+        for name, descriptor in sorted(expected.items()):
+            checksum, size = hashlib.sha256(), 0
+            with package.open(name) as stream:
+                for block in iter(lambda: stream.read(1024 * 1024), b""):
+                    checksum.update(block)
+                    size += len(block)
+            if (size, checksum.hexdigest()) != (descriptor["bytes"], descriptor["sha256"]):
+                raise ValueError("The retained Calibration history archive changed: " + name)
 
 
 def export(workspace, report_id):
@@ -248,6 +277,8 @@ def export(workspace, report_id):
                 target = prefix + "catchments/members/" + name
                 _copy(workspace, item, root / target)
                 names.add(target)
+        fs.validate_members([*names, "manifest.json", "archive.json",
+                             "selected-profile-history.zip"], portable=True)
         files = {name: describe_file(root, root / name) for name in sorted(names)}
         manifest = {"schema": "upstate.calibration-history-export/v1", "history_id": view["id"],
                     "workspace_id": workspace.project["id"], "report_id": report_id,
@@ -255,17 +286,33 @@ def export(workspace, report_id):
                     "reading": "Open index.html. CSVs retain complete rows; original/ retains each source and selection. "
                                "Use the native selected Study for an editable application project."}
         atomic_json(manifest_path, manifest, immutable=True)
-        pending, archive_path = root / ".history.pending", root / "selected-profile-history.zip"
-        pending.unlink(missing_ok=True)
-        try:
-            with zipfile.ZipFile(pending, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-                for name in sorted(names | {"manifest.json"}):
-                    archive.write(root / name, name)
-            with pending.open("rb") as stream:
-                os.fsync(stream.fileno())
-            pending.replace(archive_path)
-        finally:
-            pending.unlink(missing_ok=True)
+        archive_path = root / "selected-profile-history.zip"
+        archived = {**files, "manifest.json": describe_file(root, manifest_path)}
+        if archive_path.exists() or archive_path.is_symlink():
+            # Keep the original published ZIP if an earlier export crashed
+            # before recording archive.json; verify its complete member set.
+            _saved_archive(archive_path, archived)
+        else:
+            pending = None
+            try:
+                fd, name = tempfile.mkstemp(prefix=".history-package-", suffix=".zip", dir=root)
+                pending = fs.native_path(name)
+                with os.fdopen(fd, "w+b") as stream:
+                    with zipfile.ZipFile(stream, "w", compression=zipfile.ZIP_DEFLATED,
+                                         compresslevel=6, allowZip64=True) as package:
+                        for member in sorted(archived):
+                            package.write(fs.native_path(root / member), member)
+                    stream.flush()
+                    os.fsync(stream.fileno())
+                _saved_archive(pending, archived)
+                try:
+                    fs.publish_file(pending, archive_path)
+                except FileExistsError:
+                    _saved_archive(archive_path, archived)
+                fs.sync_directory(root)
+            finally:
+                if pending is not None:
+                    pending.unlink(missing_ok=True)
         archive_item = describe_file(root, archive_path)
         atomic_json(archive_record, archive_item, immutable=True)
         return {"history_id": view["id"], "report_id": report_id, "plan_id": view["current_plan_id"],
