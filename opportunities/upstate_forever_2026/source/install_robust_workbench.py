@@ -1658,6 +1658,18 @@ ALLOWED = ALLOWED | frozenset({
     "source_tools/collection_opening/receive_collection_studies.py",
 })
 
+# Portable native resource observations and their complete retained source.
+ALLOWED = ALLOWED | frozenset({
+    "source_tools/grid_support/compile_grid_support.py",
+    "source_tools/grid_support/compile_model_grid.py",
+    "source_tools/precipitation_matching_capacity.py",
+    "source_tools/grid_support/render_support.py",
+    "source_tools/grid_support/render_landcover.py",
+    "source_tools/process_resources.py",
+    "operator/RESOURCE_OBSERVATIONS.md",
+    "integration/component_fragments/resource-observation-portability.json",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"
