@@ -22,6 +22,7 @@ if str(APP) not in sys.path:
 from model.common import atomic_bytes, atomic_json, describe_file, digest, file_digest, identifier, now, read_json, verify_file
 from model.workspace import Workspace
 from source_tools.geographic_headwaters_reopen import receiving_lock, _lock_identity
+from source_tools.receiving_process import popen_with_lease, inherited_descriptor
 
 SCHEMA = "upstate.multivariate-control-receiving/v1"
 REOPEN = "upstate.multivariate-control-cold-reopen/v1"
@@ -147,7 +148,7 @@ def _cold_reopen(restored, inspected, design, output, lock_fd, outcome=None):
     try:
         with (directory / "stdout.log").open("xb", buffering=0) as stdout, \
                 (directory / "stderr.log").open("xb", buffering=0) as stderr:
-            process = subprocess.Popen(command, cwd=application, stdout=stdout, stderr=stderr,
+            process = popen_with_lease(command, cwd=application, stdout=stdout, stderr=stderr,
                                        pass_fds=(lock_fd,))
             _event("matched-control-cold-process", pid=process.pid, command=command)
             code = process.wait()
@@ -411,7 +412,8 @@ def main(argv=None):
     parser.add_argument("--result", type=Path, required=True)
     parser.add_argument("--lock-fd", type=int, required=True)
     args = parser.parse_args(argv)
-    result = reopen(args.reopen_request, args.request_sha256, args.result, args.lock_fd)
+    with inherited_descriptor(args.lock_fd) as descriptor:
+        result = reopen(args.reopen_request, args.request_sha256, args.result, descriptor)
     print(json.dumps(result, sort_keys=True, allow_nan=False))
     return 0
 

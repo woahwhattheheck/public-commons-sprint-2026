@@ -2,7 +2,7 @@
 from __future__ import annotations
 import argparse
 import contextlib
-import fcntl
+from ..common import held
 from hashlib import sha256
 import json
 from pathlib import Path
@@ -15,8 +15,7 @@ from .io import json_write, write_outputs
 
 @contextlib.contextmanager
 def exclusive(path):
-    with path.open('a+') as handle:
-        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    with held(path, blocking=False):
         yield
 
 def load(path):

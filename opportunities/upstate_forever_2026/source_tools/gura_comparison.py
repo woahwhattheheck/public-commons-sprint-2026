@@ -23,6 +23,8 @@ import sys
 from model.common import (atomic_bytes, atomic_json, describe_file,
                           digest, file_digest, held, now, read_json, selected_models, verify_file)
 from model.workspace import Workspace
+from source_tools.receiving_process import (receiving_lock, popen_with_lease,
+                                            process_identity, identity_matches)
 
 RECEIVING_SCHEMA = "upstate.gura-original-receiving/v1"
 CATALOG_SCHEMA = "upstate.gura-class-catalog/v1"
@@ -476,6 +478,13 @@ def _local_child_active(record, programme_id):
     pid = record.get("pid")
     if not isinstance(pid, int) or isinstance(pid, bool) or pid <= 0:
         return False
+    retained_identity = record.get("process_identity")
+    if retained_identity is not None:
+        return identity_matches(retained_identity)
+    # Preserve exact historical Linux receipts; never interpret their PID as
+    # a different platform's child. New receipts use the native platform API.
+    if sys.platform != "linux":
+        return False
     proc = Path("/proc") / str(pid)
     try:
         command = [item.decode("utf-8", "surrogateescape")
@@ -524,7 +533,6 @@ def run_retained_programme(manager, programme_id, directory, *,
     caller's descriptor therefore leaves the launch gate held by its child
     until that child exits, including the interval before execution-lock entry.
     """
-    import fcntl
     import time
     import uuid
     notify = notify or (lambda process, observation: None)
@@ -561,19 +569,14 @@ def run_retained_programme(manager, programme_id, directory, *,
     programme_directory = manager._directory(programme_id)
     manager._load(programme_id)
     gate_path = programme_directory / ".continuation-launch.lock"
-    # Do not explicitly LOCK_UN here: inherited descriptors belong to the
-    # surviving native child when its original caller is interrupted.
-    with gate_path.open("a+b") as gate:
-        last_notice = 0.0
-        while True:
-            try:
-                fcntl.flock(gate.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-                break
-            except BlockingIOError:
-                if time.monotonic() - last_notice >= 10:
-                    _observe_programme(manager, programme_id, notify, issued, gate_held=True)
-                    last_notice = time.monotonic()
-                time.sleep(1)
+    last_notice = 0.0
+    def observe_gate():
+        nonlocal last_notice
+        if time.monotonic() - last_notice >= 10:
+            _observe_programme(manager, programme_id, notify, issued, gate_held=True)
+            last_notice = time.monotonic()
+    # The child keeps this same lease after parent exit on POSIX and Windows.
+    with receiving_lock(gate_path, blocking=True, on_wait=observe_gate) as gate_fd:
         while True:
             status = manager.status(programme_id, include_ensemble_candidates=False)
             if not _programme_active(status) and not _local_child_active(issued, programme_id):
@@ -632,15 +635,14 @@ def run_retained_programme(manager, programme_id, directory, *,
 
         retain_attempt()
         with (directory / log_name).open("ab") as log:
-            child = subprocess.Popen(command, cwd=command_record["cwd"], stdout=log,
-                                     stderr=subprocess.STDOUT, pass_fds=(gate.fileno(),))
+            child = popen_with_lease(command, cwd=command_record["cwd"], stdout=log,
+                                     stderr=subprocess.STDOUT, pass_fds=(gate_fd,))
             command_record["pid"] = child.pid
-            try:
-                command_record["process_start_ticks"] = (
-                    (Path("/proc") / str(child.pid) / "stat").read_text()
-                    .rsplit(")", 1)[1].split()[19])
-            except (OSError, IndexError):
-                pass
+            native_identity = process_identity(child.pid)
+            if native_identity is not None:
+                command_record["process_identity"] = native_identity
+                if "start_ticks" in native_identity:
+                    command_record["process_start_ticks"] = native_identity["start_ticks"]
             retain_attempt()
             notify(command_record, {"programme_id": programme_id, "state": "issued",
                                     "observed_at": now(), "launch_gate_held": True})
@@ -978,7 +980,7 @@ def execute(receiving_path, plan_path, *, output=None, build_economics=True, bac
                     "schema": RESULT_SCHEMA, "id": key, "study": receipt["study"], "purpose": PURPOSE,
                     "workspace": str(ws.root), "workspace_id": ws.project["id"],
                     "original_programme_id": receipt["programme_id"], "programme_id": programme_id,
-                    "plan_id": plan["id"], "grid_id": grid["id"], "profile_id": profile["id"],
+                    "plan_id": plan["id"], "grid_id": grid["id"], "profile_id": plan["profile_id"],
                     "native_resolution_m": grid["grid"]["resolution_m"],
                     "native_pixel_area_ha": plan["inventory"]["pixel_area_ha"],
                     "baseline_run_id": runs[0]["id"], "alternative_run_ids": [run["id"] for run in runs[1:]],
