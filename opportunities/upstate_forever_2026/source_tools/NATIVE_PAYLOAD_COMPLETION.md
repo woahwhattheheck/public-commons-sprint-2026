@@ -151,3 +151,40 @@ receiver7085, capsule7300, Mac archive/mode owner and assembler7069 retain their
 existing writers. Final shared release is privately delivered to Bryce at
 brycembusiness2@gmail.com after its native opening course; Tim contact stays with
 Bryce. Source publication creates no workflow run, watcher or meeting.
+
+## Resume completed packing across handoffs
+
+C72E 1.0.0 adds retained publication inside the existing `prefix_pack.py`; it
+introduces no additional application path. The current `transport.py` and
+`model/portable_fs.py` / `windows_fs.py` supply their existing native operations.
+
+Append `--resume` to the same packing command, or use
+`pack_completed(..., resume=True)`. Keep the original prefix, completed staging,
+ordered donors, target, format, archive root and output path unchanged. The
+request binds source file bodies, modes and link targets. A changed runtime uses
+a new output rather than replacing the previous archive.
+
+A sibling `.<archive filename>.native-pack/` retains the request, state and exact
+finished bytes. Its sibling `.native-pack.lock` prevents duplicate live packing.
+A lost process after the completed-byte checkpoint resumes publication without
+another compression pass; a lost final receipt reuses the original output.
+Removed output can be republished from the retained payload. Interrupted
+compression retains its partial and restarts into a different private attempt.
+
+Publication is create-only, using the existing verified-copy fallback where
+necessary. A competing output stays intact. The source is checked again before
+recording a completed payload. Windows uses write-capable flush handles, matched
+native ChangeTime observations and the shared extended-path conversion.
+
+The returned archive descriptor keeps its existing fields and adds `reused` plus
+a stable `packing_operation.request_sha256`. Private build paths remain in the
+journal, not the descriptor. The optional `--json` report is atomic and cannot
+name the archive, lock, journal or a selected prefix file. Keep journals, locks
+and abandoned partials outside the final recipient ZIP.
+
+The C72E source overlay contains these three updated existing files: this guide,
+`prefix_pack.py` and the component fragment. Compose it after A9E1 1.0.1 using the
+retained before-source identities. The handoff retains one focused Linux archive
+lifecycle course, including actual process termination, same-byte recovery and
+a two-process lock. The native Windows adapter join follows the current shared
+filesystem API and belongs in the release host's existing receiving course.
