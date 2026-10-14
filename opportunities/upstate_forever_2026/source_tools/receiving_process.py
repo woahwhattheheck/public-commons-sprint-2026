@@ -164,10 +164,17 @@ def inherited_descriptor(logical_descriptor):
         os.environ[_HANDLE_ENV] = json.dumps({"schema": _HANDLE_SCHEMA, "handles": remaining})
     else:
         os.environ.pop(_HANDLE_ENV, None)
+    # Keep the original inherited handle until the child process exits. A
+    # scoped inspection may finish before its result/failure record is written.
+    # Only the non-inheritable duplicate below belongs to this Python context.
+    os.set_handle_inheritable(handle, False)
+    process = _winapi.GetCurrentProcess()
+    scoped_handle = _winapi.DuplicateHandle(
+        process, handle, process, 0, False, _winapi.DUPLICATE_SAME_ACCESS)
     try:
-        descriptor = msvcrt.open_osfhandle(handle, os.O_RDWR | os.O_BINARY)
+        descriptor = msvcrt.open_osfhandle(scoped_handle, os.O_RDWR | os.O_BINARY)
     except BaseException:
-        _winapi.CloseHandle(handle)
+        _winapi.CloseHandle(scoped_handle)
         raise
     try:
         os.set_inheritable(descriptor, False)
