@@ -20,8 +20,8 @@ import tempfile
 import urllib.parse
 import zipfile
 
-from .common import atomic_json, digest, file_digest, held, identifier, now, read_json
-from . import reviews
+from .common import atomic_bytes, atomic_json, digest, file_digest, held, identifier, now, read_json
+from . import reviews, portable_fs as _fs
 
 SCHEMA = "upstate.customer-review-handback/v1"
 RECORD_SCHEMA = "upstate.review-handbacks/v1"
@@ -318,7 +318,7 @@ def validate_workspace(workspace):
 
 
 def _tree(directory):
-    directory = Path(directory)
+    directory = _fs.native_path(directory)
     if directory.is_symlink() or not directory.is_dir():
         raise ValueError("Open an ordinary engineering handback directory")
     result = {}
@@ -328,11 +328,11 @@ def _tree(directory):
 
     for root, folders, names in os.walk(directory, followlinks=False, onerror=failed):
         for name in folders:
-            path = Path(root) / name
+            path = _fs.native_path(root) / name
             if path.is_symlink():
                 raise ValueError("Handback directory contains a symbolic link")
         for name in names:
-            path = Path(root) / name
+            path = _fs.native_path(root) / name
             relative = path.relative_to(directory).as_posix()
             reviews._regular(directory, relative)
             result[relative] = {"bytes": path.stat().st_size, "sha256": file_digest(path)}
@@ -380,7 +380,7 @@ def _packet_response(packet):
 
 
 def _inspect_directory(directory):
-    directory = Path(directory)
+    directory = _fs.native_path(directory)
     manifest = _manifest(reviews._read_json_file(reviews._regular(directory, MANIFEST)))
     actual = _tree(directory)
     if set(actual) != set(manifest["members"]) | {MANIFEST}:
@@ -446,9 +446,11 @@ def _inspect_directory(directory):
 
 def _extract(path, directory):
     """Extract only exact ordinary inventory members; caller owns fresh staging."""
+    path, directory = _fs.native_path(path), _fs.native_path(directory)
     with zipfile.ZipFile(path) as archive:
         infos = archive.infolist()
         names = [row.filename for row in infos]
+        _fs.validate_members(names, portable=True)
         if len(names) != len(set(names)):
             raise ValueError("Engineering archive repeats a member")
         for row in infos:
@@ -478,19 +480,21 @@ def _extract(path, directory):
                         raise ValueError("Engineering archive member exceeded its retained length")
                     hashed.update(block)
                     output.write(block)
+                output.flush()
+                os.fsync(output.fileno())
             if count != row.file_size or (expected is not None and hashed.hexdigest() != expected["sha256"]):
                 raise ValueError("Engineering archive member differs: " + row.filename)
     return _inspect_directory(directory)
 
 
 def inspect_packet(path):
-    path = Path(path)
+    path = _fs.native_path(path)
     if path.is_symlink():
         raise ValueError("Choose the original ordinary handback package")
     if path.is_dir():
         return _inspect_directory(path)
     with tempfile.TemporaryDirectory(prefix="upstate-handback-inspect-") as pending:
-        return _extract(path, Path(pending))
+        return _extract(path, _fs.native_path(pending))
 
 
 def _csv(document, requests):
@@ -566,11 +570,11 @@ def _export_result(directory, inspected):
 
 
 def describe_export(directory, *, archive=None):
-    directory = Path(directory).absolute()
+    directory = _fs.native_path(directory).absolute()
     inspected = inspect_packet(directory)
     result = _export_result(directory, inspected)
     if archive is not None:
-        archive = Path(archive).absolute()
+        archive = _fs.native_path(archive).absolute()
         archived = inspect_packet(archive)
         if archived["manifest"] != inspected["manifest"]:
             raise ValueError("Engineering archive differs from its retained exported desk")
@@ -585,14 +589,14 @@ def export_handback(workspace, handback_id, destination, *, archive=None):
         raise ValueError("Finish the engineering dispositions and save a ready edition before handback")
     chain = history(workspace, selected["review_id"], selected["response_id"])
     chain = chain[:next(index + 1 for index, row in enumerate(chain) if row["id"] == selected["id"])]
-    destination = Path(destination).absolute()
-    if (destination.resolve().is_relative_to(workspace.root.resolve()) or
-            destination.resolve().is_relative_to(Path(__file__).resolve().parents[1])):
+    destination = _fs.native_path(destination).absolute()
+    if (destination.resolve().is_relative_to(_fs.native_path(workspace.root).resolve()) or
+            destination.resolve().is_relative_to(_fs.native_path(__file__).resolve().parents[1])):
         raise ValueError("Choose a fresh handback destination outside the workspace and application")
     if destination.exists() or destination.is_symlink():
         raise ValueError("Choose a new engineering handback destination")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    pending = Path(tempfile.mkdtemp(prefix=".handback-export-", dir=destination.parent))
+    pending = _fs.native_path(tempfile.mkdtemp(prefix=".handback-export-", dir=destination.parent))
     try:
         pairs = {(selected["review_id"], selected["response_id"])}
         pairs.update((row["revised_review_id"], row["revised_response_id"])
@@ -609,17 +613,18 @@ def export_handback(workspace, handback_id, destination, *, archive=None):
         original = contexts[(selected["review_id"], selected["response_id"])]
         revision = contexts[(selected["revised_review_id"], selected["revised_response_id"])]
         atomic_json(pending / "handback.json", document, immutable=True)
-        (pending / "request-resolutions.csv").write_text(
-            _csv(document, requests_for(original["review"], original["responses"][-1])), encoding="utf-8")
-        (pending / "index.html").write_text(_html(document, original, revision), encoding="utf-8")
-        (pending / "README.md").write_text(
+        atomic_bytes(pending / "request-resolutions.csv",
+                     _csv(document, requests_for(original["review"], original["responses"][-1])).encode("utf-8"),
+                     immutable=True)
+        atomic_bytes(pending / "index.html", _html(document, original, revision).encode("utf-8"), immutable=True)
+        atomic_bytes(pending / "README.md", (
             "# Engineering handback\n\nOpen index.html. Each linked review desk contains its actual files and "
             "pinned customer response history. The revised desk can export a new customer response against "
             "that precise generation. Import it through the original customer review response flow.\n\n"
             "Inspect: python -m model.review_cli handback-inspect PATH\n"
             "Receive independently: python -m model.review_cli handback-receive PATH DESTINATION\n"
             "Join restored source project: python -m model.review_cli --workspace WORKSPACE "
-            "handback-receive PATH DESTINATION --join\n", encoding="utf-8")
+            "handback-receive PATH DESTINATION --join\n").encode("utf-8"), immutable=True)
         manifest = {"schema": PACKAGE_SCHEMA, "project_id": workspace.project["id"],
                     "review_id": selected["review_id"], "handback_id": selected["id"],
                     "created_at": now(), "members": _tree(pending)}
@@ -628,7 +633,7 @@ def export_handback(workspace, handback_id, destination, *, archive=None):
         inspected = _inspect_directory(pending)
         if destination.exists() or destination.is_symlink():
             raise ValueError("Engineering destination appeared during export")
-        os.rename(pending, destination)
+        _fs.publish_directory(pending, destination)
         pending = None
         result = _export_result(destination, inspected)
         if archive is not None:
@@ -640,13 +645,13 @@ def export_handback(workspace, handback_id, destination, *, archive=None):
 
 
 def archive_packet(directory, destination):
-    directory, destination = Path(directory).resolve(), Path(destination).absolute()
+    directory, destination = _fs.native_path(directory).resolve(), _fs.native_path(destination).absolute()
     inspected = _inspect_directory(directory)
     if destination.exists() or destination.is_symlink() or destination.resolve().is_relative_to(directory):
         raise ValueError("Choose a fresh engineering archive path outside the desk")
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, name = tempfile.mkstemp(prefix=".handback-archive-", suffix=".zip", dir=destination.parent)
-    pending = Path(name)
+    pending = _fs.native_path(name)
     try:
         with os.fdopen(descriptor, "w+b") as target:
             with zipfile.ZipFile(target, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3,
@@ -658,7 +663,8 @@ def archive_packet(directory, destination):
         verified = inspect_packet(pending)
         if verified["manifest"] != inspected["manifest"]:
             raise ValueError("Engineering desk changed while its archive was written")
-        os.link(pending, destination)
+        _fs.publish_file(pending, destination)
+        _fs.sync_directory(destination.parent)
         return {"path": str(destination), "bytes": destination.stat().st_size,
                 "sha256": file_digest(destination), "package_sha256": inspected["manifest"]["package_sha256"]}
     finally:
@@ -708,15 +714,15 @@ def _join(workspace, inspected):
 
 
 def receive_packet(path, destination, *, workspace=None):
-    path, destination = Path(path).absolute(), Path(destination).absolute()
+    path, destination = _fs.native_path(path).absolute(), _fs.native_path(destination).absolute()
     if destination.exists() or destination.is_symlink():
         raise ValueError("Receive into a new engineering handback directory")
     if path.is_dir() and destination.resolve().is_relative_to(path.resolve()):
         raise ValueError("Receive into a directory outside the source handback")
-    if workspace is not None and destination.resolve().is_relative_to(workspace.root.resolve()):
+    if workspace is not None and destination.resolve().is_relative_to(_fs.native_path(workspace.root).resolve()):
         raise ValueError("Receive handback files outside the scientific workspace; join retains their original records")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    pending = Path(tempfile.mkdtemp(prefix=".handback-receive-", dir=destination.parent))
+    pending = _fs.native_path(tempfile.mkdtemp(prefix=".handback-receive-", dir=destination.parent))
     try:
         if path.is_dir():
             inspected = _inspect_directory(path)
@@ -731,7 +737,7 @@ def receive_packet(path, destination, *, workspace=None):
         joined = _join(workspace, inspected) if workspace is not None else None
         if destination.exists() or destination.is_symlink():
             raise ValueError("Engineering receiving destination appeared during intake")
-        os.rename(pending, destination)
+        _fs.publish_directory(pending, destination)
         pending = None
         return {**_export_result(destination, inspected), "joined": joined}
     finally:
