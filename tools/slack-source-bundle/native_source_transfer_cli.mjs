@@ -37,7 +37,7 @@ function stdioBridge(){
 function summary(result){
   if(!result?.record)return result;
   const s=result.record;
-  return {...result,record:{schema:s.schema,key:s.key,operation_id:s.plan.operation_id,revision:s.revision,phase:s.phase,draft:s.draft,files:s.files,errors:s.errors}};
+  return {...result,record:{schema:s.schema,key:s.key,operation_id:s.plan.operation_id,transport:s.plan.transport||"inline-manifest-v1",manifest:s.manifest||null,revision:s.revision,phase:s.phase,draft:s.draft,files:s.files,errors:s.errors}};
 }
 let bridge;
 try{
@@ -67,7 +67,8 @@ try{
       const bytes=await fs.readFile(path.resolve(base,f.source_path));
       return {...f,content:new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(bytes)};
     }));
-    result={state:"prepared",record:await api.start(api.prepare(spec))};
+    const record=await api.start(api.prepare(spec));
+    result={state:record.phase,record};
   }else if(command==="receive"){
     result=await api.receiveExisting(await jsonFile(opts["--spec"]));
   }else{

@@ -30,6 +30,18 @@ The code uses `createArchiveCodec` from the maintained Ecosystem source-tools mo
 
 The native contract requires Gmail profile, create-draft, read-email, read-attachment and list-drafts actions. Optional Notion delivery additionally uses get-self, fetch, create-attachment, update-page, get-async-task, download-attachment and get-file-download-URLs. The tool binding calls only these actions. No generic network fetch is used.
 
+## Attachment-only transfer and retained operations
+
+New plans use `attachment-manifest-v2`: one `multipart/mixed` draft containing the selected source attachments plus `SOURCE_TRANSFER_MANIFEST.json`. The manifest binds the operation, account and every original filename, MIME type, byte count and SHA256. Its name is reserved, case-insensitively. The 32-file limit counts user source files; the generated manifest is additional. File indices continue to refer to the user's original source list.
+
+The create call supplies only the selected account link, deterministic subject, attachment MIME tree and requested receipt fields. Each part carries the original UTF-8 bytes as URL-safe Base64. It omits inline content, explicit charset, sender override, recipient and reply fields. Returned sender and recipient absence are independently checked against the selected account. Padded and unpadded canonical Base64 representations describe the same bytes; the selected encoding is not an asserted provider requirement.
+
+This minimal form addresses observed native argument-binding failures with the older composite request. Actual successful calls also exist with an inline HTML part when its explicit charset was omitted. The observations do not isolate padding, inline content or charset as a universal cause. Keep the actual provider response in the private operation record; do not infer acceptance from a generic success label.
+
+The journal schema remains `commons.native-source-transfer/v1`. Historical plans without a transport field retain their exact inline manifest, fingerprint, deterministic subject, source contents and draft. A new caller preparing the same account/operation and source identities resumes that original record, including a pending creation or Notion action. It does not rewrite the plan or create a replacement draft. A different source set still fails with `OPERATION_PAYLOAD_CONFLICT`. If deliberately reconstructing an old plan from its source spec, set `transport:"inline-manifest-v1"`; this reproduces the historical plan exactly, including an old source file that happens to use the now-reserved manifest name.
+
+Readback checks the complete attached manifest before releasing or refreshing source references. With an original-file reader, its bytes and SHA256 are verified. Without that reader, the provider must return complete, untruncated extracted JSON whose full parsed contents equal the expected manifest. Extraction may reformat JSON; this is recorded as `content_verified.via:"complete_extracted_json"` and leaves manifest byte verification empty. A truncated or missing extraction returns `COMPLETE_MANIFEST_READER_REQUIRED`; rerun the same operation with `--verify-original`. The existing draft remains available and is not recreated. Source `bytes_verified` always depends on reading each complete original source file.
+
 ## Prepare complete original files
 
 Requires Node.js 20 or newer and a private local filesystem with atomic rename and directory fsync. Select an existing authorized account; record its exact connected link and expected mailbox email. Prepare a JSON spec in the original private operation directory:
@@ -58,7 +70,7 @@ node tools/slack-source-bundle/native_source_transfer_cli.mjs prepare \
   --journal /private/original-operation/source-transfer
 ```
 
-The returned key identifies the one account/operation pair. Reusing that pair with different files fails. The journal retains complete encoded sources so later continuation does not depend on a vanished scratch source file. Limits are 32 explicitly selected text files and 16 MiB combined original content; these are application limits, not a promise of provider capacity. File basenames must be simple ASCII without paths or collisions. Text JSON, Markdown, HTML, CSV, TSV, XML, CSS, YAML, SVG and TXT extensions have fixed MIME types. An actual native attachment may still be unsupported; the provider's `read_attachment_supported` value governs receiving.
+The returned key identifies the one account/operation pair. The returned state is the actual retained phase, including when prepare resumes an existing operation. Reusing that pair with different files fails. The journal retains complete encoded sources so later continuation does not depend on a vanished scratch source file. Limits are 32 explicitly selected text files and 16 MiB combined original content; these are application limits, not a promise of provider capacity. File basenames must be simple ASCII without paths or collisions. Text JSON, Markdown, HTML, CSV, TSV, XML, CSS, YAML, SVG and TXT extensions have fixed MIME types. An actual native attachment may still be unsupported; the provider's `read_attachment_supported` value governs receiving.
 
 ## Run through the existing connected-tool caller
 
@@ -130,7 +142,7 @@ node tools/slack-source-bundle/native_source_transfer_cli.mjs refresh-original \
   --key ORIGINAL_OPERATION_KEY --index 0 --bridge stdio
 ```
 
-A refresh clears prior byte verification unless the current original is read and verified again. Current file availability and earlier verification are kept distinct.
+A refresh rechecks the same original parent and its current manifest, and clears prior source byte verification unless the current original is read and verified again. Current file availability and earlier verification are kept distinct.
 
 ## Uncertain draft creation and concurrency
 
@@ -197,6 +209,10 @@ node tools/slack-source-bundle/native_source_transfer_cli.mjs download-notion \
 Keep the stable reference in handoffs. Provider `files` and `unresolved` results remain explicit. A successful upload/attachment is separate from the equipped receiver saving and opening the file.
 
 ## Executed scope
+
+The attachment-only successor was exercised through the actual production functions with authored provider results for both transport editions: unchanged historical plan reconstruction, same-operation pending continuation, original-draft reconciliation, complete/reformatted manifest content, truncated extraction, changed manifest rejection, original source bytes and existing Notion continuation. The original legacy producer and successor produce byte-identical historical plan JSON. On 2026-10-14, the production caller created one actual recipient-free attachment-only draft containing a complete 150,152-byte source candidate and 19,728-byte guide. Its first pass accepted the complete extracted manifest and retained original source references with byte verification pending. The same operation then used the actual raw MIME originals and verified both complete source files plus the manifest, without another creation. This exercised the real native Gmail actions from the JavaScript runtime with the session journal adapter; the local filesystem journal and Node CLI were not executed in that run. Exact private provider receipts remain in the original internal operation.
+
+
 
 The actual native route delivered five complete source carriers on 2026-10-13, including a 1.2 MiB carrier for an 8.5 MiB full input bank. The original receiving operation accepted the source and then exposed the cross-session file-alias issue addressed by `receiveExisting`. The maintained helper's read-only receiving path was executed against the existing source-reconciliation parent: current mailbox, exact MIME part and a fresh original file reference were returned without creating another draft. A separate complete 116,648-byte Notion download matched its independently recorded SHA256.
 
