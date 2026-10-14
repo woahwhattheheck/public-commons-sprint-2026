@@ -128,8 +128,13 @@ function sourceExcluded(source,excluded){
   return excluded.includes(request)||excluded.includes(thread);
 }
 function keys(lead){
-  const result=['request:'+canonicalURL(lead.source_url)];
-  if(!lead.source_url)result.length=0;
+  // A company-fit source may describe several independent companies (for
+  // example, one public equipment-investment announcement). Retain that exact
+  // evidence URL without treating every company in it as one buyer request.
+  // Unidentified companies and actual requests keep the original source guard.
+  const sourceScope=lead.lead_kind==='company_fit'&&lead.company_domain?
+    'company-source:'+lead.company_domain+':':'request:';
+  const result=lead.source_url?[sourceScope+canonicalURL(lead.source_url)]:[];
   if(lead.company_domain)result.push('company:'+lead.company_domain);
   if(lead.buyer_key)result.push('buyer:'+lead.buyer_key.toLowerCase());
   if(/^mailto:/i.test(lead.contact_url))result.push('email:'+lead.contact_url.slice(7).toLowerCase());
