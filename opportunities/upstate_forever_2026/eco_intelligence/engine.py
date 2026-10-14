@@ -36,7 +36,12 @@ class Engine:
             path, source = self.repo.source(tenant,request.ref.model_dump(exclude_none=True))
             sources.append(source)
             if op == 'profile':
-                result = public_metadata(profile(path))
+                if path.suffix.lower()=='.json':
+                    with path.open('r',encoding='utf-8-sig') as retained:
+                        result={'format':'structured_json','data':public_metadata(json.load(retained)),
+                                'interpretation':'Original registered JSON values; keys and meanings are supplied by the source.'}
+                else:
+                    result = public_metadata(profile(path))
             elif op == 'table_rows':
                 page = []
                 more = False

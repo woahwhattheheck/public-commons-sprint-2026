@@ -5,7 +5,7 @@ import path from 'node:path';
 import {spawnSync} from 'node:child_process';
 import {fileURLToPath} from 'node:url';
 import {hash,stable} from './normalise.mjs';
-import {InputError} from './parse.mjs';
+import {InputError,parseCSV,sourceLineEndings} from './parse.mjs';
 import {originalMap,validateLineage} from './source_lineage.mjs';
 import {returnedTable} from './source_handback_core.mjs';
 const FORMAT='upper-savannah-original-workbook-review/v1';
@@ -40,7 +40,22 @@ function selectedGroups(project,view){
    inspectionId:lineage.inspection_id,originalFilename:lineage.original.filename,sourceSheet:lineage.sheet,
    reading:copy(lineage.reading),originalSha256:original.sha256,sourceSha256:source.sha,
    rowMapSha256:hash(stable(lineage)),selectedResultIds:[...view.exportIds]};
-  const table=returnedTable(returned),byLine=new Map(returned.rows.map((r,i)=>[r.line,{source:r,values:table.rows[i]}]));
+  // The same kind+bytes+mapping may reuse an import made under the other line
+  // edition. Keep both stored editions; join their exact logical projected rows.
+  const summary=typeof source.summary==='string'?JSON.parse(source.summary):source.summary;
+  const imported=parseCSV(source.content,{lineEndings:sourceLineEndings(summary)});
+  need(returned.sha256===source.sha&&imported.rejected.length===0&&
+   stable(returned.headers)===stable(imported.headers)&&
+   imported.rows.length===lineage.rows.length&&returned.rows.length===imported.rows.length,
+   'The complete returned worksheet differs from its original imported source.');
+  const table=returnedTable(returned),byLine=new Map();
+  need(table.rows.length===imported.rows.length,'Keep every complete returned worksheet row.');
+  for(const [index,row] of imported.rows.entries()){
+   const native=returned.rows[index],values=imported.headers.map(header=>row.raw[header]);
+   need(native.line===row.line&&stable(native.values)===stable(values),
+    'A returned row differs from its exact original cells or stored source position.');
+   byLine.set(lineage.rows[index].line,{source:native,values:table.rows[index]});
+  }
   const metaHeaders=['Original workbook','Original worksheet','Original worksheet row','Original line start','Original line end',
    'Preparation','Preparation edition','Native source','Native measurements revision'];
   const originalHeaders=lineage.columns.map(c=>c.original_label);

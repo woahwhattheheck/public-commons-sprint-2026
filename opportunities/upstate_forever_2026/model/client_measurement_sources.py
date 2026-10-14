@@ -194,7 +194,8 @@ def preparation_value(projection, *, kind, label, reviewer, note, context):
     need(label.strip() and reviewer.strip(), "Name this preparation and its source reviewer.")
     lineage = projection["lineage"]
     return {"kind": kind, "label": label, "sourceName": lineage["derived"]["filename"],
-            "sourceSha": lineage["derived"]["sha256"], "mapping": {},
+            "sourceSha": lineage["derived"]["sha256"],
+            "mapping": {"_wqp_detection": "wqp-detection-conditions/v2"} if kind == "wqp" else {},
             "reviewer": reviewer, "note": note, "context": context,
             "lineage": lineage}
 
