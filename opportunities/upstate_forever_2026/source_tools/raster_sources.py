@@ -541,7 +541,7 @@ def assemble_dem(directory, *, progress=None):
                                 rendering_rule="None", assembly="Original aligned Float32 tile values, no further resampling")
             if not valid:
                 raise ValueError("The original elevation exports contain no finite numeric cells")
-            with pending.open("rb") as handle:
+            with pending.open("r+b" if os.name == "nt" else "rb") as handle:
                 os.fsync(handle.fileno())
             _fs.replace(pending, destination)
             _fsync_directory(directory)

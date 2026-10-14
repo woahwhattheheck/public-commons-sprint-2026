@@ -267,7 +267,7 @@ def resume(path, *, maximum_bytes, chunk_bytes=DEFAULT_CHUNK_BYTES, progress=Non
                     or active["etag"] != selection["etag"]):
                 raise ValueError("Reconcile the uncommitted tail against its original response")
             segment_hash = hashlib.sha256()
-            with partial.open("rb") as source:
+            with partial.open("r+b" if os.name == "nt" else "rb") as source:
                 source.seek(state["committed_bytes"])
                 remaining = tail
                 while remaining:
@@ -355,7 +355,7 @@ def resume(path, *, maximum_bytes, chunk_bytes=DEFAULT_CHUNK_BYTES, progress=Non
                         os.fsync(output.fileno())
                     prefix_hash, segment_hash, received = prior_hash, hashlib.sha256(), 0
                 elif received:
-                    with partial.open("rb") as output:
+                    with partial.open("r+b" if os.name == "nt" else "rb") as output:
                         os.fsync(output.fileno())
 
             if partial.stat().st_size != start + received:
