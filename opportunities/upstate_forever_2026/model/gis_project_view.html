@@ -16,7 +16,7 @@ input[type="checkbox"]{accent-color:#333}
 'use strict';
 const project=JSON.parse(document.getElementById('project-data').textContent);
 const $=id=>document.getElementById(id), NS='http://www.w3.org/2000/svg';
-const fmt=n=>typeof n==='number'?new Intl.NumberFormat('en-US',{maximumSignificantDigits:7}).format(n):String(n??'—');
+const fmt=n=>typeof n==='number'?new Intl.NumberFormat('en-US',Number.isInteger(n)?{maximumFractionDigits:0}:{maximumSignificantDigits:7}).format(n):String(n??'—');
 $('title').textContent=project.title;
 $('summary').textContent=`${project.layers.length} retained layers · ${project.project_crs} · Edition ${project.edition_id.slice(0,16)}`;
 $('footer').textContent=`Selection ${project.selection_id} · Builder ${project.builder_version} · Keep this entire directory together when transferring.`;
