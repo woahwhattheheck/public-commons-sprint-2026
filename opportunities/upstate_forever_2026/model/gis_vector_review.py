@@ -22,6 +22,7 @@ from .common import identifier
 
 SCHEMA = "upstate.gis-vector-review/v1"
 VERSION = "original-feature-identity-v1"
+PRESENTATION = "wrapped-identities-v1"
 FOLDER = "gis-vector-reviews"
 
 
@@ -274,9 +275,11 @@ def compare_layer(root, project, layer):
             "counts": counts, "rows": rows}
 
 
-def _selection(workspace, payload):
+def _selection(workspace, payload, *, presentation=PRESENTATION):
     if not isinstance(payload, dict) or set(payload) != {"receipt_id", "layer_ids"}:
         raise ValueError("Select the received edition and explicit vector-layer identities.")
+    if presentation is not None and presentation != PRESENTATION:
+        raise ValueError("The retained vector review uses an unsupported presentation edition.")
     parent, receipt, verified = gis_workspace.received(workspace, payload["receipt_id"])
     project = gis.load(parent / "project" / "project.json")
     chosen = payload["layer_ids"]
@@ -290,6 +293,10 @@ def _selection(workspace, payload):
         "project_id": workspace.project["id"], "receipt_id": receipt["id"],
         "received_edition_id": project["edition_id"], "received_fingerprint": verified["fingerprint"],
         "layer_ids": chosen}
+    # New requests receive the current layout without overwriting the original
+    # immutable reports. Inspect passes None for a retained pre-layout edition.
+    if presentation is not None:
+        selection["presentation"] = presentation
     return parent / "project", project, layers, selection
 
 
@@ -300,7 +307,7 @@ def _html(report):
     parts = ['<!doctype html><html lang="en"><meta charset="utf-8">',
         '<meta name="viewport" content="width=device-width,initial-scale=1">',
         '<title>Working vector change review</title><style>',
-        'body{font:15px system-ui,sans-serif;color:#202020;background:#f5f5f5;margin:0;padding:28px;max-width:1300px}'
+        'body{font:15px system-ui,sans-serif;color:#202020;background:#f5f5f5;margin:0;padding:28px;max-width:1300px;overflow-wrap:anywhere}'
         'section,details{background:#fff;border:1px solid #bbb;padding:16px;margin:16px 0}'
         'table{border-collapse:collapse;width:100%}th,td{padding:8px;text-align:left;border:1px solid #bbb;vertical-align:top}'
         'pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px}h1,h2{font-weight:600}'
@@ -408,7 +415,8 @@ def inspect(workspace, key):
             selection.get("project_id") != workspace.project["id"] or gis.fingerprint(selection) != key):
         raise ValueError("This retained vector review belongs to another original project or selection.")
     _, _, _, current = _selection(workspace, {
-        "receipt_id": selection["receipt_id"], "layer_ids": selection["layer_ids"]})
+        "receipt_id": selection["receipt_id"], "layer_ids": selection["layer_ids"]},
+        presentation=selection.get("presentation"))
     if current != selection:
         raise ValueError("The received vector edition differs from this retained review.")
     names = {"review.json", "feature-changes.csv", "review.html", "vector-review.zip"}
