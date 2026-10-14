@@ -19,26 +19,27 @@
     "workspace_core_api_guide3": "adb1c83f9732e3f8cb925fc199d5a194e26aa241",
     "workspace_interface_browser3": "c2a7df2f0fdd6c1b7b4ef8aa47f392f757941a7d",
     "installation2": "aaaac9ad8c1133003645e06e6fc4ab55d70451d3",
-    "native_course1": "16418a90b9497a78a7d174c797da309c2b11f39d"
+    "native_course1": "16418a90b9497a78a7d174c797da309c2b11f39d",
+    "retained_workspace_continuation": "7b174e58e5b29052907085c1b3e685d6a51ca862"
   },
   "archive": {
     "path": "Forms_Workspace_Source.zip",
-    "bytes": 283607,
-    "sha256": "d14139ceeccdd718bab35cad7e7fc3192dee2fe90d29bf417d31d2da0e9ff38a"
+    "bytes": 343230,
+    "sha256": "6054ee7ec6f7ee0bf9d461a684c5da2fbf210ed85b3859515c52ddebbcd08d32"
   },
   "manifest": {
     "path": "SOURCE_SELECTION.json",
-    "bytes": 11013,
-    "sha256": "d9a00450383c4c8d5dc9afd7c477c1e30dfaf523bcd990696058763a881c2fda"
+    "bytes": 11304,
+    "sha256": "316e9fb8d3390517141368ae002f2a1d8c9bdd7200bb6072aa237bb8c3c8aa01"
   },
   "guide": {
     "path": "README.md",
-    "bytes": 19671,
-    "sha256": "432d5209158e6ec7173afdcf9853a4c2071e84a9acf6eefb16e835f14352265b"
+    "bytes": 22140,
+    "sha256": "dae12b3529530f04ae067e8466ac1f89abca53b52f36afc8673a6e5de45dfe20"
   },
   "product_files": 42,
   "archive_files": 42,
-  "source_bytes": 1280112,
+  "source_bytes": 1298011,
   "runtime": {
     "native": "Linux; existing Python 3.11+ and SQLite; standard library",
     "browser": "Existing Node, explicit installed Playwright module and Chromium; no installation"
@@ -73,17 +74,37 @@
         "ACTUAL_BINARY"
       ],
       "resume": "Same exact command/source/paths with --resume"
+    },
+    "existing_workspace": {
+      "adoption": [
+        "python",
+        "UPDATED_SOURCE/forms_workspace.py",
+        "adopt-source",
+        "--workspace",
+        "ORIGINAL_WORKSPACE",
+        "--original-software",
+        "ORIGINAL_COMPLETE_SOURCE"
+      ],
+      "server": [
+        "python",
+        "UPDATED_SOURCE/forms_workspace_server.py",
+        "--workspace",
+        "ORIGINAL_WORKSPACE",
+        "--receipt",
+        "NEW_PRIVATE_RECEIPT"
+      ],
+      "browser": "Resume the original unchanged helper and all original arguments with --resume; preserve browser profile/input/journal and retained original origin.",
+      "handover": "The full export retains original and adopted source editions and continue_workspace.py."
     }
   },
   "verification": {
     "status": "SOURCE_PACKAGED",
-    "original33_byte_exact": true,
-    "original_discovery11_byte_exact": true,
-    "archive_all_members_inflated_crc_sha_mode_checked": true,
-    "source_review": "CLOSED",
-    "native_receiving": "PENDING_EXISTING_COORDINATED_RECEIVER",
-    "browser_receiving": "PENDING_ACTUAL_NATIVE_RECEIPT",
-    "actual_visual_review": "PENDING_ORIGINAL_PRODUCED_FILES"
+    "unchanged_source_members": 36,
+    "changed_source_members": 6,
+    "archive_all_42_members_inflated_crc_sha_checked": true,
+    "workspace_inline_javascript_parses": true,
+    "native_receiving": "Original A/B/C complete; maintained source adoption and original pending browser continuation assigned to the same native receiver.",
+    "actual_visual_review": "Actual predecessor390-pixel defects corrected in source; final desktop/narrow receiving remains with original native owner."
   },
   "license": {
     "path": "LICENSE",
@@ -91,5 +112,32 @@
     "bytes": 1091,
     "sha256": "2c961cd561150af9a4f94f3f48f0bad7bf271acd0f9cdaa1d354c511b94e84d8",
     "git_blob_sha": "2d2a35a69e3896b7c6b885c1faebae2f2f8bc9c1"
-  }
+  },
+  "previous_release": {
+    "commit": "8489255dad91a05ac2bd69f3ce650b6c5ed28195",
+    "archive": {
+      "path": "Forms_Workspace_Source.zip",
+      "bytes": 283607,
+      "sha256": "d14139ceeccdd718bab35cad7e7fc3192dee2fe90d29bf417d31d2da0e9ff38a"
+    },
+    "manifest": {
+      "path": "SOURCE_SELECTION.json",
+      "bytes": 11013,
+      "sha256": "d9a00450383c4c8d5dc9afd7c477c1e30dfaf523bcd990696058763a881c2fda"
+    },
+    "guide": {
+      "path": "README.md",
+      "bytes": 19671,
+      "sha256": "432d5209158e6ec7173afdcf9853a4c2071e84a9acf6eefb16e835f14352265b"
+    },
+    "source_bytes": 1280112
+  },
+  "changed_source_files": [
+    "forms_workspace.py",
+    "forms_workspace_server.py",
+    "forms_server.py",
+    "forms_report.py",
+    "forms_workspace_report.py",
+    "FORMS_WORKSPACE.md"
+  ]
 }
