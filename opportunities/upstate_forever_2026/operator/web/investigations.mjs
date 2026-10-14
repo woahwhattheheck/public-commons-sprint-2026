@@ -734,7 +734,7 @@ export function attachInvestigations(host) {
   for(const e of s?.events||[]){
    if(['question','answer','request_error'].includes(e.kind)){
     const article=el('article',null,'intelligence-message');article.append(el('h3',e.kind==='question'?'Question':e.kind==='answer'?'Answer':'Provider result'));
-    article.append(el('p',e.body?.text||e.body?.error||'', 'intelligence-prose'));nodes.conversation.append(article);
+    article.append(retainedProse(e.body?.text||e.body?.error||''));nodes.conversation.append(article);
    }
    const item=el('li');item.append(el('strong',e.kind.replaceAll('_',' ')),el('span',displayTime(e.created)),details('Original event',e.body));nodes.historyList.append(item);
   }
@@ -982,3 +982,35 @@ export function attachInvestigations(host) {
  function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
  return {mount,update,detach,client,openForDiagnostic};
 }
+
+function retainedProse(value){
+ const root=document.createElement('div');root.className='intelligence-prose';root.style.whiteSpace='normal';
+ const unescape=text=>text.replace(/\\([\\`*{}\[\]()#+.!<>_|-])/g,'$1');
+ const inline=(parent,text)=>{
+  for(const part of String(text).split(/(\*\*[^*\n]+\*\*|`[^`\n]+`)/g)){
+   if(part.startsWith('**')&&part.endsWith('**')){const n=document.createElement('strong');n.textContent=unescape(part.slice(2,-2));parent.append(n);}
+   else if(part.startsWith('`')&&part.endsWith('`')){const n=document.createElement('code');n.textContent=part.slice(1,-1);parent.append(n);}
+   else parent.append(document.createTextNode(unescape(part)));
+  }
+ };
+ const lines=String(value||'').replace(/\r\n?/g,'\n').split('\n');
+ const cells=line=>line.trim().replace(/^\|/,'').replace(/\|$/,'').split(/(?<!\\)\|/).map(v=>v.trim().replace(/\\\|/g,'|'));
+ const rule=line=>/^\s*\|?\s*:?-{3,}:?(\s*\|\s*:?-{3,}:?)+\s*\|?\s*$/.test(line);
+ const special=i=>!lines[i]?.trim()||/^\s*(#{1,6}\s|[-*+]\s|\d+\.\s|```)/.test(lines[i])||(lines[i].includes('|')&&rule(lines[i+1]||''));
+ for(let i=0;i<lines.length;){
+  const line=lines[i];if(!line.trim()){i++;continue;}
+  if(/^\s*```/.test(line)){const pre=document.createElement('pre');const code=document.createElement('code');const body=[];i++;while(i<lines.length&&!/^\s*```/.test(lines[i]))body.push(lines[i++]);if(i<lines.length)i++;code.textContent=body.join('\n');pre.append(code);root.append(pre);continue;}
+  if(line.includes('|')&&rule(lines[i+1]||'')){
+   const wrap=document.createElement('div');wrap.style.overflowX='auto';wrap.style.maxWidth='100%';
+   const table=document.createElement('table');table.style.borderCollapse='collapse';table.style.fontSize='inherit';table.style.textAlign='left';table.style.whiteSpace='nowrap';
+   const add=(values,head)=>{const row=document.createElement('tr');for(const text of values){const c=document.createElement(head?'th':'td');if(head)c.scope='col';c.style.padding='8px 12px';c.style.borderBottom='1px solid #b9bec2';c.style.verticalAlign='top';inline(c,text);row.append(c);}return row;};
+   const thead=document.createElement('thead');thead.append(add(cells(line),true));table.append(thead);i+=2;
+   const tbody=document.createElement('tbody');while(i<lines.length&&lines[i].trim()&&lines[i].includes('|'))tbody.append(add(cells(lines[i++]),false));table.append(tbody);wrap.append(table);root.append(wrap);continue;
+  }
+  const heading=line.match(/^\s*(#{1,6})\s+(.+)$/);if(heading){const n=document.createElement('h'+Math.min(6,heading[1].length+2));inline(n,heading[2]);root.append(n);i++;continue;}
+  const list=line.match(/^\s*([-*+]|\d+\.)\s+(.+)$/);if(list){const ordered=/\d/.test(list[1]);const n=document.createElement(ordered?'ol':'ul');while(i<lines.length){const m=lines[i].match(/^\s*([-*+]|\d+\.)\s+(.+)$/);if(!m||/\d/.test(m[1])!==ordered)break;const li=document.createElement('li');inline(li,m[2]);n.append(li);i++;}root.append(n);continue;}
+  const paragraph=document.createElement('p');const body=[line];i++;while(i<lines.length&&!special(i))body.push(lines[i++]);inline(paragraph,body.join(' '));root.append(paragraph);
+ }
+ return root;
+}
+
