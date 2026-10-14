@@ -273,6 +273,13 @@ def _candidates(python=None, prefix=None):
                 yield Path(value).absolute(), child
 
 
+def _windows_command(environment, expression):
+    # cmd parses its /c remainder itself, not by the C-runtime argv rules.
+    # Only the executable prefix uses list2cmdline; fixed shell text stays intact.
+    prefix = subprocess.list2cmdline([environment.get("COMSPEC", "cmd.exe")])
+    return prefix + ' /d /v:off /s /c "' + expression + '"'
+
+
 def _probe_command(executable, environment):
     child = environment.copy()
     if executable.suffix.lower() in {".bat", ".cmd"}:
@@ -281,8 +288,7 @@ def _probe_command(executable, environment):
         # Only fixed code reaches cmd parsing. Project paths are never shell text.
         child["ECO_QGIS_WRAPPER"] = str(executable)
         child["ECO_QGIS_PROBE_CODE"] = _PROBE_CODE
-        command = [child.get("COMSPEC", "cmd.exe"), "/d", "/v:off", "/s", "/c",
-                   '""%ECO_QGIS_WRAPPER%" -c "%ECO_QGIS_PROBE_CODE%""']
+        command = _windows_command(child, '"%ECO_QGIS_WRAPPER%" -c "%ECO_QGIS_PROBE_CODE%"')
     else:
         command = [str(executable), "-c", _PROBE_CODE]
     return command, child
@@ -385,8 +391,7 @@ def open_project(directory):
         child.pop("QT_QPA_PLATFORM", None)
     if sys.platform == "win32":
         child["ECO_QGIS_PROJECT"] = str(project)
-        command = [child.get("COMSPEC", "cmd.exe"), "/d", "/v:off", "/s", "/c",
-                   'start "" "%ECO_QGIS_PROJECT%"']
+        command = _windows_command(child, 'start "" "%ECO_QGIS_PROJECT%"')
         subprocess.run(command, cwd=root, env=child, stdin=subprocess.DEVNULL, check=True, timeout=15)
     elif sys.platform == "darwin":
         subprocess.run(["/usr/bin/open", str(project)], cwd=root, env=child,
