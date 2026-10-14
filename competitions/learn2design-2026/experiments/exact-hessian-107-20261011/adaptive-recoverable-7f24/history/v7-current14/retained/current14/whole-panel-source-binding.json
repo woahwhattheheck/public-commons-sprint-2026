@@ -1,0 +1,69 @@
+{
+  "operation_id": "ACCOUNT-L2D-CURRENT14-PANEL-RECEIVE-20261014-01",
+  "state": "FIRST_WHOLE_PANEL_RECEIVED_PINNED_NUMERICAL14_BRACKET_CONFIRMED",
+  "kernel_id": 138189542,
+  "numerical_version": 14,
+  "target": {
+    "userName": "tokenjunkielabs",
+    "kernelSlug": "l2d-ffr130-retention-challenger-t4-panel-v13"
+  },
+  "source_owner_operation": "L2D-PANEL-V15-FALQN127-T4-20261012-PAPERRESEARCH-01",
+  "file_path": "l2d-panel-v15-falqn127/panel-result.json",
+  "artifact_bytes": 49538,
+  "artifact_sha256": "16793aa3838c04aacaebecb55fb3f3187445851fe452be131111a6b0d7f5ac65",
+  "metadata_before": {
+    "id": 138189542,
+    "ref": "tokenjunkielabs/l2d-ffr130-retention-challenger-t4-panel-v13",
+    "currentVersionNumber": 14,
+    "enableGpu": true,
+    "enableTpu": false,
+    "machineShape": "NvidiaTeslaT4"
+  },
+  "metadata_after": {
+    "id": 138189542,
+    "ref": "tokenjunkielabs/l2d-ffr130-retention-challenger-t4-panel-v13",
+    "currentVersionNumber": 14,
+    "enableGpu": true,
+    "enableTpu": false,
+    "machineShape": "NvidiaTeslaT4"
+  },
+  "metadata14_bracket_confirmed": true,
+  "download_request": {
+    "ownerSlug": "tokenjunkielabs",
+    "kernelSlug": "l2d-ffr130-retention-challenger-t4-panel-v13",
+    "filePath": "l2d-panel-v15-falqn127/panel-result.json",
+    "versionNumber": 14
+  },
+  "download_method": "Official kernels.KernelsApiService/DownloadKernelOutput; numeric versionNumber14",
+  "candidate_and_runner_sha256_from_whole_panel": {
+    "falqn127/submission.py": "e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b",
+    "runner/run_public_uifo.py": "c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08"
+  },
+  "arms_run": [
+    "falqn127"
+  ],
+  "algorithm_seed": 42,
+  "seconds_per_objective": 180,
+  "hardware": "Kaggle NvidiaTeslaT4",
+  "official_score": false,
+  "full_cells_count": 3,
+  "whole_file_read_by_bounded_reader": true,
+  "analysis_owner": "7F24",
+  "analysis_owner_original_parent": "C0C1F274SGH/1791736325.457109",
+  "analysis_owner_claim": "1791977798.964409",
+  "output_files_downloaded": 1,
+  "new_runs": 0,
+  "kernel_saves": 0,
+  "cancellations": 0,
+  "submissions": 0,
+  "whole_zip_downloads": 0,
+  "paid_calls": 0,
+  "signed_urls_in_carrier": false,
+  "historical_save12_separate": true,
+  "raw_current_GetKernel_source_serialization_sha256": "91039d39c82d44270fba79bf377f33759467b0a04fb0bbcdfd8eab68425cf79d",
+  "raw_current_GetKernel_source_characters": 67962,
+  "original_manifest_notebook_sha256": "b377992b383cde955792a5d4fe9cfba7cde8cc79ec4e48f1b5f19ef5c77ac6a1",
+  "serialization_difference_cause": "NOT_INFERRED; exact candidate and runner hashes in allcells/panel match retained manifest",
+  "original_full_local_receipt": "C:\\Users\\lucys\\Documents\\Codex\\2026-10-02\\yo\\outputs\\l2d-current14-panel-receiving-20261014\\receipt.json",
+  "retrieved_at": "2026-10-14T11:43:58.066334+00:00"
+}

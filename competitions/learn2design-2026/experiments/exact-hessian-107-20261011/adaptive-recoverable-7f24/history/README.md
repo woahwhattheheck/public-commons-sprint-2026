@@ -1,5 +1,9 @@
 # L2D current14 — complete native time and feasibility analysis
 
+## Recovered v7 paired controls and combined full history
+
+[The complete v7/current14 collection](v7-current14/README.md) adds all six original 096/099 T10–T12 cells to these three current14 cells: nine trajectories and 835 logged points, all original metadata, standalone plots and a full offline explorer. [Read the findings](v7-current14/FINDINGS.md) before interpreting the original finite-pair win count. The protected 096 control has a long early T11 plateau and substantial final-window gains on T10/T12; the current adaptive schedule remains a hypothesis for the existing paired native run.
+
 This edition analyzes the exact original current14 panel returned by the original Kaggle receiver. It retains all 278 logged points, every feasibility flag/time, complete environment/source bindings and the earlier diagnosis. The new analysis adds dated budget windows, complete loss/feasible-incumbent figures, measured inter-log intervals, explicit stagnation intervals, full CSV and a portable explorer that accepts later original native panels.
 
 Original run: kernel138189542, current version14, algorithm FALQN127 / source e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b, runner c03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08. T7/T8/T9, algorithm seed42, 180seconds/Objective, actual T4/Python3.13.15/JAX0.9.0.1/dfbench0.3.3. Source-native metadata reports the original12October executions; the complete output was received14October. Original environment is preserved, rather than relabelled as the final H100/Python3.12.3 environment.

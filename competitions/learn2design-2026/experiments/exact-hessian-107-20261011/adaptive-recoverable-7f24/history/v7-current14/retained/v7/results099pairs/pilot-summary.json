@@ -1,0 +1,279 @@
+{
+  "pilot": "v7 paired 099-vs-096 on topologies {10,11,12}, seed 42, 180 s, alternating order",
+  "boundary": "ORGANIZER_PUBLIC_DEVELOPMENT measurement on public UIFOProblems; NOT an official score, entry, award or payment claim, and not H100 parity.",
+  "interpretation": "Single-cell paired outcomes are development observations. GPU floating-point nondeterminism is a plausible explanation for small paired trajectory differences \u2014 plausible, not causally instrumented and not a proven noise band. 096 is the timing-matched control; 099 changes acceptance to feasibility-ranked anchor/backtracking. No improvement claim rests on single pairs.",
+  "static_contract": "accepted local passes carried as metadata; not re-run in cloud",
+  "job_cap_s": 3600,
+  "pairs": [
+    {
+      "topology_seed": 10,
+      "run_order": [
+        "096",
+        "099"
+      ],
+      "c096": {
+        "cell": "096_t10_s42_180s",
+        "order_run": 1,
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null,
+        "score": {
+          "feasible_points": 63,
+          "best_feasible_loss": 4.8852516921942515,
+          "eval_count": 98,
+          "logged_points": 98,
+          "unknown_feasibility_points": 0,
+          "feasibility_fraction": 0.6428571428571429,
+          "time_to_first_feasible_s": 12.362203121185303,
+          "best_feasible_by_budget_fraction": {
+            "0.01": null,
+            "0.05": null,
+            "0.1": 5.562360169102342,
+            "0.25": 5.562360169102342,
+            "0.5": 5.525346984226173,
+            "0.75": 5.191077107003333,
+            "1.0": 4.8852516921942515
+          },
+          "budget_exceeded": false,
+          "returned_before_budget": true,
+          "objective_time_elapsed_s": 178.5140895843506,
+          "optimize_wall_s_incl_warmup": 244.81373457599994,
+          "stopped_predictively": true,
+          "diag_calls": 98,
+          "diag_accepted": null,
+          "diag_excursions": null,
+          "diag_rejected": null,
+          "diag_nonfinite": null,
+          "diag_restarts_started": null
+        }
+      },
+      "c099": {
+        "cell": "099_t10_s42_180s",
+        "order_run": 2,
+        "status": "COMPLETE_NO_FEASIBLE_POINT_RANDOM_SEARCH_FALLBACK_WOULD_APPLY",
+        "error": null,
+        "score": {
+          "feasible_points": 0,
+          "best_feasible_loss": null,
+          "eval_count": 99,
+          "logged_points": 99,
+          "unknown_feasibility_points": 0,
+          "feasibility_fraction": 0.0,
+          "time_to_first_feasible_s": null,
+          "best_feasible_by_budget_fraction": {},
+          "budget_exceeded": false,
+          "returned_before_budget": true,
+          "objective_time_elapsed_s": 178.2273244857788,
+          "optimize_wall_s_incl_warmup": 247.42716278600005,
+          "stopped_predictively": true,
+          "diag_calls": 99,
+          "diag_accepted": 36,
+          "diag_excursions": 35,
+          "diag_rejected": 28,
+          "diag_nonfinite": 0,
+          "diag_restarts_started": 1
+        }
+      },
+      "delta_best_feasible_099_minus_096": null,
+      "both_within_budget": true,
+      "096_returned_before_budget": true,
+      "099_returned_before_budget": true,
+      "096_stopped_predictively": true,
+      "099_stopped_predictively": true,
+      "099_accept_excursion_reject": [
+        36,
+        35,
+        28
+      ]
+    },
+    {
+      "topology_seed": 11,
+      "run_order": [
+        "099",
+        "096"
+      ],
+      "c096": {
+        "cell": "096_t11_s42_180s",
+        "order_run": 2,
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null,
+        "score": {
+          "feasible_points": 32,
+          "best_feasible_loss": 5.246330569811976,
+          "eval_count": 92,
+          "logged_points": 92,
+          "unknown_feasibility_points": 0,
+          "feasibility_fraction": 0.34782608695652173,
+          "time_to_first_feasible_s": 25.185941696166992,
+          "best_feasible_by_budget_fraction": {
+            "0.01": null,
+            "0.05": null,
+            "0.1": null,
+            "0.25": 5.246330569811976,
+            "0.5": 5.246330569811976,
+            "0.75": 5.246330569811976,
+            "1.0": 5.246330569811976
+          },
+          "budget_exceeded": false,
+          "returned_before_budget": true,
+          "objective_time_elapsed_s": 179.3891429901123,
+          "optimize_wall_s_incl_warmup": 252.43909389600003,
+          "stopped_predictively": true,
+          "diag_calls": 92,
+          "diag_accepted": null,
+          "diag_excursions": null,
+          "diag_rejected": null,
+          "diag_nonfinite": null,
+          "diag_restarts_started": null
+        }
+      },
+      "c099": {
+        "cell": "099_t11_s42_180s",
+        "order_run": 1,
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null,
+        "score": {
+          "feasible_points": 13,
+          "best_feasible_loss": 5.236289810660033,
+          "eval_count": 93,
+          "logged_points": 93,
+          "unknown_feasibility_points": 0,
+          "feasibility_fraction": 0.13978494623655913,
+          "time_to_first_feasible_s": 10.786744117736816,
+          "best_feasible_by_budget_fraction": {
+            "0.01": null,
+            "0.05": null,
+            "0.1": 5.616683771434549,
+            "0.25": 5.303497880135904,
+            "0.5": 5.236289810660033,
+            "0.75": 5.236289810660033,
+            "1.0": 5.236289810660033
+          },
+          "budget_exceeded": false,
+          "returned_before_budget": true,
+          "objective_time_elapsed_s": 178.1229989528656,
+          "optimize_wall_s_incl_warmup": 251.746582503,
+          "stopped_predictively": true,
+          "diag_calls": 93,
+          "diag_accepted": 25,
+          "diag_excursions": 9,
+          "diag_rejected": 59,
+          "diag_nonfinite": 0,
+          "diag_restarts_started": 2
+        }
+      },
+      "delta_best_feasible_099_minus_096": -0.010040759151943135,
+      "both_within_budget": true,
+      "096_returned_before_budget": true,
+      "099_returned_before_budget": true,
+      "096_stopped_predictively": true,
+      "099_stopped_predictively": true,
+      "099_accept_excursion_reject": [
+        25,
+        9,
+        59
+      ]
+    },
+    {
+      "topology_seed": 12,
+      "run_order": [
+        "096",
+        "099"
+      ],
+      "c096": {
+        "cell": "096_t12_s42_180s",
+        "order_run": 1,
+        "status": "COMPLETE_WITH_FEASIBLE_POINT",
+        "error": null,
+        "score": {
+          "feasible_points": 32,
+          "best_feasible_loss": 4.891589786110237,
+          "eval_count": 87,
+          "logged_points": 87,
+          "unknown_feasibility_points": 0,
+          "feasibility_fraction": 0.367816091954023,
+          "time_to_first_feasible_s": 44.987276792526245,
+          "best_feasible_by_budget_fraction": {
+            "0.01": null,
+            "0.05": null,
+            "0.1": null,
+            "0.25": 5.400855002775094,
+            "0.5": 5.375684981378059,
+            "0.75": 5.347956559493572,
+            "1.0": 4.891589786110237
+          },
+          "budget_exceeded": false,
+          "returned_before_budget": true,
+          "objective_time_elapsed_s": 179.33830428123474,
+          "optimize_wall_s_incl_warmup": 257.0723824649999,
+          "stopped_predictively": true,
+          "diag_calls": 87,
+          "diag_accepted": null,
+          "diag_excursions": null,
+          "diag_rejected": null,
+          "diag_nonfinite": null,
+          "diag_restarts_started": null
+        }
+      },
+      "c099": {
+        "cell": "099_t12_s42_180s",
+        "order_run": 2,
+        "status": "COMPLETE_NO_FEASIBLE_POINT_RANDOM_SEARCH_FALLBACK_WOULD_APPLY",
+        "error": null,
+        "score": {
+          "feasible_points": 0,
+          "best_feasible_loss": null,
+          "eval_count": 88,
+          "logged_points": 88,
+          "unknown_feasibility_points": 0,
+          "feasibility_fraction": 0.0,
+          "time_to_first_feasible_s": null,
+          "best_feasible_by_budget_fraction": {},
+          "budget_exceeded": false,
+          "returned_before_budget": true,
+          "objective_time_elapsed_s": 178.1536009311676,
+          "optimize_wall_s_incl_warmup": 257.04627025499985,
+          "stopped_predictively": true,
+          "diag_calls": 88,
+          "diag_accepted": 20,
+          "diag_excursions": 14,
+          "diag_rejected": 54,
+          "diag_nonfinite": 0,
+          "diag_restarts_started": 1
+        }
+      },
+      "delta_best_feasible_099_minus_096": null,
+      "both_within_budget": true,
+      "096_returned_before_budget": true,
+      "099_returned_before_budget": true,
+      "096_stopped_predictively": true,
+      "099_stopped_predictively": true,
+      "099_accept_excursion_reject": [
+        20,
+        14,
+        54
+      ]
+    }
+  ],
+  "paired_result": {
+    "completed_pairs": 3,
+    "deltas_099_minus_096": [
+      -0.010040759151943135
+    ],
+    "mean_delta": -0.010040759151943135,
+    "wins_099": 1,
+    "wins_096": 0,
+    "ties_within_1e-9": 0,
+    "note": "negative delta = lower measured feasible loss for 099 on this pair; the three-pair sample does not establish general superiority"
+  },
+  "prior_constants": {
+    "v1_t0_s42_60s": 5.046134788581744,
+    "096_t0_s42_60s": 5.046134824567846,
+    "c084_t0_s42_60s": 5.235551125811549,
+    "094_t0_s42_60s": 5.47537,
+    "v5_s42_180s_deltas_096_minus_v1": [
+      -0.39409445696963186,
+      0.17952525077481063,
+      -0.17775926013342058
+    ]
+  }
+}

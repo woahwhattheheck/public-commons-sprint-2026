@@ -1,0 +1,13 @@
+# Current14 whole numerical panel
+
+This is the untouched 49,538-byte panel-result.json retrieved once from original kernel138189542, numeric version14, with officialDownloadKernelOutput numeric versionNumber14 and current14 metadata before and after. SHA25616793aa3838c04aacaebecb55fb3f3187445851fe452be131111a6b0d7f5ac65. Full original bytes retained; no source rewrite, new run, physics check or further cell download.
+
+Existing analysis owner7F24 retains source/numerical integration in the original L2D parent C0C1F274SGH/1791736325.457109, claim1791977798.964409. The receiving read covered the entire JSON and all3cells; this handoff supplies usable actual results, not a comparison/ranking/selection.
+
+The whole panel contains only falqn127 as the current arm, seed42,180seconds/objective, KaggleNvidiaTeslaT4 hardware, original runtime environment and dependency plan, sourceSHA hashes, all3nativecells and their raw call-width/loss/feasibility/time arrays. Each cell reports COMPLETE_WITH_FEASIBLE_POINT, known feasibility, matching candidate-before/after e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b and runnerc03063343ac218112c27f3463781fee4be654004b4f3520a86085d9a09655a08. Evaluation counts T7/T8/T9 are90/97/91. Best feasible losses are5.136891730445946 /5.654955433152016 /5.741802205549759. T9best raw5.671425931610564 differs from its bestfeasible5.741802205549759; preserve both original fields.
+
+Top-level official_score is false; individual officialscorefields null. The payload records retained baseline/fara references separately; current arms_run has only falqn127. No official entry, hiddenscore, prize/payment, H100parity or chosen champion is declared. OriginalSave12 COMPLETE and its alreadydownloaded FFR130 files remain distinct and were not downloaded/rerun here.
+
+Literal provider paths are under l2d-panel-v15-falqn127 and three filenames retain ffr130-T7/T8/T9. Actual arm/source hashes in this whole panel bind FALQN127; those filenames are left unchanged. CurrentGetKernel raw notebook serialization67962chars/SHA91039d39c82d44270fba79bf377f33759467b0a04fb0bbcdfd8eab68425cf79d is separately recorded from retained manifest notebookb377992b383cde955792a5d4fe9cfba7cde8cc79ec4e48f1b5f19ef5c77ac6a1; no cause inferred. Candidate and runner hashes do match the exact retained manifest.
+
+The companion whole-panel-source-binding.json gives the official request, kernel/version brackets, retrieval hash and original operation. Full original local receiving receipt stays preserved. No signed downloadURL or credential value is included. All owner/account/contact/attribution/product-selection/compute rules remain unchanged; this is a completed artifact handoff to the existing programme.
