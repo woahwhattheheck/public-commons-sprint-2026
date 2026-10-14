@@ -13,6 +13,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+from source_tools.receiving_process import popen_with_lease, inherited_descriptor
 import uuid
 
 from model.common import atomic_bytes, atomic_json, digest, file_digest, held, identifier, now, read_json
@@ -178,7 +179,7 @@ def prepare(workspace, prepared, output, *, node, receiving_lock_fd, receiving_l
                     raise ValueError("The actual Node executable changed before source execution")
                 with (attempt / "stdout.json").open("xb", buffering=0) as stdout, \
                         (attempt / "stderr.log").open("xb", buffering=0) as stderr:
-                    process = subprocess.Popen(command, stdout=stdout, stderr=stderr,
+                    process = popen_with_lease(command, stdout=stdout, stderr=stderr,
                                                pass_fds=(receiving_lock_fd,), cwd=attempt)
                     code = process.wait()
                     os.fsync(stdout.fileno()); os.fsync(stderr.fileno())
