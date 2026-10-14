@@ -13,7 +13,7 @@ use soroban_sdk::{
 };
 
 #[path="../../accounting_math.rs"] mod accounting_math;
-use accounting_math::{add,sub,floor,ceil,inverse,REWARD_SCALE};
+use accounting_math::{add,sub,floor,ceil,inverse,reward,REWARD_SCALE};
 
 pub const SCALE: i128 = 10_000_000; // 1e7
 
@@ -35,6 +35,7 @@ pub trait OracleInterface {
 #[contractclient(name = "PermClient")]
 pub trait PermissioningInterface {
     fn is_allowed(env: Env, account: Address) -> bool;
+    fn is_allowed_for_asset(env:Env,account:Address,asset:Address)->bool;
 }
 
 /// Minimum interface required from SYWrapper.
@@ -74,6 +75,9 @@ pub trait YTTokenInterface {
     fn accounting_rate(env:Env)->i128;
     fn inverse_index(env:Env)->i128;
     fn total_pending(env:Env)->i128;
+    fn pending_claim(env:Env,account:Address)->i128;
+    fn last_inverse_index(env:Env,account:Address)->i128;
+    fn reward_remainder(env:Env,account:Address)->i128;
     fn balance(env: Env, account: Address) -> i128;
     fn total_supply(env: Env) -> i128;
     fn underlying_address(env: Env) -> Address;
@@ -106,6 +110,9 @@ pub enum Error {
     Insolvent = 15,
     UnexpectedTransfer = 16,
     PrincipalNotRepresentable = 17,
+    OracleRegressed = 18,
+    Slippage = 19,
+    InsufficientPair = 20,
 }
 
 // ---------------------------------------------------------------------------
@@ -128,6 +135,8 @@ pub enum DataKey {
     TotalDepositedUnderlying,
     TotalPaidPrincipal,
     TotalPaidYield,
+    TotalRecombinedShares,
+    TotalRecombinedUnderlying,
 }
 
 // ---------------------------------------------------------------------------
@@ -146,6 +155,15 @@ pub struct MintResult {
 pub struct RedeemResult {
     pub underlying_from_pt: i128,
     pub underlying_from_yt: i128,
+}
+
+#[contracttype]
+#[derive(Clone,Debug,Eq,PartialEq)]
+pub struct RecombineQuote {
+    pub amount:i128,pub sy_shares:i128,pub underlying_allowance:i128,
+    pub underlying_value:i128,pub retained_rounding:i128,pub oracle_rate:i128,
+    pub sy_rate:i128,pub inverse_index:i128,pub pending_yield:i128,
+    pub reward_remainder:i128,pub sampled_at:u64,pub maturity:u64,
 }
 
 #[contracttype]
@@ -270,6 +288,89 @@ impl PrincipalManagerContract {
         env.events().publish((symbol_short!("mint"),),(from,sy_shares,notional));
         MintResult{pt_minted:notional,yt_minted:notional}
     }
+
+    /// Paired exit edition 1: return current principal backing in SY.
+    /// Earned whole/fractional YT credit remains with the holder, including after a full burn.
+    /// This is not the historical per-user original-deposit sketch: PT/YT are transferable,
+    /// and previously paid yield must never be paid again through recombination.
+    pub fn preview_recombine(env:Env,from:Address,amount:i128)->RecombineQuote {
+        Self::assert_edition(&env);Self::assert_not_paused(&env);
+        Self::assert_not_mature(&env);Self::assert_oracle_fresh(&env);
+        Self::assert_sac_authorized(&env,&from);Self::assert_permitted(&env,&from);
+        if amount<=0{panic_with_error!(&env,Error::ZeroAmount)}
+        let this=env.current_contract_address();
+        if from==this{panic_with_error!(&env,Error::UnexpectedTransfer)}
+        let pt=PTTokenClient::new(&env,&Self::get_pt_token(&env));
+        let yt=YTTokenClient::new(&env,&Self::get_yt_token(&env));
+        let permission=PermClient::new(&env,&Self::permissioning_address(env.clone()));
+        if !permission.is_allowed_for_asset(&from,&Self::get_pt_token(&env))
+            ||!permission.is_allowed_for_asset(&from,&Self::get_yt_token(&env)){panic_with_error!(&env,Error::PermissionDenied)}
+        let balance=yt.balance(&from);
+        if pt.balance(&from)<amount||balance<amount{panic_with_error!(&env,Error::InsufficientPair)}
+        Self::assert_custody(&env);
+        let rate=Self::get_oracle_rate(&env);let index=inverse(&env,rate);
+        if rate<yt.accounting_rate(){panic_with_error!(&env,Error::OracleRegressed)}
+        let sy=SYWrapperClient::new(&env,&Self::get_sy_wrapper(&env));
+        let sy_rate=sy.exchange_rate();
+        let allowance=floor(&env,amount,SCALE,rate);
+        let shares=floor(&env,allowance,SCALE,sy_rate);
+        if shares<=0{panic_with_error!(&env,Error::ZeroAmount)}
+        let value=floor(&env,shares,sy_rate,SCALE);
+        let (earned,fraction)=reward(&env,balance,sub(&env,yt.last_inverse_index(&from),index),yt.reward_remainder(&from));
+        let pending=add(&env,yt.pending_claim(&from),earned);
+        let required=add(&env,ceil(&env,pt.total_supply(),index,REWARD_SCALE),add(&env,yt.total_pending(),earned));
+        if Self::backing_underlying(env.clone())<required{panic_with_error!(&env,Error::Insolvent)}
+        RecombineQuote{amount,sy_shares:shares,underlying_allowance:allowance,underlying_value:value,
+            retained_rounding:sub(&env,allowance,value),oracle_rate:rate,sy_rate,inverse_index:index,
+            pending_yield:pending,reward_remainder:fraction,sampled_at:env.ledger().timestamp(),maturity:Self::maturity(env.clone())}
+    }
+
+    pub fn recombine(env:Env,from:Address,amount:i128,min_sy:i128)->RecombineQuote {
+        from.require_auth();
+        if min_sy<0{panic_with_error!(&env,Error::Slippage)}
+        let quote=Self::preview_recombine(env.clone(),from.clone(),amount);
+        if quote.sy_shares<min_sy{panic_with_error!(&env,Error::Slippage)}
+        let this=env.current_contract_address();
+        let pt=PTTokenClient::new(&env,&Self::get_pt_token(&env));
+        let yt=YTTokenClient::new(&env,&Self::get_yt_token(&env));
+        let sy=SYWrapperClient::new(&env,&Self::get_sy_wrapper(&env));
+        yt.update_yield_index();
+        let pending=yt.settle_yield(&this,&from);
+        if yt.accounting_rate()!=quote.oracle_rate||yt.inverse_index()!=quote.inverse_index
+            ||pending!=quote.pending_yield||yt.reward_remainder(&from)!=quote.reward_remainder
+            ||sy.exchange_rate()!=quote.sy_rate{panic_with_error!(&env,Error::TopologyMismatch)}
+        Self::assert_reserved(&env,0);
+        let old_pt=pt.balance(&from);let old_yt=yt.balance(&from);
+        let supply_pt=pt.total_supply();let supply_yt=yt.total_supply();
+        pt.burn(&from,&amount);yt.burn(&from,&amount);
+        if pt.balance(&from)!=sub(&env,old_pt,amount)||yt.balance(&from)!=sub(&env,old_yt,amount)
+            ||pt.total_supply()!=sub(&env,supply_pt,amount)||yt.total_supply()!=sub(&env,supply_yt,amount)
+            ||yt.pending_claim(&from)!=quote.pending_yield||yt.reward_remainder(&from)!=quote.reward_remainder{
+            panic_with_error!(&env,Error::UnexpectedTransfer)
+        }
+        // ceil(T*I/Q)-ceil((T-n)*I/Q) >= floor(n*I/Q) >= floor(n*S/rate).
+        // floor(allowance*S/w) shares reduce aggregate backing by at most allowance.
+        Self::assert_reserved(&env,quote.underlying_allowance);
+        let before=sy.balance_of(&this);let recipient=sy.balance_of(&from);
+        let transferred=sy.transfer(&this,&from,&quote.sy_shares);
+        if transferred!=quote.sy_shares||sy.balance_of(&this)!=sub(&env,before,quote.sy_shares)
+            ||sy.balance_of(&from)!=add(&env,recipient,quote.sy_shares)
+            ||sy.exchange_rate()!=quote.sy_rate||Self::get_oracle_rate(&env)!=quote.oracle_rate{
+            panic_with_error!(&env,Error::UnexpectedTransfer)
+        }
+        env.storage().instance().set(&DataKey::LockedShares,&sub(&env,Self::locked_shares(env.clone()),quote.sy_shares));
+        let total:i128=env.storage().instance().get(&DataKey::TotalRecombinedShares).unwrap_or(0);
+        env.storage().instance().set(&DataKey::TotalRecombinedShares,&add(&env,total,quote.sy_shares));
+        let value:i128=env.storage().instance().get(&DataKey::TotalRecombinedUnderlying).unwrap_or(0);
+        env.storage().instance().set(&DataKey::TotalRecombinedUnderlying,&add(&env,value,quote.underlying_value));
+        Self::assert_reserved(&env,0);
+        env.events().publish((symbol_short!("recombine"),),(from,quote.clone()));
+        quote
+    }
+
+    pub fn recombination_edition(_env:Env)->u32{1}
+    pub fn total_recombined_shares(env:Env)->i128{env.storage().instance().get(&DataKey::TotalRecombinedShares).unwrap_or(0)}
+    pub fn total_recombined_underlying(env:Env)->i128{env.storage().instance().get(&DataKey::TotalRecombinedUnderlying).unwrap_or(0)}
 
     /// Redeem PT and/or YT after maturity. Both can be supplied in any combination.
     ///

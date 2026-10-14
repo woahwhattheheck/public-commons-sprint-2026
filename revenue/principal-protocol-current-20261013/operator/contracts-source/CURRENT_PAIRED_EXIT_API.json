@@ -1,0 +1,1928 @@
+{
+  "schema": "principal.contract-api.v2",
+  "edition": "principal-paired-exit-1-market-1-accounting-3",
+  "source": {
+    "repository": "principal-Protocol-org/principal",
+    "baseCommit": "f35b914cbf4896255a3711d81795b810b0a47f1c",
+    "baseTree": "4d07bd2718558e467956f7744bfd6052c4eb8845",
+    "implementationEdition": 3,
+    "implementationSource": "CURRENT_PAIRED_EXIT_SOURCE.json",
+    "migration": "new-initialization-only",
+    "marketEdition": 1,
+    "recombinationEdition": 1,
+    "routerEdition": 2
+  },
+  "amounts": {
+    "underlying": "Raw underlying token atoms; configured asset decimals apply",
+    "pt_yt": "Exact integer token units; query each token decimals()",
+    "oracle": "Fixed 7-decimal underlying/USD reference value",
+    "sy": "Exact SY share atoms; source RATE_SCALE is 10^7",
+    "lp": "Pool liquidity atoms; four decimals, real-reserve entitlement only",
+    "swap_fees": "SY atoms in both directions, separately retained creator/protocol claims",
+    "recombination": "Equal PT/YT atoms; conservative current principal returned as SY; earned whole/fractional yield remains separately claimable"
+  },
+  "contracts": {
+    "oracle_adapter": {
+      "sourcePath": "contracts/oracle_adapter/src/lib.rs",
+      "sourceSha256": "7c595b21ef5d4cf45173468a5ed95a47b392f2bca8a0f71359de4758be2553cc",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed oracle_adapter method with its contract-enforced authorization."
+        },
+        "set_reference_value": {
+          "args": {
+            "caller": "Address",
+            "value": "i128",
+            "timestamp": "u64"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed oracle_adapter method with its contract-enforced authorization."
+        },
+        "get_reference_value": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed oracle_adapter contract."
+        },
+        "get_reference_timestamp": {
+          "args": {},
+          "returns": "u64",
+          "readOnly": true,
+          "description": "Read the deployed oracle_adapter contract."
+        },
+        "is_fresh": {
+          "args": {
+            "max_stale_seconds": "u64"
+          },
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed oracle_adapter contract."
+        },
+        "transfer_admin": {
+          "args": {
+            "current_admin": "Address",
+            "new_admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed oracle_adapter method with its contract-enforced authorization."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed oracle_adapter contract."
+        },
+        "sample_count": {
+          "args": {},
+          "returns": "u64",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 oracle_adapter contract."
+        },
+        "get_sample": {
+          "args": {
+            "sequence": "u64"
+          },
+          "returns": "Option<OracleSample>",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 oracle_adapter contract."
+        },
+        "first_at_or_after": {
+          "args": {
+            "timestamp": "u64"
+          },
+          "returns": "Option<OracleSample>",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 oracle_adapter contract."
+        }
+      }
+    },
+    "permissioning": {
+      "sourcePath": "contracts/permissioning/src/lib.rs",
+      "sourceSha256": "07372c20f970cfd7eec84cfd56bd32a04b36b4b5616bb98ac07fcc43fc3563c6",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "grant_account": {
+          "args": {
+            "caller": "Address",
+            "account": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "revoke_account": {
+          "args": {
+            "caller": "Address",
+            "account": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "grant_accounts": {
+          "args": {
+            "caller": "Address",
+            "accounts": "Vec<Address>"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "is_allowed": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed permissioning contract."
+        },
+        "grant_asset": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "asset": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "revoke_asset": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "asset": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "is_allowed_for_asset": {
+          "args": {
+            "account": "Address",
+            "asset": "Address"
+          },
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed permissioning contract."
+        },
+        "transfer_admin": {
+          "args": {
+            "current_admin": "Address",
+            "new_admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed permissioning method with its contract-enforced authorization."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed permissioning contract."
+        }
+      }
+    },
+    "principal_manager": {
+      "sourcePath": "contracts/principal_manager/src/lib.rs",
+      "sourceSha256": "ec19e7391b92382d78b5e739293932ca2f5da5d8ab31c0ab1f3872915ba4c950",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address",
+            "sy_wrapper": "Address",
+            "pt_token": "Address",
+            "yt_token": "Address",
+            "oracle": "Address",
+            "permissioning": "Address",
+            "underlying": "Address",
+            "maturity": "u64"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed principal_manager method with its contract-enforced authorization."
+        },
+        "mint": {
+          "args": {
+            "from": "Address",
+            "sy_shares": "i128"
+          },
+          "returns": "MintResult",
+          "readOnly": false,
+          "description": "Invoke the exact deployed principal_manager method with its contract-enforced authorization."
+        },
+        "redeem": {
+          "args": {
+            "from": "Address",
+            "pt_amount": "i128",
+            "yt_amount": "i128"
+          },
+          "returns": "RedeemResult",
+          "readOnly": false,
+          "description": "Invoke the exact deployed principal_manager method with its contract-enforced authorization."
+        },
+        "claim_yield": {
+          "args": {
+            "from": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed principal_manager method with its contract-enforced authorization."
+        },
+        "pt_balance": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "yt_balance": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "total_pt": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "total_yt": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "maturity": {
+          "args": {},
+          "returns": "u64",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "is_mature": {
+          "args": {},
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "set_paused": {
+          "args": {
+            "caller": "Address",
+            "paused": "bool"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed principal_manager method with its contract-enforced authorization."
+        },
+        "transfer_admin": {
+          "args": {
+            "current_admin": "Address",
+            "new_admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed principal_manager method with its contract-enforced authorization."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed principal_manager contract."
+        },
+        "accounting_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "locked_shares": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "total_deposited_underlying": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "total_paid_principal": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "total_paid_yield": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "principal_reserve": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "backing_underlying": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "preview_mint": {
+          "args": {
+            "sy_shares": "i128"
+          },
+          "returns": "MintPreview",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "sy_wrapper_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "pt_token_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "yt_token_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "oracle_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "permissioning_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "preview_recombine": {
+          "args": {
+            "from": "Address",
+            "amount": "i128"
+          },
+          "returns": "RecombineQuote",
+          "readOnly": true,
+          "description": "Read an exact current eligible paired exit, backing, rate, rounding and retained earned yield."
+        },
+        "recombine": {
+          "args": {
+            "from": "Address",
+            "amount": "i128",
+            "min_sy": "i128"
+          },
+          "returns": "RecombineQuote",
+          "readOnly": false,
+          "description": "Burn equal owned PT/YT before maturity and return current principal backing in SY, preserving earned yield."
+        },
+        "recombination_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read paired-exit edition independently from original accounting edition."
+        },
+        "total_recombined_shares": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read cumulative SY shares actually returned by paired exits."
+        },
+        "total_recombined_underlying": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read cumulative returned SY value at each exit; this is not an underlying payout counter."
+        }
+      }
+    },
+    "pt_token": {
+      "sourcePath": "contracts/pt_token/src/lib.rs",
+      "sourceSha256": "8bcf0b00644d1d4c8cd258464c76ea2b015b725b6fd90c2f81ba86d83c81b92e",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address",
+            "permissioning": "Address",
+            "underlying": "Address",
+            "maturity": "u64",
+            "name": "String",
+            "symbol": "String",
+            "decimals": "u32"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "set_minter": {
+          "args": {
+            "admin": "Address",
+            "minter": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "set_recovery_escrow": {
+          "args": {
+            "admin": "Address",
+            "escrow": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "transfer": {
+          "args": {
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "transfer_from": {
+          "args": {
+            "spender": "Address",
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "approve": {
+          "args": {
+            "from": "Address",
+            "spender": "Address",
+            "amount": "i128",
+            "expiration_ledger": "u32"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "allowance": {
+          "args": {
+            "from": "Address",
+            "spender": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "balance": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "decimals": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "name": {
+          "args": {},
+          "returns": "String",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "symbol": {
+          "args": {},
+          "returns": "String",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "mint": {
+          "args": {
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "burn": {
+          "args": {
+            "from": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "seize": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed pt_token method with its contract-enforced authorization."
+        },
+        "total_supply": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "maturity": {
+          "args": {},
+          "returns": "u64",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "minter": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "recovery_escrow": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        },
+        "permissioning_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed pt_token contract."
+        }
+      }
+    },
+    "recovery_escrow": {
+      "sourcePath": "contracts/recovery_escrow/src/lib.rs",
+      "sourceSha256": "fbfe6634c8458d74ae0204782b7ca1586fc81a8b7cf575cc7df68a6b31ab70da",
+      "methods": {
+        "initialize": {
+          "args": {
+            "underlying": "Address",
+            "sy_wrapper": "Address",
+            "pt_token": "Address",
+            "yt_token": "Address",
+            "principal_manager": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed recovery_escrow method with its contract-enforced authorization."
+        },
+        "seize_sy": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "shares": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed recovery_escrow method with its contract-enforced authorization."
+        },
+        "seize_pt": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed recovery_escrow method with its contract-enforced authorization."
+        },
+        "seize_yt": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed recovery_escrow method with its contract-enforced authorization."
+        },
+        "finalize_pt": {
+          "args": {
+            "caller": "Address",
+            "pt_amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed recovery_escrow method with its contract-enforced authorization."
+        },
+        "finalize_yt": {
+          "args": {
+            "caller": "Address",
+            "yt_amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed recovery_escrow method with its contract-enforced authorization."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed recovery_escrow contract."
+        },
+        "recover_yield": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact recovery_escrow method with current SAC issuer; original source account deauthorized authorization."
+        },
+        "finalize_yield": {
+          "args": {
+            "caller": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact recovery_escrow method with current SAC issuer authorization."
+        },
+        "yield_recovery_count": {
+          "args": {},
+          "returns": "u64",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 recovery_escrow contract."
+        },
+        "yield_recovery_receipt": {
+          "args": {
+            "sequence": "u64"
+          },
+          "returns": "Option<YieldRecovery>",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 recovery_escrow contract."
+        },
+        "recover_fraction": {
+          "args": {
+            "caller": "Address",
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact recovery_escrow method with current SAC issuer; original source account deauthorized authorization."
+        },
+        "seize_lp": {
+          "args": {
+            "caller": "Address",
+            "market": "Address",
+            "account": "Address",
+            "shares": "i128"
+          },
+          "returns": "LiquidityRecovery",
+          "readOnly": false,
+          "description": "The live SAC administrator recovers an actually deauthorized holder's LP backing through the original RecoveryEscrow; actual PT is retained and actual SY is unwrapped."
+        }
+      }
+    },
+    "risk_control": {
+      "sourcePath": "contracts/risk_control/src/lib.rs",
+      "sourceSha256": "03e70d74782c65fa93e295518bfd2f4df8a292ee35e61442fe58927199ae5768",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address",
+            "cb_limit": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "pause": {
+          "args": {
+            "caller": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "unpause": {
+          "args": {
+            "caller": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "is_paused": {
+          "args": {},
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed risk_control contract."
+        },
+        "add_pauser": {
+          "args": {
+            "caller": "Address",
+            "pauser": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "remove_pauser": {
+          "args": {
+            "caller": "Address",
+            "pauser": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "is_pauser": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed risk_control contract."
+        },
+        "add_consumer": {
+          "args": {
+            "caller": "Address",
+            "consumer": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "remove_consumer": {
+          "args": {
+            "caller": "Address",
+            "consumer": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "is_consumer": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "bool",
+          "readOnly": true,
+          "description": "Read the deployed risk_control contract."
+        },
+        "check_deposit": {
+          "args": {
+            "caller": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "set_cb_limit": {
+          "args": {
+            "caller": "Address",
+            "new_limit": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "get_cb_limit": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed risk_control contract."
+        },
+        "get_cb_volume": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed risk_control contract."
+        },
+        "transfer_admin": {
+          "args": {
+            "current_admin": "Address",
+            "new_admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed risk_control method with its contract-enforced authorization."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed risk_control contract."
+        }
+      }
+    },
+    "sy_wrapper": {
+      "sourcePath": "contracts/sy_wrapper/src/lib.rs",
+      "sourceSha256": "24e3dde8d7baf63012b2309688b1204c646b31b5724c3449b54bc7c881b1af0d",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address",
+            "underlying": "Address",
+            "permissioning": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "transfer": {
+          "args": {
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "deposit": {
+          "args": {
+            "from": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "withdraw": {
+          "args": {
+            "from": "Address",
+            "shares": "i128",
+            "to": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "exchange_rate": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "total_underlying": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "total_shares": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "balance_of": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "recovery_escrow": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "permissioning_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "set_paused": {
+          "args": {
+            "caller": "Address",
+            "paused": "bool"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "transfer_admin": {
+          "args": {
+            "current_admin": "Address",
+            "new_admin": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed sy_wrapper contract."
+        },
+        "set_recovery_escrow": {
+          "args": {
+            "admin": "Address",
+            "escrow": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        },
+        "seize": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "shares": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed sy_wrapper method with its contract-enforced authorization."
+        }
+      }
+    },
+    "yt_token": {
+      "sourcePath": "contracts/yt_token/src/lib.rs",
+      "sourceSha256": "fb7c19283a578dea1eb1fba78c233cec1c2c32c764f0841638e2cd00ca0cb497",
+      "methods": {
+        "initialize": {
+          "args": {
+            "admin": "Address",
+            "permissioning": "Address",
+            "underlying": "Address",
+            "oracle": "Address",
+            "maturity": "u64",
+            "name": "String",
+            "symbol": "String",
+            "decimals": "u32"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "set_minter": {
+          "args": {
+            "admin": "Address",
+            "minter": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "set_recovery_escrow": {
+          "args": {
+            "admin": "Address",
+            "escrow": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "transfer": {
+          "args": {
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "transfer_from": {
+          "args": {
+            "spender": "Address",
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "approve": {
+          "args": {
+            "from": "Address",
+            "spender": "Address",
+            "amount": "i128",
+            "expiration_ledger": "u32"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "allowance": {
+          "args": {
+            "from": "Address",
+            "spender": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "balance": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "decimals": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "name": {
+          "args": {},
+          "returns": "String",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "symbol": {
+          "args": {},
+          "returns": "String",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "mint": {
+          "args": {
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "burn": {
+          "args": {
+            "from": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "seize": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "update_yield_index": {
+          "args": {},
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "claim_yield": {
+          "args": {
+            "caller": "Address",
+            "from": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact deployed yt_token method with its contract-enforced authorization."
+        },
+        "accrued_yield_index": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "last_claimed_index": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "pending_claim": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "total_supply": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "maturity": {
+          "args": {},
+          "returns": "u64",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "minter": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "get_admin": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "recovery_escrow": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "permissioning_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "oracle_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the deployed yt_token contract."
+        },
+        "accounting_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "accounting_rate": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "maturity_sample": {
+          "args": {},
+          "returns": "Option<OracleSample>",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "total_backing_credit": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "total_pending": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "total_claimed": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "backing_credit": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "yield_position": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "YieldPosition",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "settle_yield": {
+          "args": {
+            "caller": "Address",
+            "from": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact yt_token method with original minter authorization."
+        },
+        "consume_yield": {
+          "args": {
+            "caller": "Address",
+            "from": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Invoke the exact yt_token method with original minter authorization."
+        },
+        "seize_position": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "RecoveryMovement",
+          "readOnly": false,
+          "description": "Invoke the exact yt_token method with original recovery escrow authorization."
+        },
+        "seize_pending": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "amount": "i128"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact yt_token method with original recovery escrow authorization."
+        },
+        "inverse_index": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "reward_scale": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "max_accounting_rate": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "reward_remainder": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "last_inverse_index": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the deployed accounting edition 3 yt_token contract."
+        },
+        "seize_fraction": {
+          "args": {
+            "caller": "Address",
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Invoke the exact yt_token method with original recovery escrow authorization."
+        }
+      }
+    },
+    "market_pool": {
+      "sourcePath": "contracts/market_pool/src/lib.rs",
+      "sourceSha256": "e31066bf224ab16d58d32d0d2ab2774ecdbefd748abb4fe5a34253b4856a75b8",
+      "methods": {
+        "initialize": {
+          "args": {
+            "issuer": "Address",
+            "c": "MarketConfig"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "configuration": {
+          "args": {},
+          "returns": "MarketConfig",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "reserves": {
+          "args": {},
+          "returns": "MarketState",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "market_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "accounting_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "recovery_escrow": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "manager_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "balance": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "total_supply": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "decimals": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "curve": {
+          "args": {},
+          "returns": "CurveFrame",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_swap": {
+          "args": {
+            "sy_in": "bool",
+            "amount_in": "i128"
+          },
+          "returns": "TradeQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_deposit": {
+          "args": {
+            "max_pt": "i128",
+            "max_sy": "i128"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_withdrawal": {
+          "args": {
+            "shares": "i128"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "swap": {
+          "args": {
+            "from": "Address",
+            "sy_in": "bool",
+            "amount_in": "i128",
+            "min_out": "i128",
+            "expires": "u64"
+          },
+          "returns": "TradeQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "add_liquidity": {
+          "args": {
+            "from": "Address",
+            "max_pt": "i128",
+            "max_sy": "i128",
+            "min_shares": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "remove_liquidity": {
+          "args": {
+            "from": "Address",
+            "shares": "i128",
+            "min_pt": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "transfer": {
+          "args": {
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "set_paused": {
+          "args": {
+            "issuer": "Address",
+            "paused": "bool"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "collect_creator_fees": {
+          "args": {
+            "issuer": "Address"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "collect_protocol_fees": {
+          "args": {
+            "receiver": "Address"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "seize": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "shares": "i128"
+          },
+          "returns": "RecoveryResult",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        }
+      }
+    },
+    "router": {
+      "sourcePath": "contracts/router/src/lib.rs",
+      "sourceSha256": "bade157e3a80ee3d489f92cdb3f5ca403e243b43004ff6b16a114a34cd1e7f19",
+      "methods": {
+        "initialize": {
+          "args": {
+            "issuer": "Address",
+            "pool": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "market_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "configuration": {
+          "args": {},
+          "returns": "MarketConfig",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "router_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_swap": {
+          "args": {
+            "sy_in": "bool",
+            "amount_in": "i128"
+          },
+          "returns": "TradeQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "tokenize": {
+          "args": {
+            "from": "Address",
+            "underlying": "i128",
+            "min_pt": "i128",
+            "min_yt": "i128",
+            "expires": "u64"
+          },
+          "returns": "MintResult",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "swap_sy_for_pt": {
+          "args": {
+            "from": "Address",
+            "sy": "i128",
+            "min_pt": "i128",
+            "expires": "u64"
+          },
+          "returns": "TradeQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "swap_pt_for_sy": {
+          "args": {
+            "from": "Address",
+            "pt": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "TradeQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "buy_pt": {
+          "args": {
+            "from": "Address",
+            "underlying": "i128",
+            "min_pt": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedSwap",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "sell_pt": {
+          "args": {
+            "from": "Address",
+            "pt": "i128",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedSwap",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "add_liquidity": {
+          "args": {
+            "from": "Address",
+            "max_pt": "i128",
+            "max_sy": "i128",
+            "min_shares": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "tokenize_liquidity": {
+          "args": {
+            "from": "Address",
+            "underlying": "i128",
+            "sy_to_mint": "i128",
+            "min_pt": "i128",
+            "min_yt": "i128",
+            "min_shares": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedLiquidity",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "remove_liquidity": {
+          "args": {
+            "from": "Address",
+            "shares": "i128",
+            "min_pt": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "claim_yield": {
+          "args": {
+            "from": "Address",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "redeem": {
+          "args": {
+            "from": "Address",
+            "pt": "i128",
+            "yt": "i128",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "RedeemResult",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "preview_recombine": {
+          "args": {
+            "from": "Address",
+            "amount": "i128"
+          },
+          "returns": "RecombineQuote",
+          "readOnly": true,
+          "description": "Read the configured original manager's paired-exit quote."
+        },
+        "recombine": {
+          "args": {
+            "from": "Address",
+            "amount": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "RecombineQuote",
+          "readOnly": false,
+          "description": "Return principal SY through the same authenticated user with minimum output and expiry."
+        },
+        "recombine_underlying": {
+          "args": {
+            "from": "Address",
+            "amount": "i128",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedRecombine",
+          "readOnly": false,
+          "description": "Atomically recombine and unwrap exact returned SY to underlying, with original custody and minimum output."
+        }
+      }
+    }
+  },
+  "sharedAdminMethods": {},
+  "types": {
+    "MintResult": {
+      "pt_minted": "i128",
+      "yt_minted": "i128"
+    },
+    "RedeemResult": {
+      "underlying_from_pt": "i128",
+      "underlying_from_yt": "i128"
+    },
+    "OracleSample": {
+      "sequence": "u64",
+      "value": "i128",
+      "timestamp": "u64",
+      "observed_at": "u64"
+    },
+    "RecoveryMovement": {
+      "amount": "i128",
+      "backing_credit": "i128",
+      "pending_underlying": "i128",
+      "reward_remainder": "i128"
+    },
+    "YieldPosition": {
+      "balance": "i128",
+      "backing_credit": "i128",
+      "pending": "i128",
+      "current_rate": "i128",
+      "projected_yield": "i128",
+      "last_factor": "i128",
+      "inverse_index": "i128",
+      "last_inverse_index": "i128",
+      "reward_remainder": "i128",
+      "reward_scale": "i128"
+    },
+    "YieldRecovery": {
+      "sequence": "u64",
+      "source_account": "Address",
+      "issuer": "Address",
+      "yt_amount": "i128",
+      "pending_underlying": "i128",
+      "reward_remainder": "i128",
+      "recorded_at": "u64"
+    },
+    "MintPreview": {
+      "sy_shares": "i128",
+      "underlying": "i128",
+      "oracle_rate": "i128",
+      "inverse_index": "i128",
+      "reward_scale": "i128",
+      "original_rate_notional": "i128",
+      "issued_notional": "i128",
+      "issuance_adjustment": "i128"
+    },
+    "MarketConfig": {
+      "manager": "Address",
+      "sy": "Address",
+      "pt": "Address",
+      "yt": "Address",
+      "oracle": "Address",
+      "permissioning": "Address",
+      "underlying": "Address",
+      "risk": "Address",
+      "escrow": "Address",
+      "protocol_receiver": "Address",
+      "maturity": "u64",
+      "anchor_apr": "i128",
+      "strength": "u32",
+      "fee_bps": "u32",
+      "protocol_share_bps": "u32"
+    },
+    "MarketState": {
+      "reserve_pt": "i128",
+      "reserve_sy": "i128",
+      "fee_sy": "i128",
+      "creator_sy": "i128",
+      "lp_supply": "i128",
+      "started_at": "u64",
+      "paused": "bool"
+    },
+    "RecoveryResult": {
+      "shares": "i128",
+      "pt": "i128",
+      "sy": "i128",
+      "underlying": "i128"
+    },
+    "CurveFrame": {
+      "sampled_at": "u64",
+      "remaining": "u64",
+      "oracle_rate": "i128",
+      "sy_rate": "i128",
+      "target_price": "i128",
+      "pt_coefficient": "i128",
+      "sy_coefficient": "i128",
+      "virtual_pt": "i128",
+      "virtual_sy": "i128"
+    },
+    "TradeQuote": {
+      "sy_in": "bool",
+      "amount_in": "i128",
+      "gross_amount_out": "i128",
+      "amount_out": "i128",
+      "fee_in_sy": "bool",
+      "total_fee": "i128",
+      "protocol_fee": "i128",
+      "creator_fee": "i128",
+      "fee_tier_bps": "u32",
+      "reserve_pt": "i128",
+      "reserve_sy": "i128",
+      "lp_supply": "i128",
+      "frame": "CurveFrame"
+    },
+    "LiquidityQuote": {
+      "shares": "i128",
+      "pt": "i128",
+      "sy": "i128"
+    },
+    "RoutedLiquidity": {
+      "deposited_sy": "i128",
+      "minted": "MintResult",
+      "liquidity": "LiquidityQuote"
+    },
+    "RoutedSwap": {
+      "underlying": "i128",
+      "trade": "TradeQuote"
+    },
+    "LiquidityRecovery": {
+      "shares": "i128",
+      "pt": "i128",
+      "sy": "i128",
+      "underlying": "i128"
+    },
+    "RecombineQuote": {
+      "amount": "i128",
+      "sy_shares": "i128",
+      "underlying_allowance": "i128",
+      "underlying_value": "i128",
+      "retained_rounding": "i128",
+      "oracle_rate": "i128",
+      "sy_rate": "i128",
+      "inverse_index": "i128",
+      "pending_yield": "i128",
+      "reward_remainder": "i128",
+      "sampled_at": "u64",
+      "maturity": "u64"
+    },
+    "RoutedRecombine": {
+      "exit": "RecombineQuote",
+      "underlying": "i128"
+    }
+  },
+  "accounting": {
+    "edition": 3,
+    "scale": "10000000",
+    "rounding": "Checked U256 floor/ceil and exact earned numerator carry",
+    "maturity": "First authenticated timely sample at or after maturity, frozen once",
+    "rewardScale": "1000000000000000000000000000000",
+    "supportedOracleRate": {
+      "min": "1",
+      "max": "1000000000000000000"
+    },
+    "inverseRelativeCeilingError": "strictly less than 1e-19 across the supported interval",
+    "issuance": "floor(actual underlying * rewardScale / inverseIndex); preview retains original-rate notional and exact difference",
+    "principal": "floor(burned notional * 1e7 / frozen original rate)",
+    "reserve": "ceil(outstanding PT * frozen/current inverseIndex / rewardScale)",
+    "ordinaryTransfer": "settle both; earned integer and fractional reward stays with original holder",
+    "recovery": "explicit issuer-authorized exact proportional complete earned numerator; full transfer moves exact remainder",
+    "cost": "O(1) account storage and arithmetic; no issuance lot/history scan"
+  },
+  "market": {
+    "edition": 1,
+    "curve": "integer-time-scaled-virtual-constant-product/v1",
+    "accountingEdition": 3,
+    "lpDecimals": 4,
+    "swapFeeAsset": "SY",
+    "tokenizationFee": "Original Manager charges no new tokenization fee",
+    "yieldFee": "Original Manager charges no new yield fee",
+    "deferred": [
+      "YT selling",
+      "mutable fee governance"
+    ],
+    "nativeStatus": "SOURCE_AUTHORED_BUILD_AND_VISUAL_RECEIVING_REQUIRED",
+    "guide": "contracts-source/docs/MARKET_EDITION_1.md",
+    "routerEdition": 2,
+    "recombinationEdition": 1,
+    "pairedExitGuide": "contracts-source/docs/PAIRED_EXIT_EDITION_1.md"
+  },
+  "recombination": {
+    "edition": 1,
+    "returns": "Current principal backing in SY, with explicit minimum; optional original Router unwrap",
+    "earnedYield": "Settled whole and fractional rewards stay with their original holder, including zero YT balance",
+    "rounding": "floor(floor(equal PT/YT amount * 1e7 / current oracle) * 1e7 / wrapper rate)",
+    "loss": "Original custody and principal/pending reserve guards reject atomically; no haircut",
+    "eligibility": "Original global permission, SAC authorization, and both PT/YT per-asset grants",
+    "guide": "contracts-source/docs/PAIRED_EXIT_EDITION_1.md",
+    "nativeStatus": "SOURCE_AUTHORED_BUILD_AND_VISUAL_RECEIVING_REQUIRED"
+  }
+}

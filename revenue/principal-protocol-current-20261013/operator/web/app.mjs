@@ -135,6 +135,9 @@ const accountingViews=[
  ['Deposited underlying · cumulative atoms','principal_manager','total_deposited_underlying',asText],
  ['Principal paid · cumulative atoms','principal_manager','total_paid_principal',asText],
  ['Yield paid · cumulative atoms','principal_manager','total_paid_yield',asText],
+ ['Paired-exit edition','principal_manager','recombination_edition',asText],
+ ['SY returned by paired exits · cumulative shares','principal_manager','total_recombined_shares',asText],
+ ['Returned SY value at exit · cumulative underlying atoms','principal_manager','total_recombined_underlying',asText],
  ['YT accounting edition','yt_token','accounting_edition',asText],
  ['Stored accounting rate','yt_token','accounting_rate',x=>Market.atomText(x,7)],
  ['YT notional reserve view · underlying atoms','yt_token','total_backing_credit',asText],
@@ -222,7 +225,7 @@ function poolOperations(host){
   operationButton('Tokenize an explicit liquidity split','router','tokenize_liquidity'),
   operationButton('Claim current creator fees','market_pool','collect_creator_fees'),
   operationButton('Recover deauthorized LP backing','recovery_escrow','seize_lp')));
- section.append(node('p','Virtual balances influence quotes and cannot be withdrawn. Both swap directions charge SY fees. The current edition leaves existing tokenization and yield accounting unchanged. Pre-maturity recombination, YT selling and fee changes are not available.'));
+ section.append(node('p','Virtual balances influence quotes and cannot be withdrawn. Both swap directions charge SY fees. The current edition leaves existing tokenization and yield accounting unchanged. Paired pre-maturity exits are available from Account positions in the paired-exit source edition. YT selling and fee changes are not available.'));
  host.append(section);
 }
 
@@ -262,6 +265,44 @@ function mintPreview(host,selected){
  host.append(section);
 }
 
+function recombinePreview(host,selected){
+ if(!hasAction('principal_manager','preview_recombine'))return;
+ const key='paired-exit:'+selected,form=draftForm(key),amount=field(form,'Equal PT and YT amount','amount',{value:saved(key,'amount',''),required:true,help:'Exact positive token atoms. The operation burns this amount of each token and returns current principal backing in SY.'});
+ const submit=node('button','Read paired-exit quote');submit.type='submit';form.append(submit);
+ form.addEventListener('submit',e=>{e.preventDefault();handle(async()=>{
+  capture(form,key);const value=amount.value.trim();if(!/^[1-9][0-9]*$/.test(value))throw failure('PAIR_AMOUNT_REQUIRED','Use an exact positive amount held in both PT and YT.');
+  await readSet([['principal_manager','preview_recombine',{from:selected,amount:value}]]);
+ });});
+ const raw=saved(key,'amount','').trim(),row=latestValue('principal_manager','preview_recombine',{from:selected,amount:raw}),q=row?.value;
+ const section=panel('Exit a PT and YT pair before maturity',node('p','Return the pair’s current principal backing without a market trade. Earned yield stays with its original holder and remains claimable after all tokens are burned. Current PT and YT eligibility, fresh rates and complete backing are required.'),form);
+ if(q&&typeof q==='object'){
+  section.append(definitions({'PT and YT burned · each':q.amount,'SY shares returned':q.sy_shares,'Principal allowance · underlying atoms':q.underlying_allowance,'Returned SY value · underlying atoms':q.underlying_value,'Rounding retained in backing · underlying atoms':q.retained_rounding,'Earned yield kept for this holder · underlying atoms':q.pending_yield,'Earned fractional numerator kept':q.reward_remainder,'Oracle rate · scaled integer':q.oracle_rate,'Wrapper rate · scaled integer':q.sy_rate,'Sampled ledger timestamp':q.sampled_at,'Maturity timestamp':q.maturity}),
+   node('p','The quote is one native observation. The exit evaluates rates and eligibility again; retain an explicit minimum and, for a Router route, an expiry. Returned SY is separate from previously earned yield.'),
+   json('Complete original paired-exit quote',row));
+  const assertAmount=value=>{if(amount.value.trim()!==String(value.amount)||saved(key,'amount','').trim()!==String(value.amount))throw failure('PAIR_QUOTE_CHANGED','Read a new quote for the edited pair amount.');};
+  section.append(actions(button('Prepare direct Manager exit to SY',()=>{assertAmount(q);const b=Market.observedBinding(row);assertCurrentBinding(b);chooseAction('principal_manager','recombine',{from:selected,amount:String(q.amount),min_sy:String(q.sy_shares)},b);},true),
+   button('Claim earned yield separately',()=>chooseAction('principal_manager','claim_yield',{from:selected},currentBinding('principal_manager'))),
+   button('Read Router configuration and paired-exit quote',async()=>{assertAmount(q);assertCurrentBinding(Market.observedBinding(row));await readSet([['principal_manager','underlying_address'],['router','configuration'],['router','preview_recombine',{from:selected,amount:String(q.amount)}]]);})));
+  const rq=latestValue('router','preview_recombine',{from:selected,amount:raw}),rc=latestValue('router','configuration'),mu=latestValue('principal_manager','underlying_address'),rv=rq?.value,config=rc?.value;
+  const targets={manager:'principal_manager',sy:'sy_wrapper',pt:'pt_token',yt:'yt_token',oracle:'oracle_adapter',permissioning:'permissioning'};
+  const matches=config&&rv&&Object.entries(targets).every(([field,contract])=>typeof config[field]==='string'&&config[field]===state.config?.contracts?.[contract]?.id)
+   &&typeof mu?.value==='string'&&config.underlying===mu.value&&String(config.maturity)===String(rv.maturity)&&String(config.maturity)===String(q.maturity)&&String(rv.amount)===raw;
+  if(matches){
+   const select=(method,parameters)=>{assertAmount(rv);assertCurrentBinding(Market.observedBinding(row));const b=Market.observedBinding(rq);assertCurrentBinding(b);assertCurrentBinding(Market.observedBinding(rc));assertCurrentBinding(Market.observedBinding(mu));
+    const current=latestValue('router','configuration')?.value;
+    if(Market.canonical(current)!==Market.canonical(config)||current?.underlying!==mu.value||!Object.entries(targets).every(([field,contract])=>current[field]===state.config?.contracts?.[contract]?.id))throw failure('ROUTER_TARGET_CHANGED','Read the selected Router and its source contracts again.');
+    chooseAction('router',method,parameters,b);
+   };
+   section.append(json('Complete bound Router configuration',rc),json('Complete original Router paired-exit quote',rq),
+    definitions({'Router SY shares returned':rv.sy_shares,'Router returned underlying atoms':rv.underlying_value,'Underlying SAC selected by Router':config.underlying}),
+    button('Prepare Router exit to SY with expiry',()=>select('recombine',{from:selected,amount:String(rv.amount),min_sy:String(rv.sy_shares),expires:''})));
+   if(exact(rv.underlying_value)>0n)section.append(button('Prepare Router exit and unwrap to underlying',()=>select('recombine_underlying',{from:selected,amount:String(rv.amount),min_underlying:String(rv.underlying_value),expires:''})));
+   else section.append(node('p','The Router quote returns SY that currently rounds to zero underlying atoms. Use the SY route; the original wrapper rejects a zero-value unwrap.'));
+  }else section.append(node('p','Router shortcuts require its own original quote and configuration matching the selected Manager, SY, PT, YT, oracle, underlying SAC and permissioning contracts. Read those exact Router observations before preparing an atomic unwrap.'));
+ }else section.append(empty('Read the quote for this exact account, pair amount and deployment.'));
+ host.append(section);
+}
+
 function account(host){
  const f=draftForm('account-position'),input=field(f,'Public account or contract address','account',{value:saved('account-position','account',view.selectedAccount??state.config?.sourceAccount?.address??''),required:true});
  const submit=node('button','Read account positions','primary');submit.type='submit';f.append(submit);
@@ -279,6 +320,7 @@ function account(host){
  host.append(panel('Original account selection',node('p',selected,'identifier')),grid);
  accountAccounting(host,selected);
  mintPreview(host,selected);
+ recombinePreview(host,selected);
  host.append(panel('Prepare account operations',node('p','Enter exact raw amounts in the operation form. The selected contracts evaluate current authorization, eligibility and available backing.'),actions(operationButton('Deposit underlying','sy_wrapper','deposit',{from:selected}),operationButton('Withdraw SY','sy_wrapper','withdraw',{from:selected,to:selected}),operationButton('Mint PT and YT','principal_manager','mint',{from:selected}),operationButton('Claim accrued yield','principal_manager','claim_yield',{from:selected}),operationButton('Redeem at maturity','principal_manager','redeem',{from:selected})),actions(operationButton('Transfer PT','pt_token','transfer',{from:selected}),operationButton('Transfer YT','yt_token','transfer',{from:selected}),operationButton('Review PT allowance','pt_token','allowance',{from:selected}),operationButton('Review YT allowance','yt_token','allowance',{from:selected}))));
  const rows=(state.observations??[]).filter(r=>Object.values(r.parameters??{}).includes(selected));
  host.append(panel('Original account observation history',table([...rows].reverse(),[{label:'Action',value:r=>r.actionId},{label:'Time',value:r=>r.createdAt},{label:'Status',value:r=>r.status},{label:'Review',value:r=>button('Open complete original',()=>detail('Account observation',json('Retained original',r,true)))}])));

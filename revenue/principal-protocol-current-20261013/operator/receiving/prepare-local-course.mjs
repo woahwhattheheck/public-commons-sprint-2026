@@ -12,11 +12,11 @@ export async function prepareLocalCourse(argv=process.argv.slice(2)){
  need(path.isAbsolute(opt.directory)&&path.isAbsolute(opt.out),'ABSOLUTE_INPUT_REQUIRED');
  const operationId=opt['operation-id'];
  need(typeof operationId==='string'&&/^[a-zA-Z0-9._:-]{1,160}$/.test(operationId),'OPERATION_ID_REQUIRED');
- const selected=['CONTRACT_API.json','source-files.json','contracts-source/docs/ACCOUNTING_EDITION_3.md','contracts-source/docs/MARKET_EDITION_1.md','native/MARKET_BUILD.md'];
+ const selected=['CONTRACT_API.json','source-files.json','contracts-source/docs/ACCOUNTING_EDITION_3.md','contracts-source/docs/MARKET_EDITION_1.md','contracts-source/docs/PAIRED_EXIT_EDITION_1.md','native/PAIRED_EXIT_BUILD.md'];
  const sources=[];
  for(const relative of selected){const original=await readOriginal(path.join(ROOT,relative));sources.push({relative,...original});}
  const api=JSON.parse(sources[0].data.toString('utf8'));
- need(api.schema==='principal.contract-api.v2'&&api.edition==='principal-market-1-accounting-3','CURRENT_MARKET_SOURCE_REQUIRED');
+ need(api.schema==='principal.contract-api.v2'&&api.edition==='principal-paired-exit-1-market-1-accounting-3','CURRENT_PAIRED_EXIT_SOURCE_REQUIRED');
  const base=path.resolve(opt.directory),tag=hash(bytes({operationId,directory:base})).slice(0,24);
  const producerCommands=sources.map((source,index)=>({
   requestId:tag+'.source.'+index,expectedRevision:index,method:'source.import',
@@ -24,7 +24,7 @@ export async function prepareLocalCourse(argv=process.argv.slice(2)){
         contentBase64:source.data.toString('base64'),bytes:source.descriptor.bytes,sha256:source.descriptor.sha256}
  }));
  producerCommands.push({requestId:tag+'.source-note',expectedRevision:sources.length,method:'note.save',
-  args:{subjectId:'source-edition:'+api.edition,title:'Original market and accounting source selection',
+  args:{subjectId:'source-edition:'+api.edition,title:'Original paired-exit, market and accounting source selection',
    body:'Retained complete installed ABI, source manifest and accounting guide for '+api.edition+
         '. This local source course records no deployed-contract, balance, transaction or native-build result.'}});
  const customerCommands=[{requestId:tag+'.recipient-note',expectedRevision:producerCommands.length,method:'note.save',
