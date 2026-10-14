@@ -103,7 +103,8 @@ function tableInput(file,kind,originals){
  const contextNames=new Set([...textNames.filter(name=>!name.endsWith('.csv')),file.name]);
  const contextFiles=originals.filter(f=>contextNames.has(f.name));
  const sourceIdentity=hash(stable(contextFiles.map(({name,bytes,sha256})=>({name,bytes,sha256}))));
- const parsed=parseCSV(file.text);need(parsed.rejected.length===0,'An original table row has the wrong number of cells');
+ // This adapter edition binds original line numbers into retained event IDs.
+ const parsed=parseCSV(file.text,{lineEndings:'legacy'});need(parsed.rejected.length===0,'An original table row has the wrong number of cells');
  const required=['datetime','sample_datetime','fines_percent','sand_percent','JulianDay','sin2piJD','cos2piJD',...roles[kind].flatMap(r=>[r.column,r.log])];
  need(required.every(h=>parsed.headers.includes(h)),'The selected '+kind.toUpperCase()+' table has a different original column contract');
  need(parsed.rows.length>0,'Original nutrient table is empty');
@@ -141,7 +142,7 @@ function tableInput(file,kind,originals){
   pages:contextFiles.map(f=>({name:f.name,sha:f.sha256,bytes:f.bytes,text:f.text})),
   conventions:clone(metadata),projection:{rows:output.length,originalRows:rows.length,columns:roles[kind].map(r=>r.column),originalWQPSource:false}};
  const input={kind:'wqp',label:'Chiques01575900 '+kind.toUpperCase()+' calibration source — original row/column projection',text,mapping,origin};
- const native=parseSource(input);need(native.rejected.length===0&&native.rows.length===output.length,'The maintained Measurements parser did not retain every projected cell');
+ const native=parseSource({...input,lineEndings:'legacy'});need(native.rejected.length===0&&native.rows.length===output.length,'The maintained Measurements parser did not retain every projected cell');
  const sha256=hash(text),importId=hash(stable([input.kind,sha256,native.mapping]));
  return {kind,sourceFile:file.name,rows,summary:{originalRows:rows.length,projectedRows:output.length,missingValues:output.filter(v=>v.value==='').length,parameters:Object.fromEntries([...new Set(native.rows.map(x=>x.row.parameter))].map(k=>[k,native.rows.filter(x=>x.row.parameter===k).length])),transformDiagnostics:Object.fromEntries([...new Set(rows.flatMap(r=>r.values.map(v=>v.status)))].map(k=>[k,rows.flatMap(r=>r.values).filter(v=>v.status===k).length]))},input:{...input,mapping:native.mapping},sha256,importId,
   records:native.rows.map(({line,row})=>({id:hash(stable([row.sourceKind,row])),line,row}))};

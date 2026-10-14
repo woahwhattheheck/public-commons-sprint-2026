@@ -37,7 +37,7 @@ export function readChiquesCollection(workspace,id){
  const sourcePacket={schema:'commons.eco.original-source-transfer.v1',sourceItem:'65b170a2d34e36a39044c04d',
   files:originals.filter(f=>f.text!==undefined).map(f=>({path:f.path.slice(10),content:f.text,bytes:f.bytes,sha256:f.sha256}))};
  const attachments=originals.filter(f=>f.base64!==undefined).map(f=>({name:f.path.slice(10),base64:f.base64,bytes:f.bytes,sha256:f.sha256}));
- const preparation=prepareChiquesNutrients({sourcePacket,attachments}),expected=previewCollection(workspace,preparation.collection);
+ const preparation=prepareChiquesNutrients({sourcePacket,attachments}),expected=previewCollection(workspace,preparation.collection,{lineEndings:'legacy'});
  need(expected.id===id,'Retained collection differs from its full original projection',409);
  need(stable(expected.files)===stable(document.files),'Retained collection manifest differs',409);
  for(const f of preparation.collection.files){
@@ -52,13 +52,13 @@ export function chiquesOperation(workspace,method,parts,input={}){
  if(method==='GET'&&parts.length===2&&parts[0]==='collections')return readChiquesCollection(workspace,parts[1]);
  if(method==='POST'&&parts.length===1&&parts[0]==='preview'){
   const preparation=input.preparation?verifyChiquesPreparation(input.preparation):prepareChiquesNutrients(input);
-  const preview=previewCollection(workspace,preparation.collection);
+  const preview=previewCollection(workspace,preparation.collection,{lineEndings:'legacy'});
   return {preparation,preview};
  }
  if(method==='POST'&&parts.length===1&&parts[0]==='receive'){
   const preparation=verifyChiquesPreparation(input.preparation);
   need(identifier(input.expectedId),'Keep the original reviewed collection ID');
-  const received=receiveCollection(workspace,{...preparation.collection,expectedId:input.expectedId});
+  const received=receiveCollection(workspace,{...preparation.collection,expectedId:input.expectedId},{lineEndings:'legacy'});
   return {result:received,...readChiquesCollection(workspace,received.id)};
  }
  throw new InputError('Chiques nutrient source operation not found',404);

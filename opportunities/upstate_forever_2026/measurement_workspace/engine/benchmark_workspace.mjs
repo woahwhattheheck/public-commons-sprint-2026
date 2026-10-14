@@ -1,6 +1,6 @@
 /** Additive observed benchmark studies on the original Measurements SQLite owner. */
 import {hash,stable,parseSource} from './normalise.mjs';
-import {InputError,csv} from './parse.mjs';
+import {InputError,csv,SOURCE_LINE_EDITION,sourceLineEndings} from './parse.mjs';
 import {cohortOf,validateDefinition,calculateBenchmark} from './benchmarks.mjs';
 const STUDY='observed-benchmark-study',DRAFT='observed-benchmark-draft',REQUEST='observed-benchmark-request';
 export const BENCHMARK_LIMITS={study_bytes:64*1024*1024,project_bytes:128*1024*1024-64*1024,draft_bytes:4*1024*1024,records:100000};
@@ -20,10 +20,10 @@ function sourceProjection(sources,selection){
  const rows=new Map(),selectedKeys=new Set(),sourceIDs=new Set(selection.source_ids),cohortStations=new Set();let cohort=null;
  for(const source of sources){
   if(!sourceIDs.has(source.id)||!['wqp','usgs-daily'].includes(source.kind)||typeof source.content!=='string'||hash(source.content)!==source.sha)fail('An original benchmark source differs from its declared bytes');
-  const parsed=parseSource({kind:source.kind,text:source.content,mapping:source.mapping});
+  const parsed=parseSource({kind:source.kind,text:source.content,mapping:source.mapping,lineEndings:sourceLineEndings(source.summary)});
   if(hash(stable([source.kind,source.sha,parsed.mapping]))!==source.id||stable(parsed.mapping)!==stable(source.mapping))fail('An original source mapping or identity differs');
   if(stable(parsed.rejected)!==stable(source.rejected))fail('Original rejected source rows were changed or omitted');
-  const summary={rows:parsed.rows.length,rejectedCount:parsed.rejected.length,stationCount:new Set(parsed.rows.map(x=>x.row.stationId||x.row.id)).size,censored:parsed.rows.filter(x=>x.row.censor&&x.row.censor!=='none').length,parameters:{},issues:{}};for(const {row}of parsed.rows){if(row.parameter)summary.parameters[row.parameter]=(summary.parameters[row.parameter]||0)+1;for(const issue of row.issues||[])summary.issues[issue]=(summary.issues[issue]||0)+1;}if(stable(summary)!==stable(source.summary))fail('Original source parse accounting differs');
+  const summary={rows:parsed.rows.length,rejectedCount:parsed.rejected.length,stationCount:new Set(parsed.rows.map(x=>x.row.stationId||x.row.id)).size,censored:parsed.rows.filter(x=>x.row.censor&&x.row.censor!=='none').length,parameters:{},issues:{}};if(parsed.kind!=='usgs-daily'&&parsed.lineEndings==='physical')summary.sourceLineEdition=SOURCE_LINE_EDITION;for(const {row}of parsed.rows){if(row.parameter)summary.parameters[row.parameter]=(summary.parameters[row.parameter]||0)+1;for(const issue of row.issues||[])summary.issues[issue]=(summary.issues[issue]||0)+1;}if(stable(summary)!==stable(source.summary))fail('Original source parse accounting differs');
   for(const p of source.origin?.pages||[])if(typeof p.text!=='string'||hash(p.text)!==p.sha)fail('An original provider page differs');
   for(const {line,row}of parsed.rows){
    const sameCohort=cohortId(row)===selection.cohort_id;if(sameCohort){cohort=cohortOf(row);cohortStations.add(row.stationId);}

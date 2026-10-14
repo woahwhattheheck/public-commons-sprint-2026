@@ -12,7 +12,7 @@ import {execFileSync} from 'node:child_process';
 import {DatabaseSync,backup} from 'node:sqlite';
 import {MeasurementWorkspace} from './workspace.mjs';
 import {hash,stable,parseSource} from './normalise.mjs';
-import {InputError,csv} from './parse.mjs';
+import {InputError,csv,SOURCE_LINE_EDITION,sourceLineEndings} from './parse.mjs';
 import {materializeOriginals} from './large_sources.mjs';
 import {ensureSourceSchema,sourceChunks,normalizedCSV,intakeRoot,intakeStatus} from './large_intake.mjs';
 import {CHUNK,identifier,atomicJSON,readJSON,fileChunks,fileDigest,copyVerified,withDirectoryLock,writeAll,listFiles,safePath} from './large_io.mjs';
@@ -218,7 +218,7 @@ export function validateReceived(directory){
    imports++;expected.exec('DELETE FROM stations;DELETE FROM counts;DELETE FROM rejected');let accepted=0,rejected=0,censored=0,mapping;
    const digest=createHash('sha256');for(const b of sourceChunks(facade,source))digest.update(b);if(digest.digest('hex')!==source.sha)throw new InputError('Original source checksum differs');
    let stream;
-   if(['wqp','stations'].includes(source.kind))stream=normalizedCSV(sourceChunks(facade,source),source.kind,JSON.parse(source.mapping));
+   if(['wqp','stations'].includes(source.kind))stream=normalizedCSV(sourceChunks(facade,source),source.kind,JSON.parse(source.mapping),{lineEndings:sourceLineEndings(JSON.parse(source.summary))});
    else if(source.kind==='usgs-daily'){
     const parsed=parseSource({kind:source.kind,text:Buffer.concat([...sourceChunks(facade,source)]).toString('utf8'),mapping:JSON.parse(source.mapping)});
     stream=[{type:'header',mapping:parsed.mapping},...parsed.rows.map(x=>({type:'row',...x})),...parsed.rejected.map(entry=>({type:'rejected',category:1,entry}))];
@@ -229,7 +229,7 @@ export function validateReceived(directory){
     accepted++;const row=item.row;station.run(row.stationId||row.id);if(row.parameter)count.run('parameter',row.parameter);if(row.censor&&row.censor!=='none')censored++;for(const issue of row.issues||[])count.run('issue',issue);
     if(source.kind!=='stations'){const id=hash(stable([row.sourceKind,row]));saveRecord.run(id,stable(row));saveLink.run(source.id,id,item.line);}
    }
-   const summary={rows:accepted,rejectedCount:rejected,stationCount:expected.prepare('SELECT COUNT(*) n FROM stations').get().n,censored,parameters:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='parameter'").iterate().map(x=>[x.key,x.n])),issues:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='issue'").iterate().map(x=>[x.key,x.n]))};
+   const summary={...(source.kind!=='usgs-daily'&&sourceLineEndings(JSON.parse(source.summary))==='physical'?{sourceLineEdition:SOURCE_LINE_EDITION}:{}),rows:accepted,rejectedCount:rejected,stationCount:expected.prepare('SELECT COUNT(*) n FROM stations').get().n,censored,parameters:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='parameter'").iterate().map(x=>[x.key,x.n])),issues:Object.fromEntries(expected.prepare("SELECT key,n FROM counts WHERE kind='issue'").iterate().map(x=>[x.key,x.n]))};
    if(hash(stable([source.kind,source.sha,mapping]))!==source.id||stable(summary)!==stable(JSON.parse(source.summary)))throw new InputError('Native source identity or parse accounting differs');
    const chunked=names.includes('source_chunks')&&db.prepare('SELECT 1 FROM source_chunks WHERE import_id=? LIMIT 1').get(source.id);
    const actualRejected=chunked?db.prepare('SELECT data FROM source_rejections WHERE import_id=? ORDER BY category,sequence').iterate(source.id):JSON.parse(source.rejected).map(data=>({data:JSON.stringify(data)}));
