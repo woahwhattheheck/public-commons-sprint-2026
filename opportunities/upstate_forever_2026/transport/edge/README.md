@@ -183,3 +183,10 @@ Provider operation limits are documented at
 https://developers.cloudflare.com/durable-objects/platform/pricing/ .
 This mode uses permitted compute and retains existing stored data; it does not
 represent renewed write quota or durable edge connection state.
+
+### Successful control response identity
+
+Successful request status, input ACK and seal responses include the original
+`X-Eco-Request-ID` before their metadata body. A client can persist acknowledged
+sealing from the matching successful response headers before reading optional
+JSON; an interrupted body therefore cannot cause the same File to be restaged.
