@@ -232,7 +232,7 @@ def download(port: int, token: str, ticket: Mapping, destination,
     selected_transport = _transport(port, token, transport)
     destination = Path(destination).absolute()
     _fs.native_path(destination.parent).mkdir(parents=True, exist_ok=True)
-    destination = destination.parent.resolve(strict=True) / destination.name
+    destination = _fs.native_path(destination.parent).resolve(strict=True) / destination.name
     name_key = hashlib.sha256(destination.name.encode("utf-8")).hexdigest()[:24]
     bank = destination.parent / (".upstate-download-" + name_key)
     lock = destination.parent / (".upstate-download-" + name_key + ".lock")
@@ -383,7 +383,7 @@ def receive_cohort(port: int, token: str, tickets: list, directory,
     selected_transport = _transport(port, token, transport)
     if not isinstance(tickets, list) or not tickets:
         raise ValueError("Select a nonempty complete download cohort")
-    directory = Path(directory).absolute()
+    directory = _fs.native_path(Path(directory).absolute())
     _fs.native_path(directory).mkdir(parents=True, exist_ok=True)
     if directory.is_symlink():
         raise ValueError("Select an ordinary receiving directory")

@@ -21,10 +21,10 @@ import uuid
 
 APP = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(APP))
-from model.common import atomic_json, canonical, identifier, read_json
+from model.common import canonical, identifier, read_json
 from model import portable_fs as _fs
 from model.retained_download import (OperatorTransport, download as receive_download,
-                                     receive_cohort)
+                                     receive_cohort, atomic_json)
 from model.staged_transport import stage_file, StagedPending
 
 MAX_JSON = 4 * 1024 * 1024
