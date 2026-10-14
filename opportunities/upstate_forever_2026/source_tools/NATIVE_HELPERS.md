@@ -92,3 +92,12 @@ No browser views or scientific report templates are changed by this component.
 ## Native Windows source join
 
 The original C++ helpers now use the native UTF-16 `wmain` entry point on Windows. Both explicit GNU/Clang developer compiler routes therefore add `-municode` on Windows. Release execution uses the bundled programs directly. This caller change is composed with the complete C++ source from commit `2c9eb08a2324eafa9fbd8088f98ce4a63ef5615c`; Linux and macOS compiler arguments retain their existing entry point.
+
+## Complete retained source inventories
+
+The native build producer records `source_files` for each executable, including the
+original C++ translation unit and every recursive local header. When supplied, the
+resolver verifies every contained path, byte count and SHA256, rejects duplicate
+records, and requires the original translation unit with a consistent identity.
+The manifest SHA256 in helper provenance binds this complete inventory. Existing
+manifest editions without `source_files` retain the original single-source check.
