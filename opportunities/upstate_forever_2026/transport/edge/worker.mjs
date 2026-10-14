@@ -593,9 +593,10 @@ export class EcoRelay {
     const match=path.match(/^\/_eco\/v1\/requests\/([A-Za-z0-9_-]{8,128})\/(status|input|seal|result)$/);
     if(match) {
       const [,id,action]=match;this.require(id);
-      if(action==="status"&&method==="GET")return json(metadata(this.require(id)));
-      if(action==="input"&&method==="PUT")return json(await this.input(id,offsetOf(url),await readLimited(request,CHUNK_BYTES),request.headers.get("x-chunk-sha256")));
-      if(action==="seal"&&method==="POST")return json(this.seal(id,await readJSON(request)));
+      const controlHeaders={"X-Eco-Request-ID":id};
+      if(action==="status"&&method==="GET")return json(metadata(this.require(id)),200,controlHeaders);
+      if(action==="input"&&method==="PUT")return json(await this.input(id,offsetOf(url),await readLimited(request,CHUNK_BYTES),request.headers.get("x-chunk-sha256")),200,controlHeaders);
+      if(action==="seal"&&method==="POST")return json(this.seal(id,await readJSON(request)),200,controlHeaders);
       if(action==="result"&&method==="GET")return this.result(id);
       problem(405,"RELAY_METHOD","Use the documented recipient method.");
     }
