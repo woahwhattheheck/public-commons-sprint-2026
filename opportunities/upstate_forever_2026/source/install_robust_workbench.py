@@ -1557,6 +1557,12 @@ ALLOWED = ALLOWED | frozenset({
     "receiving/eco_intelligence/receive_input_lineage.py",
 })
 
+# Complete selected own-data source interpretation and receiving leaves.
+ALLOWED = ALLOWED | frozenset({
+    "operator/web/profile_workbench.css",
+    "operator/web/profile_workbench.mjs",
+})
+
 HASH = re.compile(r"[0-9a-f]{64}")
 PREIMAGE_KEYS = ("before_sha256", "base_sha256", "replaces_sha256")
 PACKAGE_ROOT = "model/robust_decisions/"

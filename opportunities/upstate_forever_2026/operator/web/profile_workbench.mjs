@@ -231,7 +231,7 @@ export function createProfileWorkbench(host) {
           expand({field:row.field+'.'+name,before:object(row.before)?row.before[name]:undefined,after:object(row.after)?row.after[name]:undefined});
       }else rows.push(row);
     };diffRows(diff,fallback).forEach(expand);
-    return rows.length?'<div class="pw-table-scroll" tabindex="0" aria-label="Scientific parameter changes"><table><thead><tr><th>Changed field</th><th>Reference</th><th>Revision</th></tr></thead><tbody>'+rows.map(row=>'<tr><th scope="row">'+esc(diffLabel(row.field))+'</th><td>'+diffValue(row.before,row.field)+'</td><td>'+diffValue(row.after,row.field)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="pw-note">No coefficient or native parameter values differ.</p>';
+    return rows.length?'<p class="pw-diff-scroll-hint">Scroll the table horizontally to compare the reference and revision.</p><div class="pw-table-scroll pw-diff-scroll" tabindex="0" role="region" aria-label="Scientific parameter changes"><table><thead><tr><th scope="col">Changed field</th><th scope="col">Reference</th><th scope="col">Revision</th></tr></thead><tbody>'+rows.map(row=>'<tr><th scope="row">'+esc(diffLabel(row.field))+'</th><td>'+diffValue(row.before,row.field)+'</td><td>'+diffValue(row.after,row.field)+'</td></tr>').join('')+'</tbody></table></div>':'<p class="pw-note">No coefficient or native parameter values differ.</p>';
   }
   function coverageHTML(coverage){
     const grids=list(coverage.grids),scenarios=list(coverage.scenarios),codes=list(coverage.lucodes);
