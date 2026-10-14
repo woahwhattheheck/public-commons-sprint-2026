@@ -157,6 +157,10 @@ class ClientMeasurementSources:
                         _, _, _, item, part = self._selected(ws, {
                             "source_collection_id": collection["id"], "source_id": entry["id"]})
                         preview = {"format": item["inspection"]["format"], "part": part}
+                    else:
+                        from model.client_source_inspection_report import retained_table_preview
+                        need(retained_table_preview(ws, entry) is not None,
+                             "Retain the original native worksheet evidence before preparing it.")
                     entries.append({"source_collection_id": collection["id"], "source_id": entry["id"],
                                     "title": entry["title"], "sheet": entry.get("sheet"),
                                     "filename": entry["client_source"]["filename"],

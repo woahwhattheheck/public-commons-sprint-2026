@@ -1,7 +1,8 @@
 /** Original workbook bytes and reversible worksheet lineage in the existing store. */
 import {createHash} from 'node:crypto';
 import {InputError,parseCSV} from './parse.mjs';
-export const LINEAGE_SCHEMA='upper-savannah-measurement-source-lineage/v1';
+export const LINEAGE_SCHEMA='upper-savannah-measurement-source-lineage/v2';
+const LEGACY_LINEAGE_SCHEMA='upper-savannah-measurement-source-lineage/v1';
 const digest=raw=>createHash('sha256').update(raw).digest('hex');
 const object=x=>x&&typeof x==='object'&&!Array.isArray(x);
 const sha=x=>typeof x==='string'&&/^[a-f0-9]{64}$/.test(x);
@@ -35,7 +36,7 @@ function position(value){
     'An original worksheet row or physical source-line range changed.');
 }
 export function validateLineage(value,text,originals){
-  need(object(value)&&value.schema===LINEAGE_SCHEMA,'Unknown original worksheet lineage.');
+  need(object(value)&&[LEGACY_LINEAGE_SCHEMA,LINEAGE_SCHEMA].includes(value.schema),'Unknown original worksheet lineage.');
   for(const key of ['project_id','source_id']) {
     need(typeof value[key]==='string'&&value[key].length>0,'The original source '+key+' is missing.');
   }
@@ -58,7 +59,8 @@ export function validateLineage(value,text,originals){
   need(object(derived)&&derived.format==='csv'&&sha(derived.sha256)&&integer(derived.bytes)&&typeof derived.filename==='string',
     'The complete derived worksheet identity is missing.');
   need(typeof text==='string'&&Buffer.byteLength(text)===derived.bytes&&digest(text)===derived.sha256,'The selected worksheet text changed.');
-  const parsed=parseCSV(text);
+  // Saved v1 projections retain their historical LF-only quoted-cell positions.
+  const parsed=parseCSV(text,{lineEndings:value.schema===LEGACY_LINEAGE_SCHEMA?'legacy':'physical'});
   need(parsed.rejected.length===0,'The mechanical worksheet projection has malformed native CSV rows.');
   need(Array.isArray(value.columns)&&value.columns.length===parsed.headers.length,'The complete original column map is missing.');
   const ids=new Set();

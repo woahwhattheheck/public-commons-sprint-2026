@@ -16,7 +16,7 @@ from pathlib import Path
 from .client_source_files import need, options, scalar, table_records
 from .common import file_digest
 
-SCHEMA = "upper-savannah-measurement-source-lineage/v1"
+SCHEMA = "upper-savannah-measurement-source-lineage/v2"
 MAX_REQUEST = 128 * 1024 * 1024
 
 
@@ -64,6 +64,11 @@ def _identifier_text(value, metadata, row, column):
     return str(int(value)).zfill(len(mask))
 
 
+def _physical_line_breaks(value):
+    """Count CR, LF and CRLF once, including line breaks inside quoted cells."""
+    return value.count("\n") + value.count("\r") - value.count("\r\n")
+
+
 def project_worksheet(path, *, sheet, reading, original, project_id,
                       source_collection_id, source_id, inspection_id, identifier_fields=None):
     path = Path(path)
@@ -104,7 +109,7 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
     stream = io.StringIO(newline="")
     writer = csv.writer(stream, lineterminator="\r\n")
     writer.writerow([column["transport_column"] for column in columns])
-    current_line = stream.getvalue().count("\n") + 1
+    current_line = _physical_line_breaks(stream.getvalue()) + 1
     rows, excluded = [], []
     records = table_records(path, opts, sheet)
     formulas = table_records(path, {**opts, "formula_mode": "formulas"}, sheet) \
@@ -151,7 +156,7 @@ def project_worksheet(path, *, sheet, reading, original, project_id,
             encoded_row = item.getvalue()
             stream.write(encoded_row)
             rows.append({"line": current_line, **position})
-            current_line += encoded_row.count("\n")
+            current_line += _physical_line_breaks(encoded_row)
             need(stream.tell() <= MAX_REQUEST,
                  "The full selected worksheet exceeds the original preparation route; its complete original remains retained.")
     finally:
