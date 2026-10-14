@@ -1,0 +1,25 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "original-table-explorer",
+  "source_reference": "ECO-SOURCE-ROWS-7F24/2026-10-14",
+  "components": {
+    "original-table-explorer": {
+      "paths": [
+        "model/client_source_rows.py",
+        "operator/client_source_intake.py",
+        "operator/extensions/client-source-intake.json",
+        "operator/web/client_source_rows.mjs",
+        "operator/web/client_source_intake.mjs",
+        "operator/web/client_source_intake.css",
+        "operator/CLIENT_SOURCE_INTAKE.md",
+        "integration/component_fragments/original-table-explorer.json"
+      ],
+      "requires": [
+        "core"
+      ]
+    }
+  },
+  "required_components": [
+    "original-table-explorer"
+  ]
+}

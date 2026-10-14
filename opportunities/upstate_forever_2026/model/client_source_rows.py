@@ -36,6 +36,9 @@ def _row(record, header_row):
         if source in record:
             result[target] = [scalar(value) if source == "stored_values" else value
                               for value in record[source]]
+    result["search_values"] = [str(value) for value in
+                               result["cells"] + result.get("stored_cells", [])
+                               if value is not None]
     return result
 
 
@@ -59,7 +62,7 @@ def read_rows(path, reading, sheet=None, *, start_row=None, page_size=PAGE_SIZE,
     limit = _integer(page_size, "rows per page", 1, MAX_PAGE_SIZE)
     need(isinstance(query, str) and len(query) <= 2000, "Enter a search of up to 2,000 characters.")
     need(type(case_sensitive) is bool, "Choose an explicit case-sensitive search setting.")
-    needle = query if case_sensitive else query.casefold()
+    needle = query if case_sensitive else query.lower()
     rows, fields, last_seen, more, body_bytes = [], None, 0, False, 0
     if start <= opts["header_row"]:
         header_reader = table_records(path, opts, sheet)
@@ -79,9 +82,8 @@ def read_rows(path, reading, sheet=None, *, start_row=None, page_size=PAGE_SIZE,
                 continue
             row = _row(original, opts["header_row"])
             if needle:
-                values = row["cells"] + row.get("stored_cells", [])
-                if not any(needle in (str(value) if case_sensitive else str(value).casefold())
-                           for value in values if value is not None):
+                if not any(needle in (value if case_sensitive else value.lower())
+                           for value in row["search_values"]):
                     continue
             if len(rows) == limit:
                 more = True
@@ -160,7 +162,7 @@ def _offline_end(stream, fields):
     marker = "export function createOriginalTableReader"
     need(marker in source, "The complete original-table reader module is missing.")
     renderer = source.split(marker, 1)[0].replace("export function originalRowsTable", "function originalRowsTable")
-    script = "\nconst meta=JSON.parse(document.querySelector('#source-selection').textContent);\nconst lines=document.querySelector('#source-rows').textContent.trim().split('\\n').filter(Boolean);\nconst fields=JSON.parse(document.querySelector('#source-fields').textContent);\nconst q=s=>document.querySelector(s);\nlet start=0,matching=null;\nfunction selected(){if(matching)return matching;return Array.from({length:lines.length},(_,i)=>i);}\nfunction draw(){\n const indices=selected(),page=indices.slice(start,start+100).map(i=>JSON.parse(lines[i]));\n q('#table').innerHTML=originalRowsTable({rows:page,fields},q('#mode').value);\n q('#status').textContent=indices.length+' matching original records of '+lines.length+'; showing '+(page.length?start+1:0)+'–'+(start+page.length)+'.';\n q('#previous').disabled=start===0;q('#next').disabled=start+100>=indices.length;\n}\nq('#search').addEventListener('submit',e=>{\n e.preventDefault();const text=q('#query').value,needle=q('#case').checked?text:text.toLocaleLowerCase();\n matching=needle?lines.map((line,i)=>[JSON.parse(line),i]).filter(([r])=>\n  [...r.cells,...(r.stored_cells||[])].some(value=>value!==null&&(q('#case').checked?String(value):String(value).toLocaleLowerCase()).includes(needle))).map(([,i])=>i):null;\n start=0;draw();\n});\nq('#previous').addEventListener('click',()=>{start=Math.max(0,start-100);draw();});\nq('#next').addEventListener('click',()=>{start+=100;draw();});\nq('#mode').addEventListener('change',draw);\ndraw();\n"
+    script = "\nconst meta=JSON.parse(document.querySelector('#source-selection').textContent);\nconst lines=document.querySelector('#source-rows').textContent.trim().split('\\n').filter(Boolean);\nconst fields=JSON.parse(document.querySelector('#source-fields').textContent);\nconst q=s=>document.querySelector(s);\nlet start=0,matching=null;\nfunction selected(){if(matching)return matching;return Array.from({length:lines.length},(_,i)=>i);}\nfunction draw(){\n const indices=selected(),page=indices.slice(start,start+100).map(i=>JSON.parse(lines[i]));\n q('#table').innerHTML=originalRowsTable({rows:page,fields},q('#mode').value);\n q('#status').textContent=indices.length+' matching original records of '+lines.length+'; showing '+(page.length?start+1:0)+'–'+(start+page.length)+'.';\n q('#previous').disabled=start===0;q('#next').disabled=start+100>=indices.length;\n}\nq('#search').addEventListener('submit',e=>{\n e.preventDefault();const text=q('#query').value,needle=q('#case').checked?text:text.toLowerCase();\n matching=needle?lines.map((line,i)=>[JSON.parse(line),i]).filter(([r])=>\n  r.search_values.some(value=>(q('#case').checked?value:value.toLowerCase()).includes(needle))).map(([,i])=>i):null;\n start=0;draw();\n});\nq('#previous').addEventListener('click',()=>{start=Math.max(0,start-100);draw();});\nq('#next').addEventListener('click',()=>{start+=100;draw();});\nq('#mode').addEventListener('change',draw);\ndraw();\n"
     stream.write('</script><script id="source-fields" type="application/json">' +
                  _json_html(fields) + '</script><script>' + renderer + script +
                  '</script></html>')
