@@ -26,6 +26,16 @@ Choose **Save reviewed scientific source edition**. Its native result exposes th
 
 ## Retention and reopening
 
+### Reuse familiar table headings
+
+For a selected biophysical table, open **Save or reuse column mapping**. After choosing the original parameter columns, name the mapping and choose **Save named mapping**. The mapping retains the complete original header list, filename, worksheet and original inspection/file identities. It is included in the existing complete working-file download and returns when that working file is reopened against its original saved inspection.
+
+On another inspected table, choose its scientific role and model selection, then choose a saved mapping. The preview compares exact original header text with every current header. Reordered unique columns follow their names rather than old positional column IDs. Missing, blank or duplicate headings require manual selection; the application never guesses which duplicate has the intended meaning. The preview lists the selected model's required fields that would remain unmapped.
+
+**Apply matching columns** replaces the entire current parameter mapping with the unambiguous matches and retains the previous full working selection in its history. It keeps the new source's models, units, references, reading choices and other scientific fields. It clears confirmation so the scientist reviews the new values and meaning before saving a source edition. Reuse does not import old coefficients or run a model. Earlier working files without saved mappings remain readable.
+
+
+
 Every original is stored in the existing content store. Every inspection and committed edition is an original queued operation. Retrying identical selections reuses the same deterministic operation identity; a changed interpretation produces a new request and immutable source edition. Required files and hashes are verified before completed state is published and again on reuse. A completed edition includes the exact interpretation, source manifest, selected native projection and every raw original.
 
 Working browser choices are saved per Workspace in the current tab’s session storage. Download the complete working JSON before closing the tab when those unfinished choices matter; native saved files and operations are durable separately. Storage failure leaves the complete valid working state editable and downloadable. An unreadable prior browser copy remains unchanged with an exact download. Opening another source interpretation or working file retains prior complete selections in the working-copy history. All saved/imported/exported working documents use one exact pretty-printed UTF-8 representation and a 64 MiB capacity; prior work is never evicted to make room.
@@ -43,6 +53,7 @@ Copy the complete additive files into the corresponding current application path
 - model/client_source_files.py
 - operator/client_source_intake.py
 - operator/web/client_source_intake.mjs
+- operator/web/client_source_mapping.mjs
 - operator/web/client_source_intake.css
 - operator/extensions/client-source-intake.json
 - operator/CLIENT_SOURCE_INTAKE.md

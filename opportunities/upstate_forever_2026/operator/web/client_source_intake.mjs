@@ -1,11 +1,13 @@
 /** Guided original-file intake in the maintained scientific operator. */
+import {validateMappingLibrary, createMappingTemplate, verifyMappingTemplate,
+  previewMappingTemplate, applyMappingTemplate} from './client_source_mapping.mjs';
 const clone = value => JSON.parse(JSON.stringify(value));
 const esc = value => String(value ?? '').replace(/[&<>"']/g, x => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[x]));
 const arr = value => Array.isArray(value) ? value : [];
 const keyPattern = /^[0-9a-f]{64}$/;
 const same = (a,b) => JSON.stringify(a) === JSON.stringify(b);
 const fresh = () => ({schema:'upstate.client-source-draft/v1',title:'',uploads:[],inspection_id:null,
-  selections:[],requests:[],selected_task:null,selected_result:null,workspace_key:null,recovery:[]});
+  selections:[],requests:[],selected_task:null,selected_result:null,workspace_key:null,recovery:[],mapping_templates:[],mapping_reuse:{}});
 const canonical = value => Array.isArray(value) ? '['+value.map(canonical).join(',')+']' :
   value && typeof value==='object' ? '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}' : JSON.stringify(value);
 const hash = async raw => [...new Uint8Array(await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw)))].map(x=>x.toString(16).padStart(2,'0')).join('');
@@ -62,6 +64,13 @@ function validateDraft(value,expectedWorkspace=null,withRecovery=true){
     }
   }
   need(!value.selections.length||value.inspection_id!==null,'Source choices require their original inspection.');
+  validateMappingLibrary(value.mapping_templates??[]);
+  need(object(value.mapping_reuse??{}),'The saved mapping choices are invalid.');
+  for(const [identity,form] of Object.entries(value.mapping_reuse??{})){
+    need(/^[0-9a-f]{64}:\d+:\d+$/.test(identity)&&object(form)&&typeof form.name==='string'&&form.name.length<=160&&
+      (form.selected_id===''||keyPattern.test(form.selected_id)),'A saved mapping form is invalid.');
+    need(!form.selected_id||(value.mapping_templates??[]).some(item=>item.id===form.selected_id),'A selected saved mapping is missing from the complete working copy.');
+  }
   for(const x of value.requests){
     need(object(x)&&/^client-source-[0-9a-f]{64}$/.test(x.id)&&typeof x.key==='string'&&
       ['client-source.inspect','client-source.commit'].includes(x.action)&&object(x.payload),'An original request identity is missing.');
@@ -78,7 +87,7 @@ function validateDraft(value,expectedWorkspace=null,withRecovery=true){
     }
   }
   encoded(value);
-  return clone(value);
+  return clone({...value,mapping_templates:value.mapping_templates??[],mapping_reuse:value.mapping_reuse??{}});
 }
 function preserveWorking(candidate,previous,reason){
   const history=[...candidate.recovery,...previous.recovery];
@@ -87,6 +96,15 @@ function preserveWorking(candidate,previous,reason){
   if(!history.some(row=>row.raw===raw))history.push({raw,reason,saved_at:new Date().toISOString()});
   const unique=new Map(history.map(row=>[row.raw,row]));
   return validateDraft({...candidate,recovery:[...unique.values()]},candidate.workspace_key);
+}
+function readingRecipe(uploads){
+  return canonical(uploads.map(file=>({id:file.id,filename:file.filename,sha256:file.sha256,bytes:file.bytes,
+    options:{encoding:file.options.encoding,header_row:file.options.header_row,
+      formula_mode:file.options.formula_mode,...(file.options.delimiter?{delimiter:file.options.delimiter}:{})}})));
+}
+function inspectedUploads(value){
+  return value.files.map(file=>({id:file.upload_id,filename:file.filename,
+    sha256:file.original.sha256,bytes:file.original.bytes,options:clone(file.options)}));
 }
 export function createClientSourceIntake(host){
   let root=null,workspace=null,state=null,generation=0,busy=false,notice='',problem='',storageProblem='';
@@ -145,6 +163,8 @@ export function createClientSourceIntake(host){
     need(value?.action==='client-source.inspect'&&value.id===candidate.inspection_id&&value.project_id===catalog?.project_id,
       'The retained inspection does not match this original Workspace.');
     need(value.state==='complete'&&Array.isArray(value.files),'Wait for the complete original inspection.');
+    need(!candidate.uploads.length||readingRecipe(candidate.uploads)===readingRecipe(inspectedUploads(value)),
+      'The selected files or reading choices differ from this inspection. Inspect the current files, or deliberately reopen the retained original result.');
     for(const choice of candidate.selections){
       const file=value.files[choice.file_index],part=file?.inspection?.parts?.[choice.part_index];
       need(part&&!file.error&&!part.error&&roles[part.kind]?.includes(choice.role),'A saved choice does not match an inspected original part.');
@@ -163,17 +183,33 @@ export function createClientSourceIntake(host){
     q('[data-ci-storage]').textContent=storageProblem;
     q('[data-ci-invalid]').hidden=invalidRaw===null;
     q('[data-ci-recovery-count]').textContent=draft.recovery.length+' previous working selections retained in the complete download.';
-    root.querySelectorAll('[data-ci-mutating]').forEach(el=>el.disabled=busy);
+    root.querySelectorAll('[data-ci-mutating]').forEach(el=>el.disabled=busy||el.hasAttribute('data-ci-unavailable'));
   }
   function download(raw,name,type='application/json'){
     const url=URL.createObjectURL(new Blob([raw],{type})),a=document.createElement('a');
     a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   }
   function documentCopy(){return encoded(draft);}
+  function applyChoices(candidate){
+    validateDraft(candidate,workspace);
+    const changed=readingRecipe(candidate.uploads)!==readingRecipe(draft.uploads);
+    if(changed){
+      if(draft.inspection_id||draft.selections.length)
+        candidate=preserveWorking(candidate,draft,'Changed original files or reading choices');
+      candidate.inspection_id=null;candidate.selections=[];
+      if(candidate.selected_result===inspection?.id||candidate.selected_result===draft.inspection_id)
+        candidate.selected_result=null;
+      if(candidate.selected_task===draft.inspection_id)candidate.selected_task=null;
+      inspection=null;reading++;
+      notice='Files or reading choices changed. Inspect the current selection and review its source meaning before saving. Previous choices remain in the complete working copy.';
+    }
+    draft=validateDraft(candidate,workspace);retain();problem='';
+    if(changed){renderInspection();renderChoices();}
+    messages();
+  }
   function saveChange(change){
     if(busy)throw Error('Wait for this original intake operation to return.');
-    const candidate=clone(draft);change(candidate);validateDraft(candidate,workspace);
-    draft=candidate;retain();problem='';messages();
+    const candidate=clone(draft);change(candidate);applyChoices(candidate);
   }
   function option(value,label,selected){return '<option value="'+esc(value)+'"'+(value===selected?' selected':'')+'>'+esc(label)+'</option>';}
   function inputField(label,field,value,type='text',extra=''){
@@ -309,6 +345,30 @@ export function createClientSourceIntake(host){
         inputField('Converted target units','conversion.target_units',choice.conversion?.target_units??'')+
         inputField('Conversion source / reference','conversion.reference',choice.conversion?.reference??''))+'</div></fieldset>';
   }
+  const mappingKey = choice => draft.inspection_id+':'+choice.file_index+':'+choice.part_index;
+  function mappingForm(choice){return draft.mapping_reuse[mappingKey(choice)]||{name:'',selected_id:''};}
+  function savedMappingControls(choice,part){
+    const form=mappingForm(choice),template=draft.mapping_templates.find(item=>item.id===form.selected_id);
+    const preview=template?previewMappingTemplate(template,part,requiredFields(choice)||[]):null;
+    const status={matched:'Matching original header', 'missing-header':'Missing from this file',
+      'blank-original-header':'Blank original header — choose manually',
+      'ambiguous-original-header':'Repeated original header — choose manually',
+      'ambiguous-current-header':'Repeated current header — choose manually'};
+    return '<details class="ci-reuse"'+(template?' open':'')+'><summary>Save or reuse column mapping'+
+      (draft.mapping_templates.length?' · '+draft.mapping_templates.length+' saved':'')+'</summary>'+
+      '<p>Reuse named column choices when another table uses familiar headings. Review the new file’s values, units and scientific meaning before saving its source edition.</p>'+
+      '<div class="ci-fields"><label><span>Name for these column choices</span><input type="text" maxlength="160" data-ci-mapping-name value="'+esc(form.name)+'" data-ci-mutating></label>'+
+      '<div class="ci-actions">'+actionButton('mapping-save','Save named mapping','data-ci-mutating')+'</div></div>'+
+      (draft.mapping_templates.length?'<label><span>Saved column mapping</span><select data-ci-mapping-selection data-ci-mutating>'+option('','Choose a saved mapping',form.selected_id)+
+        draft.mapping_templates.map(item=>option(item.id,item.name+' — '+item.source.filename+' / '+item.source.part_name,form.selected_id)).join('')+'</select></label>':'<p>No named mapping saved yet. Choose the parameter columns below, give the mapping a name and save it here.</p>')+
+      (preview?'<p><strong>'+esc(template.name)+'</strong> · '+esc(template.source.filename)+' / '+esc(template.source.part_name)+
+        '. '+preview.matched+' of '+preview.rows.length+' saved columns match this file unambiguously.</p>'+
+        '<div class="ci-scroll" role="region" tabindex="0" aria-label="Saved column mapping preview"><table><caption>Original headings compared with this table</caption><thead><tr><th scope="col">Parameter</th><th scope="col">Original heading</th><th scope="col">This file</th></tr></thead><tbody>'+
+        preview.rows.map(row=>'<tr><th scope="row">'+esc(bioLabels[row.parameter])+'</th><td>'+esc(row.label||'(blank)')+'</td><td>'+esc(status[row.status])+'</td></tr>').join('')+'</tbody></table></div>'+
+        (preview.missing_required.length?'<p class="ci-warning">After applying, select original columns for: '+esc(preview.missing_required.map(name=>bioLabels[name]).join(', '))+'.</p>':'')+
+        '<p>Apply replaces the current column mapping. It keeps this source’s selected models, units, references and other scientific choices, and clears its confirmation.</p>'+
+        actionButton('mapping-apply','Apply matching columns','data-ci-mutating'+(preview.matched?'':' data-ci-unavailable disabled')):'')+'</details>';
+  }
   function interpretation(choice,index){
     const file=inspection.files[choice.file_index],part=file.inspection.parts[choice.part_index];
     const fieldValues=[['','Not selected'],...arr(part.fields).map(x=>[x.id,x.display||x.label])];
@@ -324,7 +384,7 @@ export function createClientSourceIntake(host){
       (part.kind==='raster'?rasterPreparation(choice,index):'')+
       (part.kind==='table'&&choice.role==='BIOPHYSICAL'?'<fieldset><legend>Map original columns to native parameters</legend><p>Only reviewed column selections produce the native CSV. The complete original workbook, all sheets, formulas and extra columns remain retained. Values are validated by the existing NDR/SDR table reader.</p>'+
         selectField('Native model validation','models',[['ndr,sdr','NDR and SDR'],['ndr','NDR'],['sdr','SDR']],choice.models.join(','))+
-        mappingControls(choice,fieldValues)+'</fieldset>':'')+
+        savedMappingControls(choice,part)+mappingControls(choice,fieldValues)+'</fieldset>':'')+
       '<label class="ci-confirm"><input type="checkbox" data-ci-field="confirmed" '+(choice.confirmed?'checked':'')+' data-ci-mutating> I reviewed this original source, its scientific meaning, units and selected transformations.</label>'+
       actionButton('remove-choice','Remove this source selection','data-ci-index="'+index+'" data-ci-mutating')+'</article>';
   }
@@ -402,21 +462,33 @@ export function createClientSourceIntake(host){
     catalog=value;renderHistory();
   }
   async function openResult(id,adopt=true){
-    const expected=workspace,epoch=generation,version=++reading;
+    const expected=workspace,epoch=generation,version=++reading,recipe=readingRecipe(draft.uploads);
     const value=await host.api('/api/client-source/result',{method:'POST',body:{workspace:expected,id}});
-    if(!current(expected,epoch)||version!==reading)return;
+    if(!current(expected,epoch)||version!==reading||recipe!==readingRecipe(draft.uploads))return;
     need(value.id===id&&value.project_id===catalog?.project_id,'The retained result belongs to another original project.');
     if(value.action==='client-source.inspect'){
       let candidate=clone(draft);
-      if(adopt&&draft.inspection_id!==id){
-        if(draft.selections.length&&!confirm('Open this original inspection? Your complete previous source choices remain in the working-copy history.'))return;
-        candidate.inspection_id=id;candidate.selections=[];
-        candidate=preserveWorking(candidate,draft,'Opened another original inspection');
+      if(adopt){
+        need(value.state==='complete'&&Array.isArray(value.files),'Wait for the complete original inspection.');
+        const originals=inspectedUploads(value);
+        const known=new Map([...draft.uploads,...availableUploads()].map(file=>[file.id,file]));
+        // Retained inspections keep their original files even after Study transfer.
+        // Only local retained receipts can be submitted for another inspection.
+        const selected=originals.every(file=>known.has(file.id))?originals:[];
+        const different=draft.inspection_id!==id||readingRecipe(draft.uploads)!==readingRecipe(selected);
+        if(different){
+          if(draft.selections.length&&!confirm('Open this original inspection and its reading choices? Your complete previous source choices remain in the working-copy history.'))return;
+          candidate.inspection_id=id;candidate.selections=[];candidate.uploads=selected;
+          candidate=preserveWorking(candidate,draft,'Opened the retained original inspection and reading choices');
+        }
       }
       need(candidate.inspection_id===id,'The selected inspection differs from this working copy.');
       boundInspection(candidate,value);
+      if(!candidate.title.trim()&&typeof value.title==='string'&&value.title.trim())candidate.title=value.title;
       candidate.selected_result=id;validateDraft(candidate,workspace);
-      draft=candidate;inspection=value;retain();renderInspection();renderChoices();
+      draft=candidate;inspection=value;retain();
+      const titleInput=q('[data-ci-field="title"]');if(titleInput)titleInput.value=draft.title;
+      renderFiles();renderInspection();renderChoices();
       notice='Showing the retained inspection: '+value.title+'. Review each selected source’s meaning before saving.';messages();
     }else{
       need(value.action==='client-source.commit','This is not a client-source result.');
@@ -465,11 +537,13 @@ export function createClientSourceIntake(host){
       if(!current(expected,epoch))return;
       const candidate=clone(draft);
       if(!candidate.uploads.some(x=>x.id===receipt.id))candidate.uploads.push(receipt);
-      draft=validateDraft(candidate,workspace);retain();renderFiles();
+      applyChoices(candidate);renderFiles();
     }
     notice='Original files retained. Review reading choices, then inspect their actual contents.';messages();
   }
   function addChoice(fi,pi){
+    need(inspection&&draft.inspection_id===inspection.id,'Open the complete original inspection first.');
+    boundInspection(draft,inspection);
     const file=inspection.files[fi],part=file.inspection.parts[pi];
     need(!file.error&&!part.error,'Correct this worksheet’s reading choices and inspect again before selecting it.');
     if(draft.selections.some(x=>x.file_index===fi&&x.part_index===pi))throw Error('This source is already in your reviewed choices.');
@@ -483,6 +557,19 @@ export function createClientSourceIntake(host){
   }
   function change(event){
     const target=event.target,field=target.dataset.ciField;
+    if(target.matches('[data-ci-mapping-name],[data-ci-mapping-selection]')){
+      try{
+        const index=Number(target.closest('[data-ci-choice]').dataset.ciChoice),choice=draft.selections[index];
+        saveChange(value=>{
+          const identity=mappingKey(choice),form={...mappingForm(choice)};
+          if(target.matches('[data-ci-mapping-name]'))form.name=target.value;
+          else form.selected_id=target.value;
+          value.mapping_reuse[identity]=form;
+        });
+        if(target.matches('[data-ci-mapping-selection]'))renderChoices();
+      }catch(error){problem=error.message;messages();}
+      return;
+    }
     if(!field)return;
     try{
       const choice=target.closest('[data-ci-choice]'),upload=target.closest('[data-ci-upload]');
@@ -530,6 +617,30 @@ export function createClientSourceIntake(host){
     if(action==='source'){await host.openItem('sources',button.dataset.ciId);return;}
     if(action==='navigate'){host.navigate(button.dataset.ciView);return;}
     await run(async()=>{
+      if(action==='mapping-save'||action==='mapping-apply'){
+        const expected=workspace,epoch=generation,index=Number(button.closest('[data-ci-choice]').dataset.ciChoice);
+        const choice=draft.selections[index],file=inspection?.files[choice.file_index],part=file?.inspection?.parts[choice.part_index];
+        need(inspection&&draft.inspection_id===inspection.id,'Open the original inspection first.');
+        const identity=mappingKey(choice),form=mappingForm(choice);
+        let candidate=clone(draft);
+        if(action==='mapping-save'){
+          const template=await createMappingTemplate({name:form.name,choice,part,file,inspection});
+          if(!current(expected,epoch))return;
+          candidate.mapping_templates.push(template);
+          candidate.mapping_reuse[identity]={...form,selected_id:template.id};
+          notice='Saved “'+template.name+'” with its original headers. This mapping travels in the complete working copy.';
+        }else{
+          const template=draft.mapping_templates.find(item=>item.id===form.selected_id);
+          await verifyMappingTemplate(template);if(!current(expected,epoch))return;
+          const applied=applyMappingTemplate(choice,template,part,requiredFields(choice)||[]);
+          candidate=preserveWorking(candidate,draft,'Before applying saved column mapping '+template.name);
+          candidate.selections[index]=applied.choice;
+          notice='Applied '+applied.preview.matched+' matching column choices from “'+template.name+'”. '+
+            (applied.preview.unresolved.length?applied.preview.unresolved.length+' missing or ambiguous choices need manual selection. ':'')+
+            'Review this file’s values, units and scientific meaning, then confirm it again.';
+        }
+        draft=validateDraft(candidate,workspace);retain();renderChoices();return;
+      }
       if(action==='profile'){
         const table=profileTables().find(row=>row.id===button.dataset.ciSource);
         need(table,'Open the saved biophysical source edition before preparing its profile.');
@@ -548,6 +659,7 @@ export function createClientSourceIntake(host){
       }
       if(action==='commit'){
         if(!inspection||draft.inspection_id!==inspection.id)throw Error('Open the complete original inspection first.');
+        boundInspection(draft,inspection);
         if(!draft.selections.length||draft.selections.some(x=>!x.confirmed))throw Error('Review and confirm every selected source.');
         await request('client-source.commit',{title:draft.title,inspection_id:draft.inspection_id,selections:draft.selections.map(value=>{
           const selected=clone(value);
@@ -583,16 +695,16 @@ export function createClientSourceIntake(host){
       const file=event.target.files?.[0];event.target.value='';if(!file)return;
       await run(async()=>{
         if(file.size>64*1024*1024)throw Error('This working copy exceeds 64 MiB. Keep the original and open it with its producing application.');
-        const expected=workspace,epoch=generation;
+        const expected=workspace,epoch=generation,version=++reading;
         let candidate=validateDraft(JSON.parse(await file.text())),opened=null;
         const receiving=candidate.workspace_key!==expected;
-        if(!current(expected,epoch))return;
+        if(!current(expected,epoch)||version!==reading)return;
         if(receiving&&!candidate.inspection_id)throw Error('This unfinished copy has no saved inspection to verify here. Open it in its original Workspace, inspect the originals, then back up and restore that Workspace.');
         if(candidate.inspection_id){
           if(!catalog)await refreshCatalog();
-          if(!current(expected,epoch))return;
+          if(!current(expected,epoch)||version!==reading)return;
           opened=await host.api('/api/client-source/result',{method:'POST',body:{workspace:expected,id:candidate.inspection_id}});
-          if(!current(expected,epoch))return;
+          if(!current(expected,epoch)||version!==reading)return;
           boundInspection(candidate,opened);
         }
         if(!confirm(receiving?'Open these saved source choices against their verified restored inspection? The current and original working copies remain in history. Choose the original files again only when you need a new inspection.':'Open this complete working copy? The current unfinished choices will remain in its retained history. Original native sources and operations stay saved.'))return;

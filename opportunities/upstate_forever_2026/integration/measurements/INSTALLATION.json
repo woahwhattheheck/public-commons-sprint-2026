@@ -271,6 +271,18 @@
       "behavior": "Complete immutable accepted/excluded populations, checked bounded original paging, original source context and complete downloads; same saved folder offline; full reader custody in the existing collection working copy.",
       "owner_direction": "CURRENT_OWNER_DIRECTION.md version2026-10-13.4; contextual dismissible in-UI guidance from original owner thread1791926001.619199",
       "receiving": "Same original15227/7915–8007 native collection/folder course; retain complete current sources and personally use the actual reader and all original attachments."
+    },
+    "client_source_mapping_reuse": {
+      "operation_id": "ECO-INTAKE-MAPPING-REUSE-20261013",
+      "base_commit": "b86149e92d92e3bdde43b1fb1aede9c2edf8fde9",
+      "guide": "operator/CLIENT_SOURCE_INTAKE.md",
+      "scope": "Exact original-header reuse with per-file preview and fresh scientific confirmation.",
+      "recovered_against": "6e91cd9e9b9ac44b1bd51f915eefa14faf504b35",
+      "original_pr": 4880,
+      "current_input_binding": {
+        "source": "ECO2319-CURRENT-INPUT-BOUND-INTAKE-20261014",
+        "sha256": "b625bbcf49a8be83a09c45d7128a7b8f06195724d03d24fa4cba4dc3117e2ea0"
+      }
     }
   },
   "files": [
@@ -1511,8 +1523,8 @@
     },
     {
       "path": "operator/extensions/client-source-intake.json",
-      "bytes": 1931,
-      "sha256": "46cb65ecafa6060ba6082b22a497950725b4da2b0645f28d640be026ac326d09"
+      "bytes": 1964,
+      "sha256": "77c577192ef20057c0301854c9fdab9583641198ed5218652d3d7e69a1d6331f"
     },
     {
       "path": "operator/extensions/measured-observations.json",
@@ -1566,13 +1578,13 @@
     },
     {
       "path": "operator/web/client_source_intake.css",
-      "bytes": 3253,
-      "sha256": "9bbf74fc3b09f863d40b07805312e9034a7af6ee9bf7189cedef9c44e35b39e2"
+      "bytes": 4030,
+      "sha256": "42259b7df1219eaca411559ff7d23c6eaae38c6ae12e7567f2253a632c8d0b34"
     },
     {
       "path": "operator/web/client_source_intake.mjs",
-      "bytes": 44426,
-      "sha256": "3ae2d6d5bfa07b62618e77214711250f6375f30f090bf440afa8997449852a7d"
+      "bytes": 63315,
+      "sha256": "f2ca000523cafa3b041c16bdb432e0fbbff0e53602bbd5d469cd87bb8180a91f"
     },
     {
       "path": "operator/web/collection_folder.mjs",
@@ -2028,6 +2040,16 @@
       "path": "source/run_measured_chemistry_receiving.py",
       "bytes": 39590,
       "sha256": "fe133b88ca7a4b27b04c6f161b3f9f1a40dda73e07e7829c0b2453ceea095f04"
+    },
+    {
+      "path": "operator/CLIENT_SOURCE_INTAKE.md",
+      "bytes": 18061,
+      "sha256": "bd85d7d36239913da8c2c252d29ab75cb0d484b647a4b9791e6e847b7991efb9"
+    },
+    {
+      "path": "operator/web/client_source_mapping.mjs",
+      "bytes": 6848,
+      "sha256": "5419be173999a141ba82679a340b7600c49144c927d775235f1d477e044fd3f8"
     }
   ],
   "predecessors": {
@@ -2510,7 +2532,12 @@
     "operator/web/client_source_intake.mjs": [
       "4165a38f7c53578025dad6df047131ff6b00aa4bafd73922a776d8dea76073bd",
       "a8319e4a970e5508f763f05a8c105c187278c80b4ab38fc471866ebe6ea0d2b8",
-      "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190"
+      "f4657a0aa92b6454c0e3ca0607c960915ff2d84ace9efef4caa8501e8c5a3190",
+      "3ae2d6d5bfa07b62618e77214711250f6375f30f090bf440afa8997449852a7d",
+      "db96c05f50a8c109207567d530b9f61eb2cf0bf295bb9c640ec37314cc462989",
+      "b625bbcf49a8be83a09c45d7128a7b8f06195724d03d24fa4cba4dc3117e2ea0",
+      "7f44ce09e95d268af546b55b1916105689abcd43cdf34ad397650ffcb46d009f",
+      "26349f94d0717ac4b318dcd609a7da000b8da1cc60f458bda98d4ac5fda89e6e"
     ],
     "measurement_workspace/engine/intake.mjs": [
       "be7e0157389a4416b048080b755b9d1061d3c49915ef71a86705551db04b3b8a",
@@ -2527,7 +2554,8 @@
       "9cfeb6c29bee0e861ac6303b6c2d69235c0795a9466e34acec429e8346d10bc0"
     ],
     "operator/web/client_source_intake.css": [
-      "9bbf74fc3b09f863d40b07805312e9034a7af6ee9bf7189cedef9c44e35b39e2"
+      "9bbf74fc3b09f863d40b07805312e9034a7af6ee9bf7189cedef9c44e35b39e2",
+      "2bfffa100c67e723abcafe07d66882e6365ba40ca00baee47907aae74e0dcb44"
     ],
     "operator/extensions/client-source-intake.json": [
       "46cb65ecafa6060ba6082b22a497950725b4da2b0645f28d640be026ac326d09"
@@ -2617,6 +2645,9 @@
     ],
     "operator/web/collection_folder.mjs": [
       "25a46d13cc847512f00e7050dfcdaddb00e1fb7f4dee6786761c73267df13c55"
+    ],
+    "operator/CLIENT_SOURCE_INTAKE.md": [
+      "647840376ed7f3fbf79185449a80bea03fe81e7f885d33f2510c0d5fc5c1a508"
     ]
   },
   "requires": [

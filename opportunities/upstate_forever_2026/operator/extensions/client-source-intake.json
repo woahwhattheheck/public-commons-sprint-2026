@@ -6,6 +6,7 @@
   "order": 19,
   "assets": [
     "client_source_intake.mjs",
+    "client_source_mapping.mjs",
     "client_source_intake.css"
   ],
   "backend": {
