@@ -26,6 +26,22 @@ The retained focused Linux check covers root handoff ordering, spaced/Unicode ar
 
 The receiving result's selected runtime descriptor is passed into the child environment unchanged. Windows root waiting also preserves the controller's own Ctrl+C shutdown instead of terminating it during parent interrupt cleanup.
 
+### Cumulative assembler source cohort
+
+Select the integration component `collection-root-opening` when composing a cumulative source bank. It selects the complete audited cohort together: all platform launchers, runtime/dependency composition, first-study receiving, session API, atomic root applicator, guide generator, operator documentation and the root payload manifest. Its `native-runtime-invocation` dependency carries the maintained receiver and workbench-opening chain.
+
+`OPENING_COMPONENT.json` deliberately enumerates only the ten files approved for the extracted collection root. Keep `README.md`, `apply_to_collection.py`, `build_guides.py`, `session_api.py` and `OPENING_COMPONENT.json` itself in the source bank; do not force source-only tooling into the recipient root payload.
+
+After assembling the complete collection, apply the root payload and generate recipient guidance from the retained collection identities:
+
+```sh
+python source_tools/collection_opening/apply_to_collection.py /path/to/complete-collection
+python source_tools/collection_opening/build_guides.py \
+  /path/to/complete-collection \
+  --output /path/to/new-guide-directory
+```
+
+The guide output is create-only and records its own `GUIDES.json`. Publish that completed directory through the cumulative assembler rather than editing generated HTML by hand.
 
 ## Retained own-data selection and first receiving
 
