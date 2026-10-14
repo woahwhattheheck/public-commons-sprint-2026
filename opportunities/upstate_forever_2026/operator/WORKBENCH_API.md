@@ -484,3 +484,12 @@ normal archive extraction and independent project reopening.
 ## Installed origin discovery
 
 The installed OpenAPI document advertises the explicitly configured recipient HTTPS authority from the maintained origin policy when this deployment has one. The native listener and startup capability remain private. Use that HTTPS origin with its separately issued recipient credential, or the ordinary local client with the recipient's own launcher startup JSON. No Bryce PC, account session, configuration or provider key is required. Exact Host/Origin validation, canonical /_eco/v1 transport and current staged upload/download recovery remain authoritative.
+
+
+## Original control uncertainty and relay process loss
+
+A staged manifest, input chunk, seal or result carrying X-Eco-Uncertain: 1 raises StagedUncertain with the original request_id and records the same journal's uncertain phase. This includes PREVIEW_STATE_LOST after a preview relay process reset. Reenter stage-upload or stage-json with the same input, journal and result path to observe only that retained request's result. The existing native operation remains the recovery target.
+
+The exception and checkpoint retain only validated recovery fields supplied by the original connector: code, operation_id, workspace, task_id and its matching relative lookup_path. The message includes the original task and operation IDs when available. The original request binding, source hash, immutable journal, native task and saved result remain the basis for reconciliation. If the relay cannot return the original result, inspect the same native task through the existing task/API controls using those retained references.
+
+Recipient HTTPS requests from the shared OperatorTransport identify the maintained client with User-Agent: TJLabs-Workbench-Recipient/1.0. This applies consistently to staged controls, ordinary API requests and original downloads. Local loopback headers and browser user-agent behavior retain their existing contracts.

@@ -104,6 +104,7 @@ class OperatorTransport:
         result = {"Authorization": "Bearer " + self.credential}
         if self.credential_kind == "recipient":
             result["Origin"] = self.origin
+            result["User-Agent"] = "TJLabs-Workbench-Recipient/1.0"
         return result
 
 

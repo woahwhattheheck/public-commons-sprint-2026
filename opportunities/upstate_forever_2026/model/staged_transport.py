@@ -43,6 +43,46 @@ class StagedPending(RuntimeError):
 
 class StagedUncertain(StagedPending):
     """Never replace or automatically re-execute this original native request."""
+    def __init__(self, request_id, message, recovery=None):
+        super().__init__(request_id, message)
+        self.recovery = recovery or {"id": request_id}
+
+
+def _uncertain_response(response, request_id):
+    returned = response.getheader("X-Eco-Request-ID")
+    if returned is not None and returned != request_id:
+        raise ValueError("The uncertain reply belongs to another original request.")
+    value = {}
+    try:
+        raw = response.read(CONTROL_LIMIT + 1)
+        if len(raw) <= CONTROL_LIMIT:
+            decoded = json.loads(raw)
+            if isinstance(decoded, dict):
+                value = decoded
+    except (OSError, http.client.HTTPException, ValueError, UnicodeError):
+        pass
+    detail = value.get("error")
+    if isinstance(detail, dict):
+        value = {**value, **detail}
+    if value.get("id", request_id) != request_id:
+        raise ValueError("The uncertain reply contains another original request identity.")
+    recovery = {"id": request_id}
+    for name, pattern in (("code", r"[A-Z][A-Z0-9_]{0,95}"),
+                          ("operation_id", r"[A-Za-z0-9_-]{16,100}"),
+                          ("workspace", r"[A-Za-z0-9_-]{1,200}"),
+                          ("task_id", r"[0-9a-f]{64}")):
+        field = value.get(name)
+        if isinstance(field, str) and re.fullmatch(pattern, field):
+            recovery[name] = field
+    if (recovery.get("task_id")
+            and value.get("lookup_path") == "/api/task?id=" + recovery["task_id"]):
+        recovery["lookup_path"] = value["lookup_path"]
+    message = "The original native request needs reconciliation; observe its existing operation."
+    if recovery.get("task_id"):
+        message += " Original task: " + recovery["task_id"] + "."
+    if recovery.get("operation_id"):
+        message += " Original operation: " + recovery["operation_id"] + "."
+    return StagedUncertain(request_id, message, recovery)
 
 
 def _signature(value):
@@ -111,6 +151,8 @@ def _control(transport, method, path, request_id, *, value=None, body=None,
         headers = {**(headers or {}), "Content-Type": "application/json"}
     connection, response = _connection(transport, method, path, body, headers, timeout)
     try:
+        if response.getheader("X-Eco-Uncertain") == "1":
+            raise _uncertain_response(response, request_id)
         raw = response.read(CONTROL_LIMIT + 1)
         if len(raw) > CONTROL_LIMIT:
             raise ValueError("The staged control response exceeds its original bound.")
@@ -337,8 +379,7 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                     if returned is not None and returned != request_id:
                         raise ValueError("The result returned another original request identity.")
                     if response.getheader("X-Eco-Uncertain") == "1":
-                        checkpoint("uncertain")
-                        raise StagedUncertain(request_id, "The original native mutation needs reconciliation.")
+                        raise _uncertain_response(response, request_id)
                     if response.getheader("X-Eco-Pending") == "1":
                         if time.monotonic() >= deadline:
                             raise StagedPending(request_id, "The original native request remains pending.")
@@ -357,5 +398,10 @@ def stage_file(transport, *, workspace, method, path, filename, journal, result,
                 finally:
                     connection.close()
                 time.sleep(min(0.5, max(0, deadline - time.monotonic())))
+        except StagedUncertain as error:
+            # This applies to manifest, input, seal AND result responses. Explicit
+            # re-entry observes the same outcome and never restages uncertain work.
+            checkpoint("uncertain", recovery=error.recovery)
+            raise
         except (OSError, http.client.HTTPException) as error:
             raise StagedPending(request_id, "Transport or local receiving I/O stopped; this exact request remains retained. " + str(error)) from error

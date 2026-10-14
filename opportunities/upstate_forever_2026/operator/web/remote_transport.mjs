@@ -66,11 +66,42 @@ async function fileIdentity(blob,metadata,signal){
  }
  return hex(digest);
 }
+async function uncertainResponse(response,id){
+ const returned=response.headers.get('X-Eco-Request-ID');
+ if(returned&&returned!==id){try{await response.body?.cancel();}catch{}throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id,response.status);}
+ let value={};
+ try{value=await response.json();}catch{}
+ if(!value||typeof value!=='object'||Array.isArray(value))value={};
+ const detail=value.error&&typeof value.error==='object'?{...value,...value.error}:value;
+ if(detail.id!==undefined&&detail.id!==id)throw problem('The uncertain reply belongs to another original request.','REMOTE_IDENTITY',id,response.status);
+ const recovery={id};
+ if(typeof detail.code==='string'&&/^[A-Z][A-Z0-9_]{0,95}$/.test(detail.code))recovery.code=detail.code;
+ if(typeof detail.operation_id==='string'&&/^[A-Za-z0-9_-]{16,100}$/.test(detail.operation_id))recovery.operation_id=detail.operation_id;
+ if(typeof detail.workspace==='string'&&/^[A-Za-z0-9_-]{1,200}$/.test(detail.workspace))recovery.workspace=detail.workspace;
+ if(typeof detail.task_id==='string'&&/^[a-f0-9]{64}$/.test(detail.task_id)){
+  recovery.task_id=detail.task_id;
+  if(detail.lookup_path==='/api/task?id='+detail.task_id)recovery.lookup_path=detail.lookup_path;
+ }
+ let message='The original native request needs reconciliation. Check its existing operation before another submission.';
+ if(recovery.task_id)message+=' Original task: '+recovery.task_id+'.';
+ if(recovery.operation_id)message+=' Original operation: '+recovery.operation_id+'.';
+ const error=problem(message,'UPSTREAM_UNCERTAIN',id,response.status);error.recovery=recovery;
+ return error;
+}
+function rememberPhase(known,state,recovery){
+ known.state=state;
+ const previous=journalRead(known.key)||{};
+ const value={id:known.id,created_at:previous.created_at||new Date().toISOString(),state};
+ if(recovery)value.recovery=recovery;
+ else if(previous.recovery)value.recovery=previous.recovery;
+ journalWrite(known.key,value);
+}
 async function control(path,options,id,signal){
  for(let attempt=0;;attempt++){
   abort(signal);let response,error;
   try{response=await fetch(path,{...options,credentials:'same-origin',redirect:'error',signal});}
   catch(cause){abort(signal);error=cause;}
+  if(response?.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
   if(response&&!retryCodes.has(response.status)){
    let value;try{value=await response.json();}catch(cause){abort(signal);throw problem('The transfer returned an unreadable response. Reopen the same selected file to resume.','REMOTE_RESPONSE',id,response.status);}
    if(response.ok)return value;
@@ -92,20 +123,17 @@ async function outcome(id,signal){
    abort(signal);if(attempt++>=7)throw problem('The connection was interrupted. The original request is retained; check Operations before submitting it again.','REMOTE_INTERRUPTED',id);
    await pause(Math.min(4000,250*2**attempt),signal);continue;
   }
-  if(response.headers.get('X-Eco-Uncertain')==='1'){
-   await response.body?.cancel();
-   throw problem('The native request needs reconciliation. Check its original operation before submitting it again.','UPSTREAM_UNCERTAIN',id,response.status);
-  }
+  if(response.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
   if(response.headers.get('X-Eco-Pending')==='1'){
-   await response.body?.cancel();attempt=0;await pause(retryDelay(response,0,500),signal);continue;
+   try{await response.body?.cancel();}catch{}attempt=0;await pause(retryDelay(response,0,500),signal);continue;
   }
   if((retryCodes.has(response.status)||(response.status===409&&response.headers.get('X-Eco-Transport-Error')==='RESULT_OPEN'))&&response.headers.has('X-Eco-Transport-Error')){
-   await response.body?.cancel();if(attempt++>=7)throw problem('The original request is retained but its result is temporarily unavailable.','REMOTE_INTERRUPTED',id,response.status);
+   try{await response.body?.cancel();}catch{}if(attempt++>=7)throw problem('The original request is retained but its result is temporarily unavailable.','REMOTE_INTERRUPTED',id,response.status);
    await pause(retryDelay(response,attempt),signal);continue;
   }
   if(response.headers.has('X-Eco-Transport-Error')){
    const code=response.headers.get('X-Eco-Transport-Error');
-   await response.body?.cancel();
+   try{await response.body?.cancel();}catch{}
    throw problem('The original transfer result could not be read ('+code+'). Keep its reference when reconnecting.','REMOTE_'+code,id,response.status);
   }
   return response;
@@ -162,25 +190,35 @@ async function upload(path,options){
  let known=heldFiles.get(blob)?.get(signature);
  if(!known){
   const key=await fileIdentity(blob,metadata,signal),saved=journalRead(key);
-  known={key,id:saved?.id||crypto.randomUUID()};
+  known={key,id:saved?.id||crypto.randomUUID(),state:saved?.state||'staging'};
   const records=heldFiles.get(blob)||new Map();records.set(signature,known);heldFiles.set(blob,records);
-  journalWrite(key,{id:known.id,created_at:saved?.created_at||new Date().toISOString()});
+  journalWrite(key,{id:known.id,created_at:saved?.created_at||new Date().toISOString(),state:known.state,...(saved?.recovery?{recovery:saved.recovery}:{})});
  }
  const {id,key}=known,json={'Content-Type':'application/json'};
- const created=await control('/_eco/v1/requests',{method:'POST',headers:json,body:JSON.stringify({id,...metadata})},id,signal);
- if(created.id!==id)throw problem('The transfer returned a different request identity.','REMOTE_IDENTITY',id);
- // Replay exact chunks from zero when resuming. Durable duplicate acknowledgements
- // verify the content and never execute the native upload a second time.
- for(let offset=0;offset<blob.size;offset+=CHUNK_BYTES){
-  abort(signal);
-  const bytes=await blob.slice(offset,offset+CHUNK_BYTES).arrayBuffer(),sha256=hex(await hash(bytes,signal));
-  const ack=await control('/_eco/v1/requests/'+id+'/input?offset='+offset,{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Chunk-SHA256':sha256},body:bytes},id,signal);
-  if(ack.id!==id||ack.input_offset!==offset+bytes.byteLength||ack.bytes!==bytes.byteLength||ack.sha256!==sha256)throw problem('The transfer did not confirm the selected file bytes.','REMOTE_CHUNK_MISMATCH',id);
+ try{
+  // Once sealing was acknowledged or any phase became uncertain, only observe
+  // this original outcome. Re-entry must not stage a completed native write again.
+  if(known.state!=='sealed'&&known.state!=='uncertain'){
+   const created=await control('/_eco/v1/requests',{method:'POST',headers:json,body:JSON.stringify({id,...metadata})},id,signal);
+   if(created.id!==id)throw problem('The transfer returned a different request identity.','REMOTE_IDENTITY',id);
+   // Replay exact chunks from zero when resuming. Durable duplicate acknowledgements
+   // verify the content and never execute the native upload a second time.
+   for(let offset=0;offset<blob.size;offset+=CHUNK_BYTES){
+    abort(signal);
+    const bytes=await blob.slice(offset,offset+CHUNK_BYTES).arrayBuffer(),sha256=hex(await hash(bytes,signal));
+    const ack=await control('/_eco/v1/requests/'+id+'/input?offset='+offset,{method:'PUT',headers:{'Content-Type':'application/octet-stream','X-Chunk-SHA256':sha256},body:bytes},id,signal);
+    if(ack.id!==id||ack.input_offset!==offset+bytes.byteLength||ack.bytes!==bytes.byteLength||ack.sha256!==sha256)throw problem('The transfer did not confirm the selected file bytes.','REMOTE_CHUNK_MISMATCH',id);
+   }
+   const sealed=await control('/_eco/v1/requests/'+id+'/seal',{method:'POST',headers:json,body:JSON.stringify({body_bytes:blob.size})},id,signal);
+   if(sealed.id!==id||sealed.sealed!==true)throw problem('The transfer has not confirmed the complete file.','REMOTE_SEAL',id);
+   rememberPhase(known,'sealed');
+  }
+  const response=await completeApiResponse(await outcome(id,signal),id,signal);
+  return finishWhenRead(response,()=>{journalRemove(key,id);heldFiles.get(blob)?.delete(signature);},signal);
+ }catch(error){
+  if(error?.code==='UPSTREAM_UNCERTAIN')rememberPhase(known,'uncertain',error.recovery);
+  throw error;
  }
- const sealed=await control('/_eco/v1/requests/'+id+'/seal',{method:'POST',headers:json,body:JSON.stringify({body_bytes:blob.size})},id,signal);
- if(sealed.id!==id||sealed.sealed!==true)throw problem('The transfer has not confirmed the complete file.','REMOTE_SEAL',id);
- const response=await completeApiResponse(await outcome(id,signal),id,signal);
- return finishWhenRead(response,()=>{journalRemove(key,id);heldFiles.get(blob)?.delete(signature);},signal);
 }
 /** Keep the ordinary local fetch unchanged; the login marker enables remote transport. */
 export async function operatorFetch(path,options={},capability=null){
@@ -195,14 +233,19 @@ export async function operatorFetch(path,options={},capability=null){
  let response;
  try{response=await fetch(originalPath,{...options,headers,credentials:'same-origin',redirect:'error'});}
  catch(cause){abort(options.signal);return completeApiResponse(await outcome(id,options.signal),id,options.signal);}
- if(response.headers.get('X-Eco-Uncertain')==='1'){
-  await response.body?.cancel();throw problem('The native request needs reconciliation. Check its original operation before submitting it again.','UPSTREAM_UNCERTAIN',id,response.status);
- }
+ if(response.headers.get('X-Eco-Uncertain')==='1')throw await uncertainResponse(response,id);
  if(response.headers.get('X-Eco-Pending')==='1'){
   const returned=response.headers.get('X-Eco-Request-ID');
-  await response.body?.cancel();
+  try{await response.body?.cancel();}catch{}
   if(returned&&returned!==id)throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id);
   return completeApiResponse(await outcome(id,options.signal),id,options.signal);
+ }
+ if(response.headers.has('X-Eco-Transport-Error')){
+  const returned=response.headers.get('X-Eco-Request-ID');
+  const code=response.headers.get('X-Eco-Transport-Error');
+  try{await response.body?.cancel();}catch{}
+  if(returned&&returned!==id)throw problem('The connection returned a different request identity.','REMOTE_IDENTITY',id,response.status);
+  throw problem('The original transfer could not continue ('+code+'). Keep its reference and check Operations before submitting it again.','REMOTE_'+code,id,response.status);
  }
  return completeApiResponse(response,id,options.signal);
 }
