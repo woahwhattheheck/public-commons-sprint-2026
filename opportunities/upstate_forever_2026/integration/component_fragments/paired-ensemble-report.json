@@ -7,7 +7,12 @@
       "paths": [
         "model/paired_ensemble/ensemble_report_source.py",
         "model/paired_ensemble/ensemble_report_cli.py",
+        "model/paired_ensemble/ensemble_store.py",
+        "model/paired_ensemble/ensemble_portable.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py",
         "model/paired_ensemble/REPORT_SOURCE.md",
+        "docs/PAIRED_ENSEMBLE_PORTABILITY.md",
         "operator/paired_ensemble_report_native.py",
         "operator/extensions/paired-ensemble-report.json",
         "operator/web/paired_ensemble_report_desk.mjs"
