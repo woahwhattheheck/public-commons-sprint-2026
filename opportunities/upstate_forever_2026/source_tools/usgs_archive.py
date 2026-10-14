@@ -5,6 +5,8 @@ receives an already available original ZIP or its legitimate download URL.
 """
 from __future__ import annotations
 
+from model import portable_fs as _fs
+
 import argparse
 from collections import Counter, OrderedDict
 import contextlib
@@ -57,14 +59,40 @@ def _path(name):
 
 
 def _target(root, name):
+    # Receiving is platform-specific; keep the original inventory and its ID
+    # platform-neutral while checking whether its exact names can be received.
+    _fs.relative_name(name)
     p = _path(name)
     result = root.joinpath(*p.parts)
     for parent in (result, *result.parents):
         if parent == root.parent:
             break
-        if parent.is_symlink():
+        try:
+            metadata = parent.lstat()
+        except FileNotFoundError:
+            continue
+        if (stat.S_ISLNK(metadata.st_mode)
+                or getattr(metadata, "st_file_attributes", 0) & 0x400):
             raise ValueError("Receiving paths must not follow filesystem aliases")
     return result
+
+
+def _allocated_bytes(path, metadata):
+    """Read actual retained allocation, including sparse/compressed Windows files."""
+    if os.name != "nt":
+        return metadata.st_blocks * 512
+    import ctypes
+    query = ctypes.WinDLL("kernel32", use_last_error=True).GetCompressedFileSizeW
+    query.argtypes = [ctypes.c_wchar_p, ctypes.POINTER(ctypes.c_uint32)]
+    query.restype = ctypes.c_uint32
+    high = ctypes.c_uint32()
+    ctypes.set_last_error(0)
+    low = query(str(_fs.native_path(path)), ctypes.byref(high))
+    if low == 0xffffffff:
+        error = ctypes.get_last_error()
+        if error:
+            raise ctypes.WinError(error)
+    return (high.value << 32) | low
 
 
 def _spec(path):
@@ -317,7 +345,7 @@ class RangeArchive(io.RawIOBase):
 @contextlib.contextmanager
 def _open_archive(capture, archive, access_file, on_receipt):
     if archive is not None:
-        path = Path(archive)
+        path = _fs.native_path(archive)
         before = _stat(path)
         if before[2] != ARCHIVE_BYTES:
             raise ValueError("Original P13YSTHM archive byte count differs")
@@ -426,13 +454,9 @@ def _survey(path):
 
 
 def _publish_file(partial, destination):
-    os.replace(partial, destination)
+    _fs.replace(partial, destination)
     for directory in {partial.parent, destination.parent}:
-        fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        _fs.sync_directory(directory)
 
 
 def _file_hash(path):
@@ -450,6 +474,7 @@ def _receive(z, inventory, names, output, maximum_bytes):
             or any(not isinstance(name, str) for name in names)
             or len(names) != len(set(names))):
         raise ValueError("Select distinct actual file names from archive-inventory.json")
+    _fs.validate_members(names)
     if not isinstance(maximum_bytes, int) or maximum_bytes <= 0:
         raise ValueError("Declare the maximum expanded bytes for this source selection")
     by_name = {}
@@ -479,6 +504,7 @@ def _receive(z, inventory, names, output, maximum_bytes):
     if (journal.get("schema") != "upstate.usgs-received-members/v1"
             or journal.get("archive_inventory_id") != inventory["id"]):
         raise ValueError("Continue member receiving under the same original archive inventory")
+    _fs.validate_members(sorted(set(names) | {row["name"] for row in journal["files"]}))
     completed = {}
     for record in journal["files"]:
         name = record.get("name")
@@ -541,7 +567,7 @@ def _receive(z, inventory, names, output, maximum_bytes):
                 metadata = partial.lstat()
                 if not stat.S_ISREG(metadata.st_mode) or metadata.st_nlink != 1:
                     raise ValueError("Partial source path must be an owned single-link regular file")
-                allocated = metadata.st_blocks * 512
+                allocated = _allocated_bytes(partial, metadata)
             else:
                 allocated = 0
             needed += max(0, row["bytes"]-allocated)
@@ -645,8 +671,9 @@ def _finish_receive(output, inventory, selection, journal):
 def operate(output, *, capture_path, archive=None, access_file=None,
             members=None, maximum_bytes=512*1024*1024):
     """Inspect or add a reviewed source selection to one original archive intake."""
-    output = Path(output).absolute()
-    if output.is_symlink():
+    output = _fs.native_path(output).absolute()
+    if (output.is_symlink() or (output.exists()
+            and getattr(output.lstat(), "st_file_attributes", 0) & 0x400)):
         raise ValueError("Receiving output must remain an owned directory")
     output.mkdir(parents=True, exist_ok=True)
     if archive and access_file:

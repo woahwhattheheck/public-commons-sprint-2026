@@ -5,6 +5,8 @@ It preserves original DescribeCoverage, the selected domain, native GeoTIFF,
 source receipts, and a categorical input on the returned native pixel grid.
 """
 from __future__ import annotations
+
+from model import portable_fs as _fs
 import argparse
 import gzip
 import hashlib
@@ -121,14 +123,14 @@ def _retain(source, destination, expected=None):
             raise ValueError("A different original source already occupies " + str(destination))
         return
     try:
-        os.link(source, destination)
+        _fs.publish_file(source, destination)
     except OSError as error:
         import errno
         if error.errno != errno.EXDEV:
             raise
         result = retain_file(destination.parent, source, expected)
         object_path = destination.parent / result["object"]
-        os.link(object_path, destination)
+        _fs.publish_file(object_path, destination)
         object_path.unlink()
     if file_digest(destination) != expected:
         raise ValueError("Original source changed during its retained handoff")
@@ -373,12 +375,8 @@ def _inspect_and_prepare(original, destination, plan):
         raise ValueError("The selected source coverage contains no valid land-cover cells")
     with pending.open("rb") as src:
         os.fsync(src.fileno())
-    os.replace(pending, destination)
-    fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    _fs.replace(pending, destination)
+    _fs.sync_directory(destination.parent)
     observed.update(valid_cells=valid, nodata_cells=missing, class_counts=counts,
                     extra_published_nil_cells=metadata_nil_cells,
                     prepared_nodata=INT_NODATA, prepared_dtype="int32")

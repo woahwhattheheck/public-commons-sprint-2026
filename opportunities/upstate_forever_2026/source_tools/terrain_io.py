@@ -5,6 +5,13 @@ HTTP entity; partial entities are never admitted as scientific raster inputs.
 """
 from __future__ import annotations
 
+import sys as _platform_sys
+from pathlib import Path as _PlatformPath
+_platform_root = str(_PlatformPath(__file__).resolve().parents[1])
+if _platform_root not in _platform_sys.path:
+    _platform_sys.path.insert(0, _platform_root)
+from model import portable_fs as _fs
+
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
@@ -54,17 +61,12 @@ def file_sha(path: Path | str) -> str:
     return h.hexdigest()
 
 
-def sync_directory(path: Path) -> None:
-    if os.name != "nt":
-        fd = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+def sync_directory(path):
+    _fs.sync_directory(path)
 
 
 def atomic_bytes(path: Path | str, data: bytes, *, immutable: bool = False) -> None:
-    path = Path(path)
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if immutable and path.exists():
         if path.read_bytes() != data:
@@ -80,12 +82,12 @@ def atomic_bytes(path: Path | str, data: bytes, *, immutable: bool = False) -> N
         if immutable:
             # link is create-only, including when another process won the race.
             try:
-                os.link(pending, path)
+                _fs.publish_file(pending, path)
             except FileExistsError:
                 if path.read_bytes() != data:
                     raise TerrainError(f"Concurrent immutable record differs: {path.name}")
         else:
-            os.replace(pending, path)
+            _fs.replace(pending, path)
         sync_directory(path.parent)
     finally:
         pending.unlink(missing_ok=True)
@@ -103,7 +105,11 @@ def read_json(path: Path | str) -> dict[str, Any]:
 
 
 def relative_path(root: Path | str, name: str, *, exists: bool = True) -> Path:
-    root = Path(root).resolve()
+    root = _fs.native_path(root).resolve()
+    try:
+        _fs.relative_name(name)
+    except ValueError as exc:
+        raise TerrainError(str(exc)) from exc
     pure = PurePosixPath(name)
     if (not name or pure.is_absolute() or ".." in pure.parts or "\\" in name
             or "\0" in name or pure.as_posix() != name or ":" in pure.parts[0]):
@@ -133,7 +139,7 @@ def verify(root: Path | str, record: dict[str, Any]) -> Path:
 
 
 def copy_original(source: Path | str, target: Path | str) -> dict[str, Any]:
-    source, target = Path(source).resolve(strict=True), Path(target)
+    source, target = _fs.native_path(source).resolve(strict=True), _fs.native_path(target)
     target.parent.mkdir(parents=True, exist_ok=True)
     expected = file_sha(source)
     if target.exists():
@@ -150,7 +156,7 @@ def copy_original(source: Path | str, target: Path | str) -> dict[str, Any]:
             if file_sha(pending) != expected:
                 raise SourceChanged("Source changed while it was being retained")
             try:
-                os.link(pending, target)
+                _fs.publish_file(pending, target)
             except FileExistsError:
                 if file_sha(target) != expected:
                     raise TerrainError("Concurrent source retention differs")
@@ -162,29 +168,8 @@ def copy_original(source: Path | str, target: Path | str) -> dict[str, Any]:
 
 @contextmanager
 def locked(path: Path | str) -> Iterator[None]:
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("a+b") as stream:
-        if os.name == "nt":
-            import msvcrt
-            stream.seek(0)
-            if stream.read(1) == b"":
-                stream.write(b"\0")
-                stream.flush()
-            stream.seek(0)
-            msvcrt.locking(stream.fileno(), msvcrt.LK_LOCK, 1)
-            try:
-                yield
-            finally:
-                stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
-        else:
-            import fcntl
-            fcntl.flock(stream.fileno(), fcntl.LOCK_EX)
-            try:
-                yield
-            finally:
-                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+    with _fs.locked(path):
+        yield
 
 
 def public_usgs_url(url: str) -> str:
@@ -239,7 +224,7 @@ def capture(url: str, destination: Path | str, *, maximum_bytes: int | None = No
                     or file_sha(actual) != state["sha256"]):
                 raise TerrainError("Completed original HTTP entity differs")
             if actual == partial:
-                os.replace(partial, destination)
+                _fs.replace(partial, destination)
                 sync_directory(destination.parent)
             if state["state"] != "complete":
                 state.update(state="complete", completed_at=now())
@@ -269,7 +254,7 @@ def capture(url: str, destination: Path | str, *, maximum_bytes: int | None = No
         if offset and state.get("expected_bytes") == offset:
             state.update(state="received", bytes=offset, sha256=h.hexdigest(), updated_at=now())
             atomic_json(receipt, state)
-            os.replace(partial, destination)
+            _fs.replace(partial, destination)
             sync_directory(destination.parent)
             state.update(state="complete", completed_at=now())
             atomic_json(receipt, state)
@@ -352,7 +337,7 @@ def capture(url: str, destination: Path | str, *, maximum_bytes: int | None = No
                     raise TerrainError("Publisher returned an empty original terrain entity")
                 state.update(state="received", bytes=current, sha256=h.hexdigest(), updated_at=now())
                 atomic_json(receipt, state)
-            os.replace(partial, destination)
+            _fs.replace(partial, destination)
             sync_directory(destination.parent)
             state.update(state="complete", completed_at=now())
             atomic_json(receipt, state)
@@ -367,26 +352,4 @@ def capture(url: str, destination: Path | str, *, maximum_bytes: int | None = No
 
 def publish_directory(staging: Path, destination: Path) -> None:
     """Atomically publish a new tree without replacing a concurrent destination."""
-    import errno
-    import sys
-    if sys.platform.startswith("linux"):
-        import ctypes
-        libc = ctypes.CDLL(None, use_errno=True)
-        rename = getattr(libc, "renameat2", None)
-        if rename is not None:
-            rename.argtypes = [ctypes.c_int,ctypes.c_char_p,ctypes.c_int,ctypes.c_char_p,ctypes.c_uint]
-            rename.restype = ctypes.c_int
-            result = rename(-100,os.fsencode(staging),-100,os.fsencode(destination),1)
-            if result == 0:
-                sync_directory(destination.parent)
-                return
-            error = ctypes.get_errno()
-            if error not in (errno.ENOSYS, errno.EINVAL):
-                raise OSError(error,os.strerror(error),str(destination))
-    # Windows rename is create-only. Other POSIX systems serialize cooperating
-    # receivers and verify the destination under that lock before one rename.
-    with locked(destination.parent/("."+destination.name+".receive.lock")):
-        if destination.exists():
-            raise FileExistsError("Terrain receiving directory already exists")
-        os.rename(staging,destination)
-        sync_directory(destination.parent)
+    _fs.publish_directory(staging, destination)

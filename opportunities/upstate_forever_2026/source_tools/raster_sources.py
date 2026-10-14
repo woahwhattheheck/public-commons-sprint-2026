@@ -3,6 +3,8 @@
 Run these commands inside the existing native GIS job. No model is executed.
 """
 from __future__ import annotations
+
+from model import portable_fs as _fs
 import argparse
 import hashlib
 import gzip
@@ -26,11 +28,7 @@ HEADERS = ("Date", "ETag", "Last-Modified", "Content-Type", "Content-Length",
            "Content-Encoding", "Accept-Ranges", "Retry-After")
 
 def _fsync_directory(path):
-    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
-    try:
-        os.fsync(fd)
-    finally:
-        os.close(fd)
+    _fs.sync_directory(path)
 
 def _matches(path, record):
     return (path.is_file() and path.stat().st_size == record["bytes"]
@@ -51,7 +49,7 @@ def capture(url, path, *, maximum_bytes):
             if not _matches(selected, prior):
                 raise ValueError("Retained HTTP source bytes differ: " + str(selected))
             if selected == partial:
-                os.replace(partial, path)
+                _fs.replace(partial, path)
                 _fsync_directory(path.parent)
             if prior["state"] != "complete":
                 prior["state"] = "complete"
@@ -91,7 +89,7 @@ def capture(url, path, *, maximum_bytes):
                 os.fsync(out.fileno())
             record.update(state="received", observed_at=now(), bytes=received, sha256=h.hexdigest())
             atomic_json(receipt_path, record)
-            os.replace(partial, path)
+            _fs.replace(partial, path)
             _fsync_directory(path.parent)
             record["state"] = "complete"
             atomic_json(receipt_path, record)
@@ -545,7 +543,7 @@ def assemble_dem(directory, *, progress=None):
                 raise ValueError("The original elevation exports contain no finite numeric cells")
             with pending.open("rb") as handle:
                 os.fsync(handle.fileno())
-            os.replace(pending, destination)
+            _fs.replace(pending, destination)
             _fsync_directory(directory)
             companions = [describe_file(directory, directory / name)
                           for name in ["plan.json", "tiles.json", metadata_filename]]
@@ -640,7 +638,7 @@ def prepare_prism(directory, *, archive_path=None, capture_path=None, transfer_p
                     out.write(block)
                 out.flush()
                 os.fsync(out.fileno())
-            os.replace(pending, destination)
+            _fs.replace(pending, destination)
             members = [{"name": info.filename, "bytes": info.file_size, "crc32": f"{info.CRC:08x}"} for info in infos]
         with rasterio.open(destination) as dataset:
             if dataset.count != 1 or not dataset.crs:
@@ -658,13 +656,13 @@ def prepare_prism(directory, *, archive_path=None, capture_path=None, transfer_p
             from model.common import retain_file
             if not local_archive.exists():
                 try:
-                    os.link(source, local_archive)
+                    _fs.publish_file(source, local_archive)
                 except OSError as error:
                     import errno
                     if error.errno != errno.EXDEV:
                         raise
                     original_object = retain_file(directory, source, receipt["sha256"])
-                    os.link(directory / original_object["object"], local_archive)
+                    _fs.publish_file(directory / original_object["object"], local_archive)
             if not _matches(local_archive, receipt):
                 raise ValueError("The retained original precipitation archive changed during handoff")
         atomic_json(directory / "original/prism.capture.json", receipt, immutable=True)

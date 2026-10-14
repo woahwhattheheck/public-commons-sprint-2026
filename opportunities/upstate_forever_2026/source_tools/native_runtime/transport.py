@@ -5,6 +5,13 @@ never executed by this module. Paths and complete hashes are checked before use.
 """
 from __future__ import annotations
 
+import sys as _platform_sys
+from pathlib import Path as _PlatformPath
+_platform_root = str(_PlatformPath(__file__).resolve().parents[2])
+if _platform_root not in _platform_sys.path:
+    _platform_sys.path.insert(0, _platform_root)
+from model import portable_fs as _fs
+
 from contextlib import contextmanager
 from datetime import datetime, timezone
 import hashlib
@@ -44,7 +51,7 @@ def read_json(path):
 
 
 def atomic_json(path, value):
-    path = Path(path)
+    path = _fs.native_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, temporary = tempfile.mkstemp(prefix="." + path.name + ".", dir=path.parent)
     try:
@@ -52,7 +59,8 @@ def atomic_json(path, value):
             stream.write(canonical(value) + b"\n")
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, path)
+        _fs.replace(temporary, path)
+        _fs.sync_directory(path.parent)
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
@@ -69,6 +77,7 @@ def file_hash(path):
 def safe_relative(name):
     if not isinstance(name, str) or not name or "\\" in name or "\x00" in name:
         raise ValueError("Invalid relative member path")
+    _fs.relative_name(name)
     path = PurePosixPath(name)
     if path.is_absolute() or any(p in ("", ".", "..") for p in name.split("/")):
         raise ValueError("Unsafe relative member path: " + name)
@@ -121,16 +130,8 @@ def verify_file(root, item):
 
 @contextmanager
 def lock(path):
-    """POSIX operation lock; process death releases it without stale lock removal."""
-    import fcntl
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    fd = os.open(path, os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0), 0o600)
-    try:
-        fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        yield fd
-    finally:
-        os.close(fd)
+    with _fs.locked(path, blocking=False) as descriptor:
+        yield descriptor
 
 
 def copy_verified(source, target):
@@ -150,7 +151,7 @@ def copy_verified(source, target):
 def split(archive, destination, part_bytes=8 * BLOCK):
     """Produce complete ordered parts. Matching completed parts are reusable."""
     archive = regular(Path(archive).resolve(strict=True))
-    destination = Path(destination).resolve()
+    destination = _fs.native_path(destination).resolve()
     if type(part_bytes) is not int or part_bytes <= 0:
         raise ValueError("part_bytes must be a positive integer")
     if archive.is_relative_to(destination):
@@ -198,7 +199,8 @@ def split(archive, destination, part_bytes=8 * BLOCK):
                     verify_file(destination, entry)
                     temporary.unlink()
                 else:
-                    os.replace(temporary, path)
+                    _fs.replace(temporary, path)
+                    _fs.sync_directory(path.parent)
                 parts.append(entry)
                 offset += length
         if h.hexdigest() != identity["sha256"] or archive.stat().st_size != identity["bytes"]:
@@ -236,10 +238,10 @@ def join(manifest_path, destination):
     compared byte-for-byte to the verified original part; matching bytes are kept.
     No existing completed destination or unrelated partial file is replaced.
     """
-    manifest_path = Path(manifest_path).resolve(strict=True)
+    manifest_path = _fs.native_path(manifest_path).resolve(strict=True)
     manifest = read_json(manifest_path)
     identity = check_parts(manifest)
-    destination = Path(destination).resolve()
+    destination = _fs.native_path(destination).resolve()
     destination.parent.mkdir(parents=True, exist_ok=True)
     partial = destination.with_name("." + destination.name + ".partial")
     state_path = destination.with_name("." + destination.name + ".receiving.json")
@@ -294,9 +296,10 @@ def join(manifest_path, destination):
                                          "updated_at": stamp()})
         if partial.stat().st_size != identity["bytes"] or file_hash(partial) != identity["sha256"]:
             raise ValueError("Joined capsule differs from the retained original")
-        # Hard-link publication is create-only, including against a competing writer.
-        os.link(partial, destination)
+        # Publication is create-only, including against a competing writer.
+        _fs.publish_file(partial, destination)
         partial.unlink()
+        _fs.sync_directory(destination.parent)
         result = {"state": "complete", "reused": False, "path": str(destination),
                   "transfer_sha256": signature, **identity}
         atomic_json(state_path, result)
