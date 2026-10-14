@@ -7,6 +7,7 @@
   "assets": [
     "client_source_intake.mjs",
     "client_source_mapping.mjs",
+    "client_source_rows.mjs",
     "client_source_intake.css"
   ],
   "backend": {
@@ -50,6 +51,32 @@
         ],
         "path": "/api/client-source/result",
         "operation": "result",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/client-source/rows",
+        "operation": "rows",
+        "handler": "read",
+        "args": [
+          "workspace_key",
+          "operation",
+          "payload"
+        ]
+      },
+      {
+        "methods": [
+          "POST"
+        ],
+        "path": "/api/client-source/table-export",
+        "operation": "table-export",
         "handler": "read",
         "args": [
           "workspace_key",

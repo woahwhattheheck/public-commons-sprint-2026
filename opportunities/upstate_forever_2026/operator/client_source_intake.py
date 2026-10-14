@@ -121,11 +121,76 @@ class ClientSourceIntake:
                     "required_table_fields": {model: required_table_fields([model])
                                               for model in ("ndr", "sdr")},
                     "target_units": TARGET_UNITS}
+        if operation in {"rows", "table-export"}:
+            return self._table_read(workspace_key, ws, operation, payload)
         need(operation == "result", "Choose a source intake result.")
         value = self._load(ws, identifier(payload["id"]))
         value = deepcopy(value)
         value["_downloads"] = self._downloads(workspace_key, ws, value)
         return value
+
+
+    def _table_source(self, ws, payload):
+        record = self._load(ws, identifier(payload["id"]))
+        need(record.get("action") == "client-source.inspect" and record.get("state") == "complete",
+             "Open the completed original inspection before reading its table.")
+        fi, pi = payload.get("file_index"), payload.get("part_index")
+        need(type(fi) is int and 0 <= fi < len(record["files"]), "Choose the original file.")
+        item = record["files"][fi]
+        parts = item.get("inspection", {}).get("parts", [])
+        need(type(pi) is int and 0 <= pi < len(parts), "Choose the original worksheet or table.")
+        part = parts[pi]
+        need(part.get("kind") == "table" and not part.get("error"),
+             "Choose a readable original worksheet or table.")
+        path = self._view(ws, self.directory(ws, record["id"]) / "originals" / str(fi),
+                          item["original"], item["filename"])
+        identity = {"inspection_id": record["id"], "file_index": fi, "part_index": pi,
+                    "original": deepcopy(item["original"])}
+        identity["original"]["filename"] = item["filename"]
+        return record, item, part, path, identity
+
+    def _table_read(self, workspace_key, ws, operation, payload):
+        from model.client_source_rows import read_rows, export_table
+        record, item, part, path, identity = self._table_source(ws, payload)
+        if operation == "rows":
+            result = read_rows(path, item["options"], part.get("sheet"),
+                               start_row=payload.get("start_row"),
+                               page_size=payload.get("page_size", 100),
+                               query=payload.get("query", ""),
+                               case_sensitive=payload.get("case_sensitive", False))
+            result.update(identity)
+            return result
+        selection = {**identity, "sheet": part.get("sheet"), "reading": options(item["options"]),
+                     "schema": "upstate.client-source-table-export/v1"}
+        directory = self.directory(ws, record["id"]) / "table-exports" / digest(selection)
+        directory.mkdir(parents=True, exist_ok=True)
+        saved = directory / "manifest.json"
+        with held(directory / ".export.lock"):
+            if saved.exists():
+                result = read_json(saved)
+                need(result.get("selection") == selection, "The saved whole-table export has a different source.")
+            else:
+                with tempfile.TemporaryDirectory(prefix=".table-", dir=directory) as temporary:
+                    result = export_table(path, item["options"], part.get("sheet"), temporary,
+                                          identity=identity["original"])
+                    retained = []
+                    for artifact in result.pop("files"):
+                        body = retain_file(ws.root, artifact, file_digest(artifact))
+                        body["filename"] = artifact.name
+                        retained.append(body)
+                    result.update(identity)
+                    result["selection"], result["artifacts"] = selection, retained
+                    atomic_json(saved, result, immutable=True)
+            result = deepcopy(result)
+            result["_downloads"] = [
+                self.operator._ticket(workspace_key, self._raw(ws, body), body,
+                                      body["filename"])
+                for body in result["artifacts"]]
+            result["_downloads"].append(self.operator._ticket(
+                workspace_key, self._raw(ws, item["original"]),
+                {**item["original"], "filename": item["filename"]},
+                "Exact original: " + item["filename"]))
+            return result
 
     def _downloads(self, workspace_key, ws, record):
         directory = self.directory(ws, record["id"])
@@ -169,7 +234,18 @@ class ClientSourceIntake:
 
     def verify_workspace(self, workspace):
         for path in (workspace.root / "client-source-intake").glob("*/operation.json"):
-            self._load(workspace, path.parent.name)
+            record = self._load(workspace, path.parent.name)
+            for manifest in path.parent.glob("table-exports/*/manifest.json"):
+                exported = read_json(manifest)
+                selected = exported["selection"]
+                _, item, part, _, identity = self._table_source(workspace, {"id": record["id"],
+                    "file_index": selected["file_index"], "part_index": selected["part_index"]})
+                need(selected == {**identity, "sheet": part.get("sheet"),
+                                  "reading": options(item["options"]),
+                                  "schema": "upstate.client-source-table-export/v1"},
+                     "A whole-table export belongs to a different retained source.")
+                for body in exported["artifacts"]:
+                    self._raw(workspace, body)
         return True
 
     def invoke(self, task):
