@@ -80,6 +80,12 @@ class PlatformLayouts(unittest.TestCase):
             self.assertTrue(env["PATH"].endswith("C:\\Windows\\System32"))
             self.assertEqual(native.interpreter(p, system="Windows"), p / "python.exe")
             self.assertEqual(native.interpreter(p, kind="wheelhouse", system="Windows"), p / "Scripts/python.exe")
+            mac = native.prefix_environment(p, system="Darwin", base={
+                "PATH": "/usr/bin", "DYLD_LIBRARY_PATH": "/unrelated",
+                "DYLD_INSERT_LIBRARIES": "/unrelated/libinject.dylib",
+                "SSL_CERT_FILE": "explicit-user-trust.pem"})
+            self.assertFalse(any(key.startswith("DYLD_") for key in mac))
+            self.assertEqual(mac["SSL_CERT_FILE"], "explicit-user-trust.pem")
             # The real Win32 add_dll_directory executes in the Windows receiver.
             # Here verify its application lifetime and target containment contract.
             with patch.object(native, "os") as os_mock, patch.object(native, "_DLL_HANDLES", {}):
