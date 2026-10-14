@@ -96,3 +96,14 @@ The existing deployed endpoint is https://eco-workbench.tjlabs-publisher.workers
 Registration includes the original native workspace_key from the maintained private launcher session. In the explicit fixed-origin compatibility mode, it reads the authenticated original /api/whoami default_workspace. The edge preserves and enforces its original native workspace binding across source updates. The sole final whole-workbench host supplies this original binding; parsing or reading a separate retained receiving project is independent of attaching it to the final endpoint.
 
 All exact web_assets declared by the actual authenticated extension manifest are registered beneath /web/, including nested Study modules and styles such as extensions/study_transfer.mjs. Each declaration retains the original native relative-path and .mjs/.css/.html constraints. Native root assets and exact optional private route declarations continue through the same registration. This uses the served inventory without inferring a separate Measurements mount.
+
+## Normal startup and temporary service failures
+
+The maintained launcher can own this connector as its selected-runtime child after writing the original private native session. Its lifecycle integration reads the optional private transport configuration before selecting the advertised origin, preserves the same configuration and journal across cold reopen, and never places credentials in the portable application or scientific exports.
+
+The connector retries initial registration only for transient connection failures or HTTP408,429 and5xx. Its normal retry delay grows from1 to30 seconds; a longer valid Retry-After delay from the edge or native discovery response takes precedence. Both numeric seconds and HTTP dates are supported. Waiting remains interruptible by the existing shutdown signal. Permanent configuration, certificate-verification, authentication, route and binding errors retain their explicit failure instead of retrying registration indefinitely. The diagnostic --register-only command remains a single attempt.
+
+A startup_retry event means registration is still pending. The existing connected event is emitted only after the actual current route manifest and original native Workspace pin have been accepted by the edge. Later reconnecting events also honor Retry-After. Event fields contain only safe error codes, delay, route count and protocol; credentials and request content remain private. The transfer receive/execute/journal and original-operation reconciliation paths are unchanged.
+
+HTTP Retry-After syntax is defined in RFC9110 section10.2.3:
+https://www.rfc-editor.org/rfc/rfc9110.html#name-retry-after

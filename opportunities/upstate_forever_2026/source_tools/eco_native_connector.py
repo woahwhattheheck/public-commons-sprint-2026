@@ -9,10 +9,14 @@ from __future__ import annotations
 import argparse
 import ast
 import contextlib
+from datetime import timezone
+from email.utils import parsedate_to_datetime
+import errno
 import hashlib
 import http.client
 import ipaddress
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -45,9 +49,48 @@ STOP = threading.Event()
 
 
 class ConnectorError(Exception):
-    def __init__(self, code, status=None):
+    def __init__(self, code, status=None, retry_after=None):
         super().__init__(code)
-        self.code, self.status = code, status
+        self.code, self.status, self.retry_after = code, status, retry_after
+
+
+def retry_after_seconds(value):
+    if not isinstance(value, str) or not value.strip():
+        return None
+    value = value.strip()
+    try:
+        if re.fullmatch(r"[0-9]+", value):
+            seconds = float(int(value))
+        else:
+            date = parsedate_to_datetime(value)
+            if date.tzinfo is None:
+                date = date.replace(tzinfo=timezone.utc)
+            seconds = max(0.0, date.timestamp() - time.time())
+        return seconds if math.isfinite(seconds) and seconds >= 0 else None
+    except (ValueError, TypeError, OverflowError, OSError):
+        return None
+
+
+def wait_for_retry(seconds):
+    # Long provider cooldowns remain interruptible without timeout overflow.
+    deadline = time.monotonic() + seconds
+    while not STOP.is_set():
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            return False
+        if STOP.wait(min(30.0, remaining)):
+            return True
+    return True
+
+
+def transient_registration_error(error):
+    if isinstance(error, ConnectorError):
+        return error.status in (408, 429) or (error.status is not None and 500 <= error.status < 600)
+    if isinstance(error, (ConnectionError, TimeoutError, socket.gaierror,
+                          http.client.HTTPException, ssl.SSLEOFError)):
+        return True
+    return isinstance(error, OSError) and error.errno in (
+        errno.ENETDOWN, errno.ENETUNREACH, errno.EHOSTUNREACH, errno.ETIMEDOUT)
 
 
 def canonical(value):
@@ -273,7 +316,8 @@ class Edge:
             if 300 <= reply.status < 400:
                 raise ConnectorError("EDGE_REDIRECT_REFUSED", reply.status)
             if not 200 <= reply.status < 300:
-                raise ConnectorError("EDGE_HTTP_" + str(reply.status), reply.status)
+                raise ConnectorError("EDGE_HTTP_" + str(reply.status), reply.status,
+                                     retry_after_seconds(reply.getheader("Retry-After")))
             return reply.status, {k.lower(): v for k, v in reply.getheaders()}, data
         finally:
             connection.close()
@@ -415,7 +459,8 @@ class Connector:
         try:
             raw = reply.read(8 * CHUNK + 1)
             if reply.status != 200 or len(raw) > 8 * CHUNK:
-                raise ConnectorError("NATIVE_DISCOVERY_HTTP_" + str(reply.status))
+                raise ConnectorError("NATIVE_DISCOVERY_HTTP_" + str(reply.status), reply.status,
+                                     retry_after_seconds(reply.getheader("Retry-After")))
             result = json.loads(raw)
             if not isinstance(result, dict):
                 raise ConnectorError("NATIVE_DISCOVERY_OBJECT")
@@ -816,12 +861,32 @@ class Connector:
                     STOP.wait(0.25)
                 delay = 1
             except (OSError, http.client.HTTPException, ValueError, ConnectorError) as error:
-                event("reconnecting", code=getattr(error, "code", type(error).__name__))
-                STOP.wait(delay)
+                retry_seconds = max(delay, getattr(error, "retry_after", None) or 0)
+                event("reconnecting", code=getattr(error, "code", type(error).__name__),
+                      retry_seconds=retry_seconds)
+                wait_for_retry(retry_seconds)
                 delay = min(30, delay * 2)
 
+    def register_until_connected(self):
+        delay = 1
+        while not STOP.is_set():
+            try:
+                self.register()
+                return True
+            except (OSError, http.client.HTTPException, ValueError, ConnectorError) as error:
+                if not transient_registration_error(error):
+                    raise
+                retry_seconds = max(delay, getattr(error, "retry_after", None) or 0)
+                event("startup_retry", code=getattr(error, "code", type(error).__name__),
+                      retry_seconds=retry_seconds)
+                if wait_for_retry(retry_seconds):
+                    return False
+                delay = min(30, delay * 2)
+        return False
+
     def run(self):
-        self.register()
+        if not self.register_until_connected():
+            return
         # Resume retained response/input work even when a disconnect hid its edge lease.
         for request in self.journal.pending():
             try:
