@@ -52,7 +52,7 @@ Both original archive SHA-256 values appear in the HTML and JSON. Full native in
 
 ## Existing typed client and CLI
 
-The maintained client has a read-only \`archiveComparison(selection)\` method. It uses only the existing cohort, object and reporting-table routes:
+The maintained client has a read-only `archiveComparison(selection)` method. It uses only the existing cohort, object and reporting-table routes:
 
 ~~~js
 const result = await client.archiveComparison({
@@ -73,7 +73,7 @@ project-portfolio compare \
 
 The output uses the existing immutable JSON writer. Repeating the same output path only reuses exact bytes. Supply actual IDs from the original cohort/publication catalogue; the example names are placeholders, not a prepared customer project.
 
-The shared source module \`source/archive/web/comparison.mjs\` exports \`comparePublications\`, \`reopenComparison\`, \`comparisonHTML\`, and \`comparisonCSV\` for the browser and original typed client. New files enter the maintained product's full source selection and distribution. The authenticated service only gains the exact three static asset routes; no action or new server-side mutation is introduced.
+The shared source module `source/archive/web/comparison.mjs` exports `comparePublications`, `reopenComparison`, `comparisonHTML`, and `comparisonCSV` for the browser and original typed client. New files enter the maintained product's full source selection and distribution. The authenticated service gains three static asset routes and an optional `representation=source` response on its existing object-read route. That response supplies verified original JSON bytes; the default parsed-JSON response is unchanged. No action or server-side mutation is introduced.
 
 ## Continue the original receiving course
 
