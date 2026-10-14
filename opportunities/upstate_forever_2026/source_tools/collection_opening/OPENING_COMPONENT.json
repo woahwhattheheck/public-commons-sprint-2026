@@ -14,26 +14,30 @@
     },
     {
       "path": "Open_Workbench.ps1",
-      "bytes": 3594,
-      "sha256": "66fa0ad5424c9c3ff1fbda5e7fd3a88be952bee999ede2f2434cdef283993bbe",
-      "predecessor_sha256": [],
+      "bytes": 4193,
+      "sha256": "26cc2bf0ef7a519fa1d10c96836f7d7eb3ed6ae518330b09b1951f77ef8432d4",
+      "predecessor_sha256": [
+        "66fa0ad5424c9c3ff1fbda5e7fd3a88be952bee999ede2f2434cdef283993bbe"
+      ],
       "mode": "0644"
     },
     {
       "path": "Open_Workbench.command",
-      "bytes": 2924,
-      "sha256": "e61e385fa4f4c1ca64564f5515d5d51b31cada544e581ce726c0aea6d77c1273",
+      "bytes": 3362,
+      "sha256": "1a8303062fafff7240acff42fb11e2b8a38920e4eb4efc2b1dd0570bb3cb86e8",
       "predecessor_sha256": [
-        "6b3a6818c65d2f18f097ac11cd581f3fee40f2bc2184be3b8ec1bf3dda43df7e"
+        "6b3a6818c65d2f18f097ac11cd581f3fee40f2bc2184be3b8ec1bf3dda43df7e",
+        "e61e385fa4f4c1ca64564f5515d5d51b31cada544e581ce726c0aea6d77c1273"
       ],
       "mode": "0755"
     },
     {
       "path": "open_native_collection.py",
-      "bytes": 7178,
-      "sha256": "b915d52edba870f7c0ef655596d566fd16a96a62951eaadb46caaf23a26d2cb7",
+      "bytes": 9635,
+      "sha256": "0c11dcb11b89d2f9b5984003abc70de0502f0e571f3251b85c6b46f805b9b830",
       "predecessor_sha256": [
-        "dc2d7880329983b5c9eb71aa4b20114684ab1ffd2b2c4b3d61d1f118e23c9031"
+        "dc2d7880329983b5c9eb71aa4b20114684ab1ffd2b2c4b3d61d1f118e23c9031",
+        "b915d52edba870f7c0ef655596d566fd16a96a62951eaadb46caaf23a26d2cb7"
       ],
       "mode": "0644"
     },
@@ -91,6 +95,20 @@
       "sha256": "c93c2ac9629898d511b588efdd94113a26d3c20d329df5f7ac6ec6653c07625e",
       "predecessor_sha256": [],
       "mode": "0644"
+    },
+    {
+      "path": "Open_Saved_Workbench.cmd",
+      "predecessor_sha256": [],
+      "bytes": 76,
+      "sha256": "f9579b1dd667a8528670846b19ac273a2761592efc831ca7a11f83cb55ef7947",
+      "mode": "0644"
+    },
+    {
+      "path": "Open_Saved_Workbench.command",
+      "predecessor_sha256": [],
+      "bytes": 125,
+      "sha256": "7b97b88d15165c512e945b19798d25c804c2eaec2da0b269cb997b3b6da9adf0",
+      "mode": "0755"
     }
   ]
 }

@@ -16,7 +16,6 @@ from typing import Any, Mapping
 
 from .common import INVEST_VERSION
 from . import native_study, scenario_treatment_report
-from .robust_decisions.eco_robust import decision_delivery
 from .model_selection import MODEL_LABELS, MODEL_OUTPUTS, run_scope
 from .native_versions import (POLICY as EXECUTION_VERSION_POLICY, guide_url,
                               model_versions, models_for_outputs, version_label)
@@ -1065,7 +1064,11 @@ def build_report(*, workspace, directory, selection, state, baseline, alternativ
         methods_index = next((index + 1 for index, section in enumerate(report["sections"])
                               if section["id"] == "methods"), len(report["sections"]))
         report["sections"][methods_index:methods_index] = coefficient_sections
-    appended = list(decision_delivery.client_sections(decision_product))
+    appended = []
+    if decision_product is not None:
+        # Decision validation belongs to its appendix, not saved-report startup.
+        from .robust_decisions.eco_robust import decision_delivery
+        appended.extend(decision_delivery.client_sections(decision_product))
     appended.extend(_observed_sections(observed_product))
     if observed_product is not None:
         report["observed_context"] = observed_product["binding"]

@@ -27,12 +27,24 @@ try {
     $Machine = $env:PROCESSOR_ARCHITEW6432
     if (-not $Machine) { $Machine = $env:PROCESSOR_ARCHITECTURE }
     if ($Machine -ne 'AMD64') { throw "No native runtime supplied for Windows $Machine." }
-    $Manifest = Get-Content -LiteralPath (Join-Path $Root 'NATIVE_RUNTIME.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-    $Descriptor = $Manifest.platforms.'windows-x86_64'
-    if (-not $Descriptor) { throw 'Keep the matching Windows runtime manifest in this collection.' }
+    $Saved = $WorkbenchArguments -contains '--plain'
     $Python = $env:ECOSYSTEMS_PYTHON
+    if (-not $Saved -or -not $Python) {
+        $SpecPath = Join-Path $Root 'NATIVE_RUNTIME.json'
+        $BootstrapPath = Join-Path $Root 'BOOTSTRAPS.json'
+        if ($Saved -and (Test-Path -LiteralPath $BootstrapPath -PathType Leaf)) {
+            $SpecPath = $BootstrapPath
+        }
+        $Manifest = Get-Content -LiteralPath $SpecPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        if ($SpecPath -eq $BootstrapPath -and $Manifest.schema -ne 'upstate.bootstrap-payloads/v1') {
+            throw 'Keep the original supplied bootstrap inventory in this collection.'
+        }
+        $Descriptor = $Manifest.platforms.'windows-x86_64'
+        if (-not $Descriptor) { throw 'Keep the matching Windows runtime manifest in this collection.' }
+    }
     if (-not $Python) {
         $Bootstrap = $Descriptor.bootstrap
+        if ($SpecPath -eq $BootstrapPath) { $Bootstrap = $Descriptor }
         if (-not $Bootstrap -or -not $Bootstrap.files) { throw 'Keep the complete supplied Windows bootstrap in this collection.' }
         $Directory = Bundle-Member $Root $Bootstrap.directory
         $Python = Bundle-Member $Directory $Bootstrap.python

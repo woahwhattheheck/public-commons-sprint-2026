@@ -10,7 +10,18 @@ else
   TARGET=macos-x86_64
 fi
 SPEC="$ROOT/NATIVE_RUNTIME.json"
-field() { /usr/bin/plutil -extract "platforms.$TARGET.$1" raw -o - "$SPEC"; }
+for ARGUMENT in "$@"; do
+  if [ "$ARGUMENT" = --plain ] && [ -z "${ECOSYSTEMS_PYTHON:-}" ] && [ -f "$ROOT/BOOTSTRAPS.json" ]; then
+    SPEC="$ROOT/BOOTSTRAPS.json"
+    [ "$(/usr/bin/plutil -extract schema raw -o - "$SPEC")" = upstate.bootstrap-payloads/v1 ] ||
+      fail 'Keep the original supplied bootstrap inventory in this collection.'
+  fi
+done
+field() {
+  KEY=$1
+  if [ "$SPEC" = "$ROOT/BOOTSTRAPS.json" ]; then KEY=${KEY#bootstrap.}; fi
+  /usr/bin/plutil -extract "platforms.$TARGET.$KEY" raw -o - "$SPEC"
+}
 relative() {
   case "$1" in ''|/*|*\\*|*:*|.|..|./*|../*|*/./*|*/../*|*/.|*/..|*//*|*/) return 1;; esac
 }

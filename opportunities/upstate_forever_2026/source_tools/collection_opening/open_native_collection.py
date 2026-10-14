@@ -2,6 +2,7 @@
 """Prepare the supplied native tools, then open the original whole collection."""
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import os
@@ -93,23 +94,72 @@ def selected_path(name: str) -> Path | None:
     return Path(value).expanduser() if value else None
 
 
+def launch_collection(root: Path, python: Path, environment: dict[str, str],
+                      arguments: list[str]) -> int:
+    """Keep the original collection controller in charge of both opening modes."""
+    command = [str(python), "-B", str(root / "open_collection.py"), *arguments]
+    if os.name == "nt":
+        # Console interrupts reach the controller too. Keep waiting while its
+        # maintained shutdown drains; subprocess.run would kill it on Ctrl+C.
+        child = subprocess.Popen(command, env=environment)
+        while True:
+            try:
+                return child.wait()
+            except KeyboardInterrupt:
+                continue
+    os.execve(str(python), command, environment)
+    return 0
+
+
 def main(arguments: list[str] | None = None) -> int:
     root = Path(__file__).resolve().parent
     arguments = list(sys.argv[1:] if arguments is None else arguments)
     if arguments[:1] == ["--"]:
         arguments.pop(0)
+    # Recognize only the existing mode flags; the collection owns all other
+    # arguments and rejects a conflicting --native/--plain selection.
+    parser = argparse.ArgumentParser(add_help=False, allow_abbrev=False)
+    modes = parser.add_mutually_exclusive_group()
+    modes.add_argument("--native", dest="native", action="store_true")
+    modes.add_argument("--plain", dest="native", action="store_false")
+    parser.set_defaults(native=True)
+    mode, _ = parser.parse_known_args(arguments)
     spec_path = root / "NATIVE_RUNTIME.json"
-    spec = json.loads(spec_path.read_text(encoding="utf-8"))
     key = platform_key()
     explicit_python = selected_path("ECOSYSTEMS_PYTHON")
-    if "platforms" in spec:
-        descriptor = spec["platforms"].get(key)
-        if not isinstance(descriptor, dict):
-            raise ValueError("The supplied runtime manifest has no " + key + " target")
-        if explicit_python is None:
-            verify_bootstrap(root, descriptor)
-    elif key != "linux-x86_64":
-        raise ValueError("Receive the matching Windows or macOS runtime manifest")
+    bootstrap_spec = root / "BOOTSTRAPS.json"
+    if not mode.native and bootstrap_spec.is_file():
+        spec_path = bootstrap_spec
+    # An explicit development interpreter already selects its own bootstrap.
+    # Ordinary recipient opening always verifies the supplied original inventory.
+    if mode.native or explicit_python is None:
+        spec = json.loads(spec_path.read_text(encoding="utf-8"))
+        if spec_path == bootstrap_spec and spec.get("schema") != "upstate.bootstrap-payloads/v1":
+            raise ValueError("Use the bootstrap inventory supplied with this collection")
+        if "platforms" in spec:
+            descriptor = spec["platforms"].get(key)
+            if not isinstance(descriptor, dict):
+                raise ValueError("The supplied runtime manifest has no " + key + " target")
+            if explicit_python is None:
+                if spec_path == bootstrap_spec:
+                    descriptor = {"bootstrap": descriptor}
+                verify_bootstrap(root, descriptor)
+        elif key != "linux-x86_64" or not mode.native:
+            raise ValueError("Receive the matching supplied bootstrap manifest")
+    if not mode.native:
+        # The supplied bootstrap can read retained Workspaces and reports before
+        # the platform's scientific payload is received. Reuse the original
+        # explicit plain mode rather than catching a failed native opening.
+        python = explicit_python or Path(sys.executable)
+        if not python.is_absolute() or not python.is_file():
+            raise ValueError("Select the full path of the supplied Python executable")
+        environment = {name: value for name, value in os.environ.items()
+                       if not name.startswith(("PYTHON", "PIP_", "CONDA_"))
+                       and name not in ("VIRTUAL_ENV", "PROJ_LIB", "PROJ_DATA", "GDAL_DATA")}
+        environment.update(ECOSYSTEMS_PYTHON=str(python), PYTHONNOUSERSITE="1",
+                           PYTHONDONTWRITEBYTECODE="1")
+        print("Opening saved workspaces and reports.", flush=True)
+        return launch_collection(root, python, environment, arguments)
     application = root / "application"
     sys.path.insert(0, str(application))
     from source_tools import receive_native_runtime as receiver
@@ -129,18 +179,7 @@ def main(arguments: list[str] | None = None) -> int:
     subprocess.run([str(python), "-I", "-B", str(root / "prepare_runtime_dependencies.py"),
                     "--application", str(application), "--spec", str(spec_path)],
                    env=environment, check=True)
-    command = [str(python), "-B", str(root / "open_collection.py"), *arguments]
-    if os.name == "nt":
-        # Console interrupts reach the controller too. Keep waiting while its
-        # maintained shutdown drains; subprocess.run would kill it on Ctrl+C.
-        child = subprocess.Popen(command, env=environment)
-        while True:
-            try:
-                return child.wait()
-            except KeyboardInterrupt:
-                continue
-    os.execve(str(python), command, environment)
-    return 0
+    return launch_collection(root, python, environment, arguments)
 
 
 if __name__ == "__main__":

@@ -24,7 +24,9 @@
         "integration/component_fragments/collection-root-opening.json",
         "source_tools/receive_native_runtime.py",
         "source_tools/runtime_platform.py",
-        "model/windows_fs.py"
+        "model/windows_fs.py",
+        "source_tools/collection_opening/Open_Saved_Workbench.cmd",
+        "source_tools/collection_opening/Open_Saved_Workbench.command"
       ],
       "requires": [
         "native-runtime-invocation"
