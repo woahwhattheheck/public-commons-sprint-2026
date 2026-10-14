@@ -298,7 +298,7 @@ def _delivery_inputs(directory, files, state=None):
     return inputs, expected, delivery
 
 
-def _retain_received_archive(archive_source, destination, before, sha256):
+def _retain_received_archive(archive_source, destination, before, sha256=None):
     """Publish the *opened* editable archive as an immutable working receipt.
 
     Reading through the already-verified descriptor also handles an archive
@@ -306,14 +306,14 @@ def _retain_received_archive(archive_source, destination, before, sha256):
     allowed to expose an interrupted/unchecked copy at the final name.
     The temporary is verified and fsynced before shared create-only
     publication, with the parent directory synchronized afterwards.
+    Its streaming digest also identifies the exact original ZIP for receiving,
+    avoiding a duplicate full-archive checksum pass for delivery snapshots.
     """
     if _archive_identity(archive_source) != before:
         raise ValueError("Original archive changed before retaining its working copy")
     relative = "working/scientific-workspace.zip"
     target = _native_fs_path(Path(destination) / "delivery" / relative)
     target.parent.mkdir(parents=True, exist_ok=True)
-    retained = {"path": relative, "bytes": before[2], "sha256": sha256}
-
     def verify_target():
         if (target.is_symlink() or not target.is_file()
                 or target.stat().st_size != before[2]
@@ -321,10 +321,13 @@ def _retain_received_archive(archive_source, destination, before, sha256):
             raise ValueError("Delivery snapshot conflicts with its enclosing working archive")
 
     if target.exists() or target.is_symlink():
+        if sha256 is None:
+            # Only a preexisting publication needs a separate hash pass.
+            sha256 = _archive_digest(archive_source, before)
         verify_target()
         if _archive_identity(archive_source) != before:
             raise ValueError("Original archive changed while retaining its working copy")
-        return retained
+        return {"path": relative, "bytes": before[2], "sha256": sha256}
 
     pending = None
     try:
@@ -339,9 +342,15 @@ def _retain_received_archive(archive_source, destination, before, sha256):
                 size += len(block)
             output.flush()
             os.fsync(output.fileno())
-        if (size != before[2] or copied.hexdigest() != sha256
+        actual_sha256 = copied.hexdigest()
+        if (size != before[2]
+                or (sha256 is not None and actual_sha256 != sha256)
                 or _archive_identity(archive_source) != before):
             raise ValueError("Original working archive changed during receiving copy")
+        # The same exact byte stream both populates the immutable work ZIP
+        # and identifies the original received edition: no second full scan
+        # of a 473 MB input just to rediscover the identical fingerprint.
+        sha256 = actual_sha256
         try:
             _publish_file(pending, target)
         except FileExistsError:
@@ -352,7 +361,7 @@ def _retain_received_archive(archive_source, destination, before, sha256):
         _sync_directory(target.parent)
         if _archive_identity(archive_source) != before:
             raise ValueError("Original archive changed while retaining its working copy")
-        return retained
+        return {"path": relative, "bytes": before[2], "sha256": sha256}
     finally:
         if pending is not None:
             pending.unlink(missing_ok=True)
@@ -1211,11 +1220,13 @@ def _restore_archive(archive, archive_source, before, manifest, destination):
         details = _verify_restored_workspace(manifest, pending)
         # Finish identity reads and response construction before publication.
         # The retained descriptor stays bound to the same opened archive edition.
-        archive_sha256 = _archive_digest(archive_source, before)
         working_archive = None
         if (manifest.get("delivery") or {}).get("record") is not None:
             working_archive = _retain_received_archive(
-                archive_source, pending, before, archive_sha256)
+                archive_source, pending, before)
+            archive_sha256 = working_archive["sha256"]
+        else:
+            archive_sha256 = _archive_digest(archive_source, before)
         received_record = _register_received_delivery(manifest, pending, working_archive)
         result = _receiving_result(
             manifest, destination, archive_sha256, details, received_record)
