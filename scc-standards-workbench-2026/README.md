@@ -19,13 +19,15 @@ The command installs the package and its declared document dependencies; it does
 
 For an empty working project, omit `--demo` and choose **New project**. The public and authored examples have stable, distinct IDs; selecting an example again opens the retained project without overwriting its edits. A later example source edition requires a fresh workspace or an explicit archive of the existing one.
 
-## Version 0.4.1: native ballot receiving corrections
+## Version 0.4.1: completed ballot and application corrections
 
-This complete source edition includes the original consultation, individual-member ballot and prime-application desks. It incorporates six corrections from the original equipped ballot course: readable decision export, multiline vote and notification fields, narrow-width wrapping, stable replay comparisons, a linked continuation from the retained original baseline, and safe loopback viewing of the course's own attachments.
+This complete source edition includes the original consultation, individual-member ballot and prime-application desks. It incorporates the original equipped course's decision export, multiline vote fields, offline response and narrow-screen corrections, plus the later responsive decision tables and application save/freeze comparison. Saving an application and reopening its JSON preserves its values regardless of object-key order. Saved-edition rows remain readable at narrow widths.
 
-The corrected ballot course completed its original return/adoption, closure, procedural review, publication and independent private restoration under source identity `cd0d5a03baede5b3611b733a1b36fa9d5c81216fc372bbe2df81b91e1589dc39`. The original closed ballot and earlier output are preserved. This packaged edition adds release metadata to those exact six native postimages; its source manifest is the authority for the installed files. Final inspection of every outgoing attachment and the separate prime-application receiving remain with their original producing operation; completion of the ballot course does not claim those separate outcomes.
+The original equipped operation completed the ballot return/adoption, closure, procedural review, publication and independent private restoration. It subsequently completed the original application save, freeze, downloads and cold reopening, and inspected the actual PDF, Word, HTML and CSV outputs in their recipient views. The final operated source identity is `222b3c877a992e1a270820863d54aa1bfa96d040049160308f3b76a24525f5ff`; the earlier completed ballot source `cd0d5a03baede5b3611b733a1b36fa9d5c81216fc372bbe2df81b91e1589dc39` and its output remain preserved.
 
-See the [0.4.1 receiving and source record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scc-standards-workbench-2026/releases/RECEIVING-0.4.1.md) for the exact correction identity and continuation behavior. Keep the complete private project export when upgrading; the immutable earlier source releases remain available.
+This packaged edition additionally finishes source-edition continuation in the receiving programme. It keeps each edition's attachments, screenshots and result immutable, retains original root results, publishes an explicit current-result pointer, and closes all owned resources even after an earlier cleanup failure. The original stage/request records remain authoritative, so updating the source continues the saved operation. The source manifest identifies the exact packaged files; its following receiver source is distinct from the earlier completed native edition.
+
+See the [0.4.1 receiving and source record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/main/scc-standards-workbench-2026/releases/RECEIVING-0.4.1.md) for the exact sources and continuation instructions. Keep the complete private project export when upgrading; earlier immutable source releases remain available.
 
 ## Exchange a bilingual review packet
 

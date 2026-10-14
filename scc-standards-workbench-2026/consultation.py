@@ -711,7 +711,7 @@ def _document(title, content, language="en"):
             "<title>" + html.escape(title) + "</title><style>body{font:15px/1.55 system-ui,sans-serif;color:#202020;background:#fff;margin:32px auto;max-width:1100px;padding:0 22px}"
             "h1{font-size:26px;overflow-wrap:anywhere}h2{font-size:20px;margin-top:32px}small{color:#555;overflow-wrap:anywhere}table{border-collapse:collapse;width:100%;table-layout:fixed}"
             "td,th{border:1px solid #bbb;padding:10px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:#efefef}"
-            ".prose{white-space:pre-wrap}.table-wrap{overflow:auto}code{overflow-wrap:anywhere}@media print{body{margin:0;max-width:none}tr{break-inside:avoid}h2{break-after:avoid}}</style><body>"
+            ".prose{white-space:pre-wrap}.table-wrap{overflow:auto}code{overflow-wrap:anywhere}@media screen and (max-width:600px){.table-wrap table{table-layout:auto}.table-wrap th,.table-wrap td{min-width:9rem;overflow-wrap:break-word}}@media print{body{margin:0;max-width:none}tr{break-inside:avoid}h2{break-after:avoid}}</style><body>"
             + content + "</body></html>").encode()
 
 

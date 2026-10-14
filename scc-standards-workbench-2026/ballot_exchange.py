@@ -358,7 +358,7 @@ def packet_files(state, packet_id):
 
 def _table(headings, rows):
     return "<div class='table-wrap'><table><thead><tr>" + "".join("<th>" + html.escape(str(x)) + "</th>" for x in headings) + \
-        "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td>" + html.escape(str(x)) + "</td>" for x in row) + "</tr>" for row in rows) + "</tbody></table></div>"
+        "</tr></thead><tbody>" + "".join("<tr>" + "".join("<td><div class='prose'>" + html.escape(str(x)) + "</div></td>" for x in row) + "</tr>" for row in rows) + "</tbody></table></div>"
 
 
 def decision_files(state, ballot_id, originals):

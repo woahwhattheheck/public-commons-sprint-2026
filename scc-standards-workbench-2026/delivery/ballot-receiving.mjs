@@ -76,7 +76,25 @@ async function run(){
  const save=()=>json(progressFile,progress,true);
  const stage=async(name,action)=>{if(progress.steps[name])return progress.steps[name].value;progress.active=name;save();const value=await action();progress.steps[name]={at:new Date().toISOString(),value:value??null};save();process.stdout.write(JSON.stringify({operation:OPERATION,stage:name,complete:true})+"\n");return value;};
  save();
- let server=null,browser=null,context=null,operator=null,base="",projectId="scc-authored-operator-v1";
+ const editionRoot=out("receiving/"+sourceIdentity),viewsFile=path.join(editionRoot,"views.json"),attachmentsFile=path.join(editionRoot,"outgoing-attachments.json"),resultFile=path.join(editionRoot,"result.json");
+ fs.mkdirSync(editionRoot,{recursive:true,mode:0o700});
+ function verifyPins(rows){
+  assert.ok(Array.isArray(rows));
+  for(const row of rows){
+   assert.ok(typeof row.path==="string"&&row.path&&!row.path.includes("\\")&&!path.isAbsolute(row.path)&&!row.path.split("/").some(p=>!p||p==="."||p===".."));
+   const file=out(row.path),resolved=fs.realpathSync(file);assert.ok(resolved.startsWith(config.output+path.sep));
+   assert.deepEqual(pin(file),{path:row.path,bytes:row.bytes,sha256:row.sha256},"Retained artifact differs: "+row.path);
+  }
+ }
+ function selectResult(){
+  const retained=read(resultFile);assert.equal(retained.operation,OPERATION);assert.equal(retained.source_identity,sourceIdentity);
+  assert.deepEqual(retained.source_files,sourceFiles);verifyPins(retained.artifacts);
+  json(out("current-result.json"),{schema:"scc-ballot-current-result/v1",operation:OPERATION,source_identity:sourceIdentity,result:pin(resultFile)},true);
+  progress.active=null;progress.state="COMPLETE";save();
+  process.stdout.write(JSON.stringify({operation:OPERATION,state:"COMPLETE",output:config.output,source_identity:sourceIdentity,result:path.relative(config.output,resultFile)})+"\n");
+ }
+ if(fs.existsSync(resultFile)){selectResult();return;}
+ let server=null,browser=null,context=null,operator=null,base="",projectId="scc-authored-operator-v1",serverLog=null,primaryError=null,pendingResult=null;
  // Open exact retained recipient files over allowed loopback HTTP. Chromium's
  // managed file-URL restriction remains unchanged; only this operation's files
  // are served, under an unguessable route and strict real-path containment.
@@ -95,11 +113,18 @@ async function run(){
    res.end(req.method==="HEAD"?undefined:raw);
   }catch{res.writeHead(404);res.end("Not found");}
  });
- await new Promise((resolve,reject)=>{attachmentServer.once("error",reject);attachmentServer.listen(0,"127.0.0.1",resolve);});
- attachmentBase="http://127.0.0.1:"+attachmentServer.address().port+"/"+attachmentToken+"/";
+
  function attachmentURL(file){const resolved=fs.realpathSync(file);assert.ok(resolved.startsWith(config.output+path.sep));return attachmentBase+path.relative(config.output,resolved).split(path.sep).map(encodeURIComponent).join("/");}
 
- const pageErrors=[],views=fs.existsSync(out("views.json"))?read(out("views.json")).views:[],serverLog=fs.openSync(out("server.log"),"a");
+ const pageErrors=[],views=fs.existsSync(viewsFile)?read(viewsFile).views:[];
+ async function boundedClose(action,label,ms=10000){
+  let timer;try{return await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(label+" close timed out")),ms);})]);}finally{clearTimeout(timer);}
+ }
+ async function closeRecipient(selected,primary=null){
+  if(!selected)return;
+  try{await boundedClose(()=>selected.close(),"recipient context");}
+  catch(error){if(!primary)throw error;(primary.recipient_cleanup_errors??=[]).push(String(error));}
+ }
  const endpoint=()=>base+"/api/projects/"+encodeURIComponent(projectId);
  async function api(url,options={}){
   const response=await fetch(url.startsWith("http")?url:base+url,{...options,headers:{"Content-Type":"application/json",...options.headers}});
@@ -115,13 +140,22 @@ async function run(){
    let text="",timer=setTimeout(()=>reject(Error("The selected application did not announce its bound local address.")),30000);
    child.once("error",e=>{clearTimeout(timer);reject(e);});
    child.once("exit",code=>{clearTimeout(timer);reject(Error("The selected application exited before serving: "+code));});
-   child.stderr.on("data",b=>fs.writeSync(serverLog,b));
-   child.stdout.on("data",b=>{fs.writeSync(serverLog,b);text+=b.toString();const m=text.match(/Standards drafting workspace: (http:\/\/127\.0\.0\.1:\d+)/);if(m){base=m[1];clearTimeout(timer);resolve();}});
+   child.stderr.on("data",b=>{if(serverLog!==null)fs.writeSync(serverLog,b);});
+   child.stdout.on("data",b=>{if(serverLog!==null)fs.writeSync(serverLog,b);text+=b.toString();const m=text.match(/Standards drafting workspace: (http:\/\/127\.0\.0\.1:\d+)/);if(m){base=m[1];clearTimeout(timer);resolve();}});
   });await api("/api/status");
  }
  async function stop(){
-  if(!server)return;const child=server;server=null;if(child.exitCode!==null)return;
-  child.kill("SIGINT");await new Promise(resolve=>{const timer=setTimeout(()=>child.kill("SIGTERM"),5000);child.once("exit",()=>{clearTimeout(timer);resolve();});});
+  if(!server)return;const child=server;
+  const ended=()=>child.exitCode!==null||child.signalCode!==null;
+  async function waitExit(ms){
+   if(ended())return true;
+   return new Promise(resolve=>{let timer;const done=()=>{clearTimeout(timer);child.removeListener("exit",onExit);resolve(ended());},onExit=()=>done();child.once("exit",onExit);timer=setTimeout(done,ms);if(ended())done();});
+  }
+  for(const signal of ["SIGINT","SIGTERM","SIGKILL"]){
+   if(ended())break;child.kill(signal);if(await waitExit(5000))break;
+  }
+  if(!ended())throw Error("Native server did not exit after bounded SIGINT/SIGTERM/SIGKILL: PID "+child.pid);
+  server=null;
  }
  const sourceDocumentWarnings=[];
  const archivedDependencyHashes=new Set(["e123655d3cf1ceea9de96c406de58a99c0b8983d57252d75fb8124701e523351","9c5763f5e7fc70dd557fdb438e4ef6fd1e877ddc8abb368b2a89ee9fde2bdad3"]);
@@ -133,7 +167,7 @@ async function run(){
   pageErrors.push(String(e));
  });page.on("dialog",d=>d.accept());return page;}
  async function operatorOpen(){
-  if(context)await context.close();
+  if(context)await closeRecipient(context);
   context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
   operator=attach(await context.newPage());await desk();
  }
@@ -151,10 +185,11 @@ async function run(){
  }
  async function capture(page,name,width=1440,height=1000){
   await page.setViewportSize({width,height});await page.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-  const file=out("views/"+sourceIdentity.slice(0,16)+"/"+name+".png");fs.mkdirSync(path.dirname(file),{recursive:true});
-  await page.screenshot({path:file,fullPage:true});
+  const raw=await page.screenshot({fullPage:true}),file=path.join(editionRoot,"views",name+"-"+sha(raw)+".png");write(file,raw);
   const measured=await page.evaluate(()=>({viewport:innerWidth,document_width:document.documentElement.scrollWidth,title:document.title,text:document.body.innerText}));
-  const row={name,width,height,...measured,...pin(file)};views.push(row);json(out("views.json"),{source_identity:sourceIdentity,views},true);
+  const row={name,width,height,...measured,...pin(file)},prior=views.findIndex(v=>v.name===name&&v.width===width&&v.height===height);
+  if(prior<0)views.push(row);else views[prior]=row;
+  json(viewsFile,{source_identity:sourceIdentity,views},true);
   assert.ok(measured.document_width<=width+1,"Actual "+name+" overflows its selected viewport.");
   return row;
  }
@@ -270,6 +305,9 @@ async function run(){
  const editionId="ballot-course-edition-v1",consultationId="ballot-course-consultation-v1",ballotId="ballot-course-pas-v1";
  let baseline;
  try{
+  serverLog=fs.openSync(out("server.log"),"a");
+  await new Promise((resolve,reject)=>{attachmentServer.once("error",reject);attachmentServer.listen(0,"127.0.0.1",resolve);});
+  attachmentBase="http://127.0.0.1:"+attachmentServer.address().port+"/"+attachmentToken+"/";
   await start(config.workspace);
   const mod=await import(pathToFileURL(config.playwright).href),playwright=mod.chromium?mod:mod.default;
   assert.ok(playwright?.chromium,"Use the installed Playwright module");
@@ -319,8 +357,9 @@ async function run(){
     assert.equal(envelope.packet_sha256,packet.packet_sha256);assert.equal(envelope.packet.member.person_id,id);
     assert.equal(envelope.packet.edition.snapshot.cases.length,baseline.cases.length);
     let recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
-    let page=attach(await recipientContext.newPage());
+    let page,recipientError=null;
     try{
+     page=attach(await recipientContext.newPage());
      await page.goto(attachmentURL(path.join(recipientRoot,"member-ballot.html")));
      await page.locator('#tabs [data-tab="document"]').click();assert.ok((await page.locator("#read-body").innerText()).includes("Amos"));
      await page.locator('#tabs [data-tab="vote"]').click();
@@ -328,7 +367,7 @@ async function run(){
      await formFields(page.locator("#vote-form"),{declared_name:member.person_name,choice:choices[index],justification:explanation,cast_at:"2027-02-12T12:00:00"});
      const draft=out(name+"/Member_Draft.json");await download(page,page.locator('[data-do="draft"]'),draft);
      assert.equal(read(draft).response.justification,explanation);
-     await recipientContext.close();
+     await closeRecipient(recipientContext);
      recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
      page=attach(await recipientContext.newPage());await page.goto(attachmentURL(path.join(recipientRoot,"member-ballot.html")));
      await page.locator("#open-file").setInputFiles(draft);await page.locator("#notice").filter({hasText:"Complete saved input opened"}).waitFor();
@@ -348,7 +387,7 @@ async function run(){
      }
      await page.goto(attachmentURL(copy));assert.ok((await page.locator("body").innerText()).includes(explanation||member.person_name));await capture(page,name+"-readable-copy",index===0?390:1440,index===0?844:1000);
      return{packet_id:packetId,packet:pin(zip),draft:pin(draft),returned:pin(first),readable:pin(copy),response_id:returned.response_id};
-    }finally{await recipientContext.close();}
+    }catch(error){recipientError=error;throw error;}finally{await closeRecipient(recipientContext,recipientError);}
    });
    const returnedId=await stage(name+"_receive",()=>retain(id,packetId,first,name+"-receive"));
    voteIds[id]=await stage(name+"_adopt",()=>adopt(id,returnedId,name+"-adopt"));
@@ -362,8 +401,9 @@ async function run(){
    json(out("member-1/Adopted_Original_Vote.json"),await record("votes",originalVote));return{vote_id:originalVote};
   });
   await stage("offline_explicit_correction",async()=>{
-   const recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),page=attach(await recipientContext.newPage());
+   const recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});let recipientError=null;
    try{
+    const page=attach(await recipientContext.newPage());
     await page.goto(attachmentURL(out("member-1/recipient/member-ballot.html")));
     await page.locator("#open-file").setInputFiles(originalReturn);await page.locator("#notice").filter({hasText:"Complete saved input opened"}).waitFor();
     await page.locator('[data-do="correct"]').click();await page.locator("#vote-form").waitFor();
@@ -377,7 +417,7 @@ async function run(){
     const copy=out("member-1/Member_Readable_r2.html");await download(page,page.locator('[data-do="copy"]'),copy);
     await capture(page,"member-correction",390,844);await page.goto(attachmentURL(copy));assert.ok((await page.locator("body").innerText()).includes(justification));await capture(page,"member-correction-readable",390,844);
     return{returned:pin(correction),draft:pin(draft),readable:pin(copy),response_id:second.response_id};
-   }finally{await recipientContext.close();}
+   }catch(error){recipientError=error;throw error;}finally{await closeRecipient(recipientContext,recipientError);}
   });
   const correctedId=await stage("retain_corrected_original",()=>retain(primary,packetIds[primary],correction,"primary-correction-receive"));
   await stage("correction_preserves_vote_and_reopens_resolution",async()=>{
@@ -452,7 +492,7 @@ async function run(){
    return{private_archive:pin(out("Ballot_Complete_Project.private.zip")),decision:pin(out("Ballot_Decision.private.zip")),publication:pin(out("Bilingual_Publication.zip"))};
   });
   await stage("independent_private_restore_and_reopen",async()=>{
-   await context.close();context=null;operator=null;await stop();
+   await closeRecipient(context);context=null;operator=null;await stop();
    const restored=out("received-workspace");fs.mkdirSync(restored,{recursive:true,mode:0o700});
    const result=execFileSync(config.python,["-B",path.join(config.source,"server.py"),"--workspace",restored,"--restore",out("Ballot_Complete_Project.private.zip"),"--no-serve"],{encoding:"utf8"});
    if(!fs.existsSync(out("restore-result.txt")))write(out("restore-result.txt"),result);
@@ -476,12 +516,17 @@ async function run(){
     assert.deepEqual(fs.readFileSync(path.join(dir,"recipient/packet.json")),fs.readFileSync(out("member-"+(i+1)+"/recipient/packet.json")),"Presentation export changed the original packet binding");
    }
    assert.deepEqual(await project(),before,"Presentation export changed native records");
-   json(path.join(presentation,"presentation-continuation.json"),{source_identity:sourceIdentity,project_id:projectId,revision:before.revision,publication_id:publicationId,ballot_id:ballotId,note:"Native read-only exports of the exact existing closed ballot, publication and seven packet identities. Earlier artifacts remain unchanged at original paths.",files:inventory(presentation)});
+   json(path.join(presentation,"presentation-continuation.json"),{source_identity:sourceIdentity,project_id:projectId,revision:before.revision,publication_id:publicationId,ballot_id:ballotId,note:"Native read-only exports of the exact existing closed ballot, publication and seven packet identities. Earlier artifacts remain unchanged at original paths.",files:inventory(presentation).filter(row=>row.path!=="presentation-continuation.json")});
    return{directory:path.relative(config.output,presentation),revision:before.revision};
   });
   await stage("actual_outgoing_attachment_views_"+sourceIdentity,async()=>{
-   const recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),page=attach(await recipientContext.newPage()),opened=[];
+   if(fs.existsSync(attachmentsFile)){
+    const retained=read(attachmentsFile);assert.equal(retained.source_identity,sourceIdentity);verifyPins(retained.retained_files);
+    return{html:retained.html.length,pdfs:retained.pdfs.length,manifest:path.relative(config.output,attachmentsFile),views:path.relative(config.output,viewsFile)};
+   }
+   const recipientContext=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true}),opened=[];let recipientError=null;
    try{
+    const page=attach(await recipientContext.newPage());
     const htmlFiles=inventory(config.output).filter(r=>r.path.endsWith(".html")&&!r.path.startsWith("received-workspace/")&&(!r.path.startsWith("presentation/")||r.path.startsWith("presentation/"+sourceIdentity+"/"))).filter(r=>!r.path.startsWith("publication/")&&!r.path.startsWith("decision/")&&!/^member-\d+\/recipient\//.test(r.path));
     for(const row of htmlFiles){
      const file=out(row.path);await page.goto(attachmentURL(file));
@@ -489,18 +534,47 @@ async function run(){
     }
     const pdfs=inventory(path.join(presentation,"publication")).filter(r=>r.path.endsWith(".pdf")),rendered=[];
     for(const row of pdfs){
-     const file=path.join(presentation,"publication",row.path),prefix=out("views/pdf-"+sha(row.path).slice(0,12));
+     const file=path.join(presentation,"publication",row.path),pdfRoot=path.join(editionRoot,"pdf",sha(row.path+":"+row.sha256)),prefix=path.join(pdfRoot,"page");
+     fs.mkdirSync(pdfRoot,{recursive:true,mode:0o700});
      execFileSync(config.pdftoppm||"pdftoppm",["-r","100","-png",file,prefix],{stdio:["ignore","pipe","pipe"]});
-     const pages=fs.readdirSync(out("views")).filter(n=>n.startsWith(path.basename(prefix)+"-")&&n.endsWith(".png")).sort();
-     assert.ok(pages.length);rendered.push({file:row.path,sha256:row.sha256,pages:pages.map(n=>pin(out("views/"+n)))});
+     const pages=fs.readdirSync(pdfRoot).filter(n=>n.startsWith("page-")&&n.endsWith(".png")).sort();
+     assert.ok(pages.length);rendered.push({file:row.path,sha256:row.sha256,pages:pages.map(n=>pin(path.join(pdfRoot,n)))});
     }
-    json(out("outgoing-attachments.json"),{source_identity:sourceIdentity,presentation_directory:path.relative(config.output,presentation),html:opened,pdfs:rendered,source_document_warnings:sourceDocumentWarnings,full_publication_members:inventory(path.join(presentation,"publication")),full_decision_members:inventory(path.join(presentation,"decision")),member_packets:members.map((m,i)=>({member:m.person_id,files:inventory(path.join(presentation,"member-"+(i+1)+"/recipient"))})),operator_instruction:"Open and visually VIEW every actual captured screen and report page; open the exact DOCX/CSV/JSON/archive contents in their normal recipient view. Fix the affected output and continue this same case."});
-    return{html:opened.length,pdfs:rendered.length,manifest:"outgoing-attachments.json",views:"views.json"};
-   }finally{await recipientContext.close();}
+    json(attachmentsFile,{source_identity:sourceIdentity,retained_files:[...inventory(presentation).map(row=>pin(path.join(presentation,row.path))),pin(viewsFile),...views.map(row=>({path:row.path,bytes:row.bytes,sha256:row.sha256})),...rendered.flatMap(row=>row.pages),...opened.map(row=>pin(out(row.path)))],presentation_directory:path.relative(config.output,presentation),html:opened,pdfs:rendered,source_document_warnings:sourceDocumentWarnings,full_publication_members:inventory(path.join(presentation,"publication")),full_decision_members:inventory(path.join(presentation,"decision")),member_packets:members.map((m,i)=>({member:m.person_id,files:inventory(path.join(presentation,"member-"+(i+1)+"/recipient"))})),operator_instruction:"Open and visually VIEW every actual captured screen and report page; open the exact DOCX/CSV/JSON/archive contents in their normal recipient view. Fix the affected output and continue this same case."});
+    return{html:opened.length,pdfs:rendered.length,manifest:path.relative(config.output,attachmentsFile),views:path.relative(config.output,viewsFile)};
+   }catch(error){recipientError=error;throw error;}finally{await closeRecipient(recipientContext,recipientError);}
   });
   assert.deepEqual(inventory(config.source),sourceFiles,"The selected complete source changed during the operating course.");assert.deepEqual(pageErrors,[]);
-  if(!fs.existsSync(out("result.json")))json(out("result.json"),{schema:"scc-ballot-receiving-result/v1",operation:OPERATION,state:"COMPLETE",completed_at:new Date().toISOString(),project_id:projectId,source_identity:sourceIdentity,source_files:sourceFiles,steps:Object.keys(progress.steps),records:read(out("final-native-records.json")),artifacts:inventory(config.output).filter(r=>!r.path.startsWith("received-workspace/")&&!["progress.json","operation.lock","server.log"].includes(r.path)),rendered_outputs:"outgoing-attachments.json"});
-  progress.active=null;progress.state="COMPLETE";save();process.stdout.write(JSON.stringify({operation:OPERATION,state:"COMPLETE",output:config.output,project_id:projectId})+"\n");
- }catch(error){if(operator&&!operator.isClosed()){await operator.screenshot({path:out("failure-view-"+Date.now()+".png"),fullPage:true}).catch(()=>{});await operator.locator("body").innerText().then(text=>write(out("failure-page-"+Date.now()+".txt"),text)).catch(()=>{});}json(out("failure-"+Date.now()+".json"),{operation:OPERATION,at:new Date().toISOString(),stage:progress.active,project_id:projectId,message:String(error),stack:error.stack,page_errors:pageErrors});throw error;}
- finally{if(context)await context.close();if(browser)await browser.close();await stop();attachmentServer.closeAllConnections();await new Promise(resolve=>attachmentServer.close(resolve));fs.closeSync(serverLog);}
+  pendingResult={schema:"scc-ballot-receiving-result/v1",operation:OPERATION,state:"COMPLETE",completed_at:new Date().toISOString(),project_id:projectId,source_identity:sourceIdentity,source_files:sourceFiles,steps:Object.keys(progress.steps),records:read(out("final-native-records.json")),rendered_outputs:path.relative(config.output,attachmentsFile),views:path.relative(config.output,viewsFile)};
+ }catch(error){
+  primaryError=error;
+  if(operator&&!operator.isClosed()){
+   await operator.screenshot({path:out("failure-view-"+Date.now()+".png"),fullPage:true}).catch(()=>{});
+   await operator.locator("body").innerText().then(text=>write(out("failure-page-"+Date.now()+".txt"),text)).catch(()=>{});
+  }
+  try{json(out("failure-"+Date.now()+".json"),{operation:OPERATION,at:new Date().toISOString(),stage:progress.active,project_id:projectId,message:String(error),stack:error.stack,page_errors:pageErrors});}
+  catch(failureWrite){error.failure_record_error=String(failureWrite);}
+ }finally{
+  const cleanup=[];
+  async function close(name,action,ms=10000){
+   let timer;try{await Promise.race([Promise.resolve().then(action),new Promise((_,reject)=>{timer=setTimeout(()=>reject(Error(name+" close timed out")),ms);})]);cleanup.push({resource:name,closed:true});}
+   catch(error){cleanup.push({resource:name,closed:false,message:String(error)});}finally{clearTimeout(timer);}
+  }
+  if(context)await close("browser context",()=>context.close());
+  if(browser)await close("browser",()=>browser.close());
+  await close("native server",()=>stop(),17000);
+  await close("attachment server",async()=>{attachmentServer.closeAllConnections();if(attachmentServer.listening)await new Promise((resolve,reject)=>attachmentServer.close(error=>error?reject(error):resolve()));});
+  if(serverLog!==null)await close("server log",()=>{fs.closeSync(serverLog);serverLog=null;});
+  if(cleanup.some(row=>!row.closed)){
+   if(!primaryError)primaryError=Error("Receiving resources did not all close: "+cleanup.filter(row=>!row.closed).map(row=>row.resource).join(", "));
+   primaryError.cleanup=cleanup;
+   try{json(out("cleanup-failure-"+Date.now()+".json"),{operation:OPERATION,source_identity:sourceIdentity,primary_message:String(primaryError),cleanup});}catch(error){primaryError.cleanup_record_error=String(error);}
+  }
+ }
+ if(primaryError)throw primaryError;
+ assert.ok(pendingResult);
+ const retainedAttachments=read(attachmentsFile);assert.equal(retainedAttachments.source_identity,sourceIdentity);verifyPins(retainedAttachments.retained_files);
+ const editionPrefix=path.relative(config.output,editionRoot).split(path.sep).join("/")+"/";
+ pendingResult.artifacts=inventory(config.output).filter(row=>!row.path.startsWith("received-workspace/")&&(!row.path.startsWith("receiving/")||row.path.startsWith(editionPrefix))&&!["progress.json","operation.lock","server.log","current-result.json"].includes(row.path)&&row.path!==editionPrefix+"result.json");
+ json(resultFile,pendingResult);selectResult();
 }

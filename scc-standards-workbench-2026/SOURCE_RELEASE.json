@@ -36,8 +36,8 @@
     },
     {
       "path": "BALLOT-RECEIVING.md",
-      "git_blob_sha": "73f83cb79c394c9479a2cd349f4f96c33fa59e37",
-      "bytes": 16417
+      "git_blob_sha": "89a5865d47773fe46231214a4e800dde7d697280",
+      "bytes": 18397
     },
     {
       "path": "CLAUDE.md",
@@ -61,8 +61,8 @@
     },
     {
       "path": "README.md",
-      "git_blob_sha": "94887361cfb513e83720f1414f6c582d74b49700",
-      "bytes": 23911
+      "git_blob_sha": "314408f4e81b8db185ab2e96ce7b2a091e023478",
+      "bytes": 24457
     },
     {
       "path": "SOURCE-NOTICES.md",
@@ -106,13 +106,13 @@
     },
     {
       "path": "ballot_exchange.py",
-      "git_blob_sha": "b778d7ef02d02e28954c1efbff27378ed45f38a2",
-      "bytes": 27356
+      "git_blob_sha": "5678bc4a269e89853cb518705d11d0dec4324845",
+      "bytes": 27381
     },
     {
       "path": "consultation.py",
-      "git_blob_sha": "1b2614730ae21126ee549d76f167ccf84ba01858",
-      "bytes": 54125
+      "git_blob_sha": "37abc84623cd723871de76023c918391e77fc80e",
+      "bytes": 54268
     },
     {
       "path": "delivery/CONSULTATION-RECEIVING.md",
@@ -126,8 +126,8 @@
     },
     {
       "path": "delivery/ballot-receiving.mjs",
-      "git_blob_sha": "6f91db29e7ef68406fccf9ebaad4cdf12fa97d27",
-      "bytes": 53825
+      "git_blob_sha": "31a1843e76530580630d201b59993298a5ff4909",
+      "bytes": 59005
     },
     {
       "path": "delivery/consultation-config.example.json",
@@ -266,13 +266,13 @@
     },
     {
       "path": "web/application.css",
-      "git_blob_sha": "9fe2de15510d31159e41261718ea6d76b6f18d30",
-      "bytes": 1936
+      "git_blob_sha": "71a9c2423ec0143d6340b44b5780b5f3180ed00b",
+      "bytes": 2604
     },
     {
       "path": "web/application.js",
-      "git_blob_sha": "7b6a9f77a29f660097bd0070c273de175662900b",
-      "bytes": 33796
+      "git_blob_sha": "e33f327e6d39d1d58ce313aa555939804ba52167",
+      "bytes": 33967
     },
     {
       "path": "web/ballot-exchange.css",
@@ -355,10 +355,11 @@
     "consultation_full_browser_and_installed_return_journey": "The same saved project completed all 16 business stages and the complete 40-view desktop/phone review at release 0.2.3, public commit 87b16f92d5fb7a8116ac33d1730d3a043423cd89. The original receiving controller retains this project and its published source records across source continuations.",
     "prior_publisher_0_1_1": "completed document generation and all 81 rendered-page visual review",
     "member_ballot_source_review": "Complete engine, original-vote adoption, offline return/correction, installed-source and browser-course integration received independent source review.",
-    "member_ballot_native_receiving": "The original equipped course completed under source identity cd0d5a03baede5b3611b733a1b36fa9d5c81216fc372bbe2df81b91e1589dc39, including 8 returns/adoptions, original ballot closure, procedural review, publication and independent private restoration. This release contains those exact six generic corrected postimages. The prior failed closed ballot and its output remain preserved; continuation uses the exact original baseline. The final all-attachment inspection remains an explicit producing-owner step.",
+    "member_ballot_native_receiving": "The original equipped course completed its seven member packets, eight returns/adoptions, original ballot closure, procedural review, publication and independent private restoration. Its final source identity is 222b3c877a992e1a270820863d54aa1bfa96d040049160308f3b76a24525f5ff. The producer opened and viewed 53 ballot PDF/Writer pages, 31 distinct HTML outputs at desktop/390, and all six exact CSVs in Calc (18120 cells). Earlier native source cd0d5a03baede5b3611b733a1b36fa9d5c81216fc372bbe2df81b91e1589dc39 and every original request/output remain retained.",
     "prime_application_source_review": "Complete input mapper, original-form renderer, immutable lifecycle, original-byte restore, request recovery and browser working-file integration independently source-reviewed; concrete corrections incorporated.",
     "prime_application_javascript": "The complete application and host JavaScript parse in V8; focused decimal/raw edit, late acknowledgment and failed local save recovery checks passed in V8.",
-    "prime_application_native_receiving": "The separate original prime-application and all-attachment receiving remains with its existing equipped operation. The earlier cloud attempt ended before CreateProcess with environment_offline409; the completed ballot course is not evidence that the prime-application course has completed."
+    "prime_application_native_receiving": "The same original equipped operation completed one application save and one freeze, recovered its retained save request, reopened unfinished working JSON, independently restored the full application state and replayed the original save/freeze identities. The producer viewed all 55 application PDF/Writer pages (44 distinct images and 11 identical duplicates) plus all 48 original RFP/form pages. Cold generated PDFs preserved text and DOCX inner files; original selected exports remain authoritative.",
+    "source_edition_receiver": "The complete following receiver is independently source-reviewed and V8-parsed for source-edition immutable attachment/view/result indexes, interrupted manifest adoption, content-addressed captures, explicit current-result selection and bounded cleanup. It continues the original saved native course; its affected native continuation is assigned to the existing producing owner."
   },
   "notes": [
     "The original source data, license notices and previous release downloads are retained.",
@@ -374,6 +375,7 @@
     "Version 0.4.0 adds the complete prime-application desk, original twenty-input mapper, forty-field original-form adapter, fresh document renderer, immutable drafts and application editions, private source closure and complete working-file recovery.",
     "Exact current AGENTS.md and CLAUDE.md owner-directed rendered-product instructions accompany this standalone source package.",
     "Version 0.4.1 integrates the six generic native ballot-course corrections from SCC-04-Generic-Source-Corrections-20261013.zip (145211 bytes, SHA-256 0d69443089e7119633c462e906a18eb7c784d7b42ac06d88d316ced1010659b2), preserves the complete 70-file source and updates current installation links.",
-    "The native course source identity and this packaged release manifest are distinct: packaging also updates README, version declarations and SOURCE_RELEASE.json. No private applicant files or credentials are distributed."
+    "The native course source identity and this packaged release manifest are distinct: packaging also updates README, version declarations and SOURCE_RELEASE.json. No private applicant files or credentials are distributed.",
+    "This final 0.4.1 publication includes the four later native decision/application postimages and the complete following source-edition receiver. No customer project, application answers, original private forms, screenshots, credentials or private continuation ZIP is included."
   ]
 }

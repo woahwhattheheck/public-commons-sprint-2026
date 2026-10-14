@@ -1,6 +1,6 @@
 # Install the standards workbench 0.4.1
 
-The standards workbench is a local application for bilingual drafting, source review, consultation, publication and delivery accounts. Version 0.4.1 includes the complete offline consultation and member-ballot exchange, the prime-application desk, and the six corrections from the original equipped ballot receiving course.
+The standards workbench is a local application for bilingual drafting, source review, consultation, publication and delivery accounts. Version 0.4.1 includes the complete offline consultation and member-ballot exchange, the prime-application desk, and the complete native ballot/application corrections with the maintained source-edition receiver.
 
 ## Download and open
 
@@ -92,7 +92,7 @@ The complete 0.4.1 source package includes all 70 selected application files, gu
 
 The retained 0.2.3 receiving completed the original recipient-to-operator journey: draft and response export, initial return, duplicate and corrected return, explicit adoption of unchanged decisions, clause amendment, successor edition, respondent reply, publication and full project restoration. The reviewed case includes forty desktop/phone views and paired English/French Word and PDF publications. Its authored responses remain part of that example project.
 
-The 0.4.1 [source and receiving record](./RECEIVING-0.4.1.md) identifies the six exact corrected native postimages and the actual completed ballot course. That course preserves its original closed ballot, links its continuation to the exact baseline, and restores the full private case independently. The separate prime-application course and final inspection of every outgoing attachment remain with the original producing operation.
+The 0.4.1 [source and receiving record](./RECEIVING-0.4.1.md) identifies the exact corrected native source and the actual completed ballot/application course. That operation preserved its original closed ballot and requests, restored the full private case independently, and completed its producer inspection of the PDF, Word, HTML and CSV outputs. The following source-edition receiver preserves those native results while retaining separate immutable indexes for new source presentations; its affected continuation remains with the same original producing operation.
 
 The [prime-application guide](../APPLICATION-WORKBENCH.md) covers source intake, explicit reviewer decisions, original-form rendering and private application continuation. The [individual-member guide](../BALLOT-RECEIVING.md) covers the ordinary offline ballot, original returns and corrections. Keep the owner's complete rendered-product instructions in the accompanying AGENTS.md and CLAUDE.md: run the exact outgoing product, operate its important controls, inspect desktop and narrow states, open every attachment and usable archive member, and reopen the saved delivery before claiming it client-ready.
 
