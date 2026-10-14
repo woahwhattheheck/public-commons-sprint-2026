@@ -190,7 +190,8 @@ def _archive(combined: Path, cache: Path) -> tuple[Path, dict]:
         # Keep a completed archive recoverable even if the next rename is interrupted.
         seal = {"bytes": staged.stat().st_size, "sha256": producer.sha256(staged),
                 "manifest_sha256": manifest_digest}
-        with staged.open("rb") as stream:
+        # Windows FlushFileBuffers requires a write-capable archive handle.
+        with staged.open("r+b" if os.name == "nt" else "rb") as stream:
             os.fsync(stream.fileno())
         producer.atomic_json(seal_path, seal)
         os.replace(staged, archive)
