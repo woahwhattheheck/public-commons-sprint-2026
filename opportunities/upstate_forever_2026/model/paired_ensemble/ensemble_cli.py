@@ -1,7 +1,8 @@
 """Command-line receiving and analysis of original completed Workspace runs.
 
-Saved-result inspect/export/receive need only the packaged bootstrap Python.
-Analysis and report regeneration load their numerical dependencies on demand.
+Saved-result inspect/export/receive do not load the GIS computation stack.
+Raster analysis and report regeneration use the installed scientific libraries
+and finished native artifacts; InVEST is not needed again.
 Copyright 2026 TokenJunkieLabs.
 """
 from __future__ import annotations

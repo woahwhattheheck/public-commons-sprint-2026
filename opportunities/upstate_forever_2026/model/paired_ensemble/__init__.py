@@ -1,10 +1,14 @@
-"""Paired results and native analysis, with dependency-free saved-result transport."""
+"""Paired-raster computation and portable receiving of retained results.
+
+Saved-result storage, receiving and source capture use the standard library and
+shared filesystem layer. Load the scientific Workspace only when requested so
+those operations also work with the packaged bootstrap Python.
+"""
 
 __all__ = ["EnsembleWorkspace"]
 
 
 def __getattr__(name):
-    """Load the numerical engine only when the native Workspace service is used."""
     if name == "EnsembleWorkspace":
         from .ensemble_workspace import EnsembleWorkspace
         globals()[name] = EnsembleWorkspace
