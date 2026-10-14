@@ -192,7 +192,7 @@ def build(application: Path, output: Path, targets: list[str], *, zig: Path | No
             raise FileNotFoundError("No C++17 compiler on this build machine")
         version = subprocess.run([compiler, "--version"], check=True, capture_output=True, text=True).stdout.splitlines()[0]
         identity = {"kind": "native-c++", "version": version}
-    manifest = {"schema": SCHEMA, "producer": "ECO-HELPER-PRODUCER-7065/1.0.0",
+    manifest = {"schema": SCHEMA, "producer": "ECO-HELPER-PRODUCER-7065/1.0.1",
                 "created_at": datetime.now(timezone.utc).isoformat(), "platforms": {}}
     try:
         closures = {tool: source_closure(application, tool) for tool in TOOLS}
@@ -214,7 +214,7 @@ def build(application: Path, output: Path, targets: list[str], *, zig: Path | No
             for name in LICENSES:
                 source = zig.parent / name
                 if source.is_file():
-                    destination = stage / "native_helpers/licenses" / (name.replace("/", "-") + ".txt")
+                    destination = stage / "source_tools/native_helper_binaries/licenses" / (name.replace("/", "-") + ".txt")
                     destination.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copyfile(source, destination)
                     license_records.append(record(stage, destination))
@@ -225,7 +225,7 @@ def build(application: Path, output: Path, targets: list[str], *, zig: Path | No
             platform_record = {"platform": {"system": system, "machine": machine}, "tools": {}, "licenses": license_records}
             for tool in TOOLS:
                 source_name = "source_tools/" + tool + ".cpp"
-                executable = member(stage, "native_helpers/" + target + "/" + tool + (".exe" if system == "Windows" else ""))
+                executable = member(stage, "source_tools/native_helper_binaries/" + target + "/" + tool + (".exe" if system == "Windows" else ""))
                 executable.parent.mkdir(parents=True, exist_ok=True)
                 command = [str(zig), "c++", "-target", triple, "-mcpu=baseline"] if zig else [compiler]
                 command.extend(["-std=c++17", "-O2", "-fno-fast-math", "-Wall", "-Wextra"])
@@ -300,7 +300,7 @@ def merge(output: Path, inputs: list[Path]) -> Path:
         raise FileExistsError("Use a fresh merged output directory")
     output.parent.mkdir(parents=True, exist_ok=True)
     stage = Path(tempfile.mkdtemp(prefix=".helper-merge-", dir=output.parent))
-    combined = {"schema": SCHEMA, "producer": "ECO-HELPER-PRODUCER-7065/1.0.0", "platforms": {}}
+    combined = {"schema": SCHEMA, "producer": "ECO-HELPER-PRODUCER-7065/1.0.1", "platforms": {}}
     try:
         for root in inputs:
             root = root.resolve()

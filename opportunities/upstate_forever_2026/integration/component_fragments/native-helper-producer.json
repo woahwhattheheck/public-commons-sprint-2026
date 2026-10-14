@@ -1,7 +1,7 @@
 {
   "schema": "upstate.application-component-fragment/v1",
   "id": "native-helper-producer",
-  "source_reference": "ECO-HELPER-PRODUCER-7065/1.0.0/2026-10-14",
+  "source_reference": "ECO-HELPER-PRODUCER-7065/1.0.1/2026-10-14",
   "components": {
     "native-helper-producer": {
       "paths": [
