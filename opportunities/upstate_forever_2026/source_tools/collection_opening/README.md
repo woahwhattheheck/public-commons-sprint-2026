@@ -25,3 +25,76 @@ Read the parent project's CURRENT_OWNER_DIRECTION.md version 2026-10-14.1 and it
 The retained focused Linux check covers root handoff ordering, spaced/Unicode arguments, immutable dependency reuse and changed-bootstrap rejection. Windows/macOS native opening is part of the assembled release's actual opening course.
 
 The receiving result's selected runtime descriptor is passed into the child environment unchanged. Windows root waiting also preserves the controller's own Ctrl+C shutdown instead of terminating it during parent interrupt cleanup.
+
+
+## Retained own-data selection and first receiving
+
+The qualified collection has seven original rows in STUDIES.json: Tim — Own data
+at workspaces/tim-own-data (bf5c486e-5a45-40e2-8d87-552fec5231f2), followed by six
+reference rows. The opener resolves the family: own-data row as the primary
+Workspace and preserves every original row, title and directory. Conservation
+and monitoring-original-edition deliberately share a project ID while retaining
+different directories; both remain selectable references.
+
+The shared session supplies the platform state directory and earlier Mac state
+reuse. The ordinary second opening validates the same primary and every retained
+reference against the running operator. It does not replace a live operator.
+
+For Windows-friendly outer ZIPs, the existing assembler may retain deep
+Workspace trees in complete native archives and provide STUDY_PAYLOADS.json.
+The exact contract is:
+
+```json
+{
+  "schema": "upstate.collection-study-payloads/v1",
+  "studies": [
+    {
+      "workspace": "workspaces/native82",
+      "project_id": "1b6a344c-df5a-4986-a5e4-47a2d158324b",
+      "archive": {
+        "path": "study-payloads/native82.zip",
+        "bytes": "ACTUAL_NATIVE_ARCHIVE_BYTES",
+        "sha256": "ACTUAL_NATIVE_ARCHIVE_SHA256"
+      }
+    }
+  ]
+}
+```
+
+The byte count is an integer in the actual manifest. Obtain each descriptor from
+the complete native archive selected by the assembler. Do not copy an upstream
+original_archive_sha256 into this descriptor: several original collection rows
+came from the same upstream archive but now represent distinct retained
+Workspaces. The selected native archive's own project ID must match its exact
+STUDIES row.
+
+The included helper can write this manifest from those existing native archives:
+
+```sh
+"$PY" receive_collection_studies.py --collection "$COLLECTION" \
+  --payload workspaces/native82 study-payloads/native82.zip \
+  --payload workspaces/conservation study-payloads/conservation.zip
+```
+
+Repeat --payload for every Workspace tree omitted from the outer ZIP. Use the
+assembler's actual original paths. Keep Tim's small own-data Workspace expanded,
+or include its own identity-matched native archive as another payload row.
+The command checks each archive's own project and complete bytes, then publishes
+a new manifest without replacing a different existing one. It neither creates
+new archive content nor deletes the assembler's original expanded Workspace.
+
+During ordinary opening, receive_collection_studies.py verifies existing
+Workspace identities and restores only missing trees with model.portable.restore.
+The native receiver verifies the complete source inventory and scientific
+records. A completed interrupted receiving wrapper is resumed through the same
+resume_restore API. The helper publishes the verified Workspace to its exact
+original directory with the maintained no-replace operation, retaining all
+workspace-relative delivery artifacts. The shared current application remains
+selected. The original inner archive stays in the collection; only the completed
+temporary duplicate application/delivery wrapper is removed.
+
+Later openings read the existing Workspace identity and preserve all current
+edits, histories and new runs. They do not rehash large archives or restore over
+mutable work. A conflicting project or malformed payload descriptor produces a
+concrete error with the original files preserved. No browser or scientific
+computation is started by first-study receiving itself.

@@ -8,7 +8,31 @@ import json
 import os
 from pathlib import Path, PurePosixPath
 import runpy
+import stat
 import sys
+
+
+def receiving_binding(manifest):
+    """Resolve the actual own-data row without rewriting the original inventory."""
+    own = [row for row in manifest.get('studies', [])
+           if isinstance(row, dict) and row.get('family') == 'own-data']
+    if len(own) > 1:
+        raise ValueError('The collection has more than one own-data Workspace.')
+    explicit = manifest.get('receiving_workspace')
+    if own:
+        row = own[0]
+        if (not isinstance(row.get('workspace'), str)
+                or not isinstance(row.get('project_id'), str)
+                or not isinstance(row.get('title'), str)):
+            raise ValueError('The retained own-data Workspace selection is incomplete.')
+        if explicit is not None and (
+                not isinstance(explicit, dict)
+                or explicit.get('workspace') != row['workspace']
+                or explicit.get('project_id') != row['project_id']):
+            raise ValueError('The receiving selection differs from the retained own-data row.')
+        return {'workspace': row['workspace'], 'project_id': row['project_id'],
+                'title': row['title'], 'purpose': 'own-data'}
+    return explicit
 
 
 def receiving_workspace(root, manifest, member, selected):
@@ -16,7 +40,7 @@ def receiving_workspace(root, manifest, member, selected):
     from model.common import atomic_json
     from model.workspace import Workspace
 
-    receiving = manifest.get('receiving_workspace')
+    receiving = receiving_binding(manifest)
     if receiving is None:
         relative = 'workspaces/my-data'
         workspace = member(relative, required=False)
@@ -87,12 +111,23 @@ def main() -> int:
         raise ValueError('Select the included original Study collection.')
 
     def member(value: str, *, required=True) -> Path:
-        if not isinstance(value, str) or not value:
+        if (not isinstance(value, str) or not value or '\\' in value
+                or chr(0) in value or ':' in value):
             raise ValueError('A Study path must name a collection member.')
         path = PurePosixPath(value)
         if path.is_absolute() or str(path) != value or any(p in ('.', '..') for p in path.parts):
             raise ValueError('A Study path leaves the portable collection.')
-        selected = root.joinpath(*path.parts).resolve(strict=required)
+        unresolved = root.joinpath(*path.parts)
+        for candidate in (unresolved, *unresolved.parents):
+            if candidate == root:
+                break
+            try:
+                info = candidate.lstat()
+            except FileNotFoundError:
+                continue
+            if stat.S_ISLNK(info.st_mode) or getattr(info, 'st_file_attributes', 0) & 0x400:
+                raise ValueError('A Study path is an alias in the portable collection.')
+        selected = unresolved.resolve(strict=required)
         if not selected.is_relative_to(root):
             raise ValueError('A Study path leaves the portable collection.')
         return selected
@@ -101,20 +136,13 @@ def main() -> int:
     studies = manifest['studies']
     if not studies:
         raise ValueError('The collection contains no original Studies.')
-    selected = []
-    for row in studies:
-        workspace = member(row['workspace'])
-        project = json.loads((workspace / 'workspace.json').read_text(encoding='utf-8'))
-        if (project.get('schema') != 'upstate.scientific-workbench/v1'
-                or project.get('id') != row['project_id']):
-            raise ValueError('The included Workspace belongs to another Study.')
-        selected.append((row, workspace))
-    default_state = (Path.home() / 'Library/Application Support'
-                     if sys.platform == 'darwin' else Path.home() / '.local/state')
-    local = Path(os.environ.get('LOCALAPPDATA') or os.environ.get('XDG_STATE_HOME')
-                 or default_state)
+    # Load the same maintained application that will own the final session.
+    sys.path.insert(0, str(application))
+    sys.path.insert(0, str(application / 'operator'))
+    from source_tools import workbench_session as session
     key = hashlib.sha256(str(root).encode()).hexdigest()[:20]
-    state = (args.operator_state or local / 'ecosystem-workbench' / ('collection-' + key)).expanduser().resolve()
+    state = (args.operator_state or session.state_directory(
+        'collection-' + key)).expanduser().resolve()
     if state.is_relative_to(root):
         raise ValueError('Keep private operator state outside the portable collection.')
     state.mkdir(parents=True, exist_ok=True, mode=0o700)
@@ -123,9 +151,6 @@ def main() -> int:
     # Use the maintained launch lock and live-session validation before touching
     # the registry. An ordinary second opening must not initialize another
     # Operator against the state owned by the already-running original process.
-    sys.path.insert(0, str(application))
-    sys.path.insert(0, str(application / 'operator'))
-    from source_tools import workbench_session as session
     with session._launch_lock(state):
         # Another normal first opening may have retained the receiving identity
         # before this process acquired the maintained launch lock.
@@ -134,6 +159,28 @@ def main() -> int:
                 or current_manifest.get('application') != manifest['application']
                 or current_manifest.get('studies') != manifest['studies']):
             raise ValueError('The original collection selection changed while opening.')
+        # An outer collection may keep deep original Workspace trees inside
+        # their native archives. Receive missing trees once through the existing
+        # restore implementation; subsequent openings retain every mutable edit.
+        receiver = runpy.run_path(str(root / 'receive_collection_studies.py'))
+        receiver['receive_studies'](root, current_manifest)
+        bound = receiving_binding(current_manifest)
+        selected = []
+        seen_paths = set()
+        for row in studies:
+            workspace = member(row['workspace'])
+            if workspace in seen_paths:
+                raise ValueError('The collection repeats a Workspace directory.')
+            seen_paths.add(workspace)
+            project = json.loads((workspace / 'workspace.json').read_text(encoding='utf-8'))
+            if (project.get('schema') != 'upstate.scientific-workbench/v1'
+                    or project.get('id') != row['project_id']):
+                raise ValueError('The included Workspace belongs to another Study.')
+            if bound is not None and row['workspace'] == bound.get('workspace'):
+                if row['project_id'] != bound.get('project_id'):
+                    raise ValueError('The own-data row has a different original identity.')
+                continue
+            selected.append((row, workspace))
         receiving, primary_workspace = receiving_workspace(
             root, current_manifest, member, selected)
         launch_args = argparse.Namespace(
@@ -173,20 +220,23 @@ def main() -> int:
                   + ' optional original reference projects.', flush=True)
         else:
             # Primary registration uses the same recipient-owned Workspace as
-            # final launch. The five originals retain their archive provenance.
+            # final launch. The original reference rows retain their archive provenance.
             native = runpy.run_path(str(application / 'operator/server.py'))
             operator = native['Operator'](primary_workspace, state)
             try:
                 operator.register(native['Workspace'](primary_workspace), received={
                     'receiving': 'complete-portable-study-collection',
-                    'purpose': 'own-data'})
+                    'purpose': 'own-data',
+                    'collection_title': receiving.get('title', 'Tim — Own data')})
                 for row, workspace in selected:
                     operator.register(native['Workspace'](workspace), received={
                         'archive_sha256': row['original_archive_sha256'],
                         'archive_bytes': row['original_archive_bytes'],
                         'receiving': 'complete-portable-study-collection',
-                        'purpose': 'optional-reference'})
-                print('Ready: Tim — Own data. Registered ' + str(len(selected))
+                        'purpose': 'optional-reference',
+                        'collection_title': row['title']})
+                print('Ready: ' + receiving.get('title', 'Tim — Own data')
+                      + '. Registered ' + str(len(selected))
                       + ' optional original reference projects.', flush=True)
             finally:
                 operator.close()
