@@ -1,6 +1,7 @@
 """Command-line receiving and analysis of original completed Workspace runs.
 
-Uses Rasterio and the finished native artifacts; InVEST is not needed again.
+Saved-result inspect/export/receive need only the packaged bootstrap Python.
+Analysis and report regeneration load their numerical dependencies on demand.
 Copyright 2026 TokenJunkieLabs.
 """
 from __future__ import annotations
@@ -8,8 +9,9 @@ import argparse
 import json
 from pathlib import Path
 import sys
+import zipfile
+from .. import portable_fs as _fs
 from .ensemble_store import digest, identifier, read
-from .ensemble_workspace import EnsembleWorkspace
 
 
 class CompletedWorkspace:
@@ -19,7 +21,7 @@ class CompletedWorkspace:
     EnsembleWorkspace writes derived products only to ensemble-products/.
     """
     def __init__(self, root):
-        self.root = Path(root).resolve(strict=True)
+        self.root = _fs.native_path(root).resolve(strict=True)
         self.project = read(self.root / 'workspace.json')
         if self.project.get('schema') != 'upstate.scientific-workbench/v1':
             raise ValueError('Select an original scientific Workspace')
@@ -80,6 +82,7 @@ def main(argv=None):
     progress = lambda value: print(json.dumps(value, allow_nan=False), file=sys.stderr, flush=True)
     try:
         if args.command in ('preview', 'build', 'resume', 'pause', 'list'):
+            from .ensemble_workspace import EnsembleWorkspace
             app = EnsembleWorkspace(CompletedWorkspace(args.workspace))
             if args.command == 'list':
                 result = app.list()
@@ -115,7 +118,7 @@ def main(argv=None):
             result['reports'] = export_reports(result['directory'])
         print(json.dumps(result, indent=2, allow_nan=False))
         return 0
-    except (OSError, ValueError, KeyError, TypeError) as exc:
+    except (OSError, ValueError, KeyError, TypeError, ImportError, EOFError, zipfile.BadZipFile) as exc:
         print(json.dumps({'error': type(exc).__name__, 'message': str(exc)}), file=sys.stderr)
         return 2
 
