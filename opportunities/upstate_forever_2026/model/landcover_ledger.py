@@ -16,6 +16,7 @@ from pathlib import Path
 import re
 import sqlite3
 from typing import Callable, Mapping, Sequence
+import uuid
 import zlib
 
 import numpy as np
@@ -27,6 +28,9 @@ import shapely
 from shapely.geometry import Polygon, shape, mapping
 from shapely.ops import transform as geometry_transform
 from shapely.strtree import STRtree
+
+from . import portable_fs as _fs
+from .portable_databases import _database_uri
 
 VERSION = "1.0.0"
 SCHEMA = "upstate.landcover-ledger/1"
@@ -91,33 +95,96 @@ def _json_bytes(value: object) -> bytes:
                       ensure_ascii=False, allow_nan=False).encode("utf-8")
 
 
+def _file_identity(info) -> tuple:
+    return (info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns, info.st_ctime_ns)
+
+
+def _hashed_file(path: Path | str) -> tuple[int, str]:
+    path = _fs.native_path(path)
+    digest, size = hashlib.sha256(), 0
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
+        original = _file_identity(_fs.fd_stat(source.fileno()))
+        for block in iter(lambda: source.read(4 * 1024 * 1024), b""):
+            digest.update(block)
+            size += len(block)
+        if original != _file_identity(_fs.fd_stat(source.fileno())):
+            raise LedgerError(f"Input changed while reading: {path}")
+    if size != original[2] or original != _file_identity(_fs.path_stat(path)):
+        raise LedgerError(f"Input changed while reading: {path}")
+    return size, digest.hexdigest()
+
+
 def sha256_file(path: Path | str) -> str:
-    h = hashlib.sha256()
-    with Path(path).open("rb") as f:
-        for chunk in iter(lambda: f.read(4 * 1024 * 1024), b""):
-            h.update(chunk)
-    return h.hexdigest()
+    return _hashed_file(path)[1]
 
 
 def _source(path: Path | str, role: str) -> dict:
-    p = Path(path).expanduser().resolve(strict=True)
+    p = _fs.native_path(Path(path).expanduser().resolve(strict=True))
     if not p.is_file():
         raise LedgerError(f"Not a regular input file: {p}")
-    return {"role": role, "path": str(p), "bytes": p.stat().st_size,
-            "sha256": sha256_file(p)}
+    size, digest = _hashed_file(p)
+    return {"role": role, "path": str(p), "bytes": size, "sha256": digest}
 
 
 def atomic_json(path: Path, value: object) -> None:
-    temp = path.with_name(path.name + ".tmp")
-    with temp.open("wb") as f:
-        f.write(_json_bytes(value)); f.flush(); os.fsync(f.fileno())
-    temp.replace(path)
+    path = _fs.native_path(path)
+    temp = path.with_name(".ledger-record-" + uuid.uuid4().hex)
+    try:
+        descriptor = _fs.open_file(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL)
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(_json_bytes(value))
+            output.flush()
+            os.fsync(output.fileno())
+        _fs.replace(temp, path)
+        _fs.sync_directory(path.parent)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def _resume_configuration(signature: str, stored: str, current: dict) -> dict:
+    """Admit physical relocation, preserving every non-location input decision.
+
+    Old checkpoints fingerprinted absolute paths. Keep their original signature
+    and configuration, while accepting new paths only for the same ordered roles,
+    exact original bytes, bands, geometry source and all accounting options.
+    """
+    try:
+        original = json.loads(stored)
+        if hashlib.sha256(_json_bytes(original)).hexdigest() != signature:
+            raise LedgerError("Checkpoint configuration no longer matches its original signature")
+
+        def without_locations(config):
+            result = dict(config)
+            records = result.get("sources")
+            if not isinstance(records, list) or any(
+                    not isinstance(row, dict) or not isinstance(row.get("path"), str)
+                    for row in records):
+                raise LedgerError("Checkpoint has no complete original source locations")
+            result["sources"] = [{key: value for key, value in row.items() if key != "path"}
+                                 for row in records]
+            return result
+
+        if _json_bytes(without_locations(original)) != _json_bytes(without_locations(current)):
+            raise LedgerError("Input bytes, band selection or ledger options changed; create a new edition")
+        return original
+    except (TypeError, KeyError, json.JSONDecodeError) as error:
+        raise LedgerError("Checkpoint has no readable original configuration") from error
+
+
+def _sync_rasters(paths: Sequence[Path]) -> None:
+    """Order closed native raster writes before their SQLite tile checkpoint."""
+    for path in dict.fromkeys(paths):
+        descriptor = _fs.open_file(_fs.native_path(path), os.O_RDWR)
+        try:
+            os.fsync(descriptor)
+        finally:
+            os.close(descriptor)
 
 
 def load_zones(path: Path | str, target_crs: CRS, *, id_field: str = "huc12",
                name_field: str = "name", zone_crs: str | None = None) -> list[Zone]:
     """Load GeoJSON, retaining identifier strings, multipart geometry and holes."""
-    data = json.loads(Path(path).read_text(encoding="utf-8-sig"))
+    data = json.loads(_fs.native_path(path).read_text(encoding="utf-8-sig"))
     if data.get("type") != "FeatureCollection" or not data.get("features"):
         raise LedgerError("Zones must be a nonempty GeoJSON FeatureCollection")
     declared = (data.get("crs") or {}).get("properties", {}).get("name")
@@ -283,16 +350,12 @@ def _slug(name: str) -> str:
 
 @contextmanager
 def _exclusive_lock(path: Path):
-    import fcntl
-    with path.open("a+b") as f:
+    with ExitStack() as held:
         try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            held.enter_context(_fs.locked(_fs.native_path(path), blocking=False))
         except BlockingIOError as exc:
             raise LedgerError("Another process is already writing this ledger") from exc
-        try:
-            yield
-        finally:
-            fcntl.flock(f, fcntl.LOCK_UN)
+        yield
 
 
 def _initialize_raster(path: Path, baseline, dtype: str, description: str, nodata=0):
@@ -301,7 +364,7 @@ def _initialize_raster(path: Path, baseline, dtype: str, description: str, nodat
                "dtype": dtype, "nodata": nodata, "compress": "deflate",
                "tiled": True, "blockxsize": 256, "blockysize": 256,
                "BIGTIFF": "IF_SAFER"}
-    with rasterio.open(path, "w", **profile) as out:
+    with rasterio.open(_fs.native_path(path), "w", **profile) as out:
         out.set_band_description(1, description)
         out.update_tags(ledger_schema=SCHEMA, ledger_version=VERSION)
 
@@ -309,7 +372,7 @@ def _initialize_raster(path: Path, baseline, dtype: str, description: str, nodat
 def _write_window(path: Path, data: np.ndarray, window: Window) -> None:
     # Closing before the SQLite commit is essential for process-death recovery.
     # A crash before commit causes deterministic overwrite of the same window.
-    with rasterio.open(path, "r+") as target:
+    with rasterio.open(_fs.native_path(path), "r+") as target:
         target.write(data, 1, window=window)
 
 
@@ -408,7 +471,7 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
         temporal_years = temporal.years(temporal_years, len(scenarios) + 1)
         if options.support_scope != "all":
             raise LedgerError("Temporal accounting requires common support across all observations")
-    output = Path(output).expanduser().resolve()
+    output = _fs.native_path(Path(output).expanduser().resolve())
     sources = [_source(baseline.path, "baseline"), _source(zones_path, "zones")]
     sources += [_source(spec.path, "scenario:" + name) for name, spec in scenarios.items()]
     sources += [_source(p, "context") for p in context_files]
@@ -416,9 +479,9 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
     # dependency, including VRT source files, not just the primary TIFF bytes.
     seen_paths = {record["path"] for record in sources}
     for spec in [baseline, *scenarios.values()]:
-        with rasterio.open(Path(spec.path)) as dataset:
+        with rasterio.open(_fs.native_path(Path(spec.path).expanduser().resolve(strict=True))) as dataset:
             for dependency in dataset.files:
-                dep = str(Path(dependency).expanduser().resolve(strict=True))
+                dep = str(_fs.native_path(Path(dependency).expanduser().resolve(strict=True)))
                 if dep not in seen_paths:
                     sources.append(_source(dep, "raster-companion"))
                     seen_paths.add(dep)
@@ -434,6 +497,8 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
         config["temporal"] = {"schema": temporal.SCHEMA, "years": temporal_years,
                               "reducer_sha256": sha256_file(temporal.__file__)}
     signature = hashlib.sha256(_json_bytes(config)).hexdigest()
+    location_signature = signature
+    original_sources = None
     if output.exists() and not options.resume:
         raise LedgerError(f"Output already exists; use --resume or a new output: {output}")
     if options.resume and not (output / "ledger.sqlite3").is_file():
@@ -441,7 +506,7 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
     output.mkdir(parents=True, exist_ok=True)
     with _exclusive_lock(output / ".writer.lock"), ExitStack() as stack:
         specs = [baseline, *scenarios.values()]
-        datasets = [stack.enter_context(rasterio.open(Path(s.path))) for s in specs]
+        datasets = [stack.enter_context(rasterio.open(_fs.native_path(Path(s.path).expanduser().resolve(strict=True)))) for s in specs]
         source = datasets[0]
         grid = _grid_info(source, options.allow_projected_area)
         for spec, dataset in zip(specs, datasets):
@@ -469,7 +534,10 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
             total, inside = zone.geometry.area * factor, zone.geometry.intersection(footprint).area * factor
             zone_meta.append({"id": zone.id, "name": zone.name, "geometry_ha": total,
                               "inside_grid_ha": inside, "outside_grid_ha": max(0.0, total - inside)})
-        db = sqlite3.connect(output / "ledger.sqlite3")
+        database_path = output / "ledger.sqlite3"
+        if database_path.is_symlink() or (database_path.exists() and not database_path.is_file()):
+            raise LedgerError("Ledger checkpoint must be a regular file")
+        db = sqlite3.connect(_database_uri(database_path, "rwc"), uri=True)
         stack.callback(db.close)
         db.execute("PRAGMA journal_mode=DELETE"); db.execute("PRAGMA synchronous=FULL")
         db.execute("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)")
@@ -478,12 +546,21 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
         if old and not options.resume:
             raise LedgerError("Another writer already created this edition; use --resume or a new output")
         if old and old[0] != signature:
-            raise LedgerError("Input bytes, band selection or ledger options changed; create a new edition")
+            saved = db.execute("SELECT value FROM meta WHERE key='config'").fetchone()
+            if saved is None:
+                raise LedgerError("Checkpoint has no original input configuration")
+            original_sources = _resume_configuration(old[0], saved[0], config)["sources"]
+            signature = old[0]
         if not old:
             if options.resume:
                 raise LedgerError("Checkpoint has no original input signature")
             db.executemany("INSERT INTO meta VALUES (?,?)", [("signature", signature), ("config", _json_bytes(config).decode()), ("grid", _json_bytes(grid).decode())])
             db.commit()
+        # The original signed config stays immutable; current physical locations
+        # are separate receiving state and keep later source exports usable.
+        db.execute("INSERT INTO meta(key,value) VALUES ('locations',?) "
+                   "ON CONFLICT(key) DO UPDATE SET value=excluded.value", (_json_bytes(sources).decode(),))
+        db.commit()
         names = list(scenarios)
         paths = {name: output / ("transition-" + _slug(name) + ".tif") for name in names}
         fraction_path = output / "study-area-fraction.tif"
@@ -495,6 +572,7 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                     raise LedgerError(f"Checkpoint raster missing: {p}; use a new output edition")
         temporal_paths = (temporal.initialize_rasters(output, source, temporal_years, options.resume)
                           if temporal is not None and options.write_rasters else {})
+        _fs.sync_directory(output)
         windows = [(r, c, min(options.tile_size, source.height-r), min(options.tile_size, source.width-c))
                    for r in range(0, source.height, options.tile_size)
                    for c in range(0, source.width, options.tile_size)]
@@ -550,6 +628,7 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                 temporal.write_rasters(temporal_paths, values, prepared_temporal, window, (height, width))
             if options.write_rasters:
                 _write_window(fraction_path, domain_weights, window)
+                _sync_rasters([fraction_path, *paths.values(), *temporal_paths.values()])
             # The complete per-window aggregate is the transaction. No mutable
             # cumulative counters can be doubled by a repeated interrupted tile.
             db.execute("INSERT INTO tiles VALUES (?,?)", (tile_id, zlib.compress(_json_bytes(deltas), 6)))
@@ -565,6 +644,9 @@ def run_ledger(baseline: RasterInput, scenarios: Mapping[str, RasterInput],
                 raise LedgerError(f"Input changed during run: {record['path']}; create a new edition")
         report = _aggregate(db, zone_meta, names, config, grid, True)
         report["signature"] = signature
+        if original_sources is not None:
+            report["relocation"] = {"original_inputs": original_sources,
+                                    "current_locations_signature": location_signature}
         if temporal is not None:
             report["timeline"] = temporal.aggregate(db, report, temporal_years)
         to_wgs84 = Transformer.from_crs(source.crs, "EPSG:4326", always_xy=True).transform
@@ -595,7 +677,7 @@ def run_native_workspace(workspace: Path | str, scenario_rasters: Mapping[str, P
     Pass each original scenario's completed land-cover path explicitly. The original
     scenario_set.json is retained as a context hash, not reinterpreted or rewritten.
     """
-    root = Path(workspace)
+    root = _fs.native_path(Path(workspace).expanduser().resolve(strict=True))
     contexts = [root / name for name in ("run_manifest.json", "grid.json", "scenario_set.json") if (root / name).is_file()]
     contexts.extend(kwargs.pop("context_files", ()))
     return run_ledger(RasterInput(root / "rasters" / "landcover.tif"),
