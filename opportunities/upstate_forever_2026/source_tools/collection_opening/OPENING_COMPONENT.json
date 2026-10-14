@@ -28,9 +28,11 @@
     },
     {
       "path": "open_native_collection.py",
-      "bytes": 6946,
-      "sha256": "dc2d7880329983b5c9eb71aa4b20114684ab1ffd2b2c4b3d61d1f118e23c9031",
-      "predecessor_sha256": [],
+      "bytes": 7178,
+      "sha256": "b915d52edba870f7c0ef655596d566fd16a96a62951eaadb46caaf23a26d2cb7",
+      "predecessor_sha256": [
+        "dc2d7880329983b5c9eb71aa4b20114684ab1ffd2b2c4b3d61d1f118e23c9031"
+      ],
       "mode": "0644"
     },
     {

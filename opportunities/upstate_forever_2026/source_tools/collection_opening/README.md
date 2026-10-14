@@ -23,3 +23,5 @@ Windows dependency installation uses the maintained Windows filesystem layer. Th
 Read the parent project's CURRENT_OWNER_DIRECTION.md version 2026-10-14.1 and its AGENTS.md. Compose this root component with the active receiver, native runtimes, platform filesystem, session/readiness, helper binaries and opening guides in the same release. Native runtime payloads and these source files are distinct assembly inputs. Use the assembled root launcher and inspect its actual application before the final private delivery to Bryce.
 
 The retained focused Linux check covers root handoff ordering, spaced/Unicode arguments, immutable dependency reuse and changed-bootstrap rejection. Windows/macOS native opening is part of the assembled release's actual opening course.
+
+The receiving result's selected runtime descriptor is passed into the child environment unchanged. Windows root waiting also preserves the controller's own Ctrl+C shutdown instead of terminating it during parent interrupt cleanup.

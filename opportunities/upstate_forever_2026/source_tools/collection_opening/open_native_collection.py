@@ -121,7 +121,7 @@ def main(arguments: list[str] | None = None) -> int:
     python = Path(result["python"])
     if not python.is_absolute() or not python.is_file():
         raise ValueError("The receiver did not select an installed Python executable")
-    environment = receiver.environment(Path(result["prefix"]))
+    environment = receiver.environment(Path(result["prefix"]), result.get("runtime_spec"))
     environment["ECOSYSTEMS_PYTHON"] = str(python)
     environment["PYTHONNOUSERSITE"] = "1"
     environment.pop("PYTHONHOME", None)
@@ -131,8 +131,14 @@ def main(arguments: list[str] | None = None) -> int:
                    env=environment, check=True)
     command = [str(python), "-B", str(root / "open_collection.py"), *arguments]
     if os.name == "nt":
-        # Keep the owning terminal present until the original controller exits.
-        return subprocess.run(command, env=environment).returncode
+        # Console interrupts reach the controller too. Keep waiting while its
+        # maintained shutdown drains; subprocess.run would kill it on Ctrl+C.
+        child = subprocess.Popen(command, env=environment)
+        while True:
+            try:
+                return child.wait()
+            except KeyboardInterrupt:
+                continue
     os.execve(str(python), command, environment)
     return 0
 
