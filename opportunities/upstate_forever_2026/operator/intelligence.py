@@ -9,6 +9,7 @@ admission/execution/recovery and verified file tickets.
 from __future__ import annotations
 
 from contextlib import contextmanager
+from contextvars import ContextVar
 import asyncio
 import json
 from pathlib import Path
@@ -19,10 +20,11 @@ from model.common import (
     atomic_bytes, atomic_json, canonical, describe_file, digest, identifier,
     read_json, verify_file, _native_fs_path,
 )
-from eco_intelligence.common import IntelligenceError
+from eco_intelligence.common import IntelligenceError, dumps, loads, now, digest as ask_digest
 from eco_intelligence.schemas import Action, Inspect, SessionCreate
 from eco_intelligence.report import report as investigation_html
 from intelligence_collections import CollectionExports
+from intelligence_lineage import InvestigationLineage, OPERATIONS as LINEAGE_READS
 
 ACTIONS = frozenset({
     "intelligence.session.create", "intelligence.diagnostic.open",
@@ -30,9 +32,11 @@ ACTIONS = frozenset({
     "intelligence.execute", "intelligence.continue", "intelligence.ask", "intelligence.export",
     "intelligence.collection.export",
 })
+ASK_CHECKPOINT = "eco-intelligence-ask-checkpoint/v1"
+
 READS = frozenset({"catalog", "session", "evidence", "plan", "export",
                    "native-task", "diagnostic", "experiment",
-                   "collection_sources", "collection"})
+                   "collection_sources", "collection", *LINEAGE_READS})
 SESSION_ID = re.compile(r"^(?:[0-9a-f]{32}|[0-9a-f]{64})$")
 EVIDENCE_ID = re.compile(r"^E[0-9a-f]{24}$")
 RECEIPT_SCHEMA = "upstate.intelligence-operator-receipt/v1"
@@ -53,48 +57,10 @@ class OperationStore:
     """
     def __init__(self, original, task):
         self.original, self.task = original, task
+        self._captured_events = ContextVar('eco_intelligence_operation_events', default=None)
 
     def __getattr__(self, name):
         return getattr(self.original, name)
-
-    def checkpoint_request(self, tenant, sid, rid, value):
-        self.original.authorize(tenant,sid)
-        if rid!=self.task['operation_id'] or sid!=self.task['payload'].get('session_id'):
-            raise IntelligenceError('The continuation belongs to another original operation.',409)
-        stored=getattr(self.original,'storage_tenant',lambda value:value)(tenant)
-        with self.original.db() as db:
-            db.execute("UPDATE requests SET body=? WHERE tenant=? AND session=? AND id=? AND status='running'",
-                       (json.dumps({'continuation':value},ensure_ascii=False,separators=(',',':')),stored,sid,rid))
-
-    def resume_request(self, tenant, sid, rid):
-        self.original.authorize(tenant,sid)
-        if rid!=self.task['operation_id'] or sid!=self.task['payload'].get('session_id') or len(self.task.get('attempts',[]))<2:
-            raise IntelligenceError('Resume the exact original queued operation.',409)
-        stored=getattr(self.original,'storage_tenant',lambda value:value)(tenant)
-        with self.original.db() as db:
-            db.execute('BEGIN IMMEDIATE')
-            row=db.execute('SELECT status,body FROM requests WHERE tenant=? AND session=? AND id=?',(stored,sid,rid)).fetchone()
-            if not row: raise IntelligenceError('The original provider request has no retained continuation.',409)
-            body=json.loads(row['body']) if row['body'] else {}
-            if row['status']=='complete': return body
-            if body.get('continuation'):
-                value={'_continuation':body['continuation']}
-            elif 'HTTP 429' in body.get('error',''):
-                value={'_legacy_resume':True}
-            else:
-                raise IntelligenceError('This earlier operation has no resumable provider completion. Its retained result remains available.',409)
-            db.execute("UPDATE requests SET status='running' WHERE tenant=? AND session=? AND id=?",(stored,sid,rid))
-            return value
-
-    def finish_request(self, tenant, sid, rid, value, failed=False):
-        if failed:
-            stored=getattr(self.original,'storage_tenant',lambda item:item)(tenant)
-            with self.original.db() as db:
-                row=db.execute('SELECT body FROM requests WHERE tenant=? AND session=? AND id=?',(stored,sid,rid)).fetchone()
-            previous=json.loads(row['body']) if row and row['body'] else {}
-            if previous.get('continuation'): value={**value,'continuation':previous['continuation']}
-        return self.original.finish_request(tenant,sid,rid,value,failed)
-
 
     def create_session(self, tenant, title):
         key = digest({"kind": "intelligence-session", "task_id": self.task["id"]})
@@ -182,9 +148,18 @@ class OperationStore:
                     "request_action": requested.model_dump(exclude_none=True)}
         # A direct queued prepare has exactly one selected action. The assistant
         # may legitimately prepare several distinct actions in its single task.
+        captured = self.ask_tool_identity(tenant, sid)
+        if captured is not None and captured["request_id"] != self.task["operation_id"]:
+            raise IntelligenceError("The prepared action belongs to another original request.", 409)
+        if captured is not None:
+            action = self._captured_events.get().get("action")
+            if action is None:
+                raise IntelligenceError("The original Assistant tool selection is missing.", 409)
+            body = {**body, "assistant_request": {**captured, "task_id": self.task["id"], "action": action}}
         key = (self.direct_plan_id(sid) if self.task["action"] == "intelligence.prepare"
                else digest({"kind": "intelligence-plan", "task_id": self.task["id"],
-                            "session_id": sid, "body": body}))
+                            "session_id": sid, **({"tool_call": captured["call_id"]}
+                            if captured is not None else {"body": body})}))
         normalize = getattr(self.original, "storage_tenant", None)
         stored_tenant = normalize(tenant) if callable(normalize) else tenant
         serialized = json.dumps(body, sort_keys=True, separators=(",", ":"),
@@ -202,6 +177,233 @@ class OperationStore:
                     (key, stored_tenant, sid, serialized, "ready", None,
                      self.task["created_at"], self.task["created_at"]))
         return self.original.plan(tenant, key)
+
+
+    def event(self, tenant: str, sid: str, kind: str, body: dict):
+        self.authorize(tenant,sid)
+        captured = self._captured_events.get()
+        if (captured is not None and captured['tenant'] == self._ask_tenant(tenant)
+                and captured['session'] == sid):
+            captured['events'].append({'kind':kind,'body':loads(dumps(body)),'created':now()})
+            return
+        with self.db() as db:
+            db.execute('INSERT INTO events(session,kind,body,created) VALUES (?,?,?,?)',(sid,kind,dumps(body),now()))
+
+    def retained_ask_question(self, tenant, sid, rid):
+        self.original.authorize(tenant, sid)
+        questions = []
+        with self.original.db() as db:
+            for row in db.execute("SELECT body FROM events WHERE session=? AND kind='question' ORDER BY seq", (sid,)):
+                body = loads(row["body"])
+                if isinstance(body, dict) and body.get("request_id") == rid:
+                    questions.append(body.get("text"))
+        if not questions:
+            return None
+        if not isinstance(questions[0], str) or any(value != questions[0] for value in questions):
+            raise IntelligenceError("The original question history has conflicting text.", 409)
+        return questions[0]
+
+    def retained_ask_plan(self, tenant, sid, action):
+        captured = self.ask_tool_identity(tenant, sid)
+        if captured is None or captured["request_id"] != self.task["operation_id"]:
+            raise IntelligenceError("Prepare the action inside its original Assistant tool call.", 409)
+        selected = action.model_dump(exclude_none=True)
+        self._captured_events.get()["action"] = selected
+        key = digest({"kind": "intelligence-plan", "task_id": self.task["id"],
+                      "session_id": sid, "tool_call": captured["call_id"]})
+        try:
+            plan = self.original.plan(tenant, key)
+        except IntelligenceError as error:
+            if error.status == 404:
+                return None
+            raise
+        expected = {**captured, "task_id": self.task["id"], "action": selected}
+        if plan["session"] != sid or plan["body"].get("assistant_request") != expected:
+            raise IntelligenceError("The retained Assistant plan has another original tool selection.", 409)
+        return plan
+
+    def _ask_tenant(self, tenant):
+        # Native scope accepts both its workspace key and stable project namespace.
+        normalize = getattr(self, 'storage_tenant', None)
+        return normalize(tenant) if callable(normalize) else tenant
+
+    def ask_tool_identity(self, tenant, sid):
+        captured = self._captured_events.get()
+        if (captured is not None and captured['tenant'] == self._ask_tenant(tenant)
+                and captured['session'] == sid):
+            return {'request_id':captured['request_id'],'call_id':captured['call_id']}
+        return None
+
+    @contextmanager
+    def capture_ask_events(self, tenant, sid, request_id, call_id):
+        captured = {'tenant':self._ask_tenant(tenant),'session':sid,
+                    'request_id':request_id,'call_id':call_id,'events':[]}
+        token = self._captured_events.set(captured)
+        try:
+            yield captured['events']
+        finally:
+            self._captured_events.reset(token)
+
+    def _legacy_ask_state(self, db, sid, rid, request, prior, provider_model):
+        """Retain the previous public pending completion inside this same task."""
+        if not isinstance(prior, dict):
+            return {}
+        continuation = prior.get('continuation')
+        if continuation is not None:
+            if (not isinstance(continuation, dict)
+                    or continuation.get('question') != request['question']
+                    or continuation.get('focus_ref') != request.get('focus_ref')
+                    or continuation.get('model') != provider_model):
+                raise IntelligenceError('The retained completion has another original question, source or provider model.',409)
+            messages = continuation.get('messages')
+            context = continuation.get('focused_context')
+            used = continuation.get('used_ids')
+            usage = continuation.get('usage')
+            turn = continuation.get('turn')
+            def conversation(value):
+                return (isinstance(value,list) and bool(value)
+                        and all(isinstance(item,dict)
+                            and item.get('role') in {'system','user','assistant','tool'}
+                            for item in value))
+            if (not conversation(messages) or not conversation(context)
+                    or len(context) < 2 or context[0].get('role') != 'system'
+                    or context[1].get('role') != 'user' or context[1].get('content') != request['question']
+                    or messages[:2] != context[:2]
+                    or type(turn) is not int or turn < 0
+                    or not isinstance(usage,list) or not isinstance(used,list)
+                    or any(not isinstance(key,str) or not EVIDENCE_ID.fullmatch(key) for key in used)):
+                raise IntelligenceError('The complete original pending completion is required to resume this request.',409)
+            return {'prepared':True,'messages':loads(dumps(messages)),
+                    'original_context':loads(dumps(context)),'round':turn,
+                    'usage':loads(dumps(usage)),'used_ids':list(used),
+                    'legacy_mode':'retained_pending_completion'}
+        # Older failures retained completed tools in the original event stream.
+        # Stop at the next question so another request's tools cannot be adopted.
+        active, tools, evidence_ids = False, [], []
+        for event in db.execute('SELECT kind,body FROM events WHERE session=? ORDER BY seq',(sid,)):
+            body = loads(event['body'])
+            if event['kind'] == 'question':
+                active = isinstance(body,dict) and body.get('request_id') == rid
+            elif active and isinstance(body,dict):
+                if event['kind'] == 'tool':
+                    tools.append(body)
+                elif (event['kind'] == 'inspection' and isinstance(body.get('evidence_id'),str)
+                        and EVIDENCE_ID.fullmatch(body['evidence_id'])):
+                    evidence_ids.append(body['evidence_id'])
+        return ({'legacy_tools':tools,'legacy_evidence_ids':evidence_ids,
+                 'legacy_mode':'retained_completed_tools'} if tools or evidence_ids else {})
+
+    def begin_ask(self, tenant, sid, rid, request, *, resume=False, provider_model=''):
+        """Bind one original request and explicitly continue its retained work."""
+        tenant = self._ask_tenant(tenant)
+        self.authorize(tenant,sid)
+        if self.task['action'] != 'intelligence.ask' or rid != self.task['operation_id']:
+            raise IntelligenceError('The continuation belongs to another original operation.',409)
+        request = loads(dumps({**request, 'task_id':self.task['id'],
+            'operation_id':self.task['operation_id'], 'payload_sha256':ask_digest(self.task['payload'])}))
+        request_sha = ask_digest(request)
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT status,body FROM requests WHERE tenant=? AND session=? AND id=?',
+                             (tenant,sid,rid)).fetchone()
+            prior = loads(row['body']) if row and row['body'] is not None else None
+            checkpoint = prior if isinstance(prior,dict) and prior.get('format') == ASK_CHECKPOINT else None
+            if checkpoint is not None:
+                if (checkpoint.get('request_sha256') != request_sha
+                        or checkpoint.get('request_id') != rid
+                        or checkpoint.get('session_id') != sid
+                        or checkpoint.get('tenant') != tenant):
+                    raise IntelligenceError('Resume the original request with its retained question, source and session.',409)
+                if row['status'] == 'complete':
+                    return {'complete':checkpoint['result']}
+            elif row and row['status'] == 'complete':
+                return {'complete':prior}
+            if row and not resume:
+                raise IntelligenceError('This original request is already retained. Use its existing Resume control.',409)
+            questions = []
+            answered = None
+            for event in db.execute("SELECT kind,body FROM events WHERE session=? AND kind IN ('question','answer') ORDER BY seq",(sid,)):
+                body = loads(event['body'])
+                if not isinstance(body,dict) or body.get('request_id') != rid:
+                    continue
+                if event['kind'] == 'question':
+                    questions.append(body.get('text'))
+                else:
+                    answered = body
+            if questions and any(text != request['question'] for text in questions):
+                raise IntelligenceError('The retained request has a different original question.',409)
+            if answered is not None:
+                if row is None:
+                    db.execute('INSERT INTO requests VALUES (?,?,?,?,?)',(tenant,sid,rid,'complete',dumps(answered)))
+                else:
+                    db.execute("UPDATE requests SET status='complete',body=? WHERE tenant=? AND session=? AND id=?",
+                               (dumps(answered),tenant,sid,rid))
+                return {'complete':answered}
+            if checkpoint is None:
+                checkpoint = {'format':ASK_CHECKPOINT,'tenant':tenant,'session_id':sid,
+                    'request_id':rid,'request':request,'request_sha256':request_sha,
+                    'revision':0,'attempt':0,'attempts':[],'phase':'preparing',
+                    'prepared':False,'initial_results':[],'messages':[],'original_context':[],
+                    'pending_response':None,'next_call':0,'round':0,'usage':[],'used_ids':[]}
+                if row is not None:
+                    checkpoint['legacy_request'] = {'status':row['status'],'body':prior}
+                    checkpoint.update(self._legacy_ask_state(db,sid,rid,request,prior,provider_model))
+            previous_phase = checkpoint.get('phase')
+            if checkpoint['attempts'] and not checkpoint['attempts'][-1].get('ended_at'):
+                checkpoint['attempts'][-1].update(ended_at=now(),
+                    outcome='interrupted_before_explicit_resume',last_phase=previous_phase)
+            for previous_http in checkpoint.get('http_attempts',[]):
+                if previous_http.get('state') == 'in_flight':
+                    previous_http.update(state='outcome_unknown',ended_at=now())
+            checkpoint['attempt'] += 1
+            checkpoint['revision'] += 1
+            checkpoint['attempts'].append({'number':checkpoint['attempt'],'started_at':now(),
+                'provider_model':provider_model,'authorization':'explicit_resume' if row else 'new_request',
+                'previous_phase':previous_phase})
+            checkpoint['phase'] = 'preparing'
+            checkpoint.pop('error',None)
+            if not questions:
+                db.execute('INSERT INTO events(session,kind,body,created) VALUES (?,?,?,?)',
+                           (sid,'question',dumps({'text':request['question'],'request_id':rid}),now()))
+            elif row:
+                db.execute('INSERT INTO events(session,kind,body,created) VALUES (?,?,?,?)',
+                           (sid,'request_resumed',dumps({'request_id':rid,'attempt':checkpoint['attempt'],
+                            'previous_phase':previous_phase}),now()))
+            if row is None:
+                db.execute('INSERT INTO requests VALUES (?,?,?,?,?)',(tenant,sid,rid,'running',dumps(checkpoint)))
+            else:
+                db.execute("UPDATE requests SET status='running',body=? WHERE tenant=? AND session=? AND id=?",
+                           (dumps(checkpoint),tenant,sid,rid))
+        return {'checkpoint':checkpoint}
+
+    def save_ask(self, tenant, sid, rid, checkpoint, *, events=(), status='running'):
+        """Commit continuation and its public events together under the same row."""
+        if status not in {'running','failed','complete'}:
+            raise IntelligenceError('Choose a supported retained request state.',409)
+        tenant = self._ask_tenant(tenant)
+        self.authorize(tenant,sid)
+        with self.db() as db:
+            db.execute('BEGIN IMMEDIATE')
+            row = db.execute('SELECT status,body FROM requests WHERE tenant=? AND session=? AND id=?',
+                             (tenant,sid,rid)).fetchone()
+            prior = loads(row['body']) if row and row['body'] is not None else None
+            if (not isinstance(prior,dict) or prior.get('format') != ASK_CHECKPOINT
+                    or prior.get('request_sha256') != checkpoint.get('request_sha256')
+                    or prior.get('attempt') != checkpoint.get('attempt')
+                    or prior.get('revision') != checkpoint.get('revision')
+                    or prior.get('tenant') != tenant or prior.get('session_id') != sid
+                    or prior.get('request_id') != rid or row['status'] == 'complete'):
+                raise IntelligenceError('The original request continuation changed; reopen its current task.',409)
+            saved = loads(dumps(checkpoint))
+            saved['revision'] += 1
+            saved['updated_at'] = now()
+            for event in events:
+                db.execute('INSERT INTO events(session,kind,body,created) VALUES (?,?,?,?)',
+                           (sid,event['kind'],dumps(event['body']),event.get('created') or now()))
+            db.execute('UPDATE requests SET status=?,body=? WHERE tenant=? AND session=? AND id=?',
+                       (status,dumps(saved),tenant,sid,rid))
+        checkpoint['revision'] = saved['revision']
+        checkpoint['updated_at'] = saved['updated_at']
 
 
 def _original_integration(operator):
@@ -250,6 +452,7 @@ class IntelligenceFeature:
                             "The Workspace binding must expose " + method + "(workspace_key).", 503)
         self.integration = integration
         self.collections = CollectionExports(operator)
+        self.lineage = InvestigationLineage(operator)
 
     def _engine(self, workspace):
         self.operator.ws(workspace)
@@ -445,6 +648,8 @@ class IntelligenceFeature:
                     "actions": ["analyze_collection", *(
                         name for name in ("run_job", "ensemble", "calibration") if name in methods)],
                 }
+            if operation in LINEAGE_READS:
+                return self.lineage.read(workspace, engine.repo, operation, value)
             if operation == "collection_sources":
                 return self.collections.sources(workspace, engine.repo)
             if operation == "collection":
@@ -572,7 +777,10 @@ class IntelligenceFeature:
             if not isinstance(question, str) or not question.strip() or len(question) > 24000:
                 raise IntelligenceError("Enter a question of up to 24,000 characters.", 422)
             from intelligence_diagnostic_entry import contextualize_diagnostic_question
-            question = contextualize_diagnostic_question(engine, workspace, sid, question)
+            retained_question = (engine.store.retained_ask_question(workspace, sid, task['operation_id'])
+                                 if len(task.get('attempts', [])) > 1 else None)
+            question = (retained_question if retained_question is not None else
+                        contextualize_diagnostic_question(engine, workspace, sid, question))
             assistant = self.integration.assistant(workspace)
             if assistant.engine is not engine:
                 raise IntelligenceError("The assistant must share the original investigation engine.", 503)
@@ -582,17 +790,32 @@ class IntelligenceFeature:
                         or focus_ref.get("kind") not in {"dataset", "artifact", "job", "ensemble"}
                         or not isinstance(focus_ref.get("id"), str) or not focus_ref["id"]):
                     raise IntelligenceError("Choose an original registered source or native result for this question.", 422)
-            def progress(value):
+            # Both controls and progress use the original operator task lock.
+            # An old attempt may not update a resumed task's current state.
+            def original_task():
+                current = self.operator.task(task["id"])
+                if (current.get("workspace") != workspace
+                        or current.get("action") != "intelligence.ask"
+                        or current.get("operation_id") != task["operation_id"]
+                        or current.get("payload") != value
+                        or len(current.get("attempts", [])) != len(task.get("attempts", []))
+                        or current.get("state") != "running"):
+                    raise IntelligenceError("The original Assistant task changed; reopen its current retained state.",409)
+                return current
+
+            def cancelled():
                 with self.operator.lock:
-                    current=self.operator.task(task['id'])
-                    if current.get('state')!='running': return
-                    current['provider_wait']=value
-                    task['provider_wait']=value
-                    atomic_json(self.operator.root/'tasks'/(task['id']+'.json'),current)
-            asyncio.run(assistant.ask(workspace,sid,question,task['operation_id'],focus_ref=focus_ref,
-                resume=len(task.get('attempts',[]))>1,
-                cancelled=lambda: bool(self.operator.task(task['id']).get('cancel_requested')),
-                progress=progress))
+                    return bool(original_task().get("cancel_requested"))
+
+            def progress(status):
+                with self.operator.lock:
+                    current = original_task()
+                    current["provider_wait"] = dict(status)
+                    atomic_json(self.operator.root / "tasks" / (task["id"] + ".json"), current)
+
+            asyncio.run(assistant.ask(workspace, sid, question, task["operation_id"],
+                focus_ref=focus_ref, resume=len(task.get("attempts", [])) > 1,
+                cancelled=cancelled, progress=progress))
             return {"kind": "answer", "session_id": sid, "request_id": task["operation_id"]}
         if action == "intelligence.collection.export":
             record = self.collections.export(engine, task, sid)

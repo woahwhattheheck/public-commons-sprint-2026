@@ -1,3 +1,4 @@
+import {createLineageNavigator} from './investigation_lineage.mjs';
 
 /** Investigations in the original authenticated Upper Savannah operator. */
 const json = value => JSON.stringify(value);
@@ -30,7 +31,7 @@ export function createInvestigationClient(options) {
     experiment:null,experimentId:saved.experimentId||null,experimentOffset:saved.experimentOffset||0,experimentRead:0,
     nativeTask:null,nativeTaskRead:0,experimentSubmission:saved.experimentSubmission||null,
     diagnosticReport:null,diagnosticIntake:saved.diagnosticIntake||null,diagnosticRead:0,
-    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,loading:false,error:null,readErrors:{},registryReading:{}});
+    lastResult:saved.lastResult||null,pending:saved.pending||null,draft:saved.draft||{},sessionRead:0,collectionRead:0,lastTask:null,taskRead:0,taskControl:null,controlError:null,loading:false,error:null,readErrors:{},registryReading:{}});
   }return contexts.get(w);
  };
  const persist=c=>{try{storage?.setItem(key(c.workspace),json({sessionId:c.sessionId,pending:c.pending,lastResult:c.lastResult,draft:c.draft,diagnosticIntake:c.diagnosticIntake,collectionId:c.collectionId,sourceSelection:c.sourceSelection,experimentId:c.experimentId,experimentOffset:c.experimentOffset,experimentSubmission:c.experimentSubmission}));}
@@ -226,7 +227,8 @@ export function createInvestigationClient(options) {
       stable(task.payload)!==stable(p.body.payload) || !originalId(task.id))
    throw Error('The returned operation does not match this original workspace request.');
   p.acceptedOperationId=task.operation_id;p.joinedExistingTask=p.joinedExistingTask||joinedActive;
-  c.lastTask=task;p.taskId=task.id;p.taskState=task.state;p.providerWait=clone(task.provider_wait||null);p.error=null;
+  const priorState=p.taskState,priorCancelRequested=c.lastTask?.id===task.id&&!!c.lastTask.cancel_requested;
+  c.lastTask=task;p.taskId=task.id;p.taskState=task.state;p.error=null;
   if(task.state==='complete'){
    const r=task.result||{};c.lastResult=clone(r);c.pending=null;
    const intake=c.diagnosticIntake;
@@ -258,10 +260,17 @@ export function createInvestigationClient(options) {
    ]);
    return task;
   }
-  if(['failed','interrupted','canceled','cancelled'].includes(task.state)){
+  const terminalStates=['failed','interrupted','canceled','cancelled'];
+  if(terminalStates.includes(task.state)){
    p.error=task.error?.message || 'The original operation '+task.state+'. Open its retained task for recovery.';
   }
-  changed(c);return task;
+  changed(c);
+  const sid=p.body.payload.session_id;
+  const recoveryTransition=priorState!==task.state||priorCancelRequested!==!!task.cancel_requested;
+  if(hydrate&&p.body.action==='intelligence.ask'&&sid&&c.sessionId===sid&&recoveryTransition&&
+     (terminalStates.includes(task.state)||terminalStates.includes(priorState)||task.cancel_requested))
+   await reconcileReads(c,[['session','Retained question conversation',()=>session(sid,c.workspace)]]);
+  return task;
  }
  async function send(c,p){
   p.error=null;changed(c);
@@ -290,11 +299,38 @@ export function createInvestigationClient(options) {
   if(p.taskId)return poll(c.workspace);
   return send(c,p);
  }
- async function poll(w=getWorkspace(),hydrate=true){
-  const c=context(w),p=c.pending;if(!p?.taskId)return null;
+ async function poll(w=getWorkspace(),hydrate=true,controlRead=false){
+  const c=context(w),p=c.pending;if(!p?.taskId||c.taskControl&&!controlRead)return null;
+  const revision=++c.taskRead;
   const task=await api('/api/task?'+new URLSearchParams({id:p.taskId,workspace:w}));
-  if(c.pending===p)return accept(task,c,p,hydrate);
+  if(c.pending===p&&revision===c.taskRead){c.controlError=null;return accept(task,c,p,hydrate);}
   return task;
+ }
+ async function controlAsk(action,w=getWorkspace()){
+  if(!['cancel','resume'].includes(action))throw Error('Choose an original question control.');
+  const c=context(w),p=c.pending;
+  if(!p?.taskId||p.body.action!=='intelligence.ask')throw Error('Open the retained original question operation first.');
+  if(c.taskControl)return null;
+  c.taskControl=action;c.controlError=null;++c.taskRead;changed(c);
+  try{
+   // Read the original task before changing it; a lost earlier control response
+   // must never turn into a second Ask or an unnecessary second resume.
+   await poll(w,true,true);
+   if(c.pending!==p)return c.lastTask;
+   const active=['queued','running'].includes(p.taskState);
+   if(action==='cancel'&&(!active||c.lastTask?.cancel_requested))return c.lastTask;
+   if(action==='resume'&&active)return c.lastTask;
+   if(action==='resume'&&!['failed','interrupted','canceled','cancelled'].includes(p.taskState))
+    throw Error('Refresh the retained original task before resuming this question.');
+   if(getWorkspace()!==w)throw Error('Reopen this question in its original Workspace before changing its task.');
+   ++c.taskRead;
+   const task=await api('/api/task/'+action,{method:'POST',body:{id:p.taskId}});
+   if(c.pending===p)return await accept(task,c,p);
+   return task;
+  }catch(error){
+   c.controlError='Could not confirm the '+action+' request. Refresh the retained status before continuing. '+(error?.message||String(error));
+   throw error;
+  }finally{c.taskControl=null;changed(c);}
  }
 
  function diagnosticSelection(value){
@@ -382,22 +418,15 @@ export function createInvestigationClient(options) {
   changed(c);return resumeDiagnostic(w);
  }
 
- async function resumeOriginal(){
-  const c=context(getWorkspace()),p=c.pending;if(!p?.taskId)throw Error('Choose the retained original operation.');
-  return accept(await api('/api/task/resume',{method:'POST',body:JSON.stringify({id:p.taskId})}),c,p);
- }
- async function cancelOriginal(){
-  const c=context(getWorkspace()),p=c.pending;if(!p?.taskId)throw Error('Choose the retained original operation.');
-  await api('/api/task/cancel',{method:'POST',body:JSON.stringify({id:p.taskId})});return poll(c.workspace);
- }
  function clearFinished(){
   const c=context(getWorkspace()),p=c.pending;
+  if(c.taskControl)throw Error('Wait for the original question control to return.');
   if(!p || !['failed','interrupted','canceled','cancelled'].includes(p.taskState))
    throw Error('Keep the current original operation until its status is known.');
   if(c.diagnosticIntake?.operation_id===p.body.operation_id){Object.assign(c.diagnosticIntake,{operation_id:null,phase:'staged',error:null});}
   c.pending=null;changed(c);
  }
- return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,resumeOriginal,cancelOriginal,clearFinished,openForDiagnostic,resumeDiagnostic,diagnostic,
+ return {snapshot,catalog,session,evidence,exported,collectionSources,collection,experiment,nativeTask,trackExperimentSubmission,pollExperimentSubmission,selectSubmittedExperiment,clearExperimentSubmission,selectSources,clearSourceSelection,exportCollection,refresh,queue,retry,poll,controlAsk,clearFinished,openForDiagnostic,resumeDiagnostic,diagnostic,
   saveDraft(draft,w=getWorkspace()){const c=context(w);c.draft=clone(draft);persist(c);},
   async acceptState(state){
    const c=context(workspaceId(state));
@@ -409,7 +438,8 @@ export function createInvestigationClient(options) {
       taskId:resumed.id,acceptedOperationId:resumed.operation_id,taskState:resumed.state,providerWait:clone(resumed.provider_wait||null),error:null};changed(c);}
    }
    if(c.pending?.taskId){const t=state.tasks?.find(x=>x.id===c.pending.taskId);
-    if(t && (t.state!==c.pending.taskState||stable(t.provider_wait||null)!==stable(c.pending.providerWait||null)))await poll(c.workspace);}
+    const activeAsk=c.pending.body.action==='intelligence.ask'&&['queued','running'].includes(c.pending.taskState);
+    if(t&&t.state!==c.pending.taskState||activeAsk)await poll(c.workspace);}
    if(c.diagnosticIntake && !c.pending && ['staged','waiting','submitted','received','receiving'].includes(c.diagnosticIntake.phase))await resumeDiagnostic(c.workspace);
    const submission=c.experimentSubmission;
    if(submission){const task=state.tasks?.find(x=>x.id===submission.taskId);
@@ -436,6 +466,7 @@ export function attachInvestigations(host) {
  const failure=error=>notice(error?.message||String(error));
  const client=createInvestigationClient({api:host.api,getWorkspace:()=>workspaceId(host.getState()),storage:host.storage,
   randomUUID:host.randomUUID,onNotice:notice,onChange:state=>{latest=state;if(root && state.workspace===workspace)renderData(state);}});
+ const lineage=createLineageNavigator({host,onNotice:notice,onSelectRefs:refs=>client.selectSources(refs),onOpenCollection:()=>show('sources')});
  const field=(label,id,type='input',value='')=>{const wrap=el('label',label),n=el(type);nodes[id]=n;n.dataset.intelligenceField=id;
   if(type==='input')n.type='text';if(type==='textarea')n.rows=4;n.value=draft.fields?.[id]??value;wrap.append(n);return wrap;};
  const section=(name,title)=>{const node=el('section',null,'intelligence-panel');node.id='intelligence-panel-'+name;node.dataset.panel=name;
@@ -501,7 +532,7 @@ export function attachInvestigations(host) {
    const rows=inventory[name]||[];let count=0;
    for(const row of rows){if(term&&!json(row).toLowerCase().includes(term))continue;count++;
     const b=button('',()=>{selected={kind,id:row.id};nodes.selection.textContent=resourceLabel(row);remember();renderResources(state);});
-    b.className='intelligence-resource';b.setAttribute('aria-pressed',String(selected?.kind===kind&&selected?.id===row.id));
+    b.className='intelligence-resource';b.dataset.resourceKind=kind;b.dataset.resourceId=row.id;b.setAttribute('aria-pressed',String(selected?.kind===kind&&selected?.id===row.id));
     b.append(el('strong',resourceLabel(row)),el('small',[row.model||row.kind, row.status||row.state].filter(Boolean).join(' · ')||row.id));
     nodes.resources.append(b);
    }
@@ -712,7 +743,7 @@ export function attachInvestigations(host) {
     results.map(([name,m])=>[name,m.units,m.baseline_total,m.alternative_total,m.delta,m.reduction,m.relative_change_pct,m.paired_cells,m.coverage_fraction])));
    else card.append(el('p','No retained metrics for this case on the original programme record.','intelligence-muted'));
    if(originalId(item.run_id)&&execution?.state!=='unprepared')
-    card.append(button('Open native run',()=>host.openItem('runs',item.run_id)));
+    card.append(button('Open native run',()=>host.openItem('runs',item.run_id)),button('Open input lineage',async()=>{show('analyze');await lineage.open({run_id:item.run_id});}));
    if((execution?.stages||[]).length)card.append(dataTable(['Native model','Execution','Source run'],
     execution.stages.map(stage=>[stage.model,stage.mode,stage.source_run_id||'This run'])));
    card.append(details('Original case and native execution',{case:item,native_execution:execution||null}));target.append(card);
@@ -737,6 +768,25 @@ export function attachInvestigations(host) {
   if(task.error)target.append(el('p',task.error.message||String(task.error),'intelligence-notice'));
   target.append(details('Complete retained task',value));
  }
+ function recoveryEvent(event){return ['request_cancelled','request_resumed'].includes(event.kind);}
+ function conversationTitle(event){
+  return {question:'Question',answer:'Answer',request_error:'Provider result',
+   request_cancelled:'Question cancelled',request_resumed:'Question resumed'}[event.kind]||event.kind.replaceAll('_',' ');
+ }
+ function conversationText(event){
+  const body=event.body||{};
+  if(event.kind==='request_cancelled')return body.error||body.text||'The original question was cancelled.';
+  if(event.kind==='request_resumed')return (body.text||'The retained original question was resumed.')+
+   (body.previous_phase?'\n\nPrevious request state: '+body.previous_phase+'.':'');
+  return body.text||body.error||'';
+ }
+ function recoveryIdentity(event){
+  const body=event.body||{},parts=[];
+  if(body.request_id)parts.push('Original request: '+body.request_id);
+  if(body.task_id)parts.push('Original task: '+body.task_id);
+  if(body.attempt!=null)parts.push('Attempt: '+body.attempt);
+  return parts.join(' · ');
+ }
  function renderSession(state){
   const s=state.session;clear(nodes.evidence);clear(nodes.conversation);clear(nodes.historyList);clear(nodes.exports);
   nodes.current.textContent=s?.title||'Choose or create an investigation';
@@ -747,9 +797,14 @@ export function attachInvestigations(host) {
    nodes.evidence.append(b);
   }
   for(const e of s?.events||[]){
-   if(['question','answer','request_error'].includes(e.kind)){
-    const article=el('article',null,'intelligence-message');article.append(el('h3',e.kind==='question'?'Question':e.kind==='answer'?'Answer':'Provider result'));
-    article.append(retainedProse(e.body?.text||e.body?.error||''));nodes.conversation.append(article);
+   if(['question','answer','request_error'].includes(e.kind)||recoveryEvent(e)){
+    const article=el('article',null,'intelligence-message');article.append(el('h3',conversationTitle(e)));
+    article.append(retainedProse(conversationText(e)));
+    if(recoveryEvent(e)){
+     const identity=recoveryIdentity(e);if(identity)article.append(el('p',identity,'intelligence-id'));
+     article.append(details('Original retained event',e));
+    }
+    nodes.conversation.append(article);
    }
    const item=el('li');item.append(el('strong',e.kind.replaceAll('_',' ')),el('span',displayTime(e.created)),details('Original event',e.body));nodes.historyList.append(item);
   }
@@ -808,7 +863,7 @@ export function attachInvestigations(host) {
   if(state.collection){const at=rows.findIndex(row=>row.id===state.collection.id);if(at>=0)rows[at]=state.collection;else rows.push(state.collection);}
   if(!rows.length)nodes.sourceExports.append(el('p','Exported source collections remain with this investigation and can be reopened here.','intelligence-muted'));
   for(const record of rows){
-   const article=el('article',null,'intelligence-export');article.append(el('h3',record.title),el('p',displayTime(record.created_at)));
+   const article=el('article',null,'intelligence-export');article.dataset.collectionId=record.id;article.append(el('h3',record.title),el('p',displayTime(record.created_at)));
    article.append(metrics([['Selected records',record.selected_records],['Files with companions',record.copied_files],['Original bytes',record.copied_bytes]]));
    if(record.files){
     for(const file of record.files){const link=downloadLink(file);if(link)article.append(link,el('small',displayNumber(file.bytes)+' bytes · SHA-256 '+file.sha256));}
@@ -823,21 +878,55 @@ export function attachInvestigations(host) {
    article.append(el('small','Catalog SHA-256 '+record.catalog_sha256));nodes.sourceExports.append(article);
   }
  }
+ function updateAskProgress(state){
+  const p=state.pending,task=state.lastTask;
+  if(!nodes.askProgress||p?.body.action!=='intelligence.ask'||task?.id!==p.taskId)return;
+  const wait=task.provider_wait,phases={preparing:'Preparing the original question',waiting:'Waiting for the provider response',rate_wait:'Waiting for the provider rate limit',
+   response_received:'Provider response received',inspecting:'Inspecting retained scientific sources',
+   cancelled:'Original question cancelled',interrupted:'Original question interrupted',complete:'Original question complete'};
+  const cancelling=task.cancel_requested&&['queued','running'].includes(task.state);
+  const terminal={cancelled:'Original question cancelled',canceled:'Original question cancelled',interrupted:'Original question interrupted',failed:'Original question needs attention',complete:'Original question complete'}[task.state];
+  const label=terminal||(cancelling?'Cancellation requested. The original operation will stop at its next safe checkpoint.':
+   phases[wait?.phase]||(task.state==='queued'?'Original question queued':task.state==='running'?'Original question running':'Original question '+task.state));
+  nodes.askProgress.textContent=label;
+  nodes.askProgressDetail.textContent=typeof wait?.message==='string'?(terminal?'Last provider update: ':'')+wait.message:'';
+  const at=typeof wait?.started_at==='string'?Date.parse(wait.started_at):NaN;
+  const elapsed=typeof wait?.elapsed_seconds==='number'&&Number.isFinite(wait.elapsed_seconds)&&wait.elapsed_seconds>=0?
+   wait.elapsed_seconds:Number.isFinite(at)?Math.max(0,(Date.now()-at)/1000):null;
+  if(['waiting','rate_wait'].includes(wait?.phase)&&task.state==='running'&&elapsed!==null){
+   const seconds=Math.floor(elapsed);
+   nodes.askElapsed.textContent='Provider wait: '+Math.floor(seconds/60)+'m '+(seconds%60)+'s.';
+  }else nodes.askElapsed.textContent='';
+ }
  function renderPending(state){
-  clear(nodes.pending);const p=state.pending;
+  clear(nodes.pending);nodes.askProgress=nodes.askProgressDetail=nodes.askElapsed=null;
+  const p=state.pending;
   if(!p){if(state.lastTask)nodes.pending.append(button('Open last original operation',()=>host.showTask(state.lastTask.id)));return;}
   nodes.pending.append(el('strong',actionNames[p.body.action]||p.body.action),el('p',p.taskState||'Sending original request'),
    el('p',p.body.operation_id,'intelligence-id'));
   if(p.joinedExistingTask)nodes.pending.append(el('p','Joined original task operation: '+p.acceptedOperationId,'intelligence-id'));
-  if(p.providerWait?.state==='waiting')nodes.pending.append(el('p','Waiting for provider quota until '+displayTime(p.providerWait.retry_at)+'. The original question and completed inspections remain retained.','intelligence-status'));
-  if(p.body.action==='intelligence.ask'&&p.taskId){
-   if(['failed','interrupted','cancelled'].includes(p.taskState))nodes.pending.append(button('Resume original question',()=>client.resumeOriginal()));
-   if(p.taskState==='running')nodes.pending.append(button('Cancel original question',()=>client.cancelOriginal()));
-  }
   if(p.error)nodes.pending.append(el('p',p.error,'intelligence-error'));
-  if(p.taskId)nodes.pending.append(button('Open original operation',()=>host.showTask(p.taskId)),button('Refresh retained status',()=>client.poll()));
-  else nodes.pending.append(button('Retry this original request',()=>client.retry()));
-  if(['failed','interrupted','canceled','cancelled'].includes(p.taskState))nodes.pending.append(button('Keep result and start another operation',()=>client.clearFinished()));
+  const control=(label,work,disabled=false)=>{const node=button(label,work);node.disabled=disabled||!!state.taskControl;nodes.pending.append(node);return node;};
+  if(p.body.action==='intelligence.ask'){
+   nodes.pending.append(el('p',p.body.payload.question||'','intelligence-muted'));
+   nodes.askProgress=el('p',null,'intelligence-status');nodes.askProgress.setAttribute('role','status');nodes.askProgress.setAttribute('aria-live','polite');
+   nodes.askProgressDetail=el('p',null,'intelligence-muted');nodes.askElapsed=el('p',null,'intelligence-muted');nodes.askElapsed.setAttribute('aria-live','off');
+   nodes.pending.append(nodes.askProgress,nodes.askProgressDetail,nodes.askElapsed);
+   if(state.controlError)nodes.pending.append(el('p',state.controlError,'intelligence-error'));
+   if(p.body.payload.session_id&&state.sessionId!==p.body.payload.session_id)
+    control('Open question investigation',()=>client.session(p.body.payload.session_id,state.workspace));
+   if(p.taskId&&['queued','running'].includes(p.taskState)){
+    const requested=state.lastTask?.id===p.taskId&&state.lastTask.cancel_requested;
+    control(requested?'Cancellation requested':state.taskControl==='cancel'?'Requesting cancellation…':'Cancel this question',
+     ()=>client.controlAsk('cancel',state.workspace),!!requested);
+   }
+   if(p.taskId&&['failed','interrupted','canceled','cancelled'].includes(p.taskState))
+    control(state.taskControl==='resume'?'Resuming original question…':'Resume original question',()=>client.controlAsk('resume',state.workspace));
+   updateAskProgress(state);
+  }
+  if(p.taskId){control('Open original operation',()=>host.showTask(p.taskId));control('Refresh retained status',()=>client.poll());}
+  else control('Retry this original request',()=>client.retry());
+  if(['failed','interrupted','canceled','cancelled'].includes(p.taskState))control('Keep result and start another operation',()=>client.clearFinished());
  }
  function renderDiagnostic(state){
   clear(nodes.diagnostic);const intake=state.diagnosticIntake;nodes.diagnostic.hidden=!intake;if(!intake)return;
@@ -900,7 +989,9 @@ export function attachInvestigations(host) {
   const nativeTaskStamp=stable(state.nativeTask);
   if(nativeTaskStamp!==lastNativeTask){lastNativeTask=nativeTaskStamp;renderNativeTask(state);}
   const estamp=stable(state.evidence);if(estamp!==lastEvidence){lastEvidence=estamp;renderEvidence(state.evidence);}
-  const pstamp=stable(state.pending);if(pstamp!==lastPending){lastPending=pstamp;renderPending(state);}
+  const pstamp=stable({pending:state.pending,sessionId:state.sessionId,taskId:state.lastTask?.id,cancelRequested:state.lastTask?.cancel_requested,control:state.taskControl,controlError:state.controlError});
+  if(pstamp!==lastPending){lastPending=pstamp;renderPending(state);}
+  updateAskProgress(state);
   for(const n of root.querySelectorAll('[data-submit]'))n.disabled=!!state.pending||state.loading;
  }
  function build(){
@@ -931,8 +1022,8 @@ export function attachInvestigations(host) {
    if(!refs.length)throw Error('This resource has no registered source files. Refresh the originals.');
    client.selectSources(refs);show('sources');
   });
-  selectedRow.append(nodes.selection,inspectButton,addSources);analyze.append(selectedRow,el('p','Analysis covers the complete original file and retains its source identity, coverage and units.','intelligence-muted'));
-  nodes.result=el('div');analyze.append(nodes.result);
+  selectedRow.append(nodes.selection,inspectButton,addSources,button('Open input lineage',()=>lineage.openResource(selected,latest),'intelligence-lineage-open'));analyze.append(selectedRow,el('p','Analysis covers the complete original file and retains its source identity, coverage and units.','intelligence-muted'));
+  nodes.result=el('div');nodes.lineage=el('section',null,'intelligence-plan');nodes.lineage.dataset.intelligenceLineage='true';analyze.append(nodes.result,nodes.lineage);
   const compare=el('form',null,'intelligence-form');compare.append(el('h3','Compare original files'),field('Baseline / observed file','baseline','select'),field('Candidate / predicted file','candidate','select'),field('Comparison','comparison','select'));
   selectOptions(nodes.comparison,[{value:'raster_compare',label:'Aligned raster cells'},{value:'table_compare',label:'Exact-key observed / predicted rows'}]);
   nodes.tableFields=el('div',null,'intelligence-form-group');nodes.tableFields.append(field('Pairing columns, separated by commas','keys','input','date'),field('Observed column','compareObserved','input','observed_sediment'),field('Predicted column','comparePredicted','input','predicted_sediment'));
@@ -993,13 +1084,13 @@ export function attachInvestigations(host) {
  async function mount(node,state=host.getState()){
   detach();root=node;workspace=workspaceId(state);epoch++;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';
   latest=client.snapshot();draft=clone(latest.draft||{fields:{}});panel=draft.panel||'analyze';selected=clone(draft.selected||null);
-  build();renderData(latest);await client.refresh(workspace);
+  build();renderData(latest);await Promise.all([client.refresh(workspace),lineage.mount(nodes.lineage,workspace)]);
  }
  function update(state=host.getState()){
   if(!root || workspace!==workspaceId(state))return;
   if(!refreshInFlight){refreshInFlight=client.acceptState(state).catch(failure).finally(()=>refreshInFlight=null);}
  }
- function detach(){if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
+ function detach(){lineage.detach();if(root&&workspace)remember();epoch++;root=null;workspace=null;selected=null;lastSession=lastCatalog=lastPending=lastEvidence=lastFiles=lastSources=lastDiagnostic=lastProgramme=lastNativeTask=lastSubmission='';for(const key of Object.keys(nodes))delete nodes[key];}
  return {mount,update,detach,client,openForDiagnostic};
 }
 

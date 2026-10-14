@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 import re
 
 from model.common import digest, identifier, read_json, relative_file, verify_file
+from model.scenario_mask_sources import mask_pair
 
 SCHEMA = "upstate.science-catalog/v1"
 PROVIDER = "upstate.prepared-grid/v1"
@@ -331,53 +332,40 @@ class WorkspaceScienceCatalog:
         }
 
     def lineage(self, workspace_key, *, grid_id=None, run_id=None):
-        """Reopen the exact grid, source edition, parameters and scenario recipe."""
+        """Retain ordered input uses and each exact collection/source pair.
+
+        Listing reads immutable records and declared descriptors. Opening a
+        source in Investigations verifies its complete original files through
+        the existing repository; metadata alone is not a byte verification.
+        """
         if grid_id is None and run_id is None:
             raise ValueError("Select a retained grid or native run")
         workspace = self._workspace(workspace_key)
-        runs = []
+        runs, issues = [], []
         if run_id is not None:
             run = workspace.inspect_run(identifier(run_id))
             selected_grid = run["selection"]["grid_id"]
             if grid_id is not None and identifier(grid_id) != selected_grid:
                 raise ValueError("The selected run belongs to a different native grid")
-            grid_id = selected_grid
-            runs = [run]
+            grid_id, runs = selected_grid, [run]
         grid_id = identifier(grid_id)
         grid = workspace.get_grid(grid_id)
         if not runs:
-            issues = []
             runs = [run for run in _runs(workspace, issues).values()
                     if run["selection"]["grid_id"] == grid_id]
-        else:
-            issues = []
-        profiles, scenarios, sources = {}, {}, {}
-        requested = []
+        profiles, scenarios, sources, collections = {}, {}, {}, {}
+        dependencies = []
 
-        def need(collection_id, source_id, use):
-            if collection_id is not None and source_id is not None:
-                requested.append((collection_id, source_id, use))
-
-        spec = grid["spec"]
-        collection_id = spec.get("source_collection_id")
-        for role, source_id in spec.get("input_sources", {}).items():
-            need(collection_id, source_id, "grid input " + role)
-        for role in ("reporting_area", "model_domain"):
-            need(collection_id, spec.get(role, {}).get("source_id"), role)
-        for run in runs:
-            selection = run["selection"]
-            profile = workspace._get("profiles", selection["profile_id"])
-            scenario = workspace._get("scenarios", selection["scenario_id"])
-            profiles[profile["id"]] = profile
-            scenarios[scenario["id"]] = scenario
-            need(profile.get("source_collection_id"), profile.get("biophysical_source_id"),
-                 "biophysical table for profile " + profile["id"])
-            for patch_index, patch in enumerate(scenario.get("patches", [])):
-                need(scenario.get("source_collection_id"), patch.get("mask_source_id"),
-                     "scenario " + scenario["id"] + " patch " + str(patch_index + 1))
-        collections = {}
-        for collection_id, source_id, use in requested:
+        def need(collection_id, source_id, use, **context):
+            edge = {"use": use, "collection_id": collection_id,
+                    "source_id": source_id, **context}
+            edge["id"] = digest(edge)
+            edge["state"] = "unavailable"
+            dependencies.append(edge)
             try:
+                identifier(collection_id)
+                if not isinstance(source_id, str) or not source_id:
+                    raise ValueError("This input has no selected original source ID")
                 if collection_id not in collections:
                     collections[collection_id] = workspace._get("sources", collection_id)
                 original = _entry(collections, collection_id, source_id)
@@ -385,19 +373,73 @@ class WorkspaceScienceCatalog:
                     raise ValueError("The selected source edition is missing its source ID")
                 key = (collection_id, source_id)
                 if key not in sources:
-                    sources[key] = {**original, "uses": []}
-                if use not in sources[key]["uses"]:
-                    sources[key]["uses"].append(use)
+                    sources[key] = {**original, "key": digest(list(key)), "uses": [],
+                                    "dependency_ids": []}
+                row = sources[key]
+                if use not in row["uses"]:
+                    row["uses"].append(use)
+                row["dependency_ids"].append(edge["id"])
+                edge.update(state="retained", source_key=row["key"])
             except (OSError, ValueError, TypeError, KeyError) as exc:
                 _issue(issues, "source", str(collection_id) + "/" + str(source_id), exc)
-        return {
+                edge["issue"] = _copy(issues[-1])
+            return edge
+
+        spec = grid["spec"]
+        collection_id = spec.get("source_collection_id")
+        for role, source_id in spec.get("input_sources", {}).items():
+            need(collection_id, source_id, "grid input " + role,
+                 kind="grid_input", grid_id=grid_id, role=role)
+        for role in ("reporting_area", "model_domain"):
+            selected_area = spec.get(role)
+            if isinstance(selected_area, dict) and "source_id" in selected_area:
+                need(collection_id, selected_area.get("source_id"), role,
+                     kind="grid_area", grid_id=grid_id, role=role,
+                     selection=_copy(selected_area))
+        for run in runs:
+            selection = run["selection"]
+            try:
+                profile = workspace._get("profiles", selection["profile_id"])
+                profiles[profile["id"]] = profile
+                need(profile.get("source_collection_id"), profile.get("biophysical_source_id"),
+                     "biophysical table for profile " + profile["id"],
+                     kind="profile_table", run_id=run["id"], profile_id=profile["id"])
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                _issue(issues, "profile", selection.get("profile_id"), exc)
+            try:
+                scenario = workspace._get("scenarios", selection["scenario_id"])
+                scenarios[scenario["id"]] = scenario
+                for patch_index, patch in enumerate(scenario.get("patches", [])):
+                    context = {"kind": "scenario_mask", "run_id": run["id"],
+                               "scenario_id": scenario["id"], "patch_index": patch_index,
+                               "patch": _copy(patch)}
+                    use = "scenario " + scenario["id"] + " patch " + str(patch_index + 1)
+                    try:
+                        # This is the same selector used by native save/preview/run.
+                        selected_collection, selected_source = mask_pair(scenario, patch)
+                    except (ValueError, TypeError, KeyError) as exc:
+                        selected_collection = (patch.get("source_collection_id")
+                                               if "source_collection_id" in patch
+                                               else scenario.get("source_collection_id"))
+                        edge = need(selected_collection, patch.get("mask_source_id"), use, **context)
+                        if edge["state"] == "retained":
+                            raise ValueError("The native mask selector rejected this input") from exc
+                    else:
+                        need(selected_collection, selected_source, use, **context)
+            except (OSError, ValueError, TypeError, KeyError) as exc:
+                _issue(issues, "scenario", selection.get("scenario_id"), exc)
+        value = {
             "schema": SCHEMA, "workspace_key": str(workspace_key),
             "project": _copy(workspace.project), "grid": _copy(grid),
+            "selected": {"grid_id": grid_id, "run_id": run_id},
             "runs": [{"id": run["id"], "state": run.get("state"),
                       "selection": _copy(run["selection"])} for run in runs],
             "profiles": list(profiles.values()), "scenarios": list(scenarios.values()),
-            "sources": list(sources.values()), "issues": issues,
+            "sources": list(sources.values()), "dependencies": dependencies, "issues": issues,
+            "verification": "retained metadata; selected file opens verify original bytes",
         }
+        value["lineage_sha256"] = digest(value)
+        return value
 
     def resolve(self, workspace_key, selected_dataset_id):
         """Verify a selected original prepared artifact before native analysis."""

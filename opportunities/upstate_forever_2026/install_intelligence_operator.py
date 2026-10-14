@@ -14,6 +14,16 @@ import subprocess
 import tempfile
 
 FILES = (
+    "eco_intelligence/provider.py",
+    "eco_intelligence/engine.py",
+    "eco_intelligence/profiling.py",
+    "eco_intelligence/report.py",
+    "model/scenario_mask_sources.py",
+    "operator/intelligence_lineage.py",
+    "operator/web/investigation_lineage.mjs",
+    "operator/INPUT_LINEAGE.md",
+    "receiving/eco_intelligence/receive_input_lineage.py",
+    "receiving/eco_intelligence/receive_input_lineage.mjs",
     "SCIENTIFIC_CATALOG.md",
     "install_intelligence.py",
     "install_intelligence_operator.py",
@@ -56,6 +66,7 @@ KNOWN_PREDECESSORS = {
         "bab8bfcd3c8e3fde60f7ff66f7108c6bf1dafeadfdd3c64c9b6217ebf58273e8"
     ],
     "install_intelligence_operator.py": [
+        "f830626506fbeba85bb9ce41ee277f0dac04faea547cfecbb85ac892a8877439",
         "07452e2eb484c2ec76ceebe5a38c1702679e96d06761c07aa58fff0a68f0dd52",
         "17b174dd42cdd4e8f9076139ea7c474099c4e2e991b492fd195aceaded443b0d",
         "1db81965622ea7d852f69dda6cbcf5a18e4c8b27a3c05e67b3c805ed901d2e57",
@@ -71,7 +82,8 @@ KNOWN_PREDECESSORS = {
         "bbef76e5db89a991f8bf3a1a5a8741bb67b4a1516f844642aafa1398c3d5aec5",
         "bc50c1aec1a77507abe235a369e94593f97205882b8b11694472dd3b5610e1d8",
         "dc4027036e3143979acc4713cdce3a37e38bbf3c5840adbc5b0d0e2a3b818dff",
-        "ed52ceccba5044ccfaf023ec2a47b2f32cb55b511ca2749bf2e9a42255ea9f4b"
+        "ed52ceccba5044ccfaf023ec2a47b2f32cb55b511ca2749bf2e9a42255ea9f4b",
+        "e4bc7dd290f12ce7de9fd58fd3c2594b30274ba549a13f42c5c6e36be09f9124"
     ],
     "model/diagnostics_cli.py": [
         "2e3494a27e0c5ae948ad5075c2c9925fe70ef177e109314245673710c0a6bd56"
@@ -122,13 +134,14 @@ KNOWN_PREDECESSORS = {
         "fd86e59a6223fb0671a5cff79c49a3ee945d4e5b19d3ce934d8b7c2458651d9b"
     ],
     "operator/extensions/investigations.json": [
+        "4409ba89d3ba1e3613792b03451567257f27145c0ca1de6aa74b3bcf32eba4c8",
         "13e05713869e3bf075a943fb337bbc4c789dc33dc113a7be09c9255b3f3c4485",
         "156e78e3c71b3434b46d8a643025bdf63184f7a73fbc4516c90daaa618436de9",
         "21454e5a8cc1cc54d63e78ea41436bc5773bcd581af1e417df197cdd2f56ba5a",
         "21a42c79ab94a5214c2fbe679bb5142218465167d9aefdf2eee47e76c88a14ea",
-        "4409ba89d3ba1e3613792b03451567257f27145c0ca1de6aa74b3bcf32eba4c8",
         "52dab3e0958fb17403710d53148e8234be7d060dddff5ce90566301c0938f4ab",
-        "74418650a88e51dcfed7ec959c83846e504d6b468f6ef20cd0a68669aa36d3fd"
+        "74418650a88e51dcfed7ec959c83846e504d6b468f6ef20cd0a68669aa36d3fd",
+        "84cb08c9c76ad5318fb8ce5cd3cd59f81bbe529ed562478e3979a2c931ff264b"
     ],
     "operator/install_diagnostic_investigations.py": [
         "8a195af996241eebf3ae2130c505676874efb4a5e044cb7936bb6b6532b85e15",
@@ -138,6 +151,7 @@ KNOWN_PREDECESSORS = {
         "3a2a458e9e3fd9bc20d8222a8c6fbfcf00b18bade91ceb6b136d3d8be598021f"
     ],
     "operator/intelligence.py": [
+        "28479fea1a50b4e5569f785d129fa0578fe1b531190e44def35bfe6af0578efc",
         "13a62bb1467352c5dcb1a61a0bd3d8dea0a2bc478be910383fdf0c3f2c845748",
         "1b99431e21436c4e2c2e7b31aa10a0420749079e4a1c0c25a24321b8e51ab914",
         "26a3775a65df019ee6b6123ec6396154446987ba4e58aafba27459464d8b56d4",
@@ -149,7 +163,11 @@ KNOWN_PREDECESSORS = {
         "7df7471c549310483fb5bf9e6a0fcc51dbd53e235e44e490905fea70c9864a85",
         "b7cf75d6fada1774cda5585d585a864e96ec6f19c6d67fad8819456e38057f14",
         "f627ec6c56a5bb3e9b25a6a42c43332940fdfb2853b9e9c71f5b4e80a63d5212",
-        "fe8d630d53b0bda2b669d601d443b2a4a29943c9f9c1cfa32429829c3d8663a3"
+        "fe8d630d53b0bda2b669d601d443b2a4a29943c9f9c1cfa32429829c3d8663a3",
+        "ddd2bca9d0df4604fbe2722a50f19b6a8bbc0515da6d9e2a938011a3a0ce4b5a",
+        "92737af93affc2cb2b9e1c80c6569a42c8fb99ee963e5c15060421d749497d1a",
+        "874f306b807b83f775ba8d7988650a1201cd55a52707e4b042d5e4dd851012b9",
+        "42fec32a0c794dd172e951a86154e220004ee6b165834b6109b2cab935f8fd9d"
     ],
     "operator/intelligence_binding.py": [
         "8836235f0562b220d9dc75819557a3dcbaaaeb068b5fb0dd5314fa5f4ac6a208",
@@ -172,7 +190,8 @@ KNOWN_PREDECESSORS = {
         "561df37cbe5658556c987ba39479a843aeda129541fc80200adc67762ac7e8e5"
     ],
     "operator/science_catalog.py": [
-        "a365baa72d963f0d28757b35e0435daed6aa56e20200015cf41044414860a097"
+        "a365baa72d963f0d28757b35e0435daed6aa56e20200015cf41044414860a097",
+        "8fb8efaaa75aae54e7afa726bde3a628603c66e429da681b0011d4ca8c974bf5"
     ],
     "operator/web/experiment_diagnostics.css": [
         "48de908e717eadcba15942f320ef175d45b02a373870c3fcb885a9aa82184fdf"
@@ -197,6 +216,7 @@ KNOWN_PREDECESSORS = {
         "d65d94a33a0733dfe1ac1d5ebfb1379a5f9f25da3a621e6c7a17bbc7fa97dd9c"
     ],
     "operator/web/investigations.mjs": [
+        "4e254032db659e0ea5930281801d4622552505063b04ebde1cf3b082f7ed5d68",
         "161d4ad63f80abfbcba08c44eab3f2113e078d1958015d193ae88672a36ef838",
         "30813b0c7056d9add3866af9eed493049d6c4bbb0ac794d510c43f98aba77099",
         "552f04414f38897cd18de20edfef52db273b26c4b9f146c04c3a7e01c276bf01",
@@ -207,7 +227,12 @@ KNOWN_PREDECESSORS = {
         "9c1bfda688a78652b32dd5e490374471c438f0c02d01aefe45195c161f9b8827",
         "b59216b8e9d45425b0600765fcb0b16c23ff37e4ad0f93cbd6c7153513958e34",
         "d0d34115dd81ea652f1bb2e48301058c2a8b7a82b51dfeb9d7253248b2b66e80",
-        "f3185bbb01d121c3a0ca2cddade2c9c398631630c407462314f96ad843058364"
+        "f3185bbb01d121c3a0ca2cddade2c9c398631630c407462314f96ad843058364",
+        "4fe0760c73a535295300b0373724189aa3a95526e23998d4d9c08d561249834c",
+        "e44dd3fbd94d3653e4574096df433608bcc80bbf8cc4fee52e598e8e328efeb8",
+        "4916cbd8881a48cc31654282bcaa38d8ab2e2e5e493dd208ac73f1b0fe0b6e0b",
+        "c486eb6249dab25b88edfc3d374856e582bb4a5ace25a602f138a7b55364d79f",
+        "a0c51aa1561720480d8ea1d163248c161d6a306a0ceaac429015dde8dcfcb8ae"
     ],
     "receiving/eco_intelligence/receive_original_collection.py": [
         "1a09feb60341acec44079e85908d2335a6c5dc34a99badbcf46fe7b019a9e665",
@@ -224,6 +249,52 @@ KNOWN_PREDECESSORS = {
         "206b958ef5b3a2e07ff29e3164b1c5cec21fa5878548ebd17eb3c5ff5e6c76cf",
         "2db164b250307345fdc296f43af68f15154daa8b936acaf50357077a0daeff7f",
         "35208f70924dd943eb81199310ef26dca8e681892856fc54735cdd31000124a4"
+    ],
+    "eco_intelligence/provider.py": [
+        "3b8192bbc1c0a836b57fb42e5d47e1aa5d102e0a02deffea75e9dfeac06fbfb3",
+        "d6eebc9d9f304b987f8e1eb67c595ef6b9014c8ec6830615ba1d9393c86725d4",
+        "4c80e342367bc8db542b44a1194b5f9de50a506ea5dbc22229e239de87767955",
+        "f3321be15859a6bcb3743d8e78fbfc48e6d62c3fe545df0dbc284bcf517e18d3",
+        "81fd52d017de9bc4e41d5b42ad69d488d1ceb1f3c75e90194b16bbc41d96d46d"
+    ],
+    "eco_intelligence/engine.py": [
+        "8db6f41ff4a34d3c24afdfb2169e0839f325e7b2a8fc243b1b2f3a3531c53d47",
+        "78334103b75b4ce3fc5dfad5e09b90aca2a7db46534d7b4aedd0a4bd65e80410",
+        "d3f91dbe9fde2c5a3f919f48bb8a09a4334c37f97c0bf4b2d5e1ea7ce2f270de",
+        "566bfb6868fdf8f19a0441f55d90c1e84c0b4c514a5ecd4633d624bfbb561292",
+        "2e8d8f0c294f12b5fef74f84bbcf8d7fe019714f705d310b81daf2d8bd391bb2",
+        "2d378c348872bdcfcc45c5d6a84e8c9d24e0948735468bfbcfaa98170342c68a",
+        "e0e3973d106ea33c188e0285aa876a4280b34f5f430700a6c4473c886698d95f"
+    ],
+    "eco_intelligence/profiling.py": [
+        "6b9f1b0e017d76f61ee90cfa69a4e2eadebfd83c115c84a08f992157e9c066ec",
+        "19e6c0a211b607c9c3fbf514117b42197e1a3b834b5dd4f548f7946c55eafccb",
+        "c19217e6e8605155b06a3d47fd902fd6ac624f5a6f9baed1d684e652308bead1",
+        "6050c7239e7226873e47d04bed93a12016584d04d28d9cf43f086c8de0a47ab5"
+    ],
+    "eco_intelligence/report.py": [
+        "44063ede716ca272f78d0a3ac50ed9cc0a3f7f839eb45c9b5a5e47399e6a87be",
+        "8b14abb86cd3e33b87b02523862e161cd4c320b498455dab21c32dc863d5de76",
+        "0c23b09e2729b280a23f62ce3a03605b259b3889c6460c21c2835be63637bcdf",
+        "2fb392fa59281626561e807fb3693e930d3e743887670b379462de9fa6d67452",
+        "6ce40ad119bf7f8185c0fdd604c8c52cf55553a70f56fe7f8bc8aab085fbff03",
+        "0f998aada97fee795883b3efdf5c6dda57773f5e8c18fdc09bf9414aa50ea31f"
+    ],
+    "operator/web/investigation_lineage.mjs": [
+        "deab707fcd2d97ebd8c437f8cac3b9f32039b4ab6d99542168e8760a1935523b",
+        "d66cf33b557c95d4068d79d74cd0f922a386b955cb55de1edcdee752e7c538d3"
+    ],
+    "operator/INPUT_LINEAGE.md": [
+        "cef3c9da39a17ab5830c093305da20c73d489e8c7245fec4c8755caaae479ccc"
+    ],
+    "operator/intelligence_lineage.py": [
+        "a67d1df7e59de07a628b291a18c318001176f2d69358de5a5babaaacef829ec0"
+    ],
+    "receiving/eco_intelligence/receive_input_lineage.mjs": [
+        "c2890796c77698d7d99b0d84d3eabb08e4d68931ee2d39363117f4312cc70c74"
+    ],
+    "receiving/eco_intelligence/receive_input_lineage.py": [
+        "054f8d643b0ec20271c7109bc75cba09de4ab05fb494015923e771444c48fd84"
     ]
 }
 PORTABLE_MARKER = "# A66A complete Investigations and scientific catalog source"
@@ -282,6 +353,11 @@ def install(application, source_root, dry_run=False):
         raise ValueError("Receive the current ECSA shared registry with install_extensions.py.")
     if not (application/"eco_intelligence/upstate.py").is_file():
         raise ValueError("Install the complete native component with eco_intelligence/install_upstate.py first.")
+    preview_path = application / "model" / "client_source_inspection_report.py"
+    if not preview_path.is_file() or not any(
+            isinstance(node, ast.FunctionDef) and node.name == "retained_table_preview"
+            for node in ast.parse(preview_path.read_text("utf-8")).body):
+        raise ValueError("Receive the maintained native source-inspection component with retained_table_preview before Investigations.")
     before={};after={}
     for name in FILES:
         content=(source_root/name).read_bytes()
@@ -331,6 +407,10 @@ def install(application, source_root, dry_run=False):
         with tempfile.TemporaryDirectory(prefix="investigations-source-") as folder:
             script=Path(folder)/"investigations.mjs"
             script.write_bytes(after["operator/web/investigations.mjs"])
+            check=subprocess.run([node,"--check",str(script)],capture_output=True,text=True,timeout=45)
+            if check.returncode:raise ValueError(check.stderr)
+            script=Path(folder)/"investigation_lineage.mjs"
+            script.write_bytes(after["operator/web/investigation_lineage.mjs"])
             check=subprocess.run([node,"--check",str(script)],capture_output=True,text=True,timeout=45)
             if check.returncode:raise ValueError(check.stderr)
             script=Path(folder)/"experiments.mjs"

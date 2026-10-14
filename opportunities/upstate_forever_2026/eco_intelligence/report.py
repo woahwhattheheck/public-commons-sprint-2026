@@ -66,7 +66,7 @@ def _table(headers, rows) -> str:
     return ('<div class="table-scroll"><table><thead><tr>'
             + ''.join('<th scope="col">'+html.escape(str(x))+'</th>' for x in headers)
             + '</tr></thead><tbody>'
-            + ''.join('<tr>'+''.join('<td>'+html.escape('-' if x is None else str(x))+'</td>' for x in row)+'</tr>' for row in rows)
+            + ''.join('<tr>'+''.join('<td>'+html.escape('—' if x is None else str(x))+'</td>' for x in row)+'</tr>' for row in rows)
             + '</tbody></table></div>')
 
 
@@ -82,7 +82,7 @@ def _evidence_summary(evidence: dict, original_headers=None, column_roles=None) 
         pieces.append(_table(['Original source', 'Bytes'], [[s.get('name') or s.get('id') or s.get('registry'), s.get('bytes')] for s in sources]))
     if operation == 'inventory' and isinstance(result, dict):
         counts = result.get('counts', {})
-        pieces.append('<p>'+html.escape(' - '.join(str(v)+' '+str(k).replace('_', ' ') for k, v in counts.items()))+'</p>')
+        pieces.append('<p>'+html.escape(' · '.join(str(v)+' '+str(k).replace('_', ' ') for k, v in counts.items()))+'</p>')
         rows = []
         for key in ['datasets', 'jobs', 'ensembles', 'aois']:
             for item in result.get(key, []):
@@ -97,7 +97,7 @@ def _evidence_summary(evidence: dict, original_headers=None, column_roles=None) 
     elif operation == 'table_rows' and isinstance(result, dict):
         rows = result.get('rows', [])
         retained_headers = list(dict.fromkeys(key for row in rows if isinstance(row, dict) for key in row))
-        declared=result.get('headers') or original_headers or []
+        declared=result.get('headers') or result.get('selected_reading',{}).get('column_keys') or original_headers or []
         headers=[key for key in declared if key in retained_headers]
         headers.extend(key for key in retained_headers if key not in headers)
         if headers:
@@ -108,11 +108,13 @@ def _evidence_summary(evidence: dict, original_headers=None, column_roles=None) 
         if 'Qualifier' in headers:
             pieces.append('<p>Qualifier cells are retained exactly as provided. Their definitions require the source code dictionary.</p>')
     elif operation == 'profile' and isinstance(result, dict):
-        pieces.append('<p>'+html.escape(str(result.get('format', 'Source')))+' - '
-                      +html.escape(str(result.get('rows', 'Unknown')))+' original rows - '
-                      +html.escape(str(result.get('population', 'Retained source')))+' </p>')
+        profile_parts = [str(result.get('format', 'Source')),
+                         str(result.get('population', 'Retained source'))]
+        if 'rows' in result:
+            profile_parts.insert(1, str(result['rows'])+' original rows')
+        pieces.append('<p>'+html.escape(' · '.join(profile_parts))+'</p>')
         columns = result.get('columns', {})
-        if isinstance(columns, dict):
+        if isinstance(columns, dict) and columns:
             rows = []
             for name, values in columns.items():
                 numeric = values.get('numeric', {})
@@ -124,15 +126,44 @@ def _evidence_summary(evidence: dict, original_headers=None, column_roles=None) 
         scalars = {k: v for k, v in result.items() if isinstance(v, (str, int, float, bool)) or v is None} if isinstance(result, dict) else {}
         if scalars:
             pieces.append(_table(['Retained quantity', 'Value'], [[k.replace('_', ' '), v] for k, v in scalars.items()]))
-    pieces.append('<details><summary>Complete technical evidence - '+html.escape(str(evidence.get('id', '')))
+    pieces.append('<details><summary>Complete technical evidence · '+html.escape(str(evidence.get('id', '')))
                   +'</summary><pre>'+html.escape(dumps(evidence))+'</pre></details>')
     return ''.join(pieces)
 
 
+_RECOVERY_KINDS = {'request_cancelled', 'request_resumed'}
+
+
+def _event_text(event: dict) -> str:
+    body, kind = event['body'], event['kind']
+    if kind not in _RECOVERY_KINDS:
+        return body.get('text', body.get('error', ''))
+    if kind == 'request_cancelled':
+        text = body.get('error') or body.get('text') or 'The original question was cancelled.'
+    else:
+        text = body.get('text') or 'The retained original question was resumed.'
+        if body.get('previous_phase'):
+            text += '\n\nPrevious request state: '+str(body['previous_phase'])+'.'
+    identity = []
+    if body.get('request_id'):
+        identity.append('Original request: '+str(body['request_id']))
+    if body.get('task_id'):
+        identity.append('Original task: '+str(body['task_id']))
+    if body.get('attempt') is not None:
+        identity.append('Attempt: '+str(body['attempt']))
+    return str(text)+('\n\n'+' · '.join(identity) if identity else '')
+
+
+def _event_title(event: dict) -> str:
+    return {'request_cancelled': 'Question cancelled', 'request_resumed': 'Question resumed'}.get(
+        event['kind'], event['kind'].replace('_', ' ').title())
+
+
 def report(session: dict) -> str:
-    events = [event for event in session['events'] if event['kind'] in {'question', 'answer', 'request_error'}]
-    answers = [i for i, event in enumerate(events) if event['kind'] == 'answer']
-    selected = answers[-1] if answers else len(events)-1
+    events = [event for event in session['events'] if event['kind'] in {'question', 'answer', 'request_error'} | _RECOVERY_KINDS]
+    # The latest retained outcome remains current, including a later provider
+    # error or a question still awaiting its response. Earlier answers stay in history.
+    selected = len(events)-1
     sections = []
     if selected >= 0:
         question = next((event for event in reversed(events[:selected+1]) if event['kind'] == 'question'), None)
@@ -140,10 +171,12 @@ def report(session: dict) -> str:
             sections.append('<section><h2>Question</h2>'+_prose(question['body'].get('text', ''))+'</section>')
         current = events[selected]
         if current is not question:
-            body = current['body']
-            sections.append('<section><h2>'+('Answer' if current['kind'] == 'answer' else 'Provider result')+'</h2>'
-                            +_prose(body.get('text', body.get('error', '')))+'<details><summary>Original retained text</summary><pre>'
-                            +html.escape(body.get('text', body.get('error', '')))+'</pre></details></section>')
+            recovery = current['kind'] in _RECOVERY_KINDS
+            title = _event_title(current) if recovery else 'Answer' if current['kind'] == 'answer' else 'Provider result'
+            original = dumps(current) if recovery else _event_text(current)
+            sections.append('<section><h2>'+html.escape(title)+'</h2>'
+                            +_prose(_event_text(current))+'<details><summary>Original retained '+('event' if recovery else 'text')+'</summary><pre>'
+                            +html.escape(original)+'</pre></details></section>')
     original_orders={}
     column_roles={}
     for evidence in session['evidence']:
@@ -172,13 +205,13 @@ def report(session: dict) -> str:
         key=(metadata.get('source_binding',{}).get('collection_id'),metadata.get('source_binding',{}).get('source_id'),record.get('body',{}).get('sha256'))
         sections.append('<section id="'+html.escape(evidence['id'],quote=True)+'">'+_evidence_summary(evidence,original_orders.get(key),column_roles.get(key))+'</section>')
     for plan in session['plans']:
-        sections.append('<section><h2>Guided action - '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')
+        sections.append('<section><h2>Guided action · '+html.escape(plan['status'])+'</h2><details><summary>Complete retained action</summary><pre>'+html.escape(dumps(plan))+'</pre></details></section>')
     history = []
     for event in events:
-        body = event['body']
-        history.append('<h3>'+html.escape(event['kind'].replace('_', ' ').title())+'</h3>'
-                       +_prose(body.get('text', body.get('error', ''))))
-    sections.append('<section><details><summary>Complete retained conversation - '+str(len(events))+' entries</summary>'
+        retained = ('<details><summary>Original retained event</summary><pre>'+html.escape(dumps(event))+'</pre></details>'
+                    if event['kind'] in _RECOVERY_KINDS else '')
+        history.append('<h3>'+html.escape(_event_title(event))+'</h3>'+_prose(_event_text(event))+retained)
+    sections.append('<section><details><summary>Complete retained conversation · '+str(len(events))+' entries</summary>'
                     +''.join(history)+'</details></section>')
     style = 'body{font:15px/1.5 system-ui;max-width:1100px;margin:40px auto;padding:0 20px;color:#191919;background:#fff}h1{font-size:28px}h2{font-size:19px}h3{font-size:17px}section{border-top:1px solid #bbb;padding:18px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:12px/1.5 monospace}.prose{overflow-wrap:anywhere}.table-scroll{overflow-x:auto;max-width:100%}table{border-collapse:collapse;text-align:left;font-size:14px;min-width:100%;width:max-content}th,td{padding:8px 12px;border-bottom:1px solid #bbb;vertical-align:top;white-space:nowrap}td{overflow-wrap:anywhere}details{margin:14px 0}summary{cursor:pointer;font-size:13px;color:#445}code{font-family:monospace}small{color:#555}@media print{section{break-inside:avoid}}'
     created = str(session['created']).replace('T', ' ').replace('+00:00', ' UTC')
