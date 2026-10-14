@@ -90,8 +90,9 @@ export function validateRail402Input(input) {
 
 export function importRail402Draft(text) {
   const draft = JSON.parse(text);
-  need(object(draft) && draft.schema === RAIL402_SCHEMA && typeof draft.sourceText === 'string',
-    'Select the complete saved receiving draft.');
+  need(object(draft) && draft.schema === RAIL402_SCHEMA && typeof draft.sourceText === 'string' &&
+    ['folder','privateDirectory','intentId','actor','payer'].every(key => typeof draft[key] === 'string'),
+    'Select the complete saved receiving draft, including its editable preparation fields.');
   return draft;
 }
 
