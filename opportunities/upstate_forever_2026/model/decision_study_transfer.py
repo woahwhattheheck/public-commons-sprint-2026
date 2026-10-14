@@ -18,7 +18,8 @@ import tempfile
 import time
 
 from .common import digest, identifier
-from . import portable
+from . import portable, portable_fs as _fs
+from .portable_databases import _database_uri
 
 KIND = "robust-decisions"
 MEMBER = "robust_decisions/robust_decisions.sqlite3"
@@ -40,7 +41,7 @@ def _run_id(value):
 
 
 def _path(workspace):
-    root = Path(workspace.root).resolve()
+    root = _fs.native_path(workspace.root).resolve()
     path = root / MEMBER
     if path.parent.is_symlink() or path.is_symlink():
         raise ValueError("The original decision store must retain its workspace path.")
@@ -50,10 +51,14 @@ def _path(workspace):
 
 
 def _connection(path):
-    db = sqlite3.connect(Path(path).absolute().as_uri() + "?mode=ro", uri=True, timeout=30)
-    db.row_factory = sqlite3.Row
-    db.execute("BEGIN")
-    return db
+    db = sqlite3.connect(_database_uri(_fs.native_path(path), "ro"), uri=True, timeout=30)
+    try:
+        db.row_factory = sqlite3.Row
+        db.execute("BEGIN")
+        return db
+    except BaseException:
+        db.close()
+        raise
 
 
 def _native_numbers(value):
@@ -134,8 +139,8 @@ def read(workspace, ids, *, database=None):
 def source_snapshot(workspace, *, directory):
     """Freeze one SQL generation before resolving its scientific dependencies."""
     source_path = _path(workspace)
-    with tempfile.TemporaryDirectory(prefix=".decision-source-", dir=directory) as temporary:
-        private = Path(temporary) / "source.sqlite3"
+    with tempfile.TemporaryDirectory(prefix=".decision-source-", dir=_fs.native_path(directory)) as temporary:
+        private = _fs.native_path(temporary) / "source.sqlite3"
         busy_since = None
         def progress(status, remaining, total):
             nonlocal busy_since
@@ -147,7 +152,7 @@ def source_snapshot(workspace, *, directory):
                     raise ValueError("The decision store remained busy during history capture.")
             else:
                 busy_since = None
-        with closing(_connection(source_path)) as source, closing(sqlite3.connect(private)) as target:
+        with closing(_connection(source_path)) as source, closing(sqlite3.connect(_database_uri(private, "rwc"), uri=True)) as target:
             source.backup(target, pages=256, progress=progress)
             target.execute("PRAGMA journal_mode=DELETE")
             target.commit()
@@ -155,7 +160,7 @@ def source_snapshot(workspace, *, directory):
 
 
 def catalogue(workspace):
-    path = Path(workspace.root) / MEMBER
+    path = _fs.native_path(workspace.root) / MEMBER
     if not path.exists():
         return []
     with closing(_connection(_path(workspace))) as db:
@@ -261,7 +266,7 @@ def _diagnostic_binding(source):
 
 def diagnostic_members(workspace, record):
     """Include an original pinned diagnostic even without an Investigation session."""
-    root = Path(workspace.root).resolve()
+    root = _fs.native_path(workspace.root).resolve()
     members = {}
     for revision in record["revisions"]:
         source = revision["input"].get("source") or {}
@@ -301,7 +306,7 @@ def diagnostic_members(workspace, record):
 def operation_members(workspace, ids):
     """Return original operation receipts and their exact retained export files."""
     selected = set(ids)
-    root = Path(workspace.root).resolve()
+    root = _fs.native_path(workspace.root).resolve()
     result = {}
     for path in sorted((root / "robust-operator-operations").glob("*/operation.json")):
         if path.is_symlink() or path.parent.is_symlink():
@@ -330,14 +335,14 @@ def capture(workspace, staged, records, *, database=None):
     ids = sorted(records)
     if not ids:
         return None, {}
-    source_path = _path(workspace) if database is None else Path(database)
-    destination = Path(staged.root) / MEMBER
+    source_path = _path(workspace) if database is None else _fs.native_path(database)
+    destination = _fs.native_path(staged.root) / MEMBER
     destination.parent.mkdir(parents=True, exist_ok=True)
     if destination.exists() or destination.is_symlink():
         raise ValueError("The selected decision snapshot already exists.")
     expected = digest(records)
     with tempfile.TemporaryDirectory(prefix=".decision-snapshot-", dir=destination.parent) as temporary:
-        private = Path(temporary) / "selected.sqlite3"
+        private = _fs.native_path(temporary) / "selected.sqlite3"
         busy_since = None
         def progress(status, remaining, total):
             nonlocal busy_since
@@ -349,7 +354,7 @@ def capture(workspace, staged, records, *, database=None):
                     raise ValueError("The decision store remained busy during its selected capture.")
             else:
                 busy_since = None
-        with closing(_connection(source_path)) as source, closing(sqlite3.connect(private)) as target:
+        with closing(_connection(source_path)) as source, closing(sqlite3.connect(_database_uri(private, "rwc"), uri=True)) as target:
             source.backup(target, pages=256, progress=progress)
             target.row_factory = sqlite3.Row
             if digest(_records(target, ids)) != expected:
@@ -378,7 +383,8 @@ def capture(workspace, staged, records, *, database=None):
                 raise ValueError("The selected decision snapshot retained a live journal.")
         with private.open("rb") as stream:
             os.fsync(stream.fileno())
-        os.link(private, destination)
+        _fs.publish_file(private, destination)
+        _fs.sync_directory(destination.parent)
     body = destination.read_bytes()
     member = {"path": MEMBER, "bytes": len(body), "sha256": hashlib.sha256(body).hexdigest(), "mutable": True}
     receipt = {"schema": SCHEMA, "project_id": workspace.project["id"], "study_ids": ids,

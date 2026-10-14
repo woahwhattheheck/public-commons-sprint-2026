@@ -20,10 +20,9 @@ import stat
 import tempfile
 import zipfile
 
-from .common import (atomic_json, canonical, describe_file, digest, file_digest,
+from . import portable_fs as _fs
+from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest, file_digest,
                      held, identifier, now, read_json, relative_file, verify_file)
-from .portable_fs import (publish_file as _publish_file, publish_directory as _publish_directory,
-                          sync_directory as _sync_directory)
 
 SELECTION_SCHEMA = "upstate.customer-review-selection/v1"
 PACKET_SCHEMA = "upstate.customer-review-packet/v1"
@@ -75,12 +74,12 @@ def _relative(value):
 
 
 def _regular(root, relative):
-    current = Path(root).resolve()
+    current = _fs.native_path(root).resolve()
     parts = PurePosixPath(_relative(relative)).parts
     for position, part in enumerate(parts):
         current = current / part
         state = current.lstat()
-        if stat.S_ISLNK(state.st_mode):
+        if stat.S_ISLNK(state.st_mode) or getattr(state, "st_file_attributes", 0) & 0x400:
             raise ValueError("Selected file path contains a symbolic link: " + relative)
         if position < len(parts) - 1 and not stat.S_ISDIR(state.st_mode):
             raise ValueError("Selected file path crosses a non-directory: " + relative)
@@ -90,10 +89,10 @@ def _regular(root, relative):
 
 
 def _read_json_file(path):
-    path = Path(path)
+    path = _fs.native_path(path)
     if path.stat().st_size > JSON_BYTES:
         raise ValueError("Review JSON exceeds its 32 MiB document limit")
-    with path.open("rb") as source:
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
         raw = source.read(JSON_BYTES + 1)
     if len(raw) > JSON_BYTES:
         raise ValueError("Review JSON grew while being read")
@@ -238,7 +237,7 @@ def _run_selection(workspace, key):
 
 
 def _capture_module():
-    source = Path(__file__).resolve().parent.parent / "delivery_snapshot.py"
+    source = _fs.native_path(__file__).resolve().parent.parent / "delivery_snapshot.py"
     spec = importlib.util.spec_from_file_location("_upstate_review_original_snapshot", source)
     if spec is None or spec.loader is None:
         raise ValueError("Original delivery snapshot module is unavailable")
@@ -652,7 +651,7 @@ def _preview(path, artifact):
     if not (media.startswith("text/") or media in ("application/json", "application/geo+json", "application/xml")):
         return None
     # HTML and XML remain text. The review desk never executes a source preview.
-    with path.open("rb") as source:
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source:
         raw = source.read(PREVIEW_BYTES + 4)
     try:
         text = raw[:PREVIEW_BYTES].decode("utf-8")
@@ -701,15 +700,16 @@ def review_file(workspace, review_id, artifact_id):
 
 
 def _copy_file(path, target, expected):
-    before = path.lstat()
+    path, target = _fs.native_path(path), _fs.native_path(target)
+    before = _fs.path_stat(path)
     if not stat.S_ISREG(before.st_mode) or before.st_size != expected["bytes"]:
         raise ValueError("Selected file changed before review export")
     identity = lambda value: (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
-    fd = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
     h, count = hashlib.sha256(), 0
     target.parent.mkdir(parents=True, exist_ok=True)
-    with os.fdopen(fd, "rb") as source, target.open("xb") as output:
-        if identity(os.fstat(source.fileno())) != identity(before):
+    with os.fdopen(_fs.open_file(path, os.O_RDONLY), "rb") as source, os.fdopen(
+            _fs.open_file(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL), "wb") as output:
+        if identity(_fs.fd_stat(source.fileno())) != identity(before):
             raise ValueError("Selected file changed while review export opened it")
         for block in iter(lambda: source.read(1024 * 1024), b""):
             count += len(block)
@@ -719,16 +719,16 @@ def _copy_file(path, target, expected):
             output.write(block)
         output.flush()
         os.fsync(output.fileno())
-        if identity(os.fstat(source.fileno())) != identity(before):
+        if identity(_fs.fd_stat(source.fileno())) != identity(before):
             raise ValueError("Selected file changed during review export")
-    if (identity(path.lstat()) != identity(before) or count != expected["bytes"]
+    if (identity(_fs.path_stat(path)) != identity(before) or count != expected["bytes"]
             or h.hexdigest() != expected["sha256"]):
         raise ValueError("Exported review file differs from its selected original")
     return {"path": target, "bytes": count, "sha256": h.hexdigest()}
 
 
 def _html(packet):
-    source = Path(__file__).resolve().parent.parent / "operator" / "review_app.html"
+    source = _fs.native_path(__file__).resolve().parent.parent / "operator" / "review_app.html"
     text = source.read_text(encoding="utf-8")
     if text.count(PLACEHOLDER) != 1:
         raise ValueError("The original review app needs exactly one review bootstrap placeholder")
@@ -799,14 +799,14 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
         raise ValueError("Select either a current-response guard or a retained historical prefix")
     if expected_response_id is not _UNSPECIFIED and expected_response_id is not None:
         identifier(expected_response_id)
-    destination = Path(destination).absolute()
-    source_root = Path(__file__).resolve().parent.parent
-    if destination.resolve().is_relative_to(workspace.root) or destination.resolve().is_relative_to(source_root):
+    destination = _fs.native_path(destination).absolute()
+    source_root = _fs.native_path(__file__).resolve().parent.parent
+    if destination.resolve().is_relative_to(_fs.native_path(workspace.root).resolve()) or destination.resolve().is_relative_to(source_root):
         raise ValueError("Choose a fresh review destination outside the workspace and application source")
     if destination.exists() or destination.is_symlink():
         raise ValueError("Choose a new review export directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    pending = Path(tempfile.mkdtemp(prefix=".review-", dir=destination.parent))
+    pending = _fs.native_path(tempfile.mkdtemp(prefix=".review-", dir=destination.parent))
     try:
         with held(workspace.root / ".workspace.lock", blocking=False):
             packet = show_review(workspace, review_id)
@@ -824,7 +824,7 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
                     # Keep every original path while avoiding a second disk copy.
                     target.parent.mkdir(parents=True, exist_ok=True)
                     try:
-                        _publish_file(original, target)
+                        _fs.publish_file(original, target)
                     except OSError:
                         _copy_file(path, target, item)
                 else:
@@ -833,14 +833,14 @@ def export_review(workspace, review_id, destination, *, archive=None, expected_r
             atomic_json(pending / "review.json", packet, immutable=True)
             atomic_json(pending / "response-template.json",
                         response_template(workspace, review_id, through_response_id=through_response_id), immutable=True)
-            (pending / "index.html").write_text(_html(packet), encoding="utf-8")
-            (pending / "README.md").write_text(_readme(packet), encoding="utf-8")
+            atomic_bytes(pending / "index.html", _html(packet).encode("utf-8"), immutable=True)
+            atomic_bytes(pending / "README.md", _readme(packet).encode("utf-8"), immutable=True)
             manifest = _package_manifest(pending, packet)
             atomic_json(pending / "review-manifest.json", manifest, immutable=True)
             inspect_packet(pending)
             if destination.exists():
                 raise ValueError("Review destination appeared during export")
-            _publish_directory(pending, destination)
+            _fs.publish_directory(pending, destination)
             pending = None
         result = _export_result(destination, manifest, packet)
         if archive is not None:
@@ -864,13 +864,13 @@ def describe_export(directory, *, archive=None):
     This reopens the exact retained generation without reading newer workspace
     responses. Call archive_packet first if an interrupted export lacks its ZIP.
     """
-    directory = Path(directory).absolute()
+    directory = _fs.native_path(directory).absolute()
     if directory.is_symlink() or not directory.is_dir():
         raise ValueError("Select an original complete review export directory")
     inspected = inspect_packet(directory)
     result = _export_result(directory, inspected["manifest"], inspected["packet"])
     if archive is not None:
-        archive = Path(archive).absolute()
+        archive = _fs.native_path(archive).absolute()
         if archive.is_symlink() or not stat.S_ISREG(archive.lstat().st_mode):
             raise ValueError("Select an original ordinary review archive file")
         archived = inspect_packet(archive)
@@ -900,7 +900,7 @@ def _check_package_manifest(value):
 
 
 def inspect_packet(path):
-    path = Path(path)
+    path = _fs.native_path(path)
     if path.is_dir():
         manifest = _check_package_manifest(_read_json_file(_regular(path, "review-manifest.json")))
         actual = {item.relative_to(path).as_posix() for item in path.rglob("*") if item.is_file()}
@@ -914,6 +914,7 @@ def inspect_packet(path):
         with zipfile.ZipFile(path) as archive:
             infos = archive.infolist()
             names = [info.filename for info in infos]
+            _fs.validate_members(names, portable=True)
             _unique(names, "review archive members")
             for info in infos:
                 _relative(info.filename)
@@ -961,13 +962,13 @@ def inspect_packet(path):
 
 
 def archive_packet(directory, destination):
-    directory, destination = Path(directory).resolve(), Path(destination).absolute()
+    directory, destination = _fs.native_path(directory).resolve(), _fs.native_path(destination).absolute()
     inspected = inspect_packet(directory)
     if destination.resolve().is_relative_to(directory) or destination.exists() or destination.is_symlink():
         raise ValueError("Choose a new review archive path outside its exported directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
     descriptor, name = tempfile.mkstemp(prefix=".review-archive-", suffix=".zip", dir=destination.parent)
-    pending = Path(name)
+    pending = _fs.native_path(name)
     try:
         with os.fdopen(descriptor, "w+b") as output:
             with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=3,
@@ -977,8 +978,8 @@ def archive_packet(directory, destination):
             output.flush()
             os.fsync(output.fileno())
         inspect_packet(pending)
-        _publish_file(pending, destination)
-        _sync_directory(destination.parent)
+        _fs.publish_file(pending, destination)
+        _fs.sync_directory(destination.parent)
         return {"path": str(destination), "bytes": destination.stat().st_size,
                 "sha256": file_digest(destination), "package_sha256": inspected["manifest"]["package_sha256"]}
     finally:
@@ -986,17 +987,18 @@ def archive_packet(directory, destination):
 
 
 def receive_packet(path, destination, *, workspace=None):
+    path = _fs.native_path(path)
     inspected = inspect_packet(path)
-    destination = Path(destination).absolute()
-    if Path(path).is_dir() and destination.resolve().is_relative_to(Path(path).resolve()):
+    destination = _fs.native_path(destination).absolute()
+    if _fs.native_path(path).is_dir() and destination.resolve().is_relative_to(_fs.native_path(path).resolve()):
         raise ValueError("Receive into a new directory outside the original review packet")
     if destination.exists() or destination.is_symlink():
         raise ValueError("Receive the review into a new directory")
     destination.parent.mkdir(parents=True, exist_ok=True)
-    pending = Path(tempfile.mkdtemp(prefix=".review-receive-", dir=destination.parent))
+    pending = _fs.native_path(tempfile.mkdtemp(prefix=".review-receive-", dir=destination.parent))
     try:
         names = sorted(set(inspected["manifest"]["members"]) | {"review-manifest.json"})
-        if Path(path).is_dir():
+        if _fs.native_path(path).is_dir():
             for name in names:
                 source = _regular(path, name)
                 expected = {"bytes": source.stat().st_size, "sha256": file_digest(source)}
@@ -1008,13 +1010,15 @@ def receive_packet(path, destination, *, workspace=None):
                     target.parent.mkdir(parents=True, exist_ok=True)
                     with archive.open(name) as source, target.open("xb") as output:
                         shutil.copyfileobj(source, output, 1024 * 1024)
+                        output.flush()
+                        os.fsync(output.fileno())
         inspected = inspect_packet(pending)
         joined = None
         if workspace is not None:
             joined = import_packet(workspace, inspected["packet"])
         if destination.exists():
             raise ValueError("Review receiving destination appeared during intake")
-        _publish_directory(pending, destination)
+        _fs.publish_directory(pending, destination)
         pending = None
         return {"schema": PACKAGE_SCHEMA, "directory": str(destination), "index": str(destination / "index.html"),
                 "review_id": inspected["manifest"]["review_id"], "package_sha256": inspected["manifest"]["package_sha256"],
