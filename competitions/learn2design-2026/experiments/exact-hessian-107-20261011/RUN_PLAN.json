@@ -240,6 +240,44 @@
       "id": "falqn127-reviewed",
       "sha256": "e2eeb6a03d4082579002e0204df6e8bb1890ee2d92997fb3cdf7a182d61cf71b",
       "optimize_kwargs": {}
+    },
+    {
+      "id": "096-recoverable-off-7f24",
+      "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+      "optimize_kwargs": {
+        "polish_enabled": false,
+        "polish_start_fraction": 0.8,
+        "polish_quantum": 4,
+        "resume_explore_calls": 4,
+        "memory": 8,
+        "curvature_eps": 1e-8,
+        "qn_radius": 0.08,
+        "qn_min_radius": 0.000001,
+        "qn_max_radius": 0.3,
+        "qn_grow": 2,
+        "qn_shrink": 0.5,
+        "armijo_c1": 0.0001,
+        "trace_limit": 4096
+      }
+    },
+    {
+      "id": "096-recoverable-polish-7f24",
+      "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+      "optimize_kwargs": {
+        "polish_enabled": true,
+        "polish_start_fraction": 0.8,
+        "polish_quantum": 4,
+        "resume_explore_calls": 4,
+        "memory": 8,
+        "curvature_eps": 1e-8,
+        "qn_radius": 0.08,
+        "qn_min_radius": 0.000001,
+        "qn_max_radius": 0.3,
+        "qn_grow": 2,
+        "qn_shrink": 0.5,
+        "armijo_c1": 0.0001,
+        "trace_limit": 4096
+      }
     }
   ],
   "common_objective": {
@@ -599,6 +637,53 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Thirty source-bound cells across ten public topologies compare exact096, FFR130 and reviewed FALQN127. Each topology keeps all three arms on one worker and in the same runtime cohort; complete observed outcomes inform the original selected four-hour pair."
+    },
+    {
+      "id": "recoverable-polish-development",
+      "baseline": "096",
+      "candidates": [
+        "096",
+        "096-recoverable-off-7f24",
+        "096-recoverable-polish-7f24"
+      ],
+      "public_topology_seeds": [
+        10,
+        11,
+        12
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "container_cap_seconds": 16200,
+      "purpose": "Nine fresh actual UIFO cells compare unchanged096 with the preserved-exploration implementation's explicit off/on polishing treatments. Distinguish actual common exploration prefix from wall-clock throughput; preserve original Objective physics, finite-feasible score and complete histories."
+    },
+    {
+      "id": "recoverable-polish-broad-public",
+      "baseline": "096",
+      "candidates": [
+        "096",
+        "096-recoverable-off-7f24",
+        "096-recoverable-polish-7f24"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Thirty actual paired cells retain unchanged096 plus both exact recoverable-polish treatments on each public topology. Measure feasible minima, mode/call budgets and preservation of exploration after failed polishing. Keep all outcomes and runtime cohorts; selected four-hour comparison uses the existing full-objective-budget phase."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
@@ -628,6 +713,8 @@
     "prefeasible_incumbent_development_cells": 12,
     "prefeasible_incumbent_broad_cells": 40,
     "feasible_retention_development_cells": 9,
-    "feasible_retention_broad_cells": 30
+    "feasible_retention_broad_cells": 30,
+    "recoverable_polish_development_cells": 9,
+    "recoverable_polish_broad_cells": 30
   }
 }

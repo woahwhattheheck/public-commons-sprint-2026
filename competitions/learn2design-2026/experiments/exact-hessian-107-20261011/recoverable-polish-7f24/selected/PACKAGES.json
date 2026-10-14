@@ -1,0 +1,285 @@
+{
+  "schema": "tjlabs.l2d.prepared-selected-packages/v1",
+  "operation": "L2D-RECOVERABLE-POLISH-7F24-20261014",
+  "source_manifest": {
+    "bytes": 38333,
+    "sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613"
+  },
+  "original_packager": "release_selected.py",
+  "original_packager_sha256": "3987f4f856e94b664130cdb3c0217a7873e42c7e4c4ee67ffe09da2c666dce78",
+  "current_static_validator_sha256": "fdc0ae8d4c341b6c493cd1559638246585517f38e171a5c9778fd23f926342e5",
+  "packages": [
+    {
+      "filename": "096-selected.zip",
+      "source_id": "096",
+      "bytes": 4884,
+      "sha256": "7ffd4cff1abb22d935e9b730d22c1ff6d38e8af7e71d18b266e14513f7fe267e",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096",
+        "class": "StagedTrustPortfolio096",
+        "arm_sha256": "8f7e95f6fdc60327b0aca253328146c3ffe8bc7e77e059ad1cde81650745f6ce",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077",
+          "requirements_sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80",
+          "companions": [],
+          "optimize_kwargs": {},
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_staged_trust_portfolio_096"
+            }
+          ]
+        },
+        "source_manifest_sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613",
+        "source_manifest_content_sha256": "85a43992fd121b76299090560213ed15d492e15fad79f3b7c8986556c3db5ec7",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "original/096/submission.py",
+            "bytes": 6722,
+            "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "original/096/requirements.txt",
+            "bytes": 42,
+            "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 6722,
+        "actual_original_submission": {
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": {
+        "retained_algorithm.py": {
+          "bytes": 6722,
+          "sha256": "97cbe70ec309629be60c78facf903e110aace074111715e58fde57afc01c8077"
+        },
+        "requirements.txt": {
+          "bytes": 42,
+          "sha256": "bbbc1e3cbecf807974d0d51d1892ad68c4bf053f9eb637413cdc7d4cd8139f80"
+        },
+        "submission.py": {
+          "bytes": 1176,
+          "sha256": "9ad6298e675d84ab40cbf1b3fab4cbd7fcd8ac810a2e627418c903188ab6ec46"
+        },
+        "THIRD_PARTY_LICENSE.txt": {
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        "RELEASE.json": {
+          "bytes": 1941,
+          "sha256": "31538f4c41708891a86167a95e1b49c4b4ff80dc3beea913211828abc7df281b"
+        }
+      }
+    },
+    {
+      "filename": "096-recoverable-off-7f24-selected.zip",
+      "source_id": "096-recoverable-off-7f24",
+      "bytes": 9526,
+      "sha256": "7d9cbe01ecb58a28904f0005fe93f72c09c68d0728ddf46c0159fab22d07e6a6",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096-recoverable-off-7f24",
+        "class": "RecoverablePolish096",
+        "arm_sha256": "c9fed9937405323c8e17d9a61f8dfd54bac15854a731600db8e2bbc023ef2767",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+          "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+          "companions": [],
+          "optimize_kwargs": {
+            "polish_enabled": false,
+            "polish_start_fraction": 0.8,
+            "polish_quantum": 4,
+            "resume_explore_calls": 4,
+            "memory": 8,
+            "curvature_eps": 1e-8,
+            "qn_radius": 0.08,
+            "qn_min_radius": 0.000001,
+            "qn_max_radius": 0.3,
+            "qn_grow": 2,
+            "qn_shrink": 0.5,
+            "armijo_c1": 0.0001,
+            "trace_limit": 4096
+          },
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_096_recoverable_polish_7f24"
+            },
+            {
+              "path": [
+                "configuration",
+                "polish_enabled"
+              ],
+              "equals": false
+            }
+          ]
+        },
+        "source_manifest_sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613",
+        "source_manifest_content_sha256": "85a43992fd121b76299090560213ed15d492e15fad79f3b7c8986556c3db5ec7",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "recoverable-polish-7f24/submission.py",
+            "bytes": 24609,
+            "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "recoverable-polish-7f24/requirements.txt",
+            "bytes": 58,
+            "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1462,
+          "sha256": "1d961b3ea6af51c7af1dbd389ab6e4c14b3132767eed1dcad3251bcfb707a276"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 24609,
+        "actual_original_submission": {
+          "bytes": 24609,
+          "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": {
+        "retained_algorithm.py": {
+          "bytes": 24609,
+          "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+        },
+        "requirements.txt": {
+          "bytes": 58,
+          "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+        },
+        "submission.py": {
+          "bytes": 1462,
+          "sha256": "1d961b3ea6af51c7af1dbd389ab6e4c14b3132767eed1dcad3251bcfb707a276"
+        },
+        "THIRD_PARTY_LICENSE.txt": {
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        "RELEASE.json": {
+          "bytes": 2470,
+          "sha256": "87981275f50c6f15d1a9dab5486d5859c76a55085a4d58f424e1197532aa3603"
+        }
+      }
+    },
+    {
+      "filename": "096-recoverable-polish-7f24-selected.zip",
+      "source_id": "096-recoverable-polish-7f24",
+      "bytes": 9521,
+      "sha256": "2a050ab60225dc3a51e2f631cefc539cc77264221229c7c00e388ce93d2cb14a",
+      "release": {
+        "schema": "tjlabs.l2d.selected-release/v1",
+        "source_id": "096-recoverable-polish-7f24",
+        "class": "RecoverablePolish096",
+        "arm_sha256": "1a8dca2d5b6a423499d624b5e6b585dc6e2e830a9a64d94186d6205ee59852f3",
+        "selection": {
+          "schema": "tjlabs.l2d.source-invocation/v1",
+          "candidate_sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a",
+          "requirements_sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0",
+          "companions": [],
+          "optimize_kwargs": {
+            "polish_enabled": true,
+            "polish_start_fraction": 0.8,
+            "polish_quantum": 4,
+            "resume_explore_calls": 4,
+            "memory": 8,
+            "curvature_eps": 1e-8,
+            "qn_radius": 0.08,
+            "qn_min_radius": 0.000001,
+            "qn_max_radius": 0.3,
+            "qn_grow": 2,
+            "qn_shrink": 0.5,
+            "armijo_c1": 0.0001,
+            "trace_limit": 4096
+          },
+          "diagnostic_expectations": [
+            {
+              "path": [
+                "algorithm_str"
+              ],
+              "equals": "tjlabs_096_recoverable_polish_7f24"
+            },
+            {
+              "path": [
+                "configuration",
+                "polish_enabled"
+              ],
+              "equals": true
+            }
+          ]
+        },
+        "source_manifest_sha256": "5cf27904f4c3dffb2d3293b8ebdd704b520e901a03d6e5e4c4df44aaa2bfb613",
+        "source_manifest_content_sha256": "85a43992fd121b76299090560213ed15d492e15fad79f3b7c8986556c3db5ec7",
+        "original_members": [
+          {
+            "archive_path": "retained_algorithm.py",
+            "source_path": "recoverable-polish-7f24/submission.py",
+            "bytes": 24609,
+            "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+          },
+          {
+            "archive_path": "requirements.txt",
+            "source_path": "recoverable-polish-7f24/requirements.txt",
+            "bytes": 58,
+            "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+          }
+        ],
+        "entrypoint": {
+          "bytes": 1464,
+          "sha256": "e7dc798e0cb325d07b2709b1620191ad5f1169fbd0b55a5baf80b8c36d2d709e"
+        },
+        "official_source": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+        "source_manifest_declared_submission_bytes": 24609,
+        "actual_original_submission": {
+          "bytes": 24609,
+          "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+        },
+        "semantics": "One direct optimizer subclass forwards the original Objective and caller options once to the exact retained implementation with the selected frozen options. Original source, companions, assets and requirements are unchanged."
+      },
+      "members": {
+        "retained_algorithm.py": {
+          "bytes": 24609,
+          "sha256": "ed4ce95963742f9b451001b85e4c493786ec6abd109b234b48d904177d4b560a"
+        },
+        "requirements.txt": {
+          "bytes": 58,
+          "sha256": "4edec783413e55489a4e2263c5b95169929dda43b25d6f13c80fa9ae7ebecbe0"
+        },
+        "submission.py": {
+          "bytes": 1464,
+          "sha256": "e7dc798e0cb325d07b2709b1620191ad5f1169fbd0b55a5baf80b8c36d2d709e"
+        },
+        "THIRD_PARTY_LICENSE.txt": {
+          "bytes": 1082,
+          "sha256": "771bcaa19984a241c697fa0f8df8e8d6d9dd94e5f8dcae09fee7dfafe7635f72"
+        },
+        "RELEASE.json": {
+          "bytes": 2471,
+          "sha256": "0b148978cf41612a159c13c4f24880bea528997b0f5f9ba11d51ccc09a7ff876"
+        }
+      }
+    }
+  ],
+  "composition": "Complete selected payloads composed from original native release_selected.py entrypoint, declaration and member semantics; all15 decompressed member identities verified. Equipped original receiver executes retained official Python validator and native phase before reporting measured outcomes.",
+  "native_performance": "unmeasured"
+}
