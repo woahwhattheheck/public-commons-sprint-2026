@@ -231,6 +231,13 @@ impl PrincipalManagerContract {
         env.storage().instance().set(&DataKey::Paused, &false);
     }
 
+    /// Market edition 1 topology reads; no accounting or custody change.
+    pub fn sy_wrapper_address(env:Env)->Address{Self::get_sy_wrapper(&env)}
+    pub fn pt_token_address(env:Env)->Address{Self::get_pt_token(&env)}
+    pub fn yt_token_address(env:Env)->Address{Self::get_yt_token(&env)}
+    pub fn oracle_address(env:Env)->Address{env.storage().instance().get(&DataKey::Oracle).unwrap_or_else(||panic_with_error!(&env,Error::NotInitialized))}
+    pub fn permissioning_address(env:Env)->Address{env.storage().instance().get(&DataKey::Permissioning).unwrap_or_else(||panic_with_error!(&env,Error::NotInitialized))}
+
     // --- core protocol operations ---
 
     /// Split `sy_shares` into PT + YT. The caller must already hold these shares in the

@@ -1,19 +1,22 @@
 {
   "schema": "principal.contract-api.v2",
-  "edition": "principal-current-accounting-3",
+  "edition": "principal-market-1-accounting-3",
   "source": {
     "repository": "principal-Protocol-org/principal",
     "baseCommit": "f35b914cbf4896255a3711d81795b810b0a47f1c",
     "baseTree": "4d07bd2718558e467956f7744bfd6052c4eb8845",
     "implementationEdition": 3,
-    "implementationSource": "CURRENT_ACCOUNTING_SOURCE.json",
-    "migration": "new-initialization-only"
+    "implementationSource": "CURRENT_MARKET_SOURCE.json",
+    "migration": "new-initialization-only",
+    "marketEdition": 1
   },
   "amounts": {
     "underlying": "Raw underlying token atoms; configured asset decimals apply",
     "pt_yt": "Exact integer token units; query each token decimals()",
     "oracle": "Fixed 7-decimal underlying/USD reference value",
-    "sy": "Exact SY share atoms; source RATE_SCALE is 10^7"
+    "sy": "Exact SY share atoms; source RATE_SCALE is 10^7",
+    "lp": "Pool liquidity atoms; four decimals, real-reserve entitlement only",
+    "swap_fees": "SY atoms in both directions, separately retained creator/protocol claims"
   },
   "contracts": {
     "oracle_adapter": {
@@ -192,7 +195,7 @@
     },
     "principal_manager": {
       "sourcePath": "contracts/principal_manager/src/lib.rs",
-      "sourceSha256": "d1876d4ab9004a680ad1411b99871b9d3433516b453a58d2c7c645d666361072",
+      "sourceSha256": "cefbd5e7f1d5171ddf8f5c817372be43c8a6c24b562ed5dc9b3ad38e9f2d44cf",
       "methods": {
         "initialize": {
           "args": {
@@ -355,6 +358,36 @@
           "returns": "MintPreview",
           "readOnly": true,
           "description": "Read the deployed accounting edition 3 principal_manager contract."
+        },
+        "sy_wrapper_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "pt_token_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "yt_token_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "oracle_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
+        },
+        "permissioning_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the original accounting Manager topology; this read does not change accounting."
         }
       }
     },
@@ -535,7 +568,7 @@
     },
     "recovery_escrow": {
       "sourcePath": "contracts/recovery_escrow/src/lib.rs",
-      "sourceSha256": "b53b9dd7e192a0815263753515e700009a571931231c039467cb073abdb18678",
+      "sourceSha256": "fbfe6634c8458d74ae0204782b7ca1586fc81a8b7cf575cc7df68a6b31ab70da",
       "methods": {
         "initialize": {
           "args": {
@@ -643,6 +676,17 @@
           "returns": "i128",
           "readOnly": false,
           "description": "Invoke the exact recovery_escrow method with current SAC issuer; original source account deauthorized authorization."
+        },
+        "seize_lp": {
+          "args": {
+            "caller": "Address",
+            "market": "Address",
+            "account": "Address",
+            "shares": "i128"
+          },
+          "returns": "LiquidityRecovery",
+          "readOnly": false,
+          "description": "The live SAC administrator recovers an actually deauthorized holder's LP backing through the original RecoveryEscrow; actual PT is retained and actual SY is unwrapped."
         }
       }
     },
@@ -1264,6 +1308,354 @@
           "description": "Invoke the exact yt_token method with original recovery escrow authorization."
         }
       }
+    },
+    "market_pool": {
+      "sourcePath": "contracts/market_pool/src/lib.rs",
+      "sourceSha256": "e31066bf224ab16d58d32d0d2ab2774ecdbefd748abb4fe5a34253b4856a75b8",
+      "methods": {
+        "initialize": {
+          "args": {
+            "issuer": "Address",
+            "c": "MarketConfig"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "configuration": {
+          "args": {},
+          "returns": "MarketConfig",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "reserves": {
+          "args": {},
+          "returns": "MarketState",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "market_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "accounting_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "underlying_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "recovery_escrow": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "manager_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "balance": {
+          "args": {
+            "account": "Address"
+          },
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "total_supply": {
+          "args": {},
+          "returns": "i128",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "decimals": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "curve": {
+          "args": {},
+          "returns": "CurveFrame",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_swap": {
+          "args": {
+            "sy_in": "bool",
+            "amount_in": "i128"
+          },
+          "returns": "TradeQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_deposit": {
+          "args": {
+            "max_pt": "i128",
+            "max_sy": "i128"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_withdrawal": {
+          "args": {
+            "shares": "i128"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "swap": {
+          "args": {
+            "from": "Address",
+            "sy_in": "bool",
+            "amount_in": "i128",
+            "min_out": "i128",
+            "expires": "u64"
+          },
+          "returns": "TradeQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "add_liquidity": {
+          "args": {
+            "from": "Address",
+            "max_pt": "i128",
+            "max_sy": "i128",
+            "min_shares": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "remove_liquidity": {
+          "args": {
+            "from": "Address",
+            "shares": "i128",
+            "min_pt": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "transfer": {
+          "args": {
+            "from": "Address",
+            "to": "Address",
+            "amount": "i128"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "set_paused": {
+          "args": {
+            "issuer": "Address",
+            "paused": "bool"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "collect_creator_fees": {
+          "args": {
+            "issuer": "Address"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "collect_protocol_fees": {
+          "args": {
+            "receiver": "Address"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "seize": {
+          "args": {
+            "caller": "Address",
+            "account": "Address",
+            "shares": "i128"
+          },
+          "returns": "RecoveryResult",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        }
+      }
+    },
+    "router": {
+      "sourcePath": "contracts/router/src/lib.rs",
+      "sourceSha256": "1c7386ab33010d1b9f70ec855642e930e83aa1c5c3e5585cb01ca9c3db52eba4",
+      "methods": {
+        "initialize": {
+          "args": {
+            "issuer": "Address",
+            "pool": "Address"
+          },
+          "returns": "()",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "market_address": {
+          "args": {},
+          "returns": "Address",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "configuration": {
+          "args": {},
+          "returns": "MarketConfig",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "router_edition": {
+          "args": {},
+          "returns": "u32",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "quote_swap": {
+          "args": {
+            "sy_in": "bool",
+            "amount_in": "i128"
+          },
+          "returns": "TradeQuote",
+          "readOnly": true,
+          "description": "Read the exact selected market edition 1 contract."
+        },
+        "tokenize": {
+          "args": {
+            "from": "Address",
+            "underlying": "i128",
+            "min_pt": "i128",
+            "min_yt": "i128",
+            "expires": "u64"
+          },
+          "returns": "MintResult",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "swap_sy_for_pt": {
+          "args": {
+            "from": "Address",
+            "sy": "i128",
+            "min_pt": "i128",
+            "expires": "u64"
+          },
+          "returns": "TradeQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "swap_pt_for_sy": {
+          "args": {
+            "from": "Address",
+            "pt": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "TradeQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "buy_pt": {
+          "args": {
+            "from": "Address",
+            "underlying": "i128",
+            "min_pt": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedSwap",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "sell_pt": {
+          "args": {
+            "from": "Address",
+            "pt": "i128",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedSwap",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "add_liquidity": {
+          "args": {
+            "from": "Address",
+            "max_pt": "i128",
+            "max_sy": "i128",
+            "min_shares": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "tokenize_liquidity": {
+          "args": {
+            "from": "Address",
+            "underlying": "i128",
+            "sy_to_mint": "i128",
+            "min_pt": "i128",
+            "min_yt": "i128",
+            "min_shares": "i128",
+            "expires": "u64"
+          },
+          "returns": "RoutedLiquidity",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "remove_liquidity": {
+          "args": {
+            "from": "Address",
+            "shares": "i128",
+            "min_pt": "i128",
+            "min_sy": "i128",
+            "expires": "u64"
+          },
+          "returns": "LiquidityQuote",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "claim_yield": {
+          "args": {
+            "from": "Address",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "i128",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        },
+        "redeem": {
+          "args": {
+            "from": "Address",
+            "pt": "i128",
+            "yt": "i128",
+            "min_underlying": "i128",
+            "expires": "u64"
+          },
+          "returns": "RedeemResult",
+          "readOnly": false,
+          "description": "Prepare the exact market edition 1 operation, including its original authorization, minimum amounts and expiry."
+        }
+      }
     }
   },
   "sharedAdminMethods": {},
@@ -1306,8 +1698,8 @@
       "issuer": "Address",
       "yt_amount": "i128",
       "pending_underlying": "i128",
-      "recorded_at": "u64",
-      "reward_remainder": "i128"
+      "reward_remainder": "i128",
+      "recorded_at": "u64"
     },
     "MintPreview": {
       "sy_shares": "i128",
@@ -1318,6 +1710,84 @@
       "original_rate_notional": "i128",
       "issued_notional": "i128",
       "issuance_adjustment": "i128"
+    },
+    "MarketConfig": {
+      "manager": "Address",
+      "sy": "Address",
+      "pt": "Address",
+      "yt": "Address",
+      "oracle": "Address",
+      "permissioning": "Address",
+      "underlying": "Address",
+      "risk": "Address",
+      "escrow": "Address",
+      "protocol_receiver": "Address",
+      "maturity": "u64",
+      "anchor_apr": "i128",
+      "strength": "u32",
+      "fee_bps": "u32",
+      "protocol_share_bps": "u32"
+    },
+    "MarketState": {
+      "reserve_pt": "i128",
+      "reserve_sy": "i128",
+      "fee_sy": "i128",
+      "creator_sy": "i128",
+      "lp_supply": "i128",
+      "started_at": "u64",
+      "paused": "bool"
+    },
+    "RecoveryResult": {
+      "shares": "i128",
+      "pt": "i128",
+      "sy": "i128",
+      "underlying": "i128"
+    },
+    "CurveFrame": {
+      "sampled_at": "u64",
+      "remaining": "u64",
+      "oracle_rate": "i128",
+      "sy_rate": "i128",
+      "target_price": "i128",
+      "pt_coefficient": "i128",
+      "sy_coefficient": "i128",
+      "virtual_pt": "i128",
+      "virtual_sy": "i128"
+    },
+    "TradeQuote": {
+      "sy_in": "bool",
+      "amount_in": "i128",
+      "gross_amount_out": "i128",
+      "amount_out": "i128",
+      "fee_in_sy": "bool",
+      "total_fee": "i128",
+      "protocol_fee": "i128",
+      "creator_fee": "i128",
+      "fee_tier_bps": "u32",
+      "reserve_pt": "i128",
+      "reserve_sy": "i128",
+      "lp_supply": "i128",
+      "frame": "CurveFrame"
+    },
+    "LiquidityQuote": {
+      "shares": "i128",
+      "pt": "i128",
+      "sy": "i128"
+    },
+    "RoutedLiquidity": {
+      "deposited_sy": "i128",
+      "minted": "MintResult",
+      "liquidity": "LiquidityQuote"
+    },
+    "RoutedSwap": {
+      "underlying": "i128",
+      "trade": "TradeQuote"
+    },
+    "LiquidityRecovery": {
+      "shares": "i128",
+      "pt": "i128",
+      "sy": "i128",
+      "underlying": "i128"
     }
   },
   "accounting": {
@@ -1337,5 +1807,21 @@
     "ordinaryTransfer": "settle both; earned integer and fractional reward stays with original holder",
     "recovery": "explicit issuer-authorized exact proportional complete earned numerator; full transfer moves exact remainder",
     "cost": "O(1) account storage and arithmetic; no issuance lot/history scan"
+  },
+  "market": {
+    "edition": 1,
+    "curve": "integer-time-scaled-virtual-constant-product/v1",
+    "accountingEdition": 3,
+    "lpDecimals": 4,
+    "swapFeeAsset": "SY",
+    "tokenizationFee": "Original Manager charges no new tokenization fee",
+    "yieldFee": "Original Manager charges no new yield fee",
+    "deferred": [
+      "pre-maturity recombination",
+      "YT selling",
+      "mutable fee governance"
+    ],
+    "nativeStatus": "SOURCE_AUTHORED_BUILD_AND_VISUAL_RECEIVING_REQUIRED",
+    "guide": "contracts-source/docs/MARKET_EDITION_1.md"
   }
 }

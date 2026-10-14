@@ -88,6 +88,17 @@ pub trait PrincipalManagerInterface {
     fn redeem(env: Env, from: Address, pt_amount: i128, yt_amount: i128) -> RedeemResult;
 }
 
+#[contracttype]
+#[derive(Clone,Debug,Eq,PartialEq)]
+pub struct LiquidityRecovery {pub shares:i128,pub pt:i128,pub sy:i128,pub underlying:i128}
+#[contractclient(name="MarketPoolClient")]
+pub trait MarketPoolInterface{
+ fn underlying_address(env:Env)->Address;
+ fn recovery_escrow(env:Env)->Address;
+ fn manager_address(env:Env)->Address;
+ fn seize(env:Env,caller:Address,account:Address,shares:i128)->LiquidityRecovery;
+}
+
 #[contracterror]
 #[derive(Copy, Clone, Debug, PartialEq)]
 #[repr(u32)]
@@ -153,6 +164,23 @@ impl RecoveryEscrowContract {
         env.storage()
             .instance()
             .set(&DataKey::PrincipalManager, &principal_manager);
+    }
+
+    /// Recover actual LP backing through the same issuer/deauthorization gate.
+    /// PT remains held here for original finalize_pt; SY is unwrapped here.
+    pub fn seize_lp(env:Env,caller:Address,market:Address,account:Address,shares:i128)->LiquidityRecovery{
+        Self::assert_issuer_admin(&env,&caller);
+        Self::assert_target_deauthorized(&env,&account);
+        if shares<=0{panic_with_error!(&env,Error::ZeroAmount)}
+        let pool=MarketPoolClient::new(&env,&market);
+        let this=env.current_contract_address();
+        if pool.underlying_address()!=Self::get(&env,&DataKey::Underlying)||
+           pool.recovery_escrow()!=this||pool.manager_address()!=Self::get(&env,&DataKey::PrincipalManager){
+            panic_with_error!(&env,Error::PositionUnderlyingMismatch)
+        }
+        let result=pool.seize(&this,&account,&shares);
+        env.events().publish((symbol_short!("seize_lp"),),(caller,market,account,result.clone()));
+        result
     }
 
     /// Seize `shares` of `account`'s SY balance and immediately unwrap it into raw underlying,
