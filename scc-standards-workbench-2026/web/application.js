@@ -7,7 +7,8 @@ const integerPaths=new Set(["selection.engineering_budget_row","reviewed.authori
 const decimalPaths=new Map([["reviewed.authoring.baseBudget",2],["reviewed.authoring.olaMaximum",2],["reviewed.authoring.maximumBudget",2],["reviewed.authoring.engineeringFee",2],["reviewed.schedule.hours_per_week",4],["reviewed.schedule.engineering_hours",4]]);
 const nullableNumericPaths=new Set(["reviewed.schedule.months","reviewed.schedule.hours_per_week","reviewed.schedule.engineering_hours","reviewed.commercial.invoice_due_days","reviewed.commercial.defect_correction_days"]);
 const numericPaths=new Set([...integerPaths,...decimalPaths.keys()]);
-const equal=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+const canonical=v=>Array.isArray(v)?v.map(canonical):v&&typeof v==="object"?Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
+const equal=(a,b)=>JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
 let context=null,work=null,data=null,epoch=0,databasePromise=null,queue=Promise.resolve();
 const active=(ctx,token)=>context===ctx&&epoch===token&&ctx.isCurrent();
 const endpoint=ctx=>"/api/projects/"+encodeURIComponent(ctx.project.id);

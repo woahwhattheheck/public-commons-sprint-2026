@@ -1,19 +1,19 @@
-# Install the standards workbench 0.2.3
+# Install the standards workbench 0.4.1
 
-The standards workbench is a local application for bilingual drafting, source review, consultation, publication and delivery accounts. Version 0.2.3 includes the complete offline reviewer, corrected-return handling and an operator interface that works at desktop and phone widths.
+The standards workbench is a local application for bilingual drafting, source review, consultation, publication and delivery accounts. Version 0.4.1 includes the complete offline consultation and member-ballot exchange, the prime-application desk, and the complete native ballot/application corrections with the maintained source-edition receiver.
 
 ## Download and open
 
-Download [scc_standards_workbench-0.2.3-source.zip](./scc_standards_workbench-0.2.3-source.zip). Python 3.10 or newer is required. Install the source ZIP and open the bilingual review example:
+Download [scc-standards-workbench-0.4.1-source.zip](./scc-standards-workbench-0.4.1-source.zip). Python 3.10 or newer is required. Install the source ZIP and open the bilingual review example:
 
 ```sh
-python -m pip install ./scc_standards_workbench-0.2.3-source.zip
+python -m pip install ./scc-standards-workbench-0.4.1-source.zip
 standards-workbench --workspace ./review-workspace --review-demo
 ```
 
 Open the local address printed by the command, normally `http://127.0.0.1:8773`. Keep the command running while using the operator application. Stop it with Ctrl+C, then use the same command and workspace path to resume.
 
-The source package contains the Python application, browser assets, public example sources and operating guides. Its declared publication dependencies are `python-docx==1.2.0` and `reportlab==4.4.9`; pip installs them with the application. Keep an available Python runtime and the same dependency wheels when preparing an offline installation. Pip supports an existing wheel directory through its ordinary `--no-index --find-links` options.
+The source package contains the Python application, browser assets, public example sources and operating guides. Its declared document dependencies are `python-docx==1.2.0`, `reportlab==4.4.9`, `pypdf==6.20.1` and `pdfplumber==0.11.10`; pip installs them with the application. Keep an available Python runtime and the same dependency wheels when preparing an offline installation. Pip supports an existing wheel directory through its ordinary `--no-index --find-links` options.
 
 If the default port is already in use, choose another local port:
 
@@ -77,10 +77,10 @@ Recipient packets, respondent replies and selected edition handovers contain the
 
 ## Upgrade an existing workspace
 
-Stop the running operator application. Export and retain a complete private continuation using the current installation, then install the 0.2.3 source ZIP:
+Stop the running operator application. Export and retain a complete private continuation using the current installation, then install the 0.4.1 source ZIP:
 
 ```sh
-python -m pip install --upgrade ./scc_standards_workbench-0.2.3-source.zip
+python -m pip install --upgrade ./scc-standards-workbench-0.4.1-source.zip
 standards-workbench --workspace ./review-workspace
 ```
 
@@ -88,10 +88,14 @@ Use the original workspace path when resuming. Earlier workspace histories and f
 
 ## Release contents and completed receiving
 
-The complete 0.2.3 source package includes the selected application, guides, original public inputs and `SOURCE_RELEASE.json`. The manifest identifies every selected member so the extracted contents can be compared with the chosen release.
+The complete 0.4.1 source package includes all 70 selected application files, guides, original public inputs and `SOURCE_RELEASE.json`. The manifest identifies every selected member so the extracted contents can be compared with the chosen release.
 
 The retained 0.2.3 receiving completed the original recipient-to-operator journey: draft and response export, initial return, duplicate and corrected return, explicit adoption of unchanged decisions, clause amendment, successor edition, respondent reply, publication and full project restoration. The reviewed case includes forty desktop/phone views and paired English/French Word and PDF publications. Its authored responses remain part of that example project.
 
+The 0.4.1 [source and receiving record](./RECEIVING-0.4.1.md) identifies the exact corrected native source and the actual completed ballot/application course. That operation preserved its original closed ballot and requests, restored the full private case independently, and completed its producer inspection of the PDF, Word, HTML and CSV outputs. The following source-edition receiver preserves those native results while retaining separate immutable indexes for new source presentations; its affected continuation remains with the same original producing operation.
+
+The [prime-application guide](../APPLICATION-WORKBENCH.md) covers source intake, explicit reviewer decisions, original-form rendering and private application continuation. The [individual-member guide](../BALLOT-RECEIVING.md) covers the ordinary offline ballot, original returns and corrections. Keep the owner's complete rendered-product instructions in the accompanying AGENTS.md and CLAUDE.md: run the exact outgoing product, operate its important controls, inspect desktop and narrow states, open every attachment and usable archive member, and reopen the saved delivery before claiming it client-ready.
+
 ## Previous immutable packages
 
-The earlier [0.2.0 source archive](./scc_standards_workbench-0.2.0-source.zip), [0.1.1 wheel](./scc_standards_workbench-0.1.1-py3-none-any.whl), [0.1.1 source archive](./scc_standards_workbench-0.1.1-source.zip) and [original 0.1.1 installation record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c58b2b78a0becfb2d7cc182a94d9423ac66b66d0/scc-standards-workbench-2026/releases/INSTALL.md) remain available for reproducing those editions. Use the 0.2.3 source package above for the current consultation application.
+The earlier [0.2.0 source archive](./scc_standards_workbench-0.2.0-source.zip), [0.1.1 wheel](./scc_standards_workbench-0.1.1-py3-none-any.whl), [0.1.1 source archive](./scc_standards_workbench-0.1.1-source.zip) and [original 0.1.1 installation record](https://github.com/woahwhattheheck/public-commons-sprint-2026/blob/c58b2b78a0becfb2d7cc182a94d9423ac66b66d0/scc-standards-workbench-2026/releases/INSTALL.md) remain available for reproducing those editions. The complete [0.4.0 source archive](./scc-standards-workbench-0.4.0-source.zip) and [0.3.0 source archive](./scc_standards_workbench-0.3.0-source.zip) are also retained. Use the 0.4.1 package above for the current selected application.
