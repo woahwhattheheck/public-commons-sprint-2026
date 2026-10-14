@@ -11,13 +11,17 @@
         "operator/web/source_report_editions.mjs",
         "operator/web/source_reports.mjs",
         "operator/SCIENTIFIC_REPORT_CAPTURE.md",
-        "integration/component_fragments/scientific-report-capture.json"
+        "integration/component_fragments/scientific-report-capture.json",
+        "model/portable_fs.py",
+        "model/windows_fs.py"
       ]
     },
     "scientific-report-review": {
       "paths": [
         "model/scientific_report_capture.py",
-        "model/scientific_report_editions.py"
+        "model/scientific_report_editions.py",
+        "model/portable_fs.py",
+        "model/windows_fs.py"
       ],
       "requires": [
         "scientific-report-editions"

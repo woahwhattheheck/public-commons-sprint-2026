@@ -20,7 +20,7 @@ class ReportChanges:
         self.cache = {}
 
     def _directory(self, ws, key):
-        root = ws.root.resolve()
+        root = engine._fs.native_path(ws.root).resolve()
         result = root / engine.KIND / identifier(key)
         if result.is_symlink() or not result.resolve().is_relative_to(root):
             raise ValueError('Keep the saved report comparison in its Workspace')
@@ -39,7 +39,7 @@ class ReportChanges:
     def catalog(self, workspace):
         ws = self.operator.ws(workspace)
         comparisons, issues = [], []
-        for path in sorted((ws.root / engine.KIND).glob('*/comparison.json')):
+        for path in sorted((engine._fs.native_path(ws.root) / engine.KIND).glob('*/comparison.json')):
             if path.parent.name.startswith('.'):
                 continue
             try:
@@ -115,13 +115,16 @@ class ReportChanges:
             raise self.Fault('REPORT_COMPARISON_MEMBER', 'Choose a file retained in this exact comparison.', 404)
         item = selected[name]
         path = engine._verify(directory, item, self.cache)
-        policy = document_policy(path.read_bytes()) if path.suffix.lower() in ('.html','.htm') else None
+        policy = None
+        if path.suffix.lower() in ('.html', '.htm'):
+            with engine._reader(path) as source:
+                policy = document_policy(source.read())
         return self.operator._ticket(workspace, path, item, name), policy
 
     def export(self, workspace, key):
         ws = self.operator.ws(workspace)
         directory = self._directory(ws, key)
-        target = ws.root / 'scientific-report-comparison-exports' / (identifier(key) + '.zip')
+        target = engine._fs.native_path(ws.root) / 'scientific-report-comparison-exports' / (identifier(key) + '.zip')
         with held(ws.root / '.workspace.lock'):
             item = engine.export(directory, target)
         return {'comparison_id': key, 'state': 'complete',
@@ -167,7 +170,7 @@ class ReportChanges:
             # Reissue a fresh verified ticket rather than preserving an expired URL.
             ws = self.operator.ws(task['workspace'])
             key = identifier(result.get('comparison_id'))
-            target = ws.root / 'scientific-report-comparison-exports' / (key + '.zip')
+            target = engine._fs.native_path(ws.root) / 'scientific-report-comparison-exports' / (key + '.zip')
             manifest = engine.inspect_archive(target)
             _, selected = engine.members(self._directory(ws, key), cache=self.cache)
             if manifest['comparison_id'] != key or manifest['members'] != selected:

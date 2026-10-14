@@ -89,6 +89,12 @@ The original `model/portable_fs.py`, `model/windows_fs.py` and
 Study/report-review source closure. They use only the standard library; the
 comparison does not import InVEST or the GIS runtime. Windows filenames and SQLite
 connections use the same long-path implementation as the rest of the application.
+The original saved-edition and Review retention modules accompany the comparison
+source, so standalone installation and editable review receiving use the same
+native copy/read contract. Individual saved-report exports also recover a fully
+published original ZIP after interruption before its receipt, without replacing
+another archive or rerendering the report.
+
 Completed ZIPs are flushed with writable handles, and immutable files/directories
 are published without replacing another destination, including on filesystems
 without hard links. All existing comparison IDs, row-key plans and original report
