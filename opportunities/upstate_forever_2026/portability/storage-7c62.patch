@@ -264,7 +264,7 @@
              byte_count = 0
 @@ -553,7 +530,7 @@
                  if destination_path.is_symlink():
-                     raise ImplementationError("Attachment destination is a symlink: " + str(destination_path))
+                     raise ImplementationError(f"Attachment destination is a symlink: {destination_path}")
                  try:
 -                    os.link(temporary, destination_path)
 +                    publish_new(temporary, destination_path)
