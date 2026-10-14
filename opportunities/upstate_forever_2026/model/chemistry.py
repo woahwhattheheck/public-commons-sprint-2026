@@ -81,7 +81,7 @@ def _copy_retained(source, target, expected=None):
 
 def _verify_transfer_archive(path, manifest):
     """Accept an interrupted completed archive only from its complete originals."""
-    with zipfile.ZipFile(native_path(path)) as archive:
+    with os.fdopen(open_file(path, os.O_RDONLY), 'rb') as stream, zipfile.ZipFile(stream) as archive:
         names = archive.namelist()
         if (len(names) != len(set(names))
                 or set(names) != set(manifest['files']) | {'manifest.json'}
@@ -328,9 +328,11 @@ class Chemistry:
                 manifest={'schema':'upstate.chemistry-transfer/v1','selection':selection,
                           'source_map':sources,'files':files}
                 atomic_json(root/'manifest.json',manifest)
-                pending=native_path(directory/'.pending.zip')
+                pending=None
                 try:
-                    with pending.open('w+b') as stream:
+                    with tempfile.NamedTemporaryFile(dir=native_path(directory), prefix='.chemistry-export-',
+                                                     suffix='.zip', mode='w+b', delete=False) as stream:
+                        pending=Path(stream.name)
                         with zipfile.ZipFile(stream,'w',compression=zipfile.ZIP_DEFLATED) as z:
                             for p in sorted(root.rglob('*')):
                                 if p.is_file(): z.write(p,p.relative_to(root).as_posix())
@@ -343,7 +345,8 @@ class Chemistry:
                         _verify_transfer_archive(archive,manifest)
                     sync_directory(directory)
                 finally:
-                    pending.unlink(missing_ok=True)
+                    if pending is not None:
+                        pending.unlink(missing_ok=True)
             result={'id':key,'case_id':case['id'],'artifact':describe_file(self.ws.root,archive),
                     'run_ids':run_ids,'source_count':len(case['source_refs'])}
             atomic_json(receipt,result,immutable=True)
@@ -362,7 +365,7 @@ class Chemistry:
                     state=self.get_run(adopted['run_id'])
                     self._verified_artifacts(state['id'],state)
                 return result
-            with zipfile.ZipFile(path) as z:
+            with os.fdopen(open_file(path, os.O_RDONLY), 'rb') as stream, zipfile.ZipFile(stream) as z:
                 names=z.namelist()
                 if len(names)!=len(set(names)): raise ModelError('Archive repeats a file name')
                 for info in z.infolist():
