@@ -51,6 +51,12 @@ else
     INDEX=$((INDEX + 1))
   done
   [ "$FOUND" = 1 ] || fail 'The supplied interpreter is absent from its bootstrap inventory.'
+  # A Windows/filesystem ZIP round trip can retain all bytes but lose execute
+  # permission. Repair only this byte-verified supplied interpreter; never an
+  # explicitly selected external Python, aliases, or unrelated bootstrap files.
+  if [ ! -x "$PYTHON" ]; then
+    /bin/chmod u+x "$PYTHON" || fail 'The verified supplied Python cannot be made executable in this folder.'
+  fi
 fi
 [ -x "$PYTHON" ] || fail 'The supplied Python is not executable. Extract the complete original ZIP with Archive Utility.'
 exec "$PYTHON" -I -B "$ROOT/open_native_collection.py" "$@"
