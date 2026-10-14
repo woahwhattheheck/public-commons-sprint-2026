@@ -17,7 +17,7 @@ import stat
 import tempfile
 from .verified_files import source_identity, verified_operation
 if os.name == "nt":
-    from .windows_fs import no_follow_open, sync_directory as _windows_sync_directory, replace as _windows_replace, fd_stat as _windows_fd_stat, path_stat as _windows_path_stat
+    from .windows_fs import no_follow_open, sync_directory as _windows_sync_directory, replace as _windows_replace, fd_stat as _windows_fd_stat, path_stat as _windows_path_stat, native_path as _windows_native_path
 
 _NOFOLLOW = getattr(os, "O_NOFOLLOW", 0)
 _NONBLOCK = getattr(os, "O_NONBLOCK", 0)
@@ -98,15 +98,20 @@ def canonical(value):
 def digest(value):
     return hashlib.sha256(canonical(value)).hexdigest()
 
+def _native_fs_path(path):
+    """Retain exact Windows filenames in the native extended namespace."""
+    return _windows_native_path(path) if os.name == "nt" else Path(path)
+
+
 def file_digest(path):
     h = hashlib.sha256()
-    with open(path, "rb") as f:
+    with open(_native_fs_path(path), "rb") as f:
         for b in iter(lambda: f.read(1024 * 1024), b""):
             h.update(b)
     return h.hexdigest()
 
 def atomic_bytes(path, data, *, immutable=False):
-    path = Path(path)
+    path = _native_fs_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     if immutable and path.exists():
         if path.read_bytes() != data:
@@ -139,7 +144,7 @@ def atomic_json(path, value, *, immutable=False):
     atomic_bytes(path, canonical(value) + b"\n", immutable=immutable)
 
 def read_json(path):
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    return json.loads(_native_fs_path(path).read_text(encoding="utf-8"))
 
 def identifier(value):
     if not isinstance(value, str) or not re.fullmatch(r"[0-9a-f]{64}", value):
@@ -147,7 +152,7 @@ def identifier(value):
     return value
 
 def relative_file(root, value):
-    root = Path(root).resolve()
+    root = _native_fs_path(root).resolve()
     selected = Path(value)
     if selected.is_absolute() or not selected.parts or ".." in selected.parts:
         raise ValueError("Use a relative file within the selected project")
@@ -168,7 +173,7 @@ def finite(value, name, *, minimum=None, positive=False):
 
 @contextlib.contextmanager
 def held(path, *, blocking=True):
-    path = Path(path)
+    path = _native_fs_path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     fd = _open_original(path, os.O_CREAT | os.O_RDWR | _NOFOLLOW, 0o600)
     try:
@@ -334,8 +339,8 @@ def verify_file(root, item):
     return verify_path(relative_file(root, item["path"]), item)
 
 def describe_file(root, path, **metadata):
-    path = Path(path).resolve(strict=True)
-    root = Path(root).resolve()
+    path = _native_fs_path(path).resolve(strict=True)
+    root = _native_fs_path(root).resolve()
     if not path.is_relative_to(root):
         raise ValueError("Output is outside the current run")
     return {**metadata, "path": path.relative_to(root).as_posix(),
