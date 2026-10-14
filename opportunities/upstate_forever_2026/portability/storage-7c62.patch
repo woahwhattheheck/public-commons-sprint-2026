@@ -1,0 +1,658 @@
+--- a/eco_intelligence/study_transfer.py
++++ b/eco_intelligence/study_transfer.py
+@@ -19,6 +19,8 @@
+ 
+ from .common import IntelligenceError, digest as evidence_digest, file_digest, now
+ from model.common import atomic_bytes, digest as native_digest, read_json, verify_file
++from model.portable_fs import (native_path as _native_fs_path,
++                               sync_directory as _sync_directory, publish_file as publish_new)
+ 
+ FORMAT = "upstate.selected-study-investigations/v1"
+ _SCHEMA_TABLES = frozenset({
+@@ -43,7 +45,7 @@
+     pending = None
+     selection = None
+     try:
+-        handle, name = tempfile.mkstemp(prefix=".investigations-", dir=destination.parent)
++        handle, name = tempfile.mkstemp(prefix=".investigations-", dir=_native_fs_path(destination.parent))
+         os.close(handle)
+         pending = Path(name)
+         with closing(sqlite3.connect(str(pending))) as dst:
+@@ -79,12 +81,8 @@
+             dst.commit()
+         with pending.open("rb") as handle:
+             os.fsync(handle.fileno())
+-        os.link(pending, destination)
+-        descriptor = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+-        try:
+-            os.fsync(descriptor)
+-        finally:
+-            os.close(descriptor)
++        publish_new(pending, destination)
++        _sync_directory(destination.parent)
+         result = {
+             "format": snapshot_format, "workspace_key": workspace_key,
+             "project_id": workspace.project["id"],
+--- a/model/community_report_handover.py
++++ b/model/community_report_handover.py
+@@ -14,6 +14,9 @@
+ 
+ from .common import (atomic_json, canonical, describe_file, digest,
+                      held, identifier, relative_file, verify_file)
++from .portable_fs import (native_path as _native_fs_path,
++                          sync_directory as _sync_directory, publish_file as publish_new,
++                          open_file, fd_stat, path_stat)
+ 
+ SCHEMA = "upstate.community-report-handover/v1"
+ VERSION = 1
+@@ -158,8 +161,8 @@
+         raise ValueError("Receive a source handover as an original regular file")
+     if expected_sha256 is not None:
+         identifier(expected_sha256)
+-    with path.open("rb") as original:
+-        before = os.fstat(original.fileno())
++    with os.fdopen(open_file(path, os.O_RDONLY), "rb") as original:
++        before = fd_stat(original.fileno())
+         if not stat.S_ISREG(before.st_mode):
+             raise ValueError("Receive a source handover as an original regular file")
+         descriptor = _stream(original)
+@@ -189,14 +192,14 @@
+                 _manifest_contract(manifest, record)
+                 with bundle.open(REPORT_ARCHIVE) as archive:
+                     _stream(archive, expected=manifest_files[REPORT_ARCHIVE])
+-                if (_state(os.fstat(original.fileno())) != _state(before)
+-                        or _state(path.lstat()) != _state(before)):
++                if (_state(fd_stat(original.fileno())) != _state(before)
++                        or _state(path_stat(path)) != _state(before)):
+                     raise ValueError("The original source handover changed while it was being read")
+                 yield original, bundle, manifest, record, descriptor
+         except (zipfile.BadZipFile, NotImplementedError) as error:
+             raise ValueError("The complete source handover ZIP could not be read") from error
+-        if (_state(os.fstat(original.fileno())) != _state(before)
+-                or _state(path.lstat()) != _state(before)):
++        if (_state(fd_stat(original.fileno())) != _state(before)
++                or _state(path_stat(path)) != _state(before)):
+             raise ValueError("The original source handover changed while it was being read")
+ 
+ 
+@@ -290,7 +293,7 @@
+         if not path.exists():
+             pending = None
+             try:
+-                with tempfile.NamedTemporaryFile(dir=directory, prefix=".write-community-handover-", delete=False) as output:
++                with tempfile.NamedTemporaryFile(dir=_native_fs_path(directory), prefix=".write-community-handover-", delete=False) as output:
+                     pending = Path(output.name)
+                     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as bundle:
+                         bundle.writestr(_zip_info(MANIFEST), canonical(manifest) + b"\n")
+@@ -300,14 +303,10 @@
+                                 _stream(source, target, manifest["files"][REPORT_ARCHIVE])
+                     output.flush()
+                     os.fsync(output.fileno())
+-                os.link(pending, path)
+-                pending.unlink()
++                publish_new(pending, path)
++                pending.unlink(missing_ok=True)
+                 pending = None
+-                descriptor = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+-                try:
+-                    os.fsync(descriptor)
+-                finally:
+-                    os.close(descriptor)
++                _sync_directory(directory)
+             finally:
+                 if pending is not None:
+                     pending.unlink(missing_ok=True)
+--- a/model/field_report_recovery.py
++++ b/model/field_report_recovery.py
+@@ -19,6 +19,8 @@
+ from . import field_report_adoption as adoption
+ from . import field_report_presentation as presentation
+ from .common import atomic_bytes, canonical, describe_file, digest, identifier, read_json
++from .portable_fs import (native_path as _native_fs_path,
++                          sync_directory as _sync_directory, publish_file as publish_new)
+ from .implementation import ImplementationStore, _file_lock
+ from .implementation_schema import ImplementationError, canonical_bytes
+ from .portable_implementation import report_edition
+@@ -208,7 +210,7 @@
+         if _identity(source) != expected:
+             raise ImplementationError("The original member changed after recovery admission.")
+         return
+-    temporary = target.with_name(".recovery-copy-" + uuid.uuid4().hex)
++    temporary = _native_fs_path(target.with_name(".recovery-copy-" + uuid.uuid4().hex))
+     try:
+         before = source.stat()
+         checksum, size = hashlib.sha256(), 0
+@@ -226,12 +228,13 @@
+         if {"bytes": size, "sha256": checksum.hexdigest()} != expected:
+             raise ImplementationError("A complete copied source differs from its original inventory.")
+         try:
+-            os.link(temporary, target)
++            publish_new(temporary, target)
+         except FileExistsError:
+             if _identity(target) != expected:
+                 raise ImplementationError("A different recovery member already occupies this exact path.")
+         if _identity(target) != expected:
+             raise ImplementationError("The retained recovery copy changed.")
++        _sync_directory(target.parent)
+     finally:
+         temporary.unlink(missing_ok=True)
+ 
+@@ -270,17 +273,9 @@
+         _copy(path, destination, identity)
+         if _identity(path) != identity:
+             raise ImplementationError("An initial staging member changed before private retention.")
+-        fd = os.open(retained, os.O_RDONLY | os.O_DIRECTORY)
+-        try:
+-            os.fsync(fd)
+-        finally:
+-            os.close(fd)
++        _sync_directory(retained)
+         path.unlink()
+-    fd = os.open(directory, os.O_RDONLY | os.O_DIRECTORY)
+-    try:
+-        os.fsync(fd)
+-    finally:
+-        os.close(fd)
++    _sync_directory(directory)
+ 
+ 
+ def _load_renderer(directory, kind, files):
+--- a/model/implementation.py
++++ b/model/implementation.py
+@@ -19,6 +19,9 @@
+     _safe_id, _integer, _timestamp,
+ )
+ from .implementation_reporting import render_report_html, report_csv
++from .portable_fs import (native_path as _native_fs_path, replace as _replace_original,
++                          sync_directory as _sync_directory, locked as _held,
++                          publish_file as publish_new)
+ 
+ 
+ def _source_references(row):
+@@ -75,16 +78,13 @@
+ 
+ 
+ def _fsync_directory(directory: Path) -> None:
+-    if os.name != "nt":
+-        descriptor = os.open(directory, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+-        try:
+-            os.fsync(descriptor)
+-        finally:
+-            os.close(descriptor)
++    _sync_directory(directory)
+ 
+ 
+ def _atomic_bytes(path: Path, content: bytes, *, replace: bool = False) -> Path:
+-    """Publish fully flushed bytes, using an exclusive link unless replace is requested."""
++    """Publish fully flushed bytes without overwriting an existing revision."""
++    original = path
++    path = _native_fs_path(path)
+     path.parent.mkdir(parents=True, exist_ok=True)
+     if path.is_symlink():
+         raise ImplementationError(f"Refusing to write through symlink: {path}")
+@@ -96,16 +96,16 @@
+             handle.flush()
+             os.fsync(handle.fileno())
+         if replace:
+-            os.replace(temporary, path)
++            _replace_original(temporary, path)
+         else:
+-            # Same-filesystem hard link is atomic and cannot overwrite a concurrent create.
+-            os.link(temporary, path)
+-            temporary.unlink()
++            # Retain exclusive-create semantics on every supported filesystem.
++            publish_new(temporary, path)
++            temporary.unlink(missing_ok=True)
+         _fsync_directory(path.parent)
+-        return path
++        return original
+     finally:
+         if temporary.exists():
+-            temporary.unlink()
++            temporary.unlink(missing_ok=True)
+ 
+ 
+ def _safe_output(path: str | Path, content: str, overwrite: bool) -> str:
+@@ -121,35 +121,12 @@
+ 
+ @contextmanager
+ def _file_lock(lock_path, *, blocking=True):
+-    """Use the same advisory lock for native writes and portable capture."""
+-    lock_path = Path(lock_path)
+-    lock_path.parent.mkdir(parents=True, exist_ok=True)
++    """Use the platform's same exclusive lock for writes and portable capture."""
++    lock_path = _native_fs_path(lock_path)
+     if lock_path.is_symlink():
+         raise ImplementationError("Plan lock path must not be a symlink.")
+-    flags = os.O_CREAT | os.O_RDWR | getattr(os, "O_NOFOLLOW", 0)
+-    descriptor = os.open(lock_path, flags, 0o600)
+-    handle = os.fdopen(descriptor, "r+b", buffering=0)
+-    try:
+-        if os.name == "nt":
+-            import msvcrt
+-            if os.fstat(descriptor).st_size == 0:
+-                handle.write(b"\0")
+-                handle.flush()
+-            handle.seek(0)
+-            msvcrt.locking(descriptor, msvcrt.LK_LOCK if blocking else msvcrt.LK_NBLCK, 1)
+-        else:
+-            import fcntl
+-            fcntl.flock(descriptor, fcntl.LOCK_EX | (0 if blocking else fcntl.LOCK_NB))
+-        try:
+-            yield
+-        finally:
+-            if os.name == "nt":
+-                handle.seek(0)
+-                msvcrt.locking(descriptor, msvcrt.LK_UNLCK, 1)
+-            else:
+-                fcntl.flock(descriptor, fcntl.LOCK_UN)
+-    finally:
+-        handle.close()
++    with _held(lock_path, blocking=blocking):
++        yield
+ 
+ 
+ class ImplementationStore:
+@@ -531,7 +508,7 @@
+             if attachments.is_symlink():
+                 raise ImplementationError("Attachment directory must not be a symlink.")
+             attachments.mkdir(exist_ok=True)
+-            descriptor, temporary_name = tempfile.mkstemp(prefix=".pending-", dir=attachments)
++            descriptor, temporary_name = tempfile.mkstemp(prefix=".pending-", dir=_native_fs_path(attachments))
+             temporary = Path(temporary_name)
+             digest = hashlib.sha256()
+             byte_count = 0
+@@ -553,7 +530,7 @@
+                 if destination_path.is_symlink():
+                     raise ImplementationError("Attachment destination is a symlink: " + str(destination_path))
+                 try:
+-                    os.link(temporary, destination_path)
++                    publish_new(temporary, destination_path)
+                 except FileExistsError:
+                     check = hashlib.sha256()
+                     with destination_path.open("rb") as existing:
+@@ -589,7 +566,7 @@
+                 return dict(plan=saved, source_link=link, file_ref=str(destination_path))
+             finally:
+                 if temporary.exists():
+-                    temporary.unlink()
++                    temporary.unlink(missing_ok=True)
+ 
+     def export_json(self, plan_id: str, path: str | Path,
+                     revision: int | None = None, *, overwrite: bool = False) -> str:
+@@ -632,8 +609,8 @@
+             # If interrupted, manifest.json is absent until the final move below.
+             parent.mkdir()
+             for filename in filenames:
+-                os.replace(staging / filename, parent / filename)
+-            os.replace(staging / "manifest.json", parent / "manifest.json")
++                _replace_original(staging / filename, parent / filename)
++            _replace_original(staging / "manifest.json", parent / "manifest.json")
+             _fsync_directory(parent)
+             _fsync_directory(parent.parent)
+             return dict(
+--- a/model/monitoring_report_source.py
++++ b/model/monitoring_report_source.py
+@@ -18,6 +18,8 @@
+ from .common import (atomic_bytes, atomic_json, canonical, describe_file, digest,
+                      file_digest, held, identifier, now, read_json, relative_file,
+                      verify_file)
++from .portable_fs import (native_path as _native_fs_path,
++                          sync_directory as _sync_directory, publish_file as publish_new)
+ 
+ SCHEMA = "upstate.monitoring-report-source/v1"
+ EDITION = "monitoring-report-source/1"
+@@ -83,7 +85,7 @@
+     pending = None
+     try:
+         with source.open("rb") as src, tempfile.NamedTemporaryFile(
+-                dir=destination.parent, prefix=".report-", delete=False) as out:
++                dir=_native_fs_path(destination.parent), prefix=".report-", delete=False) as out:
+             pending = Path(out.name)
+             shutil.copyfileobj(src, out, 1024 * 1024)
+             out.flush()
+@@ -91,15 +93,11 @@
+         if pending.stat().st_size != size or file_digest(pending) != checksum:
+             raise ValueError("Source changed during monitoring report capture")
+         try:
+-            os.link(pending, destination)
++            publish_new(pending, destination)
+         except FileExistsError:
+             if destination.stat().st_size != size or file_digest(destination) != checksum:
+                 raise ValueError("Concurrent report member differs")
+-        fd = os.open(destination.parent, os.O_RDONLY | os.O_DIRECTORY)
+-        try:
+-            os.fsync(fd)
+-        finally:
+-            os.close(fd)
++        _sync_directory(destination.parent)
+     finally:
+         if pending is not None:
+             pending.unlink(missing_ok=True)
+@@ -169,21 +167,20 @@
+                         raise ValueError("Previously retained native manifest differs")
+                     continue
+                 destination.parent.mkdir(parents=True, exist_ok=True)
+-                with tempfile.NamedTemporaryFile(dir=destination.parent, delete=False,
+-                                                  prefix=".extract-") as out:
+-                    pending = Path(out.name)
+-                    try:
++                pending = None
++                try:
++                    with tempfile.NamedTemporaryFile(dir=_native_fs_path(destination.parent),
++                                                      delete=False, prefix=".extract-") as out:
++                        pending = Path(out.name)
+                         with archive.open(name) as src:
+                             shutil.copyfileobj(src, out, 1024 * 1024)
+                         out.flush()
+                         os.fsync(out.fileno())
+-                    except BaseException:
+-                        pending.unlink(missing_ok=True)
+-                        raise
+-                try:
+                     _copy_file(pending, destination)
+                 finally:
+-                    pending.unlink(missing_ok=True)
++                    # Windows must close the temporary handle before removing it.
++                    if pending is not None:
++                        pending.unlink(missing_ok=True)
+         return {"plan": plan, "network": network, "campaign": campaign,
+                 "history": history, "events": events, "manifest": manifest,
+                 "utility_contexts": utility_contexts}
+--- a/operator/community_archive_inputs.py
++++ b/operator/community_archive_inputs.py
+@@ -16,6 +16,9 @@
+ import zipfile
+ 
+ from model import community_report_context, community_report_handover
++from model.portable_fs import (native_path as _native_fs_path,
++                               sync_directory as _sync_directory, publish_file as publish_new,
++                               open_file, fd_stat, path_stat)
+ 
+ PACKAGE_BYTES = 270296
+ PACKAGE_SHA256 = "dd952535cc715a9a12aa2f665c5cddae0878dcb55d11792cd70e8cdbd1cc685e"
+@@ -40,16 +43,16 @@
+ 
+ def _read(path, expected_bytes=None, expected_sha256=None):
+     path = Path(path).absolute()
+-    descriptor = os.open(path, os.O_RDONLY | os.O_NOFOLLOW)
++    descriptor = open_file(path, os.O_RDONLY)
+     with os.fdopen(descriptor, "rb") as stream:
+-        before = os.fstat(stream.fileno())
++        before = fd_stat(stream.fileno())
+         if not stat.S_ISREG(before.st_mode):
+             raise ValueError("Receive the original as a regular file: " + str(path))
+         if expected_bytes is not None and before.st_size != expected_bytes:
+             raise ValueError("The original byte count changed: " + str(path))
+         body = stream.read()
+-        if (_identity(os.fstat(stream.fileno())) != _identity(before)
+-                or _identity(path.lstat()) != _identity(before)):
++        if (_identity(fd_stat(stream.fileno())) != _identity(before)
++                or _identity(path_stat(path)) != _identity(before)):
+             raise ValueError("The original changed during receiving: " + str(path))
+     if expected_sha256 is not None and _sha(body) != expected_sha256:
+         raise ValueError("The complete original SHA256 changed: " + str(path))
+@@ -119,22 +122,18 @@
+         # Keep an interrupted temporary write outside the frozen original-member
+         # directory, so it cannot prevent continuation of the same selected input.
+         staging = _directory(root.parent, (".community-input-staging",))
+-        with tempfile.NamedTemporaryFile(dir=staging, prefix=".community-input-",
++        with tempfile.NamedTemporaryFile(dir=_native_fs_path(staging), prefix=".community-input-",
+                                          delete=False) as stream:
+             temporary = Path(stream.name)
+             stream.write(body)
+             stream.flush()
+             os.fsync(stream.fileno())
+         try:
+-            os.link(temporary, destination)
++            publish_new(temporary, destination)
+         except FileExistsError:
+             if _read(destination, len(body), _sha(body)) != body:
+                 raise ValueError("An original input was concurrently changed")
+-        directory_fd = os.open(parent, os.O_RDONLY | os.O_DIRECTORY)
+-        try:
+-            os.fsync(directory_fd)
+-        finally:
+-            os.close(directory_fd)
++        _sync_directory(parent)
+     finally:
+         if temporary is not None:
+             temporary.unlink(missing_ok=True)
+--- a/operator/customer_spatial_receiving.py
++++ b/operator/customer_spatial_receiving.py
+@@ -64,16 +64,15 @@
+ 
+ 
+ def sync_directory(path):
+-    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+-    try:
+-        os.fsync(descriptor)
+-    finally:
+-        os.close(descriptor)
++    from model.portable_fs import sync_directory as _sync_directory
++    _sync_directory(path)
+ 
+ 
+ def publish(path, value, *, immutable=False, raw=False):
+     """Publish complete bytes, syncing the file and directory before return."""
+-    path = Path(path)
++    from model.portable_fs import (native_path as _native_fs_path,
++                                   replace as _replace_original, publish_file as publish_new)
++    path = _native_fs_path(path)
+     body = value if raw else encoded(value) + b"\n"
+     path.parent.mkdir(parents=True, exist_ok=True)
+     require(not path.is_symlink(), "Preserve the existing symbolic link: " + str(path))
+@@ -91,12 +90,12 @@
+             os.fsync(stream.fileno())
+         if immutable:
+             try:
+-                os.link(temporary, path)
++                publish_new(temporary, path)
+             except FileExistsError:
+                 require(path.is_file() and not path.is_symlink() and path.read_bytes() == body,
+                         "A different original file appeared: " + str(path))
+         else:
+-            os.replace(temporary, path)
++            _replace_original(temporary, path)
+         sync_directory(path.parent)
+     finally:
+         temporary.unlink(missing_ok=True)
+@@ -315,9 +314,10 @@
+                     # Reuse a fully written original pending archive after interruption.
+                     inspected = self.reviews.inspect_packet(pending)
+                     require(inspected["manifest"] == manifest, "Pending archive belongs to a different original packet")
+-                    os.link(pending, archive_path)
++                    from model.portable_fs import publish_file
++                    publish_file(pending, archive_path)
+                     sync_directory(archive_path.parent)
+-                    pending.unlink()
++                    pending.unlink(missing_ok=True)
+                 else:
+                     self.reviews.archive_packet(destination, archive_path)
+                     sync_directory(archive_path.parent)
+--- a/source_tools/operator_source_intake.py
++++ b/source_tools/operator_source_intake.py
+@@ -81,16 +81,19 @@
+ 
+ def secret(args):
+     if args.capability_file:
+-        flags = os.O_RDONLY | os.O_CLOEXEC | getattr(os, "O_NOFOLLOW", 0)
+-        fd = os.open(args.capability_file, flags)
+-        with os.fdopen(fd, "rb") as handle:
+-            info = os.fstat(handle.fileno())
+-            if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.geteuid()
+-                    or stat.S_IMODE(info.st_mode) & 0o077):
+-                raise IntakeError("The capability file must be an ordinary file owned by this user with mode 0600 or 0400.")
+-            raw = handle.read(4097)
+-            if len(raw) > 4096:
+-                raise IntakeError("The capability file must contain only the current operator capability.")
++        # Support both module import and the original direct-script entry point.
++        try:
++            from source_tools.private_capability import read_private_file
++        except ModuleNotFoundError as error:
++            if error.name != "source_tools":
++                raise
++            from private_capability import read_private_file
++        try:
++            raw = read_private_file(args.capability_file)
++        except (OSError, ValueError) as error:
++            raise IntakeError("Choose a private capability file owned by the current user. "
++                              "On Windows, allow only this user, SYSTEM and Administrators; "
++                              "on macOS/Linux, use mode 0600 or 0400.") from error
+         try:
+             value = raw.decode("utf-8").strip()
+         except UnicodeError as error:
+--- a/source_tools/private_capability.py
++++ b/source_tools/private_capability.py
+@@ -0,0 +1,151 @@
++"""Read one private operator capability without changing filesystem permissions.
++
++POSIX keeps owner/mode validation. Windows examines the opened file's owner and
++DACL, permitting only its owner and the operating system's privileged accounts.
++No shell, global account configuration, credential logging, or new dependency.
++"""
++from __future__ import annotations
++
++import os
++import stat
++
++_PRIVATE = "The capability file must be an ordinary owner-only file."
++
++
++def _windows_descriptor(path):
++    import ctypes as c
++    from ctypes import wintypes as w
++    import msvcrt
++
++    kernel = c.WinDLL("kernel32", use_last_error=True)
++    security = c.WinDLL("advapi32", use_last_error=True)
++    pointer = c.c_void_p
++    pp = c.POINTER(pointer)
++
++    def api(dll, name, arguments, result=w.BOOL):
++        function = getattr(dll, name)
++        function.argtypes, function.restype = arguments, result
++        return function
++
++    create = api(kernel, "CreateFileW", [w.LPCWSTR, w.DWORD, w.DWORD, pointer,
++                 w.DWORD, w.DWORD, w.HANDLE], w.HANDLE)
++    close = api(kernel, "CloseHandle", [w.HANDLE])
++    free = api(kernel, "LocalFree", [pointer], pointer)
++    attributes = api(kernel, "GetFileInformationByHandleEx",
++                     [w.HANDLE, c.c_int, pointer, w.DWORD])
++    process = api(kernel, "GetCurrentProcess", [], w.HANDLE)
++    open_token = api(security, "OpenProcessToken",
++                     [w.HANDLE, w.DWORD, c.POINTER(w.HANDLE)])
++    token_info = api(security, "GetTokenInformation",
++                     [w.HANDLE, c.c_int, pointer, w.DWORD, c.POINTER(w.DWORD)])
++    file_security = api(security, "GetSecurityInfo",
++                         [w.HANDLE, c.c_int, w.DWORD, pp, pp, pp, pp, pp], w.DWORD)
++    get_ace = api(security, "GetAce", [pointer, w.DWORD, pp])
++    sid_text = api(security, "ConvertSidToStringSidW", [pointer, pp])
++
++    class Attributes(c.Structure):
++        _fields_ = [("attributes", w.DWORD), ("reparse_tag", w.DWORD)]
++
++    class TokenUser(c.Structure):
++        _fields_ = [("sid", pointer), ("attributes", w.DWORD)]
++
++    class ACL(c.Structure):
++        _fields_ = [("revision", w.BYTE), ("reserved", w.BYTE),
++                    ("size", w.WORD), ("count", w.WORD), ("reserved2", w.WORD)]
++
++    class ACE(c.Structure):
++        _fields_ = [("kind", w.BYTE), ("flags", w.BYTE),
++                    ("size", w.WORD), ("mask", w.DWORD)]
++
++    def sid(value):
++        text = pointer()
++        if not value or not sid_text(value, c.byref(text)):
++            raise c.WinError(c.get_last_error())
++        try:
++            return c.wstring_at(text)
++        finally:
++            free(text)
++
++    name = os.path.abspath(os.fspath(path))
++    if not name.startswith("\\\\?\\"):
++        name = "\\\\?\\UNC\\" + name[2:] if name.startswith("\\\\") else "\\\\?\\" + name
++    # GENERIC_READ includes READ_CONTROL. Deny simultaneous writers/deleters;
++    # FILE_FLAG_OPEN_REPARSE_POINT opens the link itself so it can be rejected.
++    handle = create(name, 0x80000000, 1, None, 3, 0x00200000 | 0x02000000, None)
++    if handle == pointer(-1).value:
++        raise c.WinError(c.get_last_error())
++    token, descriptor = w.HANDLE(), pointer()
++    try:
++        info = Attributes()
++        if not attributes(handle, 9, c.byref(info), c.sizeof(info)):
++            raise c.WinError(c.get_last_error())
++        if info.attributes & (0x10 | 0x400):
++            raise ValueError(_PRIVATE)
++        if not open_token(process(), 8, c.byref(token)):
++            raise c.WinError(c.get_last_error())
++        size = w.DWORD()
++        token_info(token, 1, None, 0, c.byref(size))
++        if not size.value:
++            raise c.WinError(c.get_last_error())
++        buffer = c.create_string_buffer(size.value)
++        if not token_info(token, 1, buffer, size.value, c.byref(size)):
++            raise c.WinError(c.get_last_error())
++        current_user = sid(c.cast(buffer, c.POINTER(TokenUser)).contents.sid)
++        owner, dacl = pointer(), pointer()
++        error = file_security(handle, 1, 1 | 4, c.byref(owner), None,
++                              c.byref(dacl), None, c.byref(descriptor))
++        if error:
++            raise c.WinError(error)
++        if not dacl.value or sid(owner) != current_user:
++            raise ValueError(_PRIVATE)
++        trusted = {current_user, "S-1-5-18", "S-1-5-32-544"}  # SYSTEM and Administrators
++        # File data access, generic data rights, delete, and ACL/owner mutation.
++        sensitive = 0xF0000000 | 0x000D0000 | 0x00000007
++        for index in range(c.cast(dacl, c.POINTER(ACL)).contents.count):
++            entry = pointer()
++            if not get_ace(dacl, index, c.byref(entry)):
++                raise c.WinError(c.get_last_error())
++            ace = c.cast(entry, c.POINTER(ACE)).contents
++            if ace.flags & 0x08 or ace.kind in (1, 6, 10, 12):
++                continue  # Inherit-only entries and denial entries grant no access here.
++            if ace.kind != 0 or ace.size < c.sizeof(ACE) + 8:
++                raise ValueError(_PRIVATE)
++            if ace.mask & sensitive and sid(entry.value + c.sizeof(ACE)) not in trusted:
++                raise ValueError(_PRIVATE)
++        fd = msvcrt.open_osfhandle(handle, os.O_RDONLY | os.O_BINARY)
++        handle = None  # The CRT descriptor now owns exactly the validated handle.
++        return fd
++    finally:
++        if descriptor.value:
++            free(descriptor)
++        if token.value:
++            close(token)
++        if handle is not None:
++            close(handle)
++
++
++def read_private_file(path, *, limit=4096):
++    """Validate the opened file before reading, retaining the bounded byte contract."""
++    if type(limit) is not int or limit < 1:
++        raise ValueError("A positive private-file byte limit is required.")
++    if os.name == "nt":
++        fd = _windows_descriptor(path)
++    else:
++        flags = os.O_RDONLY | getattr(os, "O_CLOEXEC", 0)
++        flags |= getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
++        fd = os.open(path, flags)
++    with os.fdopen(fd, "rb") as stream:
++        before = os.fstat(stream.fileno())
++        if not stat.S_ISREG(before.st_mode):
++            raise ValueError(_PRIVATE)
++        if os.name != "nt" and (before.st_uid != os.geteuid()
++                                or stat.S_IMODE(before.st_mode) & 0o077):
++            raise ValueError(_PRIVATE + " Use mode 0600 or 0400.")
++        raw = stream.read(limit + 1)
++        after = os.fstat(stream.fileno())
++        if (before.st_size, before.st_mtime_ns, before.st_ctime_ns) != (
++                after.st_size, after.st_mtime_ns, after.st_ctime_ns):
++            raise ValueError("The capability file changed while it was being read.")
++        if len(raw) > limit:
++            raise ValueError("The capability file must contain only the current operator capability.")
++    return raw
