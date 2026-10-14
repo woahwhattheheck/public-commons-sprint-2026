@@ -13,7 +13,7 @@ export function originalCsvRows(text){
  function field(){row.push(value);value='';closed=false;}
  function end(){field();rows.push({line:start,values:row});row=[];start=line+1;}
  for(let i=0;i<text.length;i++){const ch=text[i];
-  if(quoted){if(ch==='"'){if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}}else{value+=ch;if(ch==='\n')line++;}}
+  if(quoted){if(ch==='"'){if(text[i+1]==='"'){value+='"';i++;}else{quoted=false;closed=true;}}else{value+=ch;if(ch==='\r'||(ch==='\n'&&text[i-1]!=='\r'))line++;}}
   else if(ch===',')field();
   else if(ch==='\r'||ch==='\n'){end();if(ch==='\r'&&text[i+1]==='\n')i++;line++;}
   else if(closed)throw new InputError('Unexpected original CSV text after closing quote at line '+line);

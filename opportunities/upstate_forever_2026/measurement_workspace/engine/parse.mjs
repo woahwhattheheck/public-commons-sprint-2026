@@ -31,7 +31,7 @@ export function parseCSV(text, {maxRows = 1_000_000, maxCell = 1_000_000} = {}) 
     const char = text[i];
     if (inQuotes) {
       if (char === '"') { if (text[i+1] === '"') { field += '"'; i++; } else {inQuotes=false;afterQuote=true;} }
-      else {field += char; if (char === '\n') line++;}
+      else {field += char; if (char === '\r' || (char === '\n' && text[i-1] !== '\r')) line++;}
     } else if (char === ',') endField();
     else if (char === '\n' || char === '\r') {endRecord();if(char==='\r'&&text[i+1]==='\n') i++;line++;}
     else if (afterQuote) throw new InputError(`Unexpected character after closing quote at line ${line}`);
