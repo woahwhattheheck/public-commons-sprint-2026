@@ -37,7 +37,7 @@ configuration when access is required.
 After acquisition, the reader checks each blob's type, declared size, complete
 batch framing and Git object hash before passing its original bytes to the
 builder. The reader and builder share a 128 MiB aggregate source limit, while
-original source files retain their 2 MiB limit. Before materialization, the whole
+original source files retain their 4 MiB limit. Before materialization, the whole
 package—including its generated manifest, metadata, README and license—must fit
 the original installer's 128 MiB unpacked limit and 4 MiB member limit. The final
 compressed archive remains limited to 64 MiB. Use the maintained object receiver,

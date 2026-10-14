@@ -1,4 +1,5 @@
 // MIT. Bind source-owned byte inventories to one unchanged distribution selection.
+import { MAX_SOURCE_FILE_BYTES } from './git-source.mjs';
 export const PINNED_SOURCE_SCHEMA = 'stellar-forge.measurement-workspace-source.v1';
 export const MAX_PINNED_SOURCE_BYTES = 1024 * 1024;
 const plain = value => value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -29,7 +30,7 @@ export function validatePinnedSourceManifest(value, manifestPath) {
         Object.keys(member).some(key => !['path','gitBlob','bytes','sha256'].includes(key)) ||
         !path(member.path) || member.path === manifestPath || seen.has(member.path) ||
         !oid(member.gitBlob) || !Number.isSafeInteger(member.bytes) || member.bytes < 0 ||
-        member.bytes > 2 * 1024 * 1024 || !/^[a-f0-9]{64}$/.test(member.sha256 ?? ''))
+        member.bytes > MAX_SOURCE_FILE_BYTES || !/^[a-f0-9]{64}$/.test(member.sha256 ?? ''))
       invalid('Invalid or duplicate pinned source member');
     seen.add(member.path);
     entries.push({...member});
