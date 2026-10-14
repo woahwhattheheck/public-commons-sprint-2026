@@ -26,7 +26,11 @@ import time
 from typing import Any, BinaryIO, Iterator
 import zipfile
 
-VERSION = "1.0.0"
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from source_tools import original_object_io as object_io
+
+VERSION = "1.1.0"
 REQUEST = "commons.original-source-missing-objects-request/v1"
 PACKET = "commons.original-source-objects/v1"
 BLOCK = 192 * 1024  # Divisible by three for streaming, canonical Base64.
@@ -74,13 +78,13 @@ def relative(value: Any) -> str:
     p = PurePosixPath(value)
     if not p.parts or p.is_absolute() or str(p) != value or any(x in (".", "..") for x in p.parts):
         raise TransferError("Unsafe original relative path: " + repr(value))
-    if ":" in p.parts[0] or any(ord(c) < 32 for c in value):
+    if ":" in p.parts[0] or any(ord(c) < 32 or 0xD800 <= ord(c) <= 0xDFFF for c in value):
         raise TransferError("Nonportable original path: " + repr(value))
     return value
 
 
 def signature(path: Path) -> tuple[int, int, int, int, int]:
-    s = path.lstat()
+    s = object_io.file_stat(object_io.native(path))
     if not stat.S_ISREG(s.st_mode):
         raise TransferError("Expected a regular nonsymlink file: " + str(path))
     return s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns
@@ -90,8 +94,8 @@ def signature(path: Path) -> tuple[int, int, int, int, int]:
 def regular(path: Path) -> Iterator[BinaryIO]:
     before = signature(path)
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
-    with os.fdopen(os.open(path, flags), "rb") as stream:
-        s = os.fstat(stream.fileno())
+    with os.fdopen(object_io.open_file(object_io.native(path), flags), "rb") as stream:
+        s = object_io.fd_stat(stream.fileno())
         opened = (s.st_dev, s.st_ino, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
         if before != opened:
             raise TransferError("Source changed while opening: " + str(path))
@@ -114,14 +118,18 @@ def hash_file(path: Path) -> tuple[int, str]:
 
 
 def write_json(path: Path, value: Any) -> None:
-    """Replace only this operation's small report, never a source object."""
+    """Replace this operation's report after closing its flushed temporary file."""
+    path = object_io.native(path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".report-", delete=False) as f:
-        pending = Path(f.name)
-        try:
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=path.parent, prefix=".report-", delete=False) as f:
+            pending = Path(f.name)
             f.write(canonical(value)); f.flush(); os.fsync(f.fileno())
-            os.replace(pending, path)
-        finally:
+        object_io.replace(pending, path)
+        object_io.sync_directory(path.parent)
+    finally:
+        if pending is not None:
             pending.unlink(missing_ok=True)
 
 
@@ -214,6 +222,7 @@ class Candidate:
 class SourceIndex:
     """Disk-backed byte identities. Every chosen body is rehashed at export."""
     def __init__(self, path: Path):
+        path = object_io.native(path)
         path.parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(path)
         self.db.execute("PRAGMA journal_mode=WAL")
@@ -256,15 +265,16 @@ class SourceIndex:
         sizes = set(wanted.values())
         found: dict[str, Candidate] = {}
         for root in roots:
-            if root.is_symlink():
+            root = object_io.native(root)
+            if object_io.is_link(root):
                 raise TransferError("Retained root must not be a symlink: " + str(root))
             root = root.resolve(strict=True)
             if root.is_dir():
                 for directory, dirs, files in os.walk(root, followlinks=False):
-                    dirs[:] = sorted(d for d in dirs if not (Path(directory) / d).is_symlink())
+                    dirs[:] = sorted(d for d in dirs if not object_io.is_link(Path(directory) / d))
                     for name in sorted(files):
                         p = Path(directory) / name
-                        if p.is_symlink():
+                        if object_io.is_link(p):
                             self.stats["skipped_symlinks"] += 1; continue
                         s = p.stat()
                         if not stat.S_ISREG(s.st_mode):
@@ -320,46 +330,51 @@ def export(request: dict[str, Any], request_hash: str, selection: dict[str, Any]
            destination: Path, compress: bool = False) -> dict[str, Any]:
     if selection.get("request_sha256") != request_hash or not selection.get("complete"):
         raise TransferError("Export requires this request's complete source plan")
-    if destination.exists() or destination.is_symlink():
+    destination = object_io.native(destination)
+    if destination.exists() or object_io.is_link(destination):
         raise TransferError("Use a new packet destination: " + str(destination))
     destination.parent.mkdir(parents=True, exist_ok=True)
-    with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".objects-", delete=False) as raw:
-        pending = Path(raw.name)
-        stream = gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) if compress else raw
-        try:
-            header = {"schema": PACKET, "operation": request.get("operation"),
-                      "request_sha256": request_hash, "objects_count": request["objects_count"],
-                      "unique_bytes": request["unique_bytes"]}
-            if "source_manifest_sha256" in request:
-                header["source_manifest_sha256"] = request["source_manifest_sha256"]
-            stream.write(canonical(header).rstrip()[:-1] + b',"objects":[')
-            with contextlib.ExitStack() as sources:
-                archives: dict[str, zipfile.ZipFile] = {}
-                for ordinal, row in enumerate(request["objects"]):
-                    if ordinal:
-                        stream.write(b",")
-                    stream.write(canonical(row).rstrip()[:-1] + b',"content_base64":"')
-                    source = Candidate(**selection["sources"][row["sha256"]])
-                    size, h, carry = 0, hashlib.sha256(), b""
-                    with source.open(sources, archives) as src:
-                        while block := src.read(BLOCK):
-                            h.update(block); size += len(block)
-                            chunk = carry + block; boundary = len(chunk) // 3 * 3
-                            stream.write(base64.b64encode(chunk[:boundary])); carry = chunk[boundary:]
-                        if carry:
-                            stream.write(base64.b64encode(carry))
-                    if size != row["bytes"] or h.hexdigest() != row["sha256"]:
-                        raise TransferError("Original object changed before export: " + row["sha256"])
-                    stream.write(b'"}')
-            stream.write(b"]}\n")
-            if compress:
-                stream.close()
-            raw.flush(); os.fsync(raw.fileno())
-            # Never replace an existing packet, including after a lost response.
-            os.link(pending, destination, follow_symlinks=False)
-        finally:
-            if compress and not stream.closed:
-                stream.close()
+    pending = None
+    try:
+        with tempfile.NamedTemporaryFile(dir=destination.parent, prefix=".objects-", delete=False) as raw:
+            pending = Path(raw.name)
+            stream = gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=0) if compress else raw
+            try:
+                header = {"schema": PACKET, "operation": request.get("operation"),
+                          "request_sha256": request_hash, "objects_count": request["objects_count"],
+                          "unique_bytes": request["unique_bytes"]}
+                if "source_manifest_sha256" in request:
+                    header["source_manifest_sha256"] = request["source_manifest_sha256"]
+                stream.write(canonical(header).rstrip()[:-1] + b',"objects":[')
+                with contextlib.ExitStack() as sources:
+                    archives: dict[str, zipfile.ZipFile] = {}
+                    for ordinal, row in enumerate(request["objects"]):
+                        if ordinal:
+                            stream.write(b",")
+                        stream.write(canonical(row).rstrip()[:-1] + b',"content_base64":"')
+                        source = Candidate(**selection["sources"][row["sha256"]])
+                        size, h, carry = 0, hashlib.sha256(), b""
+                        with source.open(sources, archives) as src:
+                            while block := src.read(BLOCK):
+                                h.update(block); size += len(block)
+                                chunk = carry + block; boundary = len(chunk) // 3 * 3
+                                stream.write(base64.b64encode(chunk[:boundary])); carry = chunk[boundary:]
+                            if carry:
+                                stream.write(base64.b64encode(carry))
+                        if size != row["bytes"] or h.hexdigest() != row["sha256"]:
+                            raise TransferError("Original object changed before export: " + row["sha256"])
+                        stream.write(b'"}')
+                stream.write(b"]}\n")
+                if compress:
+                    stream.close()
+                raw.flush(); os.fsync(raw.fileno())
+            finally:
+                if compress and not stream.closed:
+                    stream.close()
+        # The complete, flushed writer is now closed. Never replace a packet.
+        object_io.publish_file(pending, destination)
+    finally:
+        if pending is not None:
             pending.unlink(missing_ok=True)
     size, identity = hash_file(destination)
     return {"schema": "commons.original-source-object-export/v1", "path": str(destination),
@@ -422,10 +437,10 @@ class JsonStream:
         self.expect(b'"')
         h, size, carry, padded = hashlib.sha256(), 0, b"", False
         flags = os.O_RDWR | os.O_CREAT | getattr(os, "O_NOFOLLOW", 0)
-        with os.fdopen(os.open(path, flags, 0o600), "r+b") as out:
+        with os.fdopen(object_io.open_file(object_io.native(path), flags), "r+b") as out:
             original = os.fstat(out.fileno())
-            if not stat.S_ISREG(original.st_mode):
-                raise TransferError("Receiving stage is not a regular file")
+            if not stat.S_ISREG(original.st_mode) or original.st_nlink != 1:
+                raise TransferError("Receiving stage is not an independent regular file")
             remaining = original.st_size
             while True:
                 if not self.buffer and not self.fill():
@@ -537,29 +552,16 @@ def read_packet(path: Path, stage: Path, expected: str | None = None) -> dict[st
 
 
 @contextlib.contextmanager
-def parent_fd(root: Path, name: str, create: bool = False) -> Iterator[tuple[int, str]]:
-    """Traverse with no-follow directory descriptors; never follow a target link."""
-    if not hasattr(os, "O_NOFOLLOW") or os.open not in os.supports_dir_fd:
-        raise TransferError("Receiving requires a POSIX host with no-follow directory descriptors")
-    parts = PurePosixPath(relative(name)).parts
-    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
-    descriptors = [os.open(root, flags)]
-    try:
-        for item in parts[:-1]:
-            if create:
-                try: os.mkdir(item, dir_fd=descriptors[-1])
-                except FileExistsError: pass
-            descriptors.append(os.open(item, flags, dir_fd=descriptors[-1]))
-        yield descriptors[-1], parts[-1]
-    finally:
-        for descriptor in reversed(descriptors): os.close(descriptor)
+def parent_fd(root, name: str, create: bool = False) -> Iterator[tuple[Any, str]]:
+    """Hold each parent by its native directory handle, never follow target links."""
+    with object_io.parent(root, relative(name), create) as value:
+        yield value
 
 
-def target_state(root: Path, name: str, expected: tuple[int, str]) -> str:
+def target_state(root, name: str, expected: tuple[int, str]) -> str:
     try:
         with parent_fd(root, name) as (directory, leaf):
-            flags = os.O_RDONLY | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0)
-            fd = os.open(leaf, flags, dir_fd=directory)
+            fd = directory.open(leaf, os.O_RDONLY)
             with os.fdopen(fd, "rb") as f:
                 if not stat.S_ISREG(os.fstat(f.fileno()).st_mode):
                     return "conflict"
@@ -575,14 +577,14 @@ def receiving_stage(destination: Path, packet_hash: str, packet_bytes: int) -> I
     """Own a deterministic decode stage, surviving process death without a copy farm."""
     key = sha((str(destination) + "\0" + packet_hash).encode("utf-8"))
     stage = destination.parent / (".source-objects-" + key)
-    if stage.is_symlink():
-        raise TransferError("Receiving stage must not be a symlink")
+    if object_io.is_link(stage):
+        raise TransferError("Receiving stage must not be a symlink or reparse point")
     stage.mkdir(mode=0o700, exist_ok=True)
     owner = {"schema": "commons.original-source-object-stage/v1", "destination": str(destination),
              "packet_sha256": packet_hash, "packet_bytes": packet_bytes}
     identity_file = stage / "STAGE.json"
     expected = canonical(owner)
-    if identity_file.exists() or identity_file.is_symlink():
+    if identity_file.exists() or object_io.is_link(identity_file):
         with regular(identity_file) as f:
             if f.read() != expected:
                 raise TransferError("Existing receiving stage has another owner; preserved " + str(stage))
@@ -591,8 +593,10 @@ def receiving_stage(destination: Path, packet_hash: str, packet_bytes: int) -> I
             raise TransferError("Unidentified nonempty receiving stage preserved: " + str(stage))
         with identity_file.open("xb") as f:
             f.write(expected); f.flush(); os.fsync(f.fileno())
-    # On an exception or process kill, retain exact partial bytes for this packet.
-    yield stage
+    # Keep the directory itself anchored on Windows throughout decode.
+    # An exception or process kill retains exact partial bytes for this packet.
+    with object_io.open_directory(stage):
+        yield stage
     # Completion removes only this operation's own decoded cache, not originals.
     with regular(identity_file) as f:
         if f.read() != expected:
@@ -601,14 +605,17 @@ def receiving_stage(destination: Path, packet_hash: str, packet_bytes: int) -> I
 
 
 def _receive(packet: Path, destination: Path, expected: str | None = None,
-            request: tuple[dict[str, Any], str] | None = None, dry_run: bool = False) -> dict[str, Any]:
-    if destination.is_symlink():
-        raise TransferError("Receiving root must not be a symlink")
+            request: tuple[dict[str, Any], str] | None = None, dry_run: bool = False,
+            *, root=None) -> dict[str, Any]:
+    destination = object_io.native(destination)
+    if object_io.is_link(destination):
+        raise TransferError("Receiving root must not be a symlink or reparse point")
     if not destination.exists():
         if dry_run:
             raise TransferError("Create the owned destination before a read-only receiving plan")
         destination.mkdir(parents=True, exist_ok=False)
     destination = destination.resolve(strict=True)
+    root = root if root is not None else destination
     # Decode to a separate same-filesystem scratch tree. A corrupt later object
     # cannot make an earlier unvalidated object appear in the receiving tree.
     physical_size, physical_hash = hash_file(packet)
@@ -627,7 +634,11 @@ def _receive(packet: Path, destination: Path, expected: str | None = None,
             if expected_rows != actual_rows:
                 raise TransferError("Packet does not contain the complete exact requested selection")
         rows = [(name, row) for row in decoded["objects"] for name in row["paths"]]
-        states = {name: target_state(destination, name, (row["bytes"], row["sha256"]))
+        try:
+            object_io.validate_names([name for name, _ in rows])
+        except object_io.PathConflict as error:
+            raise TransferError(str(error)) from error
+        states = {name: target_state(root, name, (row["bytes"], row["sha256"]))
                   for name, row in rows}
         conflicts = [name for name, state in states.items() if state == "conflict"]
         if conflicts:
@@ -638,20 +649,20 @@ def _receive(packet: Path, destination: Path, expected: str | None = None,
                 if states[name] == "identical":
                     pending_id = sha((decoded["packet_sha256"] + "\0" + name).encode("utf-8"))
                     pending_name = str(PurePosixPath(name).parent / (".original-object-" + pending_id))
-                    if target_state(destination, pending_name, (row["bytes"], row["sha256"])) == "identical":
-                        with parent_fd(destination, pending_name) as (directory, leaf):
-                            os.unlink(leaf, dir_fd=directory); os.fsync(directory)
+                    if target_state(root, pending_name, (row["bytes"], row["sha256"])) == "identical":
+                        with parent_fd(root, pending_name) as (directory, leaf):
+                            directory.unlink(leaf); directory.sync()
                     continue
-                with parent_fd(destination, name, create=True) as (directory, leaf):
+                with parent_fd(root, name, create=True) as (directory, leaf):
                     # Each logical path gets its own inode so editing one companion
                     # never alters another equal-content logical source path.
                     pending_id = sha((decoded["packet_sha256"] + "\0" + name).encode("utf-8"))
                     temporary_leaf = ".original-object-" + pending_id
-                    flags = os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW | getattr(os, "O_NONBLOCK", 0)
-                    fd = os.open(temporary_leaf, flags, 0o600, dir_fd=directory)
+                    fd = directory.open(temporary_leaf, os.O_RDWR | os.O_CREAT)
                     with os.fdopen(fd, "r+b") as out, regular(Path(row["staged"])) as source:
                         pending_stat = os.fstat(out.fileno())
-                        if not stat.S_ISREG(pending_stat.st_mode) or pending_stat.st_size > row["bytes"]:
+                        if (not stat.S_ISREG(pending_stat.st_mode) or pending_stat.st_nlink != 1
+                                or pending_stat.st_size > row["bytes"]):
                             raise TransferError("Interrupted receiving file differs; preserved " + name)
                         remaining = pending_stat.st_size
                         while remaining:
@@ -664,17 +675,16 @@ def _receive(packet: Path, destination: Path, expected: str | None = None,
                         if hash_stream(out) != (row["bytes"], row["sha256"]):
                             raise TransferError("Staged source changed before publication: " + name)
                     try:
-                        os.link(temporary_leaf, leaf, src_dir_fd=directory, dst_dir_fd=directory,
-                                follow_symlinks=False)
+                        directory.publish(temporary_leaf, leaf)
                         written += 1
                     except FileExistsError:
-                        if target_state(destination, name, (row["bytes"], row["sha256"])) != "identical":
+                        if target_state(root, name, (row["bytes"], row["sha256"])) != "identical":
                             raise TransferError("Concurrent local edit preserved: " + name)
-                    os.unlink(temporary_leaf, dir_fd=directory)
-                    os.fsync(directory)
+                    directory.unlink(temporary_leaf, missing_ok=True)
+                    directory.sync()
             # A fresh read verifies every logical alias, including unchanged ones.
             for name, row in rows:
-                if target_state(destination, name, (row["bytes"], row["sha256"])) != "identical":
+                if target_state(root, name, (row["bytes"], row["sha256"])) != "identical":
                     raise TransferError("Received source changed during final readback: " + name)
         return {"schema": "commons.original-source-object-receiving/v1",
                 "operation": decoded.get("operation"), "version": VERSION,
@@ -689,23 +699,12 @@ def _receive(packet: Path, destination: Path, expected: str | None = None,
 
 def receive(packet: Path, destination: Path, expected: str | None = None,
             request: tuple[dict[str, Any], str] | None = None, dry_run: bool = False) -> dict[str, Any]:
-    """Serialize only this receiving root; no Workspace or scientific lock."""
+    """Serialize only this native receiving root; preserve Workspace/run locks."""
     try:
-        import fcntl
-    except ImportError as exc:
-        raise TransferError("Receiving requires a POSIX host with flock and no-follow paths") from exc
-    if destination.is_symlink():
-        raise TransferError("Receiving root must not be a symlink")
-    if not destination.exists():
-        if dry_run:
-            raise TransferError("Create the owned destination before a read-only receiving plan")
-        destination.mkdir(parents=True, exist_ok=False)
-    directory = os.open(destination, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        fcntl.flock(directory, fcntl.LOCK_EX)
-        return _receive(packet, destination, expected, request, dry_run)
-    finally:
-        os.close(directory)
+        with object_io.receiving_root(destination, dry_run) as root:
+            return _receive(packet, root.path, expected, request, dry_run, root=root)
+    except object_io.PathConflict as error:
+        raise TransferError(str(error)) from error
 
 
 def request_archive(archive_path: Path, prefixes: list[str], strip_prefix: str = "",
@@ -833,7 +832,7 @@ def main(argv: list[str] | None = None) -> int:
         request = read_request(args.request, args.request_sha256) if args.request else None
         result = receive(args.packet, args.destination, args.packet_sha256, request, args.dry_run)
         write_json(args.report, result); print(json.dumps(result)); return 0
-    except (TransferError, OSError, json.JSONDecodeError, zipfile.BadZipFile, EOFError) as exc:
+    except (TransferError, object_io.PathConflict, OSError, json.JSONDecodeError, zipfile.BadZipFile, EOFError) as exc:
         print(json.dumps({"error": type(exc).__name__, "message": str(exc)}, ensure_ascii=False), file=sys.stderr)
         return 1
 

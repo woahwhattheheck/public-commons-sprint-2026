@@ -1,6 +1,6 @@
 # Exact original source transfers
 
-Version 1.0.0. Python 3.10 or newer. Standard library only. Receiving requires Linux or another POSIX host providing directory-relative no-follow access and `flock`.
+Version 1.1.0. Python 3.10 or newer. Standard library only. Native Windows, macOS and Linux receiving use the same request, packet and reporting formats. The Windows backend reuses the application's maintained `model/windows_fs.py` for file identities, extended paths and locks.
 
 ## Purpose
 
@@ -71,19 +71,29 @@ The receiver checks the physical packet hash, decodes and verifies all object bo
 
 For a destination review, create the owned directory and add `--dry-run`. It verifies and stages packet bytes but does not publish logical source files. The temporary decoded cache is removed after a successful dry run. Consequently this is read-only with respect to the source destination, not a promise of zero scratch-disk use.
 
-After interruption, rerun the same command with the same request, packet and destination. The receiver uses one deterministic sibling decode stage for that destination/packet pair, checks existing byte prefixes and continues incomplete files. Each completed path is published with a no-replace operation and directory synchronization. A lost response does not require another destination or copy of the entire application. Receiving is file-atomic, not a transaction that rolls back already completed files. A final read verifies every selected logical path.
+After interruption, rerun the same command with the same request, packet and destination. The receiver uses one deterministic sibling decode stage for that destination/packet pair, checks existing byte prefixes and continues incomplete files. Each completed path is published with a no-replace operation. POSIX publication synchronizes the containing directory. Windows publication closes the verified writer first, renames through an owned directory handle without replacement, and flushes the renamed file; it does not claim a POSIX directory-fsync guarantee. A lost response does not require another destination or copy of the entire application. Receiving is file-atomic, not a transaction that rolls back already completed files. A final read verifies every selected logical path.
 
 Two paths containing equal bytes receive independent file inodes. Editing one companion does not edit the other. Keep deliberate edits in place: the next receive reports the affected paths and leaves them untouched. Receive another edition to a separately named destination, or reconcile changes through the original application's maintained source-refresh workflow.
 
-The lock covers only the owned receiving directory. No scientific task, shared application, native run scheduler, server process, or source archive is executed or edited. Keep sufficient space for the unique decoded objects plus the complete logical received selection. Retained stages after a failure are named `.source-objects-<identity>` and contain an ownership record; preserve them for a restart, rather than deleting unknown directories.
+On POSIX, the lock covers the owned receiving directory. Windows uses the maintained native lock on a stable sibling lock file keyed to that directory's volume and file identity. The small `.source-objects-lock-<identity>` file stays in place so waiting receivers keep the same lock. No scientific task, shared application, native run scheduler, server process, or source archive is executed or edited. Keep sufficient space for the unique decoded objects plus the complete logical received selection. Retained stages after a failure are named `.source-objects-<identity>` and contain an ownership record; preserve them for a restart, rather than deleting unknown directories.
+
+## Native paths and portable storage
+
+Run the commands above with the received application's Python. On Windows, use its supplied `python.exe`; no WSL, shell translation or `fcntl` installation is needed. Keep quoted paths as separate command arguments. Names with spaces, Unicode characters and deep directories are retained; the Windows path layer uses the extended namespace without shortening source identifiers.
+
+Before publication, the receiver checks all requested names for file/directory conflicts. Windows also rejects reserved device names, alternate-data-stream syntax, terminal dots/spaces, illegal characters and overlong components. Windows and Mac receiving reject case or Unicode-normalization aliases among requested names before writing originals. The shared `original_object_io.validate_names(names, target="portable")` entry point allows an archive assembler to apply that check to its selected original paths. A naming conflict is reported; no source file is silently renamed or substituted.
+
+Windows child opens are relative to held native directory handles and reject reparse points, including junctions. Original data is copied independently for every logical destination and then published without replacing existing data. Windows publication does not require hardlinks. On POSIX volumes without hardlinks, the existing verified copy uses native exclusive rename (`renameat2` on Linux or `renameatx_np` on Mac). A host without that operation reports the concrete capability error while retaining its partial file. Reports and packets close their temporary writers before publication, allowing normal Windows file sharing semantics.
+
+The Windows implementation follows Microsoft's [NtCreateFile relative-directory contract](https://learn.microsoft.com/en-us/windows/win32/api/winternl/nf-winternl-ntcreatefile), [no-replacement rename contract](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-file_rename_info), and [file naming rules](https://learn.microsoft.com/en-us/windows/win32/fileio/naming-a-file). Target-native use remains part of the consolidated received-application opening course.
 
 ## Application integration
 
-`integration/component_fragments/original-object-transfer.json` extends the original `core` component with this script and guide, so the existing static component composer can include them in complete source receiving. This is an additive tool, not a replacement operator entry point. Original native application backups still use their maintained `model/cli.py restore` and original `operator/server.py`.
+`integration/component_fragments/original-object-transfer.json` extends the original `core` component with the transfer script, both contained-I/O backends and this guide, so the existing static component composer can include them in complete source receiving. This is an additive tool, not a replacement operator entry point. Original native application backups still use their maintained `model/cli.py restore` and original `operator/server.py`.
 
-Read the received application's `AGENTS.md` and `CURRENT_OWNER_DIRECTION.md` before continuing work. During the October 13 sprint the retained owner direction is `2026-10-13.3`, ending at 14:00 UTC; newer actual owner direction takes precedence. An older source packet is never a reason to replace a newer owner brief. Retain the complete original brief in any downstream handoff, and keep prospect-specific communication in the authorized internal surface.
+Read the received application's `AGENTS.md` and `CURRENT_OWNER_DIRECTION.md` before continuing work. Use the current owner direction, including the October 14 Windows/Mac delivery scope. An older source packet is never a reason to replace a newer owner brief. Retain the complete original brief in any downstream handoff, and keep prospect-specific communication in the authorized internal surface.
 
-## Executed original-archive journey
+## Retained version 1.0 original-archive journey
 
 The actual retained archive was 157,219,641 bytes, SHA-256 `0134ee8a7750ce39c11024cc149f7f178bc51ee30a69e0a6c9edd4015caf7a4e`. Its selected source recovery comprised 1,857 unique objects, 46,338,043 original unique bytes and 1,861 logical paths. The gzip packet was 24,362,258 bytes, SHA-256 `aaa7bb5f36ea435f8af7da7398486e88ced60a44745d6a9791dcd145baf94c8f`.
 
