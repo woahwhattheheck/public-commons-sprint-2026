@@ -7,14 +7,11 @@ It does not execute a model or rebuild a scientific product.
 from __future__ import annotations
 
 import argparse
-from contextlib import contextmanager
-import fcntl
 import hashlib
 import importlib
 import json
 import os
 from pathlib import Path
-import stat
 import subprocess
 import sys
 import uuid
@@ -23,19 +20,10 @@ APP = Path(__file__).resolve().parents[1]
 HELPER = "source_tools/geographic_headwaters_reopen.py"
 SCHEMA = "upstate.geographic-headwaters-cold-receiving/v1"
 
-
-@contextmanager
-def receiving_lock(path):
-    """Keep the original receiving flock alive in a surviving owned child."""
-    path = Path(path)
-    path.parent.mkdir(parents=True, exist_ok=True)
-    descriptor = os.open(path, os.O_CREAT | os.O_RDWR | os.O_NOFOLLOW, 0o600)
-    try:
-        fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        yield descriptor
-    finally:
-        # Do not explicitly LOCK_UN: a child can still own this open description.
-        os.close(descriptor)
+if str(APP) not in sys.path:
+    sys.path.insert(0, str(APP))
+from source_tools.receiving_process import (receiving_lock, lock_identity as _lock_identity,
+                                            popen_with_lease, inherited_descriptor)
 
 
 def _support():
@@ -45,17 +33,6 @@ def _support():
     if Path(simulated_headwaters_receiving.__file__).resolve() != APP / "source_tools/simulated_headwaters_receiving.py":
         raise ValueError("Use the retained scientific receiving implementation")
     return simulated_headwaters_receiving
-
-
-def _lock_identity(descriptor, path):
-    if type(descriptor) is not int:
-        raise ValueError("Retain the original receiving lock descriptor")
-    path = Path(path).absolute()
-    opened, current = os.fstat(descriptor), path.lstat()
-    if (not stat.S_ISREG(opened.st_mode) or not stat.S_ISREG(current.st_mode)
-            or (opened.st_dev, opened.st_ino) != (current.st_dev, current.st_ino)):
-        raise ValueError("The receiving lock path differs from its owned descriptor")
-    return {"path": str(path), "device": opened.st_dev, "inode": opened.st_ino}
 
 
 def _scientific_identity(scientific):
@@ -132,7 +109,7 @@ def cold_reopen(restored, manifest, prepared, scientific, delivery_id, review_id
         })
         _lock_identity(receiving_lock_fd, receiving_lock_path)
         with stdout_path.open("xb", buffering=0) as stdout, stderr_path.open("xb", buffering=0) as stderr:
-            process = subprocess.Popen(
+            process = popen_with_lease(
                 command, cwd=application, stdout=stdout, stderr=stderr,
                 pass_fds=(receiving_lock_fd,))
             returncode = process.wait()
@@ -414,7 +391,8 @@ def main(argv=None):
         if hashlib.sha256(raw).hexdigest() != args.request_sha256:
             raise ValueError("The exact original receiving request changed")
         request = json.loads(raw)
-        result = _inspect(request, args.lock_fd)
+        with inherited_descriptor(args.lock_fd) as descriptor:
+            result = _inspect(request, descriptor)
         result["request_sha256"] = args.request_sha256
         support._write(args.result, result)
         print(json.dumps({"state": "complete", "attempt_id": result["attempt_id"],
