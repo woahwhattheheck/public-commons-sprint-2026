@@ -1,0 +1,20 @@
+{
+  "schema": "upstate.application-component-fragment/v1",
+  "id": "gura-native-receiving",
+  "extend_components": {
+    "core": {
+      "paths": [
+        "source_tools/gura_receiving.py",
+        "source_tools/receive_gura_operation.py",
+        "source_tools/receive_first_gura_case.py",
+        "source_tools/receive_gura_studies.py",
+        "source_tools/gura_workflow.py",
+        "docs/GURA_NATIVE_RECEIVING.md",
+        "source_tools/receiving_process.py",
+        "source_tools/native_runtime/platform_runtime.py",
+        "model/windows_process.py",
+        "model/windows_fs.py"
+      ]
+    }
+  }
+}
