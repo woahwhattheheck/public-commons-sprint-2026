@@ -5,13 +5,18 @@ alignment, validation and native execution remain in their original modules.
 """
 from __future__ import annotations
 
+from contextlib import contextmanager
 import csv
 from datetime import date, datetime, time
 import itertools
 import json
 import math
+import os
 from pathlib import Path
 import re
+import tempfile
+
+from . import portable_fs as _fs
 
 PREVIEW_ROWS = 30
 ENCODINGS = {"utf-8-sig", "utf-16", "cp1252"}
@@ -101,7 +106,7 @@ def workbook_cell_value(cell):
 
 def table_records(path, selected, sheet=None):
     """Yield original record and physical row/line positions through the same readers."""
-    path = Path(path)
+    path = _fs.native_path(path)
     opts = options(selected)
     if path.suffix.lower() in {".xlsx", ".xlsm"}:
         try:
@@ -187,7 +192,7 @@ def table_preview(path, opts, sheet=None):
 
 
 def inspect_file(path, supplied=None):
-    path = Path(path)
+    path = _fs.native_path(path)
     opts = options(supplied)
     suffix = path.suffix.lower()
     if suffix in {".csv", ".tsv", ".txt"}:
@@ -333,6 +338,33 @@ def checked_selection(value, inspection):
     return result, file, part
 
 
+@contextmanager
+def _projection_target(target):
+    """Publish only a fully closed and validated original-file projection.
+
+    The caller still owns its operation lock and retained-source checkpoint.
+    Stage beside the selected output so a failed row or band cannot replace an
+    existing complete projection or leave a partial final file. Native paths
+    also cover Windows long/UNC destinations supplied by the intake worker.
+    """
+    target = _fs.native_path(target)
+    descriptor, name = tempfile.mkstemp(
+        prefix=".source-projection-", suffix=target.suffix, dir=target.parent)
+    os.close(descriptor)
+    pending = _fs.native_path(name)
+    try:
+        yield pending
+        # Windows FlushFileBuffers needs a writable handle. All workbook/GDAL
+        # writers and readers must have closed before replacing their output.
+        with pending.open("r+b") as completed:
+            completed.flush()
+            os.fsync(completed.fileno())
+        _fs.replace(pending, target)
+        _fs.sync_directory(target.parent)
+    finally:
+        pending.unlink(missing_ok=True)
+
+
 def project_table(path, target, selected, part, reading):
     """One explicit column projection; complete original remains a companion."""
     field_map = selected["mapping"]
@@ -343,38 +375,39 @@ def project_table(path, target, selected, part, reading):
     # A cached formula result must not be silently replaced by missing data.
     formulas = table_rows(path, {**reading, "formula_mode": "formulas"}, part.get("sheet")) \
         if reading.get("formula_mode") == "cached" and Path(path).suffix.lower() in {".xlsx", ".xlsm"} else None
-    count = 0
-    try:
-        with Path(target).open("w", encoding="utf-8", newline="") as out:
-            writer = csv.writer(out)
-            writer.writerow(names)
-            for number, row in source:
-                original = next(formulas)[1] if formulas else row
-                if number <= part["header_row"]:
-                    continue
-                if not any(value is not None and str(value) != "" for value in original):
-                    continue
-                values = []
-                for name in names:
-                    index = indexes[field_map[name]]
-                    need(index < len(row), "Original row " + str(number) + " has no mapped " + name + " cell.")
-                    value = row[index]
-                    raw = original[index] if index < len(original) else None
-                    if isinstance(raw, str) and raw.startswith("="):
-                        need(reading["formula_mode"] == "cached" and value is not None,
-                             "Original row " + str(number) + " contains a formula without an explicitly selected cached result. Recalculate/save the original workbook or supply reviewed values.")
-                    need(not (isinstance(value, str) and value.startswith("=")),
-                         "A native parameter cell contains an unevaluated formula.")
-                    values.append("" if value is None else scalar(value))
-                writer.writerow(values)
-                count += 1
-    finally:
-        source.close()
-        if formulas:
-            formulas.close()
-    from model.profiles import inspect_table
-    inspected = inspect_table(target, selected_models=selected["models"])
-    need(len(inspected["rows"]) == count, "The complete native table row count differs.")
+    with _projection_target(target) as pending:
+        count = 0
+        try:
+            with pending.open("w", encoding="utf-8", newline="") as out:
+                writer = csv.writer(out)
+                writer.writerow(names)
+                for number, row in source:
+                    original = next(formulas)[1] if formulas else row
+                    if number <= part["header_row"]:
+                        continue
+                    if not any(value is not None and str(value) != "" for value in original):
+                        continue
+                    values = []
+                    for name in names:
+                        index = indexes[field_map[name]]
+                        need(index < len(row), "Original row " + str(number) + " has no mapped " + name + " cell.")
+                        value = row[index]
+                        raw = original[index] if index < len(original) else None
+                        if isinstance(raw, str) and raw.startswith("="):
+                            need(reading["formula_mode"] == "cached" and value is not None,
+                                 "Original row " + str(number) + " contains a formula without an explicitly selected cached result. Recalculate/save the original workbook or supply reviewed values.")
+                        need(not (isinstance(value, str) and value.startswith("=")),
+                             "A native parameter cell contains an unevaluated formula.")
+                        values.append("" if value is None else scalar(value))
+                    writer.writerow(values)
+                    count += 1
+        finally:
+            source.close()
+            if formulas:
+                formulas.close()
+        from model.profiles import inspect_table
+        inspected = inspect_table(pending, selected_models=selected["models"])
+        need(len(inspected["rows"]) == count, "The complete native table row count differs.")
     return {"row_count": count, "columns": inspected["columns"],
             "lucodes": inspected["lucodes"], "original_sheet": part.get("sheet"),
             "original_header_row": part["header_row"], "mapping": field_map}
@@ -382,11 +415,11 @@ def project_table(path, target, selected, part, reading):
 
 def select_band(path, target, band):
     import rasterio
-    with rasterio.open(path) as src:
+    with _projection_target(target) as pending, rasterio.open(_fs.native_path(path)) as src:
         need(type(band) is int and 1 <= band <= src.count, "Choose an original raster band.")
         profile = src.profile.copy()
         profile.update(driver="GTiff", count=1)
-        with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(target, "w", **profile) as out:
+        with rasterio.Env(GDAL_TIFF_INTERNAL_MASK=True), rasterio.open(pending, "w", **profile) as out:
             for _, window in src.block_windows(band):
                 out.write(src.read(band, window=window), 1, window=window)
                 if src.mask_flag_enums[band-1]:
