@@ -278,6 +278,11 @@
         "armijo_c1": 0.0001,
         "trace_limit": 4096
       }
+    },
+    {
+      "id": "ffr130eb",
+      "sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271",
+      "optimize_kwargs": {}
     }
   ],
   "common_objective": {
@@ -684,6 +689,51 @@
       "max_time_seconds": 600,
       "container_cap_seconds": 16200,
       "purpose": "Thirty actual paired cells retain unchanged096 plus both exact recoverable-polish treatments on each public topology. Measure feasible minima, mode/call budgets and preservation of exploration after failed polishing. Keep all outcomes and runtime cohorts; selected four-hour comparison uses the existing full-objective-budget phase."
+    },
+    {
+      "id": "episode-budget-changed-development",
+      "baseline": "ffr130eb",
+      "candidates": [
+        "ffr130eb"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 180,
+      "container_cap_seconds": 16200,
+      "purpose": "Only the original requested changed candidate's three fresh native UIFO cells. Baseline names this sole arm for the existing runner schema; this phase alone makes no incumbent delta. Reuse already completed matched096/FFR130 outputs only when actual source, seed, budget, physics and runtime conditions match; keep original execution ownership."
+    },
+    {
+      "id": "episode-budget-broad-public",
+      "baseline": "096",
+      "candidates": [
+        "096",
+        "ffr130",
+        "ffr130eb"
+      ],
+      "public_topology_seeds": [
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16
+      ],
+      "algorithm_seeds": [
+        42
+      ],
+      "max_time_seconds": 600,
+      "container_cap_seconds": 16200,
+      "purpose": "Optional next whole matched native campaign: thirty cells comparing unchanged096, exact originalFFR130 and the episode-budget successor. Use after the original changed-only three cells and actual findings, not as an automatic re-run of accepted work. One fresh Objective per cell, all outcomes retained, same recorded runtime cohort required for paired interpretation."
     }
   ],
   "retention": "Keep every original raw cell and error. Reuse only exact source/runner/runtime/problem/seeds/budget matches. CPU and GPU results are separate conditions. Retain completed matching cells and the complete original output histories and diagnostics.",
@@ -715,6 +765,8 @@
     "feasible_retention_development_cells": 9,
     "feasible_retention_broad_cells": 30,
     "recoverable_polish_development_cells": 9,
-    "recoverable_polish_broad_cells": 30
+    "recoverable_polish_broad_cells": 30,
+    "episode_budget_changed_cells": 3,
+    "episode_budget_broad_cells": 30
   }
 }

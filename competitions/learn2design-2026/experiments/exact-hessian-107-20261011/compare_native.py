@@ -25,7 +25,7 @@ def finite(value):
     return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
-def runtime_context(path, report_bytes, report, source_manifest):
+def runtime_context(path, report_bytes, report, source_manifest, historical_bindings=None):
     """Join retained bytes to their effective dispatch settings without changing them."""
     sidecar = Path(str(path) + ".runtime.json")
     report_sha = hashlib.sha256(report_bytes).hexdigest()
@@ -35,6 +35,16 @@ def runtime_context(path, report_bytes, report, source_manifest):
         return {"status": "not_recorded", "isolation_report_sha256": report_sha}, None, None
     raw = sidecar.read_bytes()
     context = json.loads(raw)
+    invocation = context.get("invocation")
+    binding = {"kind": "current", "manifest_content_sha256": digest(source_manifest)}
+    if invocation is not None and invocation.get("manifest_content_sha256") != digest(source_manifest):
+        retained = (historical_bindings or {}).get(invocation.get("manifest_content_sha256"))
+        if retained is None or invocation.get("manifest_sha256") != retained["sha256"]:
+            raise ValueError(f"{sidecar}: supply the exact retained original source manifest")
+        source_manifest = retained["manifest"]
+        binding = {"kind": "retained_original", "file": retained["file"],
+                   "sha256": retained["sha256"],
+                   "manifest_content_sha256": digest(source_manifest)}
     expected_capture = source_manifest["runtime_capture"]["sha256"]
     if (context.get("schema") != "tjlabs.l2d.runtime-context/v1" or
             context.get("state") != "native_report_retained" or
@@ -57,7 +67,8 @@ def runtime_context(path, report_bytes, report, source_manifest):
             raise ValueError(f"{sidecar}: different source-invocation adapter")
     return {"status": "captured", **context["condition"]}, {
         "file": str(sidecar), "sha256": hashlib.sha256(raw).hexdigest(),
-        "captured_at": context.get("captured_at"), "finished_at": context.get("finished_at")}, invocation
+        "captured_at": context.get("captured_at"), "finished_at": context.get("finished_at"),
+        "source_manifest_binding": binding}, invocation
 
 
 def cohort_for(condition):
@@ -74,7 +85,20 @@ def cohort_for(condition):
     return cohort
 
 
-def compare(paths, source_manifest, baseline):
+def compare(paths, source_manifest, baseline, historical_sources=()):
+    # Retain old source-bound measurements under their own complete manifest.
+    # An added candidate must not require replaying an unchanged measured control.
+    historical_bindings = {}
+    for supplied in historical_sources:
+        path = Path(supplied)
+        raw = path.read_bytes()
+        manifest = json.loads(raw)
+        key = digest(manifest)
+        record = {"manifest": manifest, "file": str(path),
+                  "sha256": hashlib.sha256(raw).hexdigest()}
+        if key in historical_bindings and historical_bindings[key]["sha256"] != record["sha256"]:
+            raise ValueError("Select one exact byte representation per retained historical manifest")
+        historical_bindings[key] = record
     expected = {}
     source_ids = {}
     arm_ids = set()
@@ -98,14 +122,26 @@ def compare(paths, source_manifest, baseline):
             raise ValueError(f"{path}: source is outside this frozen comparison")
         if report.get("runner", {}).get("sha256") != runner_sha:
             raise ValueError(f"{path}: different original runner; retain it as a separate condition")
-        runtime, runtime_receipt, invocation = runtime_context(path, data, report, source_manifest)
+        runtime, runtime_receipt, invocation = runtime_context(
+            path, data, report, source_manifest, historical_bindings)
         if invocation is not None:
             candidate = invocation.get("source_id")
             selected = source_ids.get(candidate)
+            invoked_digest = invocation.get("manifest_content_sha256")
+            invoked_manifest = (source_manifest if invoked_digest == digest(source_manifest)
+                                else historical_bindings[invoked_digest]["manifest"])
+            original_rows = [row for row in invoked_manifest["candidates"]
+                             if row["id"] == candidate]
+            original = original_rows[0] if len(original_rows) == 1 else None
+            if (original is None or selected is None
+                    or invoked_manifest["native_runner"]["sha256"] != runner_sha
+                    or selection_for(original) != selection_for(selected)
+                    or original["submission_sha256"] != source_sha):
+                raise ValueError(f"{path}: original manifest does not bind the unchanged selected arm")
             if (selected is None or selected["submission_sha256"] != source_sha or
                     invocation.get("selection") != selection_for(selected) or
                     invocation.get("arm_sha256") != arm_identity(selected) or
-                    invocation.get("manifest_content_sha256") != digest(source_manifest)):
+                    invoked_digest != digest(invoked_manifest)):
                 raise ValueError(f"{path}: source/options invocation does not match this frozen arm")
         else:
             if len(expected[source_sha]) != 1:
@@ -147,6 +183,7 @@ def compare(paths, source_manifest, baseline):
                   "time_to_best_feasible_s": m.get("time_to_best_feasible_s"),
                   "budget": report.get("budget"),
                   "runtime_context": runtime_receipt,
+                  "source_manifest_binding": (runtime_receipt or {}).get("source_manifest_binding"),
                   "algorithm_diagnostics": report.get("algorithm_diagnostics")}
         records.append(record)
         group = groups.setdefault(condition_id, {"condition": condition, "records": {}})
@@ -196,9 +233,12 @@ def main():
     parser.add_argument("reports", type=Path, nargs="+")
     parser.add_argument("--sources", type=Path, default=ROOT / "SOURCES.json")
     parser.add_argument("--baseline", default="099")
+    parser.add_argument("--historical-sources", type=Path, action="append", default=[],
+                        help="Exact complete original source manifest for a retained report; repeat as needed")
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args()
-    result = compare(args.reports, json.loads(args.sources.read_text()), args.baseline)
+    result = compare(args.reports, json.loads(args.sources.read_text()), args.baseline,
+                     args.historical_sources)
     with args.out.open("x") as stream:
         json.dump(result, stream, indent=2, ensure_ascii=False, allow_nan=False)
         stream.write("\n")

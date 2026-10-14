@@ -184,3 +184,8 @@ while interleaving late feasible polishing. Unchanged096 and explicit new off/on
 arms are paired in nine-cell development and thirty-cell broad phases, with the
 original selected four-hour continuation. The complete original panel, diagnosis,
 source and three selected archives are retained beside the maintained runner.
+
+
+## Original FFR130 episode-budget continuation
+
+The complete [FFR130EB integration](episode-budget-ffr130eb/README.md) retains the exact new candidate and five original fixtures, current official rules and the exact native Objective admission contract. All prior22arms/17phases and actual datasets remain intact. New changed-only T7–9/180s cells reuse the existing original simulation owner; the optional30-cell broad phase and three complete selected archives are available through the unchanged native runner and packager. Explicit retained historical source manifests now permit source-bound control reuse without rewriting old measurements.

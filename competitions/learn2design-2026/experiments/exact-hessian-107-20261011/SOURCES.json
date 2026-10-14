@@ -808,6 +808,35 @@
           }
         ]
       }
+    },
+    {
+      "id": "ffr130eb",
+      "class": "FeasibleFilterRetention130EB",
+      "submission": "episode-budget-ffr130eb/submission.py",
+      "submission_bytes": 30975,
+      "submission_sha256": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271",
+      "requirements": "episode-budget-ffr130eb/requirements.txt",
+      "requirements_sha256": "0c4e162a4f280f3fc3561a72e4e67873cb5fef937e273a8ddea8f3ab4ecfabee",
+      "source_owner": "Original complete FFR130EB episode-budget source and all five fixtures from F0C9DT34D0U; candidate bytes preserved unchanged.",
+      "based_on_submission_sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b",
+      "invocation": {
+        "companions": [],
+        "optimize_kwargs": {},
+        "diagnostic_expectations": [
+          {
+            "path": [
+              "algorithm_str"
+            ],
+            "equals": "tjlabs_ffr130eb"
+          },
+          {
+            "path": [
+              "budget_patience"
+            ],
+            "equals": true
+          }
+        ]
+      }
     }
   ],
   "native_runner": {
@@ -964,6 +993,26 @@
       "original_native_modules_preserved": true,
       "actual_motivation": "current14 FALQN T4/180s/S42 panel 16793aa3838c04aacaebecb55fb3f3187445851fe452be131111a6b0d7f5ac65; full original panel/source binding and diagnosis retained beside this candidate.",
       "performance": "New candidate and schedule are unmeasured. Actual original Objective results determine comparison; off ablation is a revised implementation and does not replace original096."
+    },
+    "episode_budget_experiment": {
+      "operation": "L2D-EPISODE-BUDGET-NATIVE-INTEGRATION-7F24-20261014",
+      "original_operation": "L2D-EPISODE-BUDGET-COMPLETE-SOURCE-HANDOFF-20261014-ROOT-01",
+      "source_job": "l2d-episode-budget-complete-delivery-20261014-root-01",
+      "source_response_sha256": "85a74a295e17a38c3359f2fc1b773fc627a59b14001eca8d1e3db9868b048ecc",
+      "source_file": "F0C9DT34D0U",
+      "candidate": "b674c27ab897c19b57e7aca73134fa2410813cda4c4a8975af282f28ca007271",
+      "fixtures": "2342cf7d2568043b65e3d6026ce7f74a4d766a18805b4c6915ba9fdb2998c214",
+      "parent_source_sha256": "48edc90b09dd2453163c71f893918fa6cbf66f164a0dd9cc705dd85081216b7b",
+      "original_source_preserved": true,
+      "source_ids": [
+        "096",
+        "ffr130",
+        "ffr130eb"
+      ],
+      "guide": "episode-budget-ffr130eb/README.md",
+      "source_map": "episode-budget-ffr130eb/SOURCE_MAP.json",
+      "official_commit": "9ebce9bfe5c33242c297f84f4c79d088b7b52e70",
+      "performance": "Incoming source and five authored fixtures await the original native receiver. Existing numerical datasets and measured source identities remain unchanged."
     }
   }
 }
