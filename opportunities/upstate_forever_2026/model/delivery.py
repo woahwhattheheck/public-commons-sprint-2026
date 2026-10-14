@@ -9,7 +9,7 @@ import sys
 import xml.etree.ElementTree as ET
 from .common import (INVEST_VERSION, MAP_IDS, SOURCE_IDS, atomic_bytes, atomic_json,
                      describe_file, digest, held, identifier, now, read_json, verify_file)
-from . import atlas_browser, cartography, client_report, map_atlas, native_study, native_versions, portable, rasters
+from . import atlas_browser, cartography, client_report, map_atlas, map_summary, native_study, native_versions, portable, rasters
 import tempfile
 from .report_release import bind_report, retain_report
 from .source_lineage import LINEAGE_VERSION
@@ -484,6 +484,7 @@ def _prepare_context(workspace, selection):
                   "report_renderer": scientific_report.REPORT_VERSION,
                   "delivery_format": DELIVERY_FORMAT_VERSION,
                   "map_atlas": map_atlas.ATLAS_VERSION,
+                  "map_quantities": map_summary.VERSION,
                   "gis_datasets": delivery_datasets.VERSION,
                   "overlay_labels": OVERLAY_LABELS,
                   **({"parcel_source_lineage": LINEAGE_VERSION}
@@ -832,6 +833,8 @@ def build(workspace, selection, *, expected_binding=None):
             map_atlas.write(directory, atlas_pages, workspace=workspace, selection=selection,
                 grid=grid, boundary=boundary, crs=crs, footer=footer,
                 state=state, state_path=state_path, water_links=water_links)
+            map_summary.write(directory, state)
+            atomic_json(state_path, state)
             maps = {family: state["maps"][family]["path"] for family in all_specs if family in MAP_IDS}
             for family, map_keys in future_maps.items():
                 # The first explicit scenario is the principal family map; every additional scenario remains an extra map.
@@ -952,6 +955,7 @@ def build(workspace, selection, *, expected_binding=None):
                 profile_index = next((index + 1 for index, (heading, _) in enumerate(sections)
                                       if heading == "Selected parameter profile"), len(sections))
                 sections[profile_index:profile_index] = coefficient_sections
+                sections.extend(map_summary.report_sections(state["map_quantities"]))
                 sections.extend(scenario_treatment_report.sections(
                     summary, baseline_run_id=baseline["id"],
                     alternative_run_ids=[run["id"] for run in alternatives]))
@@ -1013,7 +1017,8 @@ def build(workspace, selection, *, expected_binding=None):
                     scenario_summary=summary,
                     decision_product=decision_product, observed_product=observed_product,
                     coefficient_product=coefficient_product,
-                    additional_sections=receiving_water_delivery.report_section(water_product),
+                    additional_sections=(receiving_water_delivery.report_section(water_product)
+                                         + map_summary.client_sections(state["map_quantities"])),
                     output_stem="client-report", file_key_prefix="client_",
                     working_archive_path=working_relative)
                 for name, relative in generated.items():

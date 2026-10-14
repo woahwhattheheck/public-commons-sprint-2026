@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from .common import MAP_IDS, atomic_bytes, describe_file
 from .cartography import TITLES
+from . import map_summary
 
 BROWSER_PATH = "maps/atlas-browser.html"
 BROWSER_KEY = "map_atlas_browser"
@@ -136,7 +137,7 @@ def _dataset_links(panel, included):
     return '<div class="actions">' + "".join(links) + '</div><code class="hash">' + _text(raster["path"]) + "</code>"
 
 
-def _sheet(row, atlas, included):
+def _sheet(row, atlas, included, quantities=None):
     path = _path(row["file"]["path"])
     if path not in included:
         raise ValueError("Atlas map is absent from the captured member selection: " + path)
@@ -172,6 +173,7 @@ def _sheet(row, atlas, included):
             '</div><div class="table-wrap"><table><thead><tr><th>Panel</th><th>Physical units / index</th>'
             '<th>Quantity</th><th>Retained display range</th><th>Editable GIS dataset</th></tr></thead><tbody>' +
             "".join(rows) + "</tbody></table></div>" +
+            map_summary.html_for_sheet(quantities, row) +
             _details("Dataset units, support, derivation and original sources", dataset_records) +
             _details("Original native raster and scale", native_sources) +
             _details("Rendered source overlays", row.get("overlays")) +
@@ -215,7 +217,17 @@ def render(state, manifest, *, browser_path=BROWSER_PATH, manifest_path="deliver
                    list(state.get("files", {}).values()) + list(state.get("maps", {}).values())
                    if isinstance(item, dict) and "path" in item}
     families = [family for family in MAP_IDS if any(row["family"] == family for row in pages)]
-    cards = "".join(_sheet(row, atlas, members) for row in pages)
+    quantities = state.get("map_quantities")
+    if quantities is not None:
+        map_summary.validate(quantities)
+        if (quantities["delivery_id"] != state["id"] or quantities["grid_id"] != atlas["grid_id"]
+                or quantities["baseline_run_id"] != atlas["baseline_run_id"]
+                or quantities["scenario_run_ids"] != atlas["scenario_run_ids"]):
+            raise ValueError("Map quantities do not match this atlas edition")
+    quantity_links = "".join(_link(p, label, download=True) for p, label in (
+        (map_summary.CSV_PATH, "Full-resolution map values CSV"),
+        (map_summary.JSON_PATH, "Map values and source context")) if p in members)
+    cards = "".join(_sheet(row, atlas, members, quantities) for row in pages)
     options = "".join('<option value="' + _text(family) + '">' + _text(TITLES[family]) +
                       "</option>" for family in families)
     scenarios = "".join('<option value="' + _text(run_id) + '">Alternative ' +
@@ -265,7 +277,7 @@ def render(state, manifest, *, browser_path=BROWSER_PATH, manifest_path="deliver
             '</div><p class="muted">Keep the extracted delivery folder together. Open this page locally; its maps and downloads use the retained relative paths.</p>'
             '<div class="actions">' + _link("maps/atlas-index.json", "Map index JSON", download=True) +
             _link("maps/atlas-index.csv", "Map index CSV", download=True) +
-            _link("maps/source-context.json", "Original source choices", download=True) +
+            _link("maps/source-context.json", "Original source choices", download=True) + quantity_links +
             '</div></section><section aria-labelledby="browse"><h2 id="browse">Browse map sheets</h2>'
             '<form data-atlas-filters hidden><label>Map family<select name="family"><option value="">All retained families</option>' +
             options + '</select></label><label>Scenario<select name="scenario"><option value="">All maps</option>'
