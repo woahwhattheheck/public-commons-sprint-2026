@@ -17,12 +17,26 @@ import time
 
 
 def file_identity(path):
+    """Hash one original handle and require the unchanged native file identity."""
+    from model import portable_fs as fs
     path = Path(path)
     digest = hashlib.sha256()
-    with path.open("rb") as source:
+    with os.fdopen(fs.open_file(path, os.O_RDONLY), "rb") as source:
+        before = fs.fd_stat(source.fileno())
+        identity = (before.st_dev, before.st_ino, before.st_size,
+                    before.st_mtime_ns, before.st_ctime_ns)
         for block in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(block)
-    return {"path": str(path.resolve()), "bytes": path.stat().st_size, "sha256": digest.hexdigest()}
+        after = fs.fd_stat(source.fileno())
+        if identity != (after.st_dev, after.st_ino, after.st_size,
+                        after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("The original source changed during receiving.")
+    actual = fs.path_stat(path)
+    if identity != (actual.st_dev, actual.st_ino, actual.st_size,
+                    actual.st_mtime_ns, actual.st_ctime_ns):
+        raise ValueError("The original source changed before receiving admission.")
+    return {"path": str(path.resolve()), "bytes": before.st_size,
+            "sha256": digest.hexdigest()}
 
 
 
@@ -31,6 +45,7 @@ def reconcile_receiving_locations(workspace, output, state_path, specification):
     """Bind explicitly relocated originals without changing the saved request."""
     from model.common import atomic_json
     from model.portable import inspect_archive
+    from model.portable_fs import publish_file as publish_new, sync_directory
     from measurement_workspace.published_studies import PublishedStudyStore
     import tempfile
 
@@ -143,7 +158,8 @@ def reconcile_receiving_locations(workspace, output, state_path, specification):
                 stream.flush()
                 os.fsync(stream.fileno())
             try:
-                os.link(temporary, frozen)
+                publish_new(temporary, frozen)
+                sync_directory(output)
             except FileExistsError:
                 if frozen.read_bytes() != original_bytes:
                     raise ValueError("A different original operation appeared during relocation.")

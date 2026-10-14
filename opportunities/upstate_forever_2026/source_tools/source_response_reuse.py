@@ -17,6 +17,7 @@ import tempfile
 from urllib.parse import urlencode
 
 from model.common import atomic_json, describe_file, digest, held, identifier, now, read_json
+from model import portable_fs as fs
 
 SCHEMA = "upstate.source-acquisition-continuation/v1"
 ORIGIN_SCHEMA = "upstate.source-response-reuse/v1"
@@ -26,10 +27,34 @@ COUNTERS = ("reused_requests", "reused_bytes", "reused_stored_bytes",
 
 def _sha(path):
     value = hashlib.sha256()
-    with Path(path).open("rb") as incoming:
+    with os.fdopen(fs.open_file(path, os.O_RDONLY), "rb") as incoming:
+        before = fs.fd_stat(incoming.fileno())
         for block in iter(lambda: incoming.read(1024 * 1024), b""):
             value.update(block)
+        after = fs.fd_stat(incoming.fileno())
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
+                after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("An original HTTP response changed during source reuse.")
     return value.hexdigest()
+
+
+def _durable_copy(source, destination):
+    """Retain the original regular response bytes on the receiving volume."""
+    with os.fdopen(fs.open_file(source, os.O_RDONLY), "rb") as incoming:
+        before = fs.fd_stat(incoming.fileno())
+        with os.fdopen(fs.open_file(destination, os.O_WRONLY | os.O_CREAT | os.O_EXCL),
+                       "wb") as output:
+            for block in iter(lambda: incoming.read(1024 * 1024), b""):
+                output.write(block)
+            output.flush()
+            os.fsync(output.fileno())
+        after = fs.fd_stat(incoming.fileno())
+        if (before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns,
+                before.st_ctime_ns) != (after.st_dev, after.st_ino, after.st_size,
+                after.st_mtime_ns, after.st_ctime_ns):
+            raise ValueError("An original source changed during verified receiving.")
+    fs.sync_directory(Path(destination).parent)
 
 
 def _safe(root, path):
@@ -409,7 +434,7 @@ class ResponseReuse:
             for source in files:
                 _safe(donor, source)
                 destination = staged / source.name
-                shutil.copyfile(source, destination)
+                _durable_copy(source, destination)
                 descriptor = describe_file(original, source)
                 # Every selected response file lives directly in one request
                 # folder; no derived output or mutable shared inode is copied.
@@ -420,7 +445,7 @@ class ResponseReuse:
             # The existing SDA reader may finalize the working receipt after
             # transfer. Retain the exact donor receipt as a separate companion.
             original_receipt = staged / "continuation-original-receipt.json"
-            shutil.copyfile(receipt_path, original_receipt)
+            _durable_copy(receipt_path, original_receipt)
             original_receipt_descriptor = describe_file(staged, original_receipt)
             if original_receipt_descriptor["sha256"] != _sha(receipt_path):
                 raise ValueError("The original receipt changed during transfer")
@@ -439,7 +464,9 @@ class ResponseReuse:
                 "successful_responses": int(success), "retained_failures": int(not success),
             }
             atomic_json(staged / "continuation-origin.json", row, immutable=True)
-            os.rename(staged, target)
+            # The original request folder is published only once; never let a
+            # concurrent consumer's empty target be replaced by a POSIX rename.
+            fs.publish_directory(staged, target)
             self._record(target)
         finally:
             if staged.exists():

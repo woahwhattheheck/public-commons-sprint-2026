@@ -34,6 +34,7 @@ from model import field_deployment, implementation_report_source, observed_conte
 from model import scientific_briefing, scientific_report_editions, study_receiving, study_transfer
 from model.project_transfer_workspace import NativeProjectTransfer
 from model.portable import member_name
+from model import portable_fs as fs
 
 SCHEMA = "upstate.scientific-fieldwork-course/v1"
 
@@ -294,6 +295,7 @@ def briefing_view(root, workspace, key):
     _, _, members = scientific_briefing.members(workspace, key)
     destination = root / "briefing-view"
     destination.mkdir(exist_ok=True)
+    fs.validate_members(members.keys(), portable=True)
     with zipfile.ZipFile(archive) as package:
         if len(package.namelist()) != len(members) or set(package.namelist()) != set(members):
             raise ValueError("The complete briefing ZIP differs from its original member inventory")
@@ -321,7 +323,13 @@ def briefing_view(root, workspace, key):
                     os.fsync(output.fileno())
                 if size != descriptor["bytes"] or checksum.hexdigest() != descriptor["sha256"]:
                     raise ValueError("The original briefing ZIP member changed: " + name)
-                os.replace(temporary, target)
+                try:
+                    fs.publish_file(temporary, target)
+                except FileExistsError:
+                    # A parallel opening may have published this same original
+                    # member; reuse only the proven byte-identical copy.
+                    verify_file(destination, {**descriptor, "path": name})
+                fs.sync_directory(target.parent)
             finally:
                 temporary.unlink(missing_ok=True)
     return destination / record["files"]["html"]["path"]
