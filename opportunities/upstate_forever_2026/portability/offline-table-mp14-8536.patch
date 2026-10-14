@@ -1,0 +1,205 @@
+--- a/model/client_source_rows.py
++++ b/model/client_source_rows.py
+@@ -12,6 +12,7 @@
+ from .client_source_files import headers, need, options, scalar, table_records
+ 
+ SCHEMA = "upstate.client-source-rows/v1"
++EXPORT_VIEWER_REVISION = "original-table-offline/2"
+ PAGE_SIZE = 100
+ MAX_PAGE_SIZE = 250
+ MAX_PAGE_BYTES = 4 * 1024 * 1024
+@@ -124,17 +125,20 @@
+                  '<title>Complete original table</title><style>'
+                  'body{margin:24px;font:15px Arial,sans-serif;color:#202428;background:white}'
+                  'h1{font-size:26px}p{line-height:1.5;overflow-wrap:anywhere}'
++                 'pre{white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%}'
++                 'label,input,select{box-sizing:border-box;min-width:0;max-width:100%}'
+                  'button,input,select{font:inherit;padding:9px;border:1px solid #858d94;background:#fff;border-radius:3px}'
+                  'form,.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:end;margin:18px 0}'
+                  'label{display:flex;flex-direction:column;gap:6px}'
+-                 '.ci-scroll{overflow:auto;max-width:100%;border:1px solid #ccd0d3}'
++                 '.ci-scroll{overflow:auto;max-width:100%;max-height:65vh;border:1px solid #ccd0d3}'
+                  'table{border-collapse:collapse;min-width:100%;width:max-content}'
+                  'th,td{text-align:left;vertical-align:top;padding:10px;border-bottom:1px solid #ddd;white-space:pre-wrap;min-width:130px;max-width:500px;overflow-wrap:anywhere}'
+-                 'th{background:#f0f2f3}caption{text-align:left;padding:10px;font-weight:bold}'
++                 'th{background:#f0f2f3}th[scope=col]{position:sticky;top:0}'
++                 'caption{text-align:left;padding:10px;font-weight:bold}'
+                  'details{margin-top:8px}dd{margin:5px 0 12px}dt{font-weight:bold}'
+                  '.ci-row-empty{color:#60676c;font-style:italic}'
+                  '@media(max-width:600px){body{margin:12px}button{min-height:44px}}'
+-                 '@media print{form,.controls{display:none}.ci-scroll{overflow:visible}table{width:100%}th,td{min-width:0;max-width:none;font-size:10px}}'
++                 '@media print{form,.controls{display:none}.ci-scroll{overflow:visible;max-height:none}table{width:100%}th,td{min-width:0;max-width:none;font-size:10px}th[scope=col]{position:static}}'
+                  '</style><h1>Complete original table</h1><p>' +
+                  escape(str(source.get("filename", "Original file"))) + ' · worksheet ' +
+                  escape(str(metadata["sheet"] or "CSV / delimited table")) +
+@@ -147,11 +151,14 @@
+                  escape(json.dumps(metadata, ensure_ascii=False, indent=2)) +
+                  '</pre></details><form id="search"><label>Search all original values<input id="query" maxlength="2000" type="search"></label>'
+                  '<label><span>Case sensitive</span><input id="case" type="checkbox"></label>'
+-                 '<button type="submit">Search all rows</button></form>'
+-                 '<div class="controls"><button id="previous">Previous 100</button><button id="next">Next 100</button>'
++                 '<button type="submit">Search all rows</button><button id="cancel-search" type="button" hidden>Cancel search</button></form>'
++                 '<div class="controls"><button id="previous" data-offline-page="previous">Previous 100</button><button id="next" data-offline-page="next">Next 100</button>'
++                 '<label>Rows per page<select id="page-size"><option>50</option><option selected>100</option><option>250</option></select></label>'
+                  '<label>Cell values<select id="mode"><option value="displayed">Selected-reader values</option>'
+                  '<option value="stored">Stored values</option></select></label></div>'
+-                 '<p id="status" role="status" aria-live="polite"></p><div id="table"></div>'
++                 '<form id="jump"><label>Go to original row<input id="original-row" type="number" min="1" step="1" required></label><button type="submit">Go to row</button></form>'
++                 '<p id="status" role="status" aria-live="polite"></p><p id="offline-error" role="alert"></p><div id="table"></div>'
++                 '<div class="controls"><button data-offline-page="previous">Previous 100</button><button data-offline-page="next">Next 100</button><span id="bottom-status"></span></div>'
+                  '<script id="source-selection" type="application/json">' + _json_html(metadata) +
+                  '</script><script id="source-rows" type="application/x-ndjson">\n')
+ 
+@@ -162,7 +169,9 @@
+     marker = "export function createOriginalTableReader"
+     need(marker in source, "The complete original-table reader module is missing.")
+     renderer = source.split(marker, 1)[0].replace("export function originalRowsTable", "function originalRowsTable")
+-    script = "\nconst meta=JSON.parse(document.querySelector('#source-selection').textContent);\nconst lines=document.querySelector('#source-rows').textContent.trim().split('\\n').filter(Boolean);\nconst fields=JSON.parse(document.querySelector('#source-fields').textContent);\nconst q=s=>document.querySelector(s);\nlet start=0,matching=null;\nfunction selected(){if(matching)return matching;return Array.from({length:lines.length},(_,i)=>i);}\nfunction draw(){\n const indices=selected(),page=indices.slice(start,start+100).map(i=>JSON.parse(lines[i]));\n q('#table').innerHTML=originalRowsTable({rows:page,fields},q('#mode').value);\n q('#status').textContent=indices.length+' matching original records of '+lines.length+'; showing '+(page.length?start+1:0)+'–'+(start+page.length)+'.';\n q('#previous').disabled=start===0;q('#next').disabled=start+100>=indices.length;\n}\nq('#search').addEventListener('submit',e=>{\n e.preventDefault();const text=q('#query').value,needle=q('#case').checked?text:text.toLowerCase();\n matching=needle?lines.map((line,i)=>[JSON.parse(line),i]).filter(([r])=>\n  r.search_values.some(value=>(q('#case').checked?value:value.toLowerCase()).includes(needle))).map(([,i])=>i):null;\n start=0;draw();\n});\nq('#previous').addEventListener('click',()=>{start=Math.max(0,start-100);draw();});\nq('#next').addEventListener('click',()=>{start+=100;draw();});\nq('#mode').addEventListener('change',draw);\ndraw();\n"
++    need("function mountOfflineOriginalTable()" in renderer,
++         "The complete offline-table reader module is missing.")
++    script = "\nmountOfflineOriginalTable();\n"
+     stream.write('</script><script id="source-fields" type="application/json">' +
+                  _json_html(fields) + '</script><script>' + renderer + script +
+                  '</script></html>')
+--- a/operator/web/client_source_rows.mjs
++++ b/operator/web/client_source_rows.mjs
+@@ -17,6 +17,101 @@
+    columns.map((f,i)=>'<td>'+cell(shown[i],i<shown.length)+(Array.isArray(row.stored_cells)?'<details><summary>Cell meaning</summary><dl><dt>Selected-reader value</dt><dd>'+cell(row.cells[i],i<row.cells.length)+'</dd><dt>Stored value</dt><dd>'+cell(row.stored_cells[i],i<row.stored_cells.length)+'</dd><dt>Number format</dt><dd>'+esc(row.number_formats?.[i]??'Not supplied')+'</dd><dt>Native type</dt><dd>'+esc(row.cell_metadata?.[i]?.data_type??'Not supplied')+'</dd></dl></details>':'')+'</td>').join('')+'</tr>';
+  }).join('')+'</tbody></table></div>';
+ }
++/** Operate the same complete export without keeping every parsed row in memory. */
++function mountOfflineOriginalTable(){
++ const q=selector=>document.querySelector(selector);
++ const lines=q('#source-rows').textContent.trim().split('\n').filter(Boolean);
++ const fields=JSON.parse(q('#source-fields').textContent);
++ const pager=()=>document.querySelectorAll('[data-offline-page]');
++ let start=0,matching=null,pageSize=100,generation=0,busy=false;
++ const count=()=>matching===null?lines.length:matching.length;
++ const sourceIndex=index=>matching===null?index:matching[index];
++ const status=q('#status'),error=q('#offline-error');
++ function controls(){
++  for(const button of pager()){
++   const previous=button.dataset.offlinePage==='previous';
++   button.disabled=busy||(previous?start===0:start+pageSize>=count());
++   button.textContent=(previous?'Previous ':'Next ')+pageSize;
++  }
++  q('#page-size').disabled=busy;
++  for(const node of q('#jump').elements)node.disabled=busy||!count();
++  q('#cancel-search').hidden=!busy;
++  q('#table').setAttribute('aria-busy',String(busy));
++ }
++ function draw(note=''){
++  const size=count();
++  start=Math.min(start,Math.max(0,Math.floor((size-1)/pageSize)*pageSize));
++  const page=[];
++  for(let i=start;i<Math.min(size,start+pageSize);i++)page.push(JSON.parse(lines[sourceIndex(i)]));
++  q('#table').innerHTML=originalRowsTable({rows:page,fields},q('#mode').value);
++  status.textContent=size+' matching original records of '+lines.length+'; showing '+(page.length?start+1:0)+'–'+(start+page.length)+'.'+(note?' '+note:'');
++  q('#bottom-status').textContent=page.length?'Showing '+(start+1)+'–'+(start+page.length)+' of '+size+'.':'No matching original records.';
++  controls();
++ }
++ async function search(event){
++  event.preventDefault();
++  const request=++generation,text=q('#query').value,sensitive=q('#case').checked;
++  const needle=sensitive?text:text.toLowerCase();
++  error.textContent='';
++  if(!needle){busy=false;matching=null;start=0;draw();return;}
++  busy=true;controls();status.textContent='Searching every original record…';
++  const found=[];
++  let yieldAfter=performance.now()+12;
++  try{
++   for(let i=0;i<lines.length;i++){
++    if(request!==generation)return;
++    // Only the current original row is decoded; matches retain integer positions.
++    const row=JSON.parse(lines[i]);
++    if(row.search_values.some(value=>(sensitive?value:value.toLowerCase()).includes(needle)))found.push(i);
++    if(performance.now()>=yieldAfter){
++     status.textContent='Searched '+(i+1)+' of '+lines.length+' original records; '+found.length+' matches so far.';
++     await new Promise(resolve=>setTimeout(resolve,0));
++     yieldAfter=performance.now()+12;
++    }
++   }
++   if(request!==generation)return;
++   matching=found;start=0;busy=false;draw();
++  }catch(failure){
++   if(request!==generation)return;
++   busy=false;draw('The previous complete result remains visible.');
++   error.textContent='An original record could not be read. Keep the complete original file and JSONL export, then create a fresh HTML export.';
++  }
++ }
++ q('#search').addEventListener('submit',event=>{void search(event);});
++ q('#cancel-search').addEventListener('click',()=>{
++  generation++;busy=false;draw('Search canceled. The previous complete result is retained.');
++ });
++ for(const button of pager())button.addEventListener('click',()=>{
++  if(busy)return;
++  start=button.dataset.offlinePage==='previous'?Math.max(0,start-pageSize):start+pageSize;
++  draw();
++ });
++ q('#page-size').addEventListener('change',()=>{
++  const selected=Number(q('#page-size').value);
++  if(![50,100,250].includes(selected))return;
++  pageSize=selected;start=Math.floor(start/pageSize)*pageSize;draw();
++ });
++ q('#mode').addEventListener('change',()=>{if(!busy)draw();});
++ q('#jump').addEventListener('submit',event=>{
++  event.preventDefault();if(busy||!count())return;
++  const target=Number(q('#original-row').value);
++  if(!Number.isSafeInteger(target)||target<1){error.textContent='Choose a positive original row number.';return;}
++  error.textContent='';
++  // Search the retained original row positions, never a reconstructed heading.
++  let left=0,right=count();
++  while(left<right){const middle=Math.floor((left+right)/2);const row=JSON.parse(lines[sourceIndex(middle)]).row;
++   if(row<target)left=middle+1;else right=middle;}
++  const position=Math.min(left,count()-1),actual=JSON.parse(lines[sourceIndex(position)]).row;
++  start=Math.floor(position/pageSize)*pageSize;
++  draw(actual===target?'Original row '+target+' is on this page.':(actual>target?'Next matching original row: ':'Last matching original row: ')+actual+'.');
++  const region=q('#table .ci-original-grid');if(region)region.focus({preventScroll:true});
++ });
++ try{draw();}catch(failure){
++  error.textContent='This HTML export is incomplete. Keep the complete original file and create a fresh export.';
++  busy=false;controls();
++ }
++}
++
+ export function createOriginalTableReader(host){
+  let active=null,serial=0;
+  const valid=state=>active===state&&state.dialog.isConnected&&host.getWorkspace()===state.workspace;
+--- a/operator/client_source_intake.py
++++ b/operator/client_source_intake.py
+@@ -150,7 +150,7 @@
+         return record, item, part, path, identity
+ 
+     def _table_read(self, workspace_key, ws, operation, payload):
+-        from model.client_source_rows import read_rows, export_table
++        from model.client_source_rows import read_rows, export_table, EXPORT_VIEWER_REVISION
+         record, item, part, path, identity = self._table_source(ws, payload)
+         if operation == "rows":
+             result = read_rows(path, item["options"], part.get("sheet"),
+@@ -161,7 +161,8 @@
+             result.update(identity)
+             return result
+         selection = {**identity, "sheet": part.get("sheet"), "reading": options(item["options"]),
+-                     "schema": "upstate.client-source-table-export/v1"}
++                     "schema": "upstate.client-source-table-export/v1",
++                     "viewer_revision": EXPORT_VIEWER_REVISION}
+         directory = self.directory(ws, record["id"]) / "table-exports" / digest(selection)
+         directory.mkdir(parents=True, exist_ok=True)
+         saved = directory / "manifest.json"
+@@ -240,9 +241,13 @@
+                 selected = exported["selection"]
+                 _, item, part, _, identity = self._table_source(workspace, {"id": record["id"],
+                     "file_index": selected["file_index"], "part_index": selected["part_index"]})
+-                need(selected == {**identity, "sheet": part.get("sheet"),
+-                                  "reading": options(item["options"]),
+-                                  "schema": "upstate.client-source-table-export/v1"},
++                expected = {**identity, "sheet": part.get("sheet"),
++                            "reading": options(item["options"]),
++                            "schema": "upstate.client-source-table-export/v1"}
++                if "viewer_revision" in selected:
++                    from model.client_source_rows import EXPORT_VIEWER_REVISION
++                    expected["viewer_revision"] = EXPORT_VIEWER_REVISION
++                need(selected == expected,
+                      "A whole-table export belongs to a different retained source.")
+                 for body in exported["artifacts"]:
+                     self._raw(workspace, body)
