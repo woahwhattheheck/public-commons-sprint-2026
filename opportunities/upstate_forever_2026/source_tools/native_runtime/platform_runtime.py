@@ -21,7 +21,7 @@ def system_name(value=None):
 
 def machine_name(value):
     value = str(value).lower()
-    return {"amd64": "x86_64", "x64": "x86_64", "x86-64": "x86_64",
+    return {"amd64": "x86_64", "x64": "x86-64", "x86-64": "x86_64",
             "aarch64": "arm64"}.get(value, value)
 
 
@@ -72,6 +72,10 @@ def prefix_environment(prefix=None, offline=False, *, base=None, system=None):
            and key.upper() not in ("VIRTUAL_ENV", "GDAL_DATA", "GDAL_DRIVER_PATH",
                                     "PROJ_LIB", "PROJ_DATA")}
     selected = system_name(system)
+    if selected == "Darwin":
+        # Select the packaged Mach-O dependencies before the interpreter starts,
+        # not a caller's development-time loader overrides.
+        env = {key: value for key, value in env.items() if not key.startswith("DYLD_")}
     # Case-insensitive Windows environment names can otherwise leave PATH/Path
     # or SSL_CERT_FILE/ssl_cert_file competing in the CreateProcess block.
     if selected == "Windows":
