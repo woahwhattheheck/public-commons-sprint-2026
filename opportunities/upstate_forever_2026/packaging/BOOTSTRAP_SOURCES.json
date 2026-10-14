@@ -1,0 +1,37 @@
+{
+  "schema": "upstate.bootstrap-sources/v1",
+  "platforms": {
+    "windows-x86_64": {
+      "filename": "cpython-3.12.14+20260901-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "sha256": "7c45c9622400d578709a9b2cddbe8124cc21d382409d9f13406d706d28e31b14",
+      "archive_root": "python",
+      "python": "python.exe",
+      "python_version": "3.12.14",
+      "publisher": "astral-sh/python-build-standalone",
+      "upstream_release": "20260901"
+    },
+    "macos-x86_64": {
+      "filename": "cpython-3.12.14+20260901-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "sha256": "65b195c9cedc1fef6767f044f9822069adbd1bd9204d424ece4628776fdc04bb",
+      "archive_root": "python",
+      "python": "bin/python3",
+      "python_version": "3.12.14",
+      "publisher": "astral-sh/python-build-standalone",
+      "upstream_release": "20260901"
+    },
+    "macos-arm64": {
+      "filename": "cpython-3.12.14+20260901-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260901/cpython-3.12.14%2B20260901-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "sha256": "81a359f1cfadd4da11766534c5913791cea55f26e1bb902cacd2a531bb1e4b2b",
+      "archive_root": "python",
+      "python": "bin/python3",
+      "python_version": "3.12.14",
+      "publisher": "astral-sh/python-build-standalone",
+      "upstream_release": "20260901"
+    }
+  },
+  "source_index": "https://github.com/astral-sh/python-build-standalone/releases/expanded_assets/20260901",
+  "purpose": "First-stage stdlib-only receiver Python; original native scientific runtimes and their selected versions remain separate."
+}

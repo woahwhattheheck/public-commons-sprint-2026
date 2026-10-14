@@ -1,0 +1,14 @@
+{
+  "check": "bootstrap payload packaging",
+  "result": "passed",
+  "cases": [
+    "windows-x86_64 extraction, link materialization, verified reuse, interrupted-index recovery",
+    "macos-x86_64 extraction, link materialization, verified reuse, interrupted-index recovery",
+    "macos-arm64 extraction, link materialization, verified reuse, interrupted-index recovery",
+    "scientific manifest preserved; bootstrap-only composition",
+    "deterministic ZIP; executable bits and complete indexes retained",
+    "portable paths reject traversal and invalid Windows names",
+    "changed existing payload rejected"
+  ],
+  "native_target_execution": false
+}
