@@ -373,7 +373,7 @@ def _inspect_and_prepare(original, destination, plan):
                 source_description_sha256=contract["description_sha256"])
     if valid == 0:
         raise ValueError("The selected source coverage contains no valid land-cover cells")
-    with pending.open("rb") as src:
+    with pending.open("r+b" if os.name == "nt" else "rb") as src:
         os.fsync(src.fileno())
     _fs.replace(pending, destination)
     _fs.sync_directory(destination.parent)
@@ -454,7 +454,7 @@ def main(argv=None):
     options = dict(selected_time=args.time, buffer_m=args.buffer_m, layer=args.layer,
                    where=json.loads(args.where_json) if args.where_json else None,
                    expected_features=args.expected_features, description_receipt=args.description_receipt,
-                   collection=args.collection, collection_reference=args.collection_reference)
+                   collection= args.collection, collection_reference=args.collection_reference)
     if args.maximum_bytes < 1:
         parser.error("--maximum-bytes must be positive")
     if args.command == "plan":
