@@ -52,7 +52,7 @@ Attachments select actual files already present in the original complete source.
 
 The receiver reuses connected_mime.cjs and connected_gmail_raw.cjs. It checks original provider/RFC identities; full sender, single recipient, date and subject headers; exact MIME container/leaf structure; original plain/HTML alternatives; every attachment's filename/type/length/SHA; and source path correspondence. Actual attachment bytes remain authoritative when an attachment's omitted charset prevents optional text decoding; that original parser warning is retained. The complete RAW response and original authoring payload stay in the delivered source. Readable body content is never obtained by flattening attachment or HTML text.
 
-Connector-authored text content may omit its charset; the receiver uses UTF-8 for that text and retains the exact original authoring payload. Explicit non-UTF-8 charsets reject. The FULL/RAW header comparison decodes RFC 2047 words and ignores only outer space/tab folding; the original raw headers and exact authored-subject binding remain retained.
+Connector-authored text content may omit its charset; the receiver uses UTF-8 for that text and retains the exact original authoring payload. Explicit non-UTF-8 charsets reject. The FULL/RAW header comparison decodes RFC 2047 words and ignores outer space/tab folding. For a complete bare mailbox in From, To, Cc or Bcc, it also compares only the domain case-insensitively because Gmail FULL can lowercase that domain while RAW preserves it. Local-part case, display-name syntax and all other header content remain exact. Original raw headers and the exact authored-subject binding remain retained.
 
 ## Preserve the original event
 

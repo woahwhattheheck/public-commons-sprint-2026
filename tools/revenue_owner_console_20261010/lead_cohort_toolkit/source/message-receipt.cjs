@@ -31,7 +31,12 @@ function receiveMessage({message,raw,originalPayload,attachments,files,binaries=
  for(const name of ['from','to','cc','bcc','date','subject','message-id']){
   const warnings=[];
   const values=headers=>headers.filter(h=>String(h.name).toLowerCase()===name).map(h=>mime.decodeHeaderWords(String(h.value),warnings).replace(/^[ \t]+|[ \t]+$/g,''));
-  if(!same(values(message.payload.headers||[]),values(rawHeaders))||warnings.length)throw Error('Original FULL/RAW header differs: '+name);
+  // Gmail FULL may lowercase a bare address domain while RAW retains its case.
+  // Domains are case-insensitive; preserve the local part and all other syntax.
+  const comparable=value=>['from','to','cc','bcc'].includes(name)
+   ? value.replace(/^([A-Za-z0-9.!#$%&'*+\/=?^_`{|}~-]+@)([A-Za-z0-9.-]+)$/,(_,local,domain)=>local+domain.toLowerCase())
+   : value;
+  if(!same(values(message.payload.headers||[]).map(comparable),values(rawHeaders).map(comparable))||warnings.length)throw Error('Original FULL/RAW header differs: '+name);
  }
  // Keep every observed original part; FULL must describe the same RAW tree.
  const partRows=[];
