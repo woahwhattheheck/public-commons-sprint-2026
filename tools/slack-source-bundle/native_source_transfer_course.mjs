@@ -8,7 +8,7 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
   async function rejects(fn,code){try{await fn();throw new Error("NOT_REJECTED "+code);}catch(e){if(e.code!==code&&e.message!==code)throw e;checks.push(code);}}
   function fixture({readComplete=true,manifestPreview=false}={}){
     const records=new Map(),originals=new Map(),drafts=new Map(),uploads=new Map();
-    const driveFiles=new Map();let driveCalls=0,loseDrive=false,badDrive=false,sharedFolder=false;
+    const driveFiles=new Map();let driveCalls=0,loseDrive=false,badDrive=false,sharedFolder=false,advanceDuringUpload=false;
     let createCalls=0,attachCalls=0,page="# Authored source page\n",loseDraft=false,loseInsert=false,queuedInsert=false,taskReads=0,pendingContent="";
     const journal={load:async k=>clone(records.get(k)||null),compareAndSwap:async(k,rev,next)=>{if((records.get(k)?.revision??null)!==rev)return false;records.set(k,clone(next));return true;}};
     const call=async(name,args)=>{
@@ -42,6 +42,11 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
         if(!ref.file_id||!ref.download_url||!ref.file_name||!ref.mime_type)throw Error("ORIGINAL_ENVELOPE_LOST");
         const id="drive-file-"+driveCalls;
         driveFiles.set(id,{name:args.file_name,mime:args.mime_type,parent:args.parent_folder_id,text:originals.get(ref.file_id)});
+        if(advanceDuringUpload){
+          advanceDuringUpload=false;const [key,current]=[...records.entries()][0];
+          const next=clone(current);next.revision++;next.other_file_progress="retained";
+          records.set(key,next);
+        }
         if(loseDrive){loseDrive=false;throw Error("AUTHORED_DRIVE_REPLY_LOST");}
         v={id,success:true};
       }else if(name==="google_drive_fetch"){
@@ -69,7 +74,7 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
     const input={operation_id:"authored-operation",link_id:"authored-link",account_email:"operator@example.test",files:[{filename:"source.json",content:'{\r\n  "literal": "a  b\\tand \u00a0 snowman ☃", "id": 9007199254740993\r\n}\r\n'}]};
     input.files[0].bytes=codec.utf8Encode(input.files[0].content).length;input.files[0].sha256=codec.sha256(codec.utf8Encode(input.files[0].content));
     const target={page_id:"page-authored",workspace_id:"workspace-authored",user_id:"user-authored"};
-    return {api,input,target,journal,records,drafts,call,originals,driveFiles,driveTarget:{account_id:"drive-actor",account_email:"operator@example.test",folder_id:"folder-authored"},get driveCalls(){return driveCalls;},loseDrive:()=>{loseDrive=true;},badDrive:value=>{badDrive=value;},shareFolder:()=>{sharedFolder=true;},get createCalls(){return createCalls;},get attachCalls(){return attachCalls;},loseDraft:()=>{loseDraft=true;},loseInsert:()=>{loseInsert=true;},queueInsert:()=>{queuedInsert=true;}};
+    return {api,input,target,journal,records,drafts,call,originals,driveFiles,driveTarget:{account_id:"drive-actor",account_email:"operator@example.test",folder_id:"folder-authored"},get driveCalls(){return driveCalls;},advanceDuringUpload:()=>{advanceDuringUpload=true;},loseDrive:()=>{loseDrive=true;},badDrive:value=>{badDrive=value;},shareFolder:()=>{sharedFolder=true;},get createCalls(){return createCalls;},get attachCalls(){return attachCalls;},loseDraft:()=>{loseDraft=true;},loseInsert:()=>{loseInsert=true;},queueInsert:()=>{queuedInsert=true;}};
   }
   const f=fixture(),p=f.api.prepare(f.input),s=await f.api.start(p);
   const args=f.api.draftArgs(p);
@@ -175,6 +180,9 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
   const driveParallel=await Promise.allSettled([dc.api.toDrive(dcp.key,0,dc.driveTarget),dc.api.toDrive(dcp.key,0,dc.driveTarget)]);
   ok(dc.driveCalls===1&&driveParallel.some(x=>x.status==="fulfilled"),"concurrent private Drive continuation admits one upload");
 
+  const racing=fixture(),racingPlan=racing.api.prepare(racing.input);await racing.api.start(racingPlan);await racing.api.advance(racingPlan.key);
+  racing.advanceDuringUpload();const racingResult=await racing.api.toDrive(racingPlan.key,0,racing.driveTarget);
+  ok(racingResult.state==="drive_file_verified"&&racingResult.record.other_file_progress==="retained"&&racingResult.record.files[0].drive.file_id==="drive-file-1"&&racing.driveCalls===1,"accepted Drive ID merges after unrelated journal progress without loss or duplicate upload");
   return {schema:"commons.native-source-transfer-course/v1",scope:"authored protocol behavior; no live service writes",checks};
 }
 

@@ -377,6 +377,31 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     s=await save(s,{files,receipts:[...s.receipts,{kind,index,at:now(),file_id,verified:clone(verified)}]});
     return {state:"drive_file_verified",record:s,delivery:verified};
   }
+
+  async function retainDriveUpload(s,index,target,r){
+    const file_id=text(r.value.id,"DRIVE_FILE_ID");
+    const recovery={key:s.key,index,file_id,target:clone(target),provider:r.raw};
+    let latest=s;
+    for(let attempt=0;attempt<4;attempt++){
+      const d=latest.files[index]?.drive;
+      assert(d&&canonical(d.target)===canonical(target),"DRIVE_UPLOAD_RECEIPT_TARGET_CONFLICT",recovery);
+      if(["uploaded","verified"].includes(d.phase)){
+        assert(d.file_id===file_id,"DRIVE_UPLOAD_RECEIPT_FILE_CONFLICT",recovery);return latest;
+      }
+      assert(d.phase==="upload_pending","DRIVE_UPLOAD_RECEIPT_PHASE_CONFLICT",recovery);
+      const files=clone(latest.files);files[index].drive={...d,phase:"uploaded",file_id};
+      try{
+        return await save(latest,{files,receipts:[...latest.receipts,{kind:"drive_upload",index,at:now(),provider:r.raw}]});
+      }catch(e){
+        if(e.code!=="JOURNAL_CONFLICT")fail("DRIVE_UPLOAD_RECEIPT_PERSISTENCE_REQUIRED",{...recovery,cause:String(e.message||e)});
+        try{latest=await current(s.key);}catch(loadError){
+          fail("DRIVE_UPLOAD_RECEIPT_PERSISTENCE_REQUIRED",{...recovery,cause:String(loadError.message||loadError)});
+        }
+      }
+    }
+    fail("DRIVE_UPLOAD_RECEIPT_PERSISTENCE_REQUIRED",recovery);
+  }
+
   async function toDrive(key,index,target){
     let s=await current(key),f=s.files[index];assert(f?.original,"ORIGINAL_NOT_AVAILABLE");
     const expected=driveTarget(target),d=f.drive;
@@ -397,10 +422,8 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
       const r=await invoke("google_drive_upload_file",{file_uri:clone(f.original.file_uri),
         file_name:f.identity.filename,mime_type:f.identity.mime_type,parent_folder_id:expected.folder_id});
       assert(r.value.success!==false,"DRIVE_UPLOAD_FAILED",r.raw);
-      text(r.value.id,"DRIVE_FILE_ID");
-      const uploaded=clone(s.files);uploaded[index].drive={...uploaded[index].drive,phase:"uploaded",file_id:r.value.id};
-      // Retain the actual ID before metadata/download checks, so they resume it.
-      s=await save(s,{files:uploaded,receipts:[...s.receipts,{kind:"drive_upload",index,at:now(),provider:r.raw}]});
+      // Merge the accepted ID across unrelated concurrent journal updates.
+      s=await retainDriveUpload(s,index,expected,r);
       return await finishDrive(s,index,r.value.id,"drive_download_verified");
     }catch(e){return fault(s,e,"drive_upload_"+index);}
   }
