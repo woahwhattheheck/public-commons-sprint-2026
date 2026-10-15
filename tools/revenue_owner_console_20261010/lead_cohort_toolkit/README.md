@@ -109,3 +109,7 @@ node NEW_OUTPUT_DIRECTORY/native/reopen-cohort.mjs REOPENED_CUSTOMER_DIRECTORY
 ```
 
 The request binds complete original Gmail report/SENT objects and one stable operation ID. The maintained parser associates the actual message and records its failed, delayed or delivered outcome. Every prior source, customer edition, expanded ZIP, receipt and ordinary supplemental file stays retained. The output includes its receiving result inside the complete source so it can be received again. Read [DELIVERY_FEEDBACK.md](source/DELIVERY_FEEDBACK.md) for exact input, RAW binding and same-operation recovery.
+
+## Published contact and DNS evidence
+
+Use `node native/triage-contact-route.mjs ORIGINAL_INPUT_JSON NEW_OUTPUT_DIRECTORY` to preserve published mailto/visible/Cloudflare routes, DNS JSON observations and original-parser delivery outcomes in a read-only owner report. MX is routing evidence, not mailbox confirmation; no-MX differs from null MX and resolver failure. The helper performs no network request, send or automatic buyer-route edit. See [source/CONTACT_ROUTE_TRIAGE.md](source/CONTACT_ROUTE_TRIAGE.md) and run `node course/contact-route-triage.cjs` for the authored reserved-domain course. Keep actual correspondence and company recovery inputs private.
