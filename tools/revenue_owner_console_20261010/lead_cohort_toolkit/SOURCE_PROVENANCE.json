@@ -2,7 +2,7 @@
   "schema": "commons.lead-cohort-toolkit-source.v1",
   "operation_id": "LEAD-TOOLKIT-PUBLIC-COMPLETE-20261014",
   "license": "Apache-2.0",
-  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation. Includes source-bound complimentary value messages, version4 singular wording, and explicit same-domain hosted company URLs.",
+  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation. Includes source-bound complimentary value messages, version4 singular wording, and explicit same-domain hosted company URLs. Includes complete original delivery-feedback receiving, resumable successor source closure, full inherited tool dependencies and exact expanded customer-archive preservation.",
   "files": [
     {
       "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
@@ -161,8 +161,8 @@
     },
     {
       "path": "native/prepare-cohort.mjs",
-      "bytes": 7455,
-      "sha256": "d65398cb49b7d6acc00a6f6d0ac59bf4cda5fd661c3ce5f3529fd52b533d999a"
+      "bytes": 7563,
+      "sha256": "67ebce8909c9682f7ab677b5b59db09148b032e88e2896851565a5ceb0bd7c44"
     },
     {
       "path": "native/reopen-cohort.mjs",
@@ -186,8 +186,8 @@
     },
     {
       "path": "native/record-delivery.mjs",
-      "bytes": 10236,
-      "sha256": "3625a78bcf2bbd951b414ddb3a2f94f15f5abc5fc97117941ae48ce6426d8c80"
+      "bytes": 12747,
+      "sha256": "1c947158f2d27687d7f4cd41da6ce4c820f88c2ead042bb3fae11566985a18e6"
     },
     {
       "path": "native/materialize-source.py",
@@ -196,8 +196,8 @@
     },
     {
       "path": "source/RECORD_DELIVERY.md",
-      "bytes": 10098,
-      "sha256": "e1babb66986586ea286aeac2dadd9842773097d40eae69902ce00346cb09b046"
+      "bytes": 10711,
+      "sha256": "4e4831b151af7deb5b486eb9eb903ba2af43c3baeba63367b4b0be66ddc38d5e"
     },
     {
       "path": "source/MATERIALIZE_SOURCE.md",
@@ -250,11 +250,6 @@
       "sha256": "cef8b0691bcd3e8dcc5c97f35f0cf6398696e22e31143ac5c7733fc73b1d4762"
     },
     {
-      "path": "README.md",
-      "bytes": 10082,
-      "sha256": "0ee1072c3453f6be686538d70c3a37c615480aec1032bb9643d4a24aa4b27570"
-    },
-    {
       "path": "source/VALUE_FIRST_CUSTOMER_PRESENTATION.md",
       "bytes": 1084,
       "sha256": "6945e94743352976aebd53a5e0bb8da8b87f0195306f4d0738a903f53f2561ac"
@@ -285,6 +280,56 @@
       "sha256": "79f7be10ca80d627ed09ce51b9642306fd9171a6e39a0e42363cf481f4137c02"
     },
     {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_delivery_portable_gmail.cjs",
+      "bytes": 6669,
+      "sha256": "391be7c1df7520886c8f0a207e5f618cbc48293d0a792f7390a7c169e1c0929c"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/lead_delivery_feedback_core.cjs",
+      "bytes": 25983,
+      "sha256": "5fe5c29b3e17070817468f8ff53731af40acedb9d16600cbd41a312e8c259bd4"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/native_delivery_report_core.cjs",
+      "bytes": 31706,
+      "sha256": "242fde56fa8f377b0d1e5e4578f5f0b6ff59084a1d8c041576923619d7e67411"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/gmail_native_messages.cjs",
+      "bytes": 22579,
+      "sha256": "d2c2fe0adf905cfbe3b0230cd091f8fc78b4530957a52759c453d0065b21fe2e"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/native_google_attachment_failure.cjs",
+      "bytes": 2745,
+      "sha256": "863d2b960740413524a887418b501636fbd98b12591b2f995f5bbb5cbddd5e43"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/native_google_sending_limit_failure.cjs",
+      "bytes": 2813,
+      "sha256": "7ffc282f16ff5dea27ebdb38b3e2ec8741df457e5b186fae868acd50fe5cedcd"
+    },
+    {
+      "path": "runtime/tools/revenue_owner_console_20261010/native_google_groups_failure.cjs",
+      "bytes": 3101,
+      "sha256": "623194587399e889e8fc64bb7e002282218e13af2f7098a36f30bb327324ca8e"
+    },
+    {
+      "path": "source/receive-delivery-feedback.cjs",
+      "bytes": 3923,
+      "sha256": "bc94b3692a2d6e4fe85e6d8a48ae70f46d2bbad0ac756b101f62e41ddc2f5d4e"
+    },
+    {
+      "path": "native/receive-delivery-feedback.mjs",
+      "bytes": 8732,
+      "sha256": "0801706e05df6ff93298ae9aad1e256d80c2c20c11cc35fb32093141a568c0f7"
+    },
+    {
+      "path": "source/DELIVERY_FEEDBACK.md",
+      "bytes": 3908,
+      "sha256": "bd554d6c7e792ad24ed0d3765e9f79eb6ced6b894e9bc42184a1fac7afb3263d"
+    },
+    {
       "path": "LICENSE",
       "bytes": 11358,
       "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
@@ -295,14 +340,20 @@
       "sha256": "21cf446bc8cf3e6dc9ee401251ffa1dc4ac60f6a94c022370ef06c74d128f390"
     },
     {
-      "path": "course/route-recovery.cjs",
-      "bytes": 1787,
-      "sha256": "27c9bd6857c94d8ed82dd81408ca83f3224a530ba1fa58a5b00b2bcef0ba8bca"
+      "path": "README.md",
+      "bytes": 10924,
+      "sha256": "533d2720e614a24d61bcd1090cd0852cf1824118a73a17bc5bf38c84eb44c3ff"
     },
     {
       "path": "ROUTE_RECOVERY.md",
       "bytes": 1463,
       "sha256": "b7b90f64c71f0cb284d043ee62f0a703a8a029bf12b647a191b2ffe45f77cdf3"
+    },
+    {
+      "path": "course/route-recovery.cjs",
+      "bytes": 1787,
+      "sha256": "27c9bd6857c94d8ed82dd81408ca83f3224a530ba1fa58a5b00b2bcef0ba8bca"
     }
-  ]
+  ],
+  "continuation_operation_id": "LEAD-DELIVERY-FEEDBACK-20261015"
 }

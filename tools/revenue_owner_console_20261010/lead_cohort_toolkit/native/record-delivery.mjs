@@ -25,7 +25,7 @@ const originalBody=await fs.readFile(path.resolve(path.dirname(inputPath),input.
 const bankBody=await fs.readFile(path.join(source,'complete-source.json'),'utf8');
 const bank=JSON.parse(bankBody);
 const hash=value=>{const bytes=Buffer.from(value);return {bytes:bytes.length,sha256:createHash('sha256').update(bytes).digest('hex')};};
-const files={},binaries={},disk=new Map();
+const files=Object.create(null),binaries=Object.create(null),disk=new Map();
 function safe(value){if(typeof value!=='string'||!value||value.startsWith('/')||value.includes('\\')||value.split('/').some(p=>!p||p==='.'||p==='..'))throw Error('Unsafe complete source path');return value;}
 async function collect(directory,prefix=''){
  for(const item of await fs.readdir(directory,{withFileTypes:true})){
@@ -40,7 +40,8 @@ const originalMembers=[...disk.entries()].map(([path,body])=>({path,...hash(body
 const sourceReal=await fs.realpath(source),outputParentReal=await fs.realpath(path.dirname(output));
 const outputReal=path.join(outputParentReal,path.basename(output));
 if(outputReal===sourceReal||outputReal.startsWith(sourceReal+path.sep))throw Error('Use an output outside the original source');
-const toolPaths=['source/source-archive.cjs','source/SOURCE_ARCHIVES.md','native/pack-source.mjs','source/VALUE_FIRST_CUSTOMER_PRESENTATION.md','source/MARKDOWN_MIME_RECEIVING.md','source/PACK_SCOPED_LEAD_RECORDS.md','ROUTE_RECOVERY.md','course/route-recovery.cjs','source/message-receipt.cjs','runtime/host/connected_contact_attachments.cjs','runtime/host/connected_archive_bytes.cjs','runtime/host/connected_mime.cjs','runtime/host/connected_gmail_raw.cjs','source/delivery-recorder.cjs','source/source-publication.cjs','native/record-delivery.mjs','native/reopen-cohort.mjs','source/RECORD_DELIVERY.md','native/materialize-source.py','source/MATERIALIZE_SOURCE.md'];
+const toolPaths=['source/receive-delivery-feedback.cjs','native/receive-delivery-feedback.mjs','source/DELIVERY_FEEDBACK.md','source/source-archive.cjs','source/SOURCE_ARCHIVES.md','native/pack-source.mjs','source/VALUE_FIRST_CUSTOMER_PRESENTATION.md','source/MARKDOWN_MIME_RECEIVING.md','source/PACK_SCOPED_LEAD_RECORDS.md','ROUTE_RECOVERY.md','course/route-recovery.cjs','source/message-receipt.cjs','runtime/host/connected_contact_attachments.cjs','runtime/host/connected_archive_bytes.cjs','runtime/host/connected_mime.cjs','runtime/host/connected_gmail_raw.cjs','source/delivery-recorder.cjs','source/source-publication.cjs','native/record-delivery.mjs','native/reopen-cohort.mjs','source/RECORD_DELIVERY.md','native/materialize-source.py','source/MATERIALIZE_SOURCE.md'];
+for(const name of ["lead_delivery_portable_gmail.cjs","lead_delivery_feedback_core.cjs","native_delivery_report_core.cjs","gmail_native_messages.cjs","native_google_groups_failure.cjs","native_google_attachment_failure.cjs","native_google_sending_limit_failure.cjs"])toolPaths.push('runtime/tools/revenue_owner_console_20261010/'+name);
 const toolBodies={};for(const rel of toolPaths)toolBodies[rel]=await fs.readFile(path.join(toolRoot,rel),'utf8');
 const operation=await publication.createPublication({fs,path,hash,encode:(value,encoding)=>Buffer.from(value,encoding),randomId:randomUUID,syncDirectories:process.platform!=='win32'}).open({
  output,binding:{schema:'lead-actual-delivery.original-input.v1',source:sourceReal,input:hash(inputBody),external_sources:externalSources.map(({path,body})=>({path,...hash(body)})),original_body:hash(originalBody),complete_source:hash(bankBody),original_members:originalMembers,tool_members:toolPaths.map(path=>({path,...hash(toolBodies[path])}))},
@@ -66,7 +67,8 @@ for(const [p,bytes]of disk){const text=bytes.toString('utf8');if(Buffer.from(tex
 const require=createRequire(path.join(source,'delivery-loader.cjs'));
 const core=require(path.join(source,'runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs'));
 const renderer=require(path.join(source,'source/customer-renderer.cjs')),markdown=require(path.join(source,'source/customer-markdown.cjs'));
-// Rebuild the original prepared ZIPs from their retained complete members.
+// Validate the retained original ZIP, including all supplemental project members.
+// Only a legacy source with no retained ZIP reconstructs the original five files.
 if(files['internal/preparation-config.json']){
  if(!files['internal/preparation-input.json'])throw Error('Original cohort preparation input is missing');
  const preparation=JSON.parse(files['internal/preparation-input.json']),config=preparation.config;
@@ -78,10 +80,41 @@ if(files['internal/preparation-config.json']){
   if(typeof preparation.guides?.[name]!=='string')throw Error('Original customer ZIP guide is missing');
   const members=['html','csv','json','md'].map(ext=>{const body=files['customer/'+name+'.'+ext];if(typeof body!=='string')throw Error('Original complete ZIP member missing');return {name:stem+'.'+ext,data:body};});
   members.push({name:'START_HERE.md',data:preparation.guides[name]});
-  const expected=Buffer.from(zip.packStoredZip(members,{timestamp:config.prepared_at})),p='customer/'+stem+'.zip';
-  const retained=binaries[p]||(files[p]!==undefined?Buffer.from(files[p]):null);
-  if(retained&&!retained.equals(expected))throw Error('Original complete customer ZIP differs: '+p);
-  delete files[p];binaries[p]=expected;
+  const p='customer/'+stem+'.zip',retained=binaries[p]||(files[p]!==undefined?Buffer.from(files[p]):null);
+  if(retained){
+   const original=zip.readZip(new Uint8Array(retained));
+   const byName=new Map(original.map(member=>[member.name,member]));
+   for(const member of members){
+    const actual=byName.get(member.name);
+    const candidates=[member.data];
+    if(member.name==='START_HERE.md'&&typeof files['customer/START_HERE.md']==='string')candidates.push(files['customer/START_HERE.md']);
+    if(!actual||!candidates.some(body=>Buffer.from(actual.data).equals(Buffer.from(body))))throw Error('Original customer ZIP member differs: '+p+'/'+member.name);
+   }
+   for(const member of original){
+    if(members.some(required=>required.name===member.name))continue;
+    const sourcePath='customer/'+member.name;
+    const sourceBody=binaries[sourcePath]??files[sourcePath];
+    if(sourceBody!==undefined&&!Buffer.from(member.data).equals(Buffer.from(sourceBody)))throw Error('Original supplemental ZIP source differs: '+p+'/'+member.name);
+   }
+   const manifestMember=byName.get('MANIFEST.json');
+   if(manifestMember){
+    const originalManifest=JSON.parse(Buffer.from(manifestMember.data).toString('utf8'));
+    if(!Array.isArray(originalManifest))throw Error('Use the original complete ZIP member manifest');
+    const listed=new Set();
+    for(const member of originalManifest){
+     if(!member||typeof member.path!=='string'||listed.has(member.path)||member.path==='MANIFEST.json')throw Error('Original ZIP manifest has an invalid member');
+     listed.add(member.path);const actual=byName.get(member.path),id=actual?hash(actual.data):null;
+     if(!id||member.bytes!==id.bytes||member.sha256!==id.sha256)throw Error('Original ZIP manifest identity differs: '+p+'/'+member.path);
+    }
+    if(listed.size!==original.length-1)throw Error('Original ZIP manifest omits retained members');
+   }
+   // readZip validates every original member, path, boundary and CRC. The full
+   // archive identity was already checked against the retained source bank;
+   // keep its exact compression, ordering, extra project files and timestamps.
+   delete files[p];binaries[p]=retained;
+  }else{
+   binaries[p]=Buffer.from(zip.packStoredZip(members,{timestamp:config.prepared_at}));
+  }
  }
 }
 const portable='runtime/tools/revenue_owner_console_20261010/lead_delivery_portable_gmail.cjs';
