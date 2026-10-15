@@ -60,6 +60,12 @@ local bytes again. The match establishes byte identity with the imported
 metadata, not authenticity. JSON exports still omit file bytes, so retain the
 original files or a package export when saving your work.
 
+## Package snapshots
+
+ZIP, RO-Crate and BagIt downloads capture the current packet metadata, item list and loaded payload bytes before their asynchronous digests start. Edits, removals or new items made while a download is being prepared stay in the workbench for a later export; they do not change the package already requested.
+
+On narrow screens, the exported HTML keeps its item table inside a labeled, keyboard-focusable horizontal scroll area instead of widening the whole report.
+
 ## Spreadsheet inventory
 
 **CSV inventory** downloads the existing item list with name, role, archive path,
