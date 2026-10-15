@@ -97,31 +97,35 @@ function createLeadValueMessage({sha256Utf8}) {
       return {plain:lines.filter(Boolean).join('\n\n'),html};
     });
     const layout=recipe.layout??{mode:'complete'};
-    need(plain(layout)&&['complete','concise'].includes(layout.mode),'Select complete or concise message layout.');
+    need(plain(layout)&&['complete','concise','inline-openings'].includes(layout.mode),'Select complete, concise or inline-openings message layout.');
+    need(layout.mode!=='inline-openings'||renderVersion>=5,'Inline openings require the current rendering contract.');
+    const briefLayout=layout.mode==='concise'||layout.mode==='inline-openings';
     let selectedSections=sections,selectedOpenings=[];
-    if(layout.mode==='concise'){
+    if(briefLayout){
       need(Array.isArray(layout.cards)&&layout.cards.length===edition.leads.length,'Concise layout needs one reviewed card for every original lead.');
       need(Array.isArray(layout.opening_indices)&&layout.opening_indices.length>0&&new Set(layout.opening_indices).size===layout.opening_indices.length,'Select at least one distinct complete original opening.');
       need(layout.opening_indices.every(i=>Number.isSafeInteger(i)&&i>=0&&i<edition.leads.length),'Select original opening indices from this exact edition.');
+      if(layout.mode==='inline-openings')need(layout.opening_indices.length===edition.leads.length&&layout.opening_indices.every((value,index)=>value===index),'Inline layout retains every complete opening in source order.');
       selectedSections=layout.cards.map((card,index)=>{
         need(plain(card)&&card.index===index&&card.lead_sha256===witnesses[index].lead_sha256,'Editorial cards must retain every original lead in source order and its exact content hash.');
         for(const key of ['observed_workflow','product_use','contact_qualification'])text(card[key],'Card '+(index+1)+' '+key);
         const lead=edition.leads[index],title=(index+1)+'. '+lead.organization+(lead.person?' — '+lead.person:'');
+        if(layout.mode==='inline-openings')return {plain:[title,'Published contact: '+contactLabel(lead.contact_route),card.contact_qualification,'Source: '+lead.source_url,'Opening to adapt:\n'+lead.opening_message].join('\n\n'),html:'<section><h2>'+esc(title)+'</h2><p><strong>Published contact:</strong> '+link(lead.contact_route,contactLabel(lead.contact_route))+'</p>'+paras(card.contact_qualification)+'<p>Source: '+link(lead.source_url)+'</p><h3>Opening to adapt</h3><blockquote style="white-space:pre-wrap">'+esc(lead.opening_message)+'</blockquote></section>'};
         return {plain:[title,'Published contact: '+contactLabel(lead.contact_route),card.contact_qualification,'Observed workflow: '+card.observed_workflow,'Possible use: '+card.product_use,'Source: '+lead.source_url].join('\n\n'),
           html:'<section><h2>'+esc(title)+'</h2><p><strong>Published contact:</strong> '+link(lead.contact_route,contactLabel(lead.contact_route))+'</p>'+paras(card.contact_qualification)+
             '<p><strong>Observed workflow:</strong> '+esc(card.observed_workflow)+'</p><p><strong>Possible use:</strong> '+esc(card.product_use)+'</p><p>Source: '+link(lead.source_url)+'</p></section>'};
       });
-      selectedOpenings=layout.opening_indices.map(index=>{
+      selectedOpenings=layout.mode==='inline-openings'?[]:layout.opening_indices.map(index=>{
         const lead=edition.leads[index],title='Complete proposed opening — '+lead.organization;
         return {plain:title+'\n\n'+lead.opening_message,html:'<section><h2>'+esc(title)+'</h2><blockquote style="white-space:pre-wrap">'+esc(lead.opening_message)+'</blockquote></section>'};
       });
     }
     const currentLine='Included now: '+current.quantity+' complete '+(renderVersion>=4&&current.quantity===1?'profile':'profiles')+' — '+(current.price_minor===0?'free ('+money(0,current.currency)+')':money(current.price_minor,current.currency))+'. '+current.description;
     const nextLine=next===null?'':'Optional follow-on: '+next.quantity+' new, distinct profiles — '+money(next.price_minor,next.currency)+' total. '+next.description+' '+next.timing+' '+next.corrections;
-    const intro=layout.mode==='concise'?[recipe.opening]:[recipe.opening,buyer.fit,buyer.product_scope,...(legacy?[buyer.pricing_fit,currentLine]:[])];
+    const intro=briefLayout?[recipe.opening]:[recipe.opening,buyer.fit,buyer.product_scope,...(legacy?[buyer.pricing_fit,currentLine]:[])];
     const closing=legacy
-      ? [...(layout.mode==='concise'?[currentLine]:[]),nextLine,recipe.next_question,recipe.signature].filter(Boolean)
-      : [...(layout.mode==='concise'?[]:[buyer.pricing_fit]),currentLine,nextLine,recipe.next_question,recipe.signature].filter(Boolean);
+      ? [...(briefLayout?[currentLine]:[]),nextLine,recipe.next_question,recipe.signature].filter(Boolean)
+      : [...(briefLayout?[]:[buyer.pricing_fit]),currentLine,nextLine,recipe.next_question,recipe.signature].filter(Boolean);
     const bodyPlain=[...intro,...selectedSections.map(s=>s.plain),...selectedOpenings.map(s=>s.plain),...closing].join('\n\n')+'\n';
     const bodyHtml='<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+esc(recipe.subject)+'</title></head>'+
       '<body style="font:16px/1.55 Arial,sans-serif;color:#17202a;max-width:800px;margin:24px auto;padding:0 16px">'+
@@ -134,10 +138,10 @@ function createLeadValueMessage({sha256Utf8}) {
       interpretation:'Prepared content only. The original edition, prospect interest, existing delivery events and buyer decisions are unchanged. Actual sending and reply ownership remain with the original authorized case.'};
     return {...basis,sha256:sha256Utf8(JSON.stringify(canonical(basis))).sha256};
   }
-  function compose(input){return composeRecord(input,4);}
+  function compose(input){return composeRecord(input,input?.recipe?.layout?.mode==='inline-openings'?5:4);}
   function receive(record){
     need(plain(record)&&record.schema===VERSION&&record.state==='PREPARED_UNSENT','Reopen the complete unsent value-message record.');
-    need(record.render_version===undefined||record.render_version===2||record.render_version===3||record.render_version===4,'Use a supported complete message rendering version.');
+    need(record.render_version===undefined||record.render_version===2||record.render_version===3||record.render_version===4||record.render_version===5,'Use a supported complete message rendering version.');
     const expected=composeRecord({editionText:record.original_edition_text,recipe:record.recipe},record.render_version===undefined?1:record.render_version);
     need(JSON.stringify(canonical(expected))===JSON.stringify(canonical(record)),'The prepared message, exact source or reviewed recipe changed.');
     return expected;
