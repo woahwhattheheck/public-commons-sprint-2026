@@ -8,6 +8,7 @@ const copy=value=>JSON.parse(JSON.stringify(value));
 const own=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
 const uid=prefix=>prefix+'-'+crypto.randomUUID();
 const stamp=()=>new Date().toISOString();
+const literalValues=new WeakMap();
 const S={db:null,copyId:null,workspace:null,state:null,section:'workspace',registryId:null,sourceIds:[],sourceId:null,rowId:null,page:0,planId:null,returnedId:null,templateId:null,busy:false,drafts:{},draftQueue:Promise.resolve(),actor:'',conflict:null,storageError:null};
 let tabId;try{tabId=sessionStorage.getItem('tourism-series-tab');if(!tabId){tabId=uid('tab');sessionStorage.setItem('tourism-series-tab',tabId);}S.actor=sessionStorage.getItem('tourism-series-actor')||'';}catch{tabId=uid('tab');}
 async function claimTabIdentity(){
@@ -21,7 +22,7 @@ async function claimTabIdentity(){
   });
 }
 const channel=typeof BroadcastChannel==='function'?new BroadcastChannel('tourism-series-workspace'):null;
-function el(tag,props={},...children){const node=document.createElement(tag);for(const [k,v]of Object.entries(props)){if(k==='class')node.className=v;else if(k==='text')node.textContent=v;else if(k==='on')for(const [name,fn]of Object.entries(v))node.addEventListener(name,fn);else if(k==='dataset')Object.assign(node.dataset,v);else if(k in node&&k!=='form')node[k]=v;else node.setAttribute(k,v);}for(const child of children.flat(Infinity))if(child!==null&&child!==undefined)node.append(child instanceof Node?child:document.createTextNode(String(child)));return node;}
+function el(tag,props={},...children){const node=document.createElement(tag);for(const [k,v]of Object.entries(props)){if(k==='class')node.className=v;else if(k==='text')node.textContent=v;else if(k==='on')for(const [name,fn]of Object.entries(v))node.addEventListener(name,fn);else if(k==='dataset')Object.assign(node.dataset,v);else if(k in node&&k!=='form'){node[k]=v;if(k==='value'&&['input','textarea'].includes(tag))literalValues.set(node,String(v));}else node.setAttribute(k,v);}for(const child of children.flat(Infinity))if(child!==null&&child!==undefined)node.append(child instanceof Node?child:document.createTextNode(String(child)));return node;}
 function say(message,error=false){$('notice').textContent=message;$('notice').dataset.error=String(error);}
 function buttons(){document.querySelectorAll('button,input,select,textarea').forEach(n=>{if(S.busy){if(!n.hasAttribute('data-was-disabled'))n.dataset.wasDisabled=n.disabled?'1':'0';n.disabled=true;}else if(n.hasAttribute('data-was-disabled')){n.disabled=n.dataset.wasDisabled==='1';delete n.dataset.wasDisabled;}});}
 async function act(fn){if(S.busy)return;S.busy=true;buttons();try{await fn();}catch(e){say((e.code?e.code+': ':'')+e.message,true);}finally{S.busy=false;buttons();}}
@@ -38,8 +39,9 @@ function textArea(name,label,value='',props={}){return el('label',{class:'field'
 function select(name,label,options,value=''){const n=el('select',{name},options.map(o=>el('option',{value:Array.isArray(o)?o[0]:o},Array.isArray(o)?o[1]:o)));if(value!==''&&!Array.from(n.options).some(o=>o.value===String(value)))n.append(el('option',{value},'Retained value: '+value));n.value=value;return el('label',{class:'field'},el('span',{},label),n);}
 function check(name,label,checked=false){return el('label',{class:'check'},el('input',{name,type:'checkbox',checked}),el('span',{},label));}
 function chosen(data,prefix){return Object.keys(data).filter(k=>k.startsWith(prefix+':')&&data[k]===true).map(k=>k.slice(prefix.length+1));}
-function plainValues(form){const fields={};for(const n of form.elements)if(n.name&&n.type!=='file'&&!['submit','button'].includes(n.type))fields[n.name]=n.type==='checkbox'?n.checked:n.value;return fields;}
-function hydrate(form,fields){for(const n of form.elements)if(n.name&&own(fields,n.name)&&n.type!=='file'){if(n.type==='checkbox')n.checked=fields[n.name]===true;else{if(n.tagName==='SELECT'&&!Array.from(n.options).some(o=>o.value===String(fields[n.name])))n.append(el('option',{value:fields[n.name]},'Retained value: '+fields[n.name]));n.value=fields[n.name];}}}
+function plainValues(form){const fields={};for(const n of form.elements)if(n.name&&n.type!=='file'&&!['submit','button'].includes(n.type))fields[n.name]=n.type==='checkbox'?n.checked:literalValues.has(n)?literalValues.get(n):n.value;return fields;}
+function editedValue(event){const n=event.target;if(n&&['INPUT','TEXTAREA'].includes(n.tagName)&&n.type!=='file'&&n.type!=='checkbox')literalValues.set(n,n.value);}
+function hydrate(form,fields){for(const n of form.elements)if(n.name&&own(fields,n.name)&&n.type!=='file'){if(n.type==='checkbox')n.checked=fields[n.name]===true;else{if(n.tagName==='SELECT'&&!Array.from(n.options).some(o=>o.value===String(fields[n.name])))n.append(el('option',{value:fields[n.name]},'Retained value: '+fields[n.name]));n.value=fields[n.name];if(['INPUT','TEXTAREA'].includes(n.tagName))literalValues.set(n,String(fields[n.name]));}}}
 function request(tx,store,key){return new Promise((resolve,reject)=>{const r=tx.objectStore(store).get(key);r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});}
 function transaction(stores,fn){return new Promise((resolve,reject)=>{const tx=S.db.transaction(stores,'readwrite');let result;tx.oncomplete=()=>resolve(result);tx.onerror=()=>reject(tx.error||Error('The local save failed.'));tx.onabort=()=>reject(tx.error||Error('The local save was aborted.'));try{fn(tx,value=>{result=value;});}catch(e){tx.abort();reject(e);}});}
 async function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open('tourism-series-workspace-v1',1);r.onupgradeneeded=()=>{for(const name of ['copies','drafts','branches'])r.result.createObjectStore(name,{keyPath:'key'});};r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.onblocked=()=>reject(Error('Close the older workspace tab to open the local database.'));});}
@@ -55,8 +57,8 @@ function form(name,title,fields,prepare,options={}){
   adopt.hidden=!saved||saved.baseHead===Portable.head(S.workspace);
   box.append(flag,adopt,el('div',{class:'actions'},el('button',{type:'submit',class:'primary'},options.label||'Save'),button('Discard this unfinished form',async()=>{await S.draftQueue;await transaction(['drafts'],tx=>tx.objectStore('drafts').delete(draftKey(name)));delete S.drafts[name];render();})));
   form.append(box);if(saved)hydrate(form,saved.fields);updateFlag();
-  form.addEventListener('input',()=>{captureDraft(form,name);updateFlag();});
-  form.addEventListener('change',()=>{captureDraft(form,name);updateFlag();});
+  form.addEventListener('input',event=>{editedValue(event);captureDraft(form,name);updateFlag();});
+  form.addEventListener('change',event=>{editedValue(event);captureDraft(form,name);updateFlag();});
   form.addEventListener('submit',event=>{event.preventDefault();if(S.busy)return;
     const raw=plainValues(form),picked={};for(const n of form.elements)if(n.type==='file'&&n.name)picked[n.name]=Array.from(n.files);
     const draft=captureDraft(form,name),original=copy(S.workspace),originalKey=S.copyId;
