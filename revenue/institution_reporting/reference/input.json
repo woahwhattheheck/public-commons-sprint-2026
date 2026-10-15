@@ -1,0 +1,290 @@
+{
+  "schema": "commons.institution-report-input.v1",
+  "title": "Authored institution reporting reference",
+  "periods": [
+    "2025-12-31",
+    "2026-03-31",
+    "2026-06-30",
+    "2026-09-30"
+  ],
+  "institutions": [
+    {
+      "id": "A",
+      "name": "Example Bank A",
+      "family": "bank"
+    },
+    {
+      "id": "B",
+      "name": "Example Bank B",
+      "family": "bank"
+    },
+    {
+      "id": "C",
+      "name": "Example Bank C",
+      "family": "bank"
+    }
+  ],
+  "subjectIds": [
+    "A"
+  ],
+  "cohorts": [
+    {
+      "id": "authored-cohort",
+      "subjectId": "A",
+      "definition": "Three authored example institutions",
+      "approvedBy": "Reference author",
+      "approvedAt": "2026-10-15",
+      "memberIds": [
+        "A",
+        "B",
+        "C"
+      ],
+      "includeSubject": true
+    }
+  ],
+  "measures": [
+    {
+      "decimals": 2,
+      "rankDirection": "higher",
+      "comparisonPolicy": "compatible",
+      "comparisonNote": "Calendar-quarter flow or quarter-end stock; explicit reported units",
+      "id": "income_quarter",
+      "label": "Quarter income",
+      "unit": "USD",
+      "operation": "quarter_from_ytd",
+      "sourceMetric": "income_ytd",
+      "sourceBasis": "year_to_date",
+      "peerStatistic": "mean",
+      "sourceDefinitionGroup": "authored-income_ytd-v1"
+    },
+    {
+      "decimals": 2,
+      "rankDirection": "higher",
+      "comparisonPolicy": "compatible",
+      "comparisonNote": "Calendar-quarter flow or quarter-end stock; explicit reported units",
+      "id": "assets",
+      "label": "Quarter-end assets",
+      "unit": "USD",
+      "operation": "reported",
+      "sourceMetric": "assets",
+      "sourceBasis": "instant",
+      "peerStatistic": "median",
+      "sourceDefinitionGroup": "authored-assets-v1"
+    },
+    {
+      "decimals": 2,
+      "rankDirection": "higher",
+      "comparisonPolicy": "compatible",
+      "comparisonNote": "Calendar-quarter flow or quarter-end stock; explicit reported units",
+      "id": "income_to_assets",
+      "label": "Quarter income / period-end assets (unannualized)",
+      "unit": "percent",
+      "operation": "ratio",
+      "numerator": "income_quarter",
+      "denominator": "assets",
+      "multiplier": "100",
+      "peerStatistic": "ratio_of_sums"
+    },
+    {
+      "decimals": 2,
+      "rankDirection": "higher",
+      "comparisonPolicy": "same_calendar_quarter",
+      "comparisonNote": "Only equal calendar-quarter endpoints have equal YTD duration",
+      "id": "income_ytd",
+      "label": "Reported year-to-date income",
+      "unit": "USD",
+      "operation": "reported",
+      "sourceMetric": "income_ytd",
+      "sourceBasis": "year_to_date",
+      "peerStatistic": "mean",
+      "sourceDefinitionGroup": "authored-income_ytd-v1"
+    }
+  ],
+  "originals": [
+    {
+      "filename": "authored-2025-09-30.csv",
+      "sha256": "fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f",
+      "text": "entity,period,income_ytd,assets\nA,2025-09-30,90,1000\nB,2025-09-30,180,3000\nC,2025-09-30,0,0\n"
+    },
+    {
+      "filename": "authored-2025-12-31.csv",
+      "sha256": "77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851",
+      "text": "entity,period,income_ytd,assets\nA,2025-12-31,120,1000\nB,2025-12-31,240,3000\nC,2025-12-31,0,0\n"
+    },
+    {
+      "filename": "authored-2026-03-31.csv",
+      "sha256": "ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f",
+      "text": "entity,period,income_ytd,assets\nA,2026-03-31,35,1000\nB,2026-03-31,70,3000\nC,2026-03-31,0,0\n"
+    },
+    {
+      "filename": "authored-2026-06-30.csv",
+      "sha256": "338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1",
+      "text": "entity,period,income_ytd,assets\nA,2026-06-30,75,1000\nB,2026-06-30,150,3000\nC,2026-06-30,0,0\n"
+    },
+    {
+      "filename": "authored-2026-09-30.csv",
+      "sha256": "993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12",
+      "text": "entity,period,income_ytd,assets\nA,2026-09-30,120,1000\nB,2026-09-30,240,3000\nC,2026-09-30,0,0\n"
+    }
+  ],
+  "views": [
+    {
+      "sha256": "444d926cb862d4c8988c1b74274c0a686f36b48eb2950c3206c6bab2d58faeed",
+      "text": "{\n  \"schema\": \"commons.bankregdata-view.v1\",\n  \"source_sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n  \"mapping\": {\n    \"authoredReference\": true\n  },\n  \"observations\": [\n    {\n      \"entity\": \"A\",\n      \"period\": \"2025-09-30\",\n      \"period_raw\": \"2025-09-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"90\",\n      \"value\": \"90\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"90\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 3,\n        \"line\": 2,\n        \"source_row\": \"A,2025-09-30,90,1000\"\n      }\n    },\n    {\n      \"entity\": \"A\",\n      \"period\": \"2025-09-30\",\n      \"period_raw\": \"2025-09-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"1000\",\n      \"value\": \"1000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"1000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 4,\n        \"line\": 2,\n        \"source_row\": \"A,2025-09-30,90,1000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2025-09-30\",\n      \"period_raw\": \"2025-09-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"180\",\n      \"value\": \"180\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"180\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 3,\n        \"line\": 3,\n        \"source_row\": \"B,2025-09-30,180,3000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2025-09-30\",\n      \"period_raw\": \"2025-09-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"3000\",\n      \"value\": \"3000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"3000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 4,\n        \"line\": 3,\n        \"source_row\": \"B,2025-09-30,180,3000\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2025-09-30\",\n      \"period_raw\": \"2025-09-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 3,\n        \"line\": 4,\n        \"source_row\": \"C,2025-09-30,0,0\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2025-09-30\",\n      \"period_raw\": \"2025-09-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 4,\n        \"line\": 4,\n        \"source_row\": \"C,2025-09-30,0,0\"\n      }\n    }\n  ],\n  \"entities\": [\n    \"A\",\n    \"B\",\n    \"C\"\n  ],\n  \"periods\": [\n    \"2025-09-30\"\n  ],\n  \"metrics\": [\n    \"income_ytd\",\n    \"assets\"\n  ],\n  \"observation_count\": 6\n}\n"
+    },
+    {
+      "sha256": "fbb4589b6e53d00036d6d9261075e52fcce4aafd954cb0b24843919000ea5418",
+      "text": "{\n  \"schema\": \"commons.bankregdata-view.v1\",\n  \"source_sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n  \"mapping\": {\n    \"authoredReference\": true\n  },\n  \"observations\": [\n    {\n      \"entity\": \"A\",\n      \"period\": \"2025-12-31\",\n      \"period_raw\": \"2025-12-31\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"120\",\n      \"value\": \"120\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"120\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 3,\n        \"line\": 2,\n        \"source_row\": \"A,2025-12-31,120,1000\"\n      }\n    },\n    {\n      \"entity\": \"A\",\n      \"period\": \"2025-12-31\",\n      \"period_raw\": \"2025-12-31\",\n      \"metric\": \"assets\",\n      \"raw\": \"1000\",\n      \"value\": \"1000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"1000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 4,\n        \"line\": 2,\n        \"source_row\": \"A,2025-12-31,120,1000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2025-12-31\",\n      \"period_raw\": \"2025-12-31\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"240\",\n      \"value\": \"240\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"240\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 3,\n        \"line\": 3,\n        \"source_row\": \"B,2025-12-31,240,3000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2025-12-31\",\n      \"period_raw\": \"2025-12-31\",\n      \"metric\": \"assets\",\n      \"raw\": \"3000\",\n      \"value\": \"3000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"3000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 4,\n        \"line\": 3,\n        \"source_row\": \"B,2025-12-31,240,3000\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2025-12-31\",\n      \"period_raw\": \"2025-12-31\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 3,\n        \"line\": 4,\n        \"source_row\": \"C,2025-12-31,0,0\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2025-12-31\",\n      \"period_raw\": \"2025-12-31\",\n      \"metric\": \"assets\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 4,\n        \"line\": 4,\n        \"source_row\": \"C,2025-12-31,0,0\"\n      }\n    }\n  ],\n  \"entities\": [\n    \"A\",\n    \"B\",\n    \"C\"\n  ],\n  \"periods\": [\n    \"2025-12-31\"\n  ],\n  \"metrics\": [\n    \"income_ytd\",\n    \"assets\"\n  ],\n  \"observation_count\": 6\n}\n"
+    },
+    {
+      "sha256": "da5c5caedf3fbc16216ae12d1a35cced59e02747f483604bcac48f6906f1d23f",
+      "text": "{\n  \"schema\": \"commons.bankregdata-view.v1\",\n  \"source_sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n  \"mapping\": {\n    \"authoredReference\": true\n  },\n  \"observations\": [\n    {\n      \"entity\": \"A\",\n      \"period\": \"2026-03-31\",\n      \"period_raw\": \"2026-03-31\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"35\",\n      \"value\": \"35\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"35\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 3,\n        \"line\": 2,\n        \"source_row\": \"A,2026-03-31,35,1000\"\n      }\n    },\n    {\n      \"entity\": \"A\",\n      \"period\": \"2026-03-31\",\n      \"period_raw\": \"2026-03-31\",\n      \"metric\": \"assets\",\n      \"raw\": \"1000\",\n      \"value\": \"1000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"1000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 4,\n        \"line\": 2,\n        \"source_row\": \"A,2026-03-31,35,1000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2026-03-31\",\n      \"period_raw\": \"2026-03-31\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"70\",\n      \"value\": \"70\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"70\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 3,\n        \"line\": 3,\n        \"source_row\": \"B,2026-03-31,70,3000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2026-03-31\",\n      \"period_raw\": \"2026-03-31\",\n      \"metric\": \"assets\",\n      \"raw\": \"3000\",\n      \"value\": \"3000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"3000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 4,\n        \"line\": 3,\n        \"source_row\": \"B,2026-03-31,70,3000\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2026-03-31\",\n      \"period_raw\": \"2026-03-31\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 3,\n        \"line\": 4,\n        \"source_row\": \"C,2026-03-31,0,0\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2026-03-31\",\n      \"period_raw\": \"2026-03-31\",\n      \"metric\": \"assets\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 4,\n        \"line\": 4,\n        \"source_row\": \"C,2026-03-31,0,0\"\n      }\n    }\n  ],\n  \"entities\": [\n    \"A\",\n    \"B\",\n    \"C\"\n  ],\n  \"periods\": [\n    \"2026-03-31\"\n  ],\n  \"metrics\": [\n    \"income_ytd\",\n    \"assets\"\n  ],\n  \"observation_count\": 6\n}\n"
+    },
+    {
+      "sha256": "8795bd8bd19c04907430b78ea7b319ddb09f6f460409f957921b5663610a5e5e",
+      "text": "{\n  \"schema\": \"commons.bankregdata-view.v1\",\n  \"source_sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n  \"mapping\": {\n    \"authoredReference\": true\n  },\n  \"observations\": [\n    {\n      \"entity\": \"A\",\n      \"period\": \"2026-06-30\",\n      \"period_raw\": \"2026-06-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"75\",\n      \"value\": \"75\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"75\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 3,\n        \"line\": 2,\n        \"source_row\": \"A,2026-06-30,75,1000\"\n      }\n    },\n    {\n      \"entity\": \"A\",\n      \"period\": \"2026-06-30\",\n      \"period_raw\": \"2026-06-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"1000\",\n      \"value\": \"1000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"1000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 4,\n        \"line\": 2,\n        \"source_row\": \"A,2026-06-30,75,1000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2026-06-30\",\n      \"period_raw\": \"2026-06-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"150\",\n      \"value\": \"150\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"150\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 3,\n        \"line\": 3,\n        \"source_row\": \"B,2026-06-30,150,3000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2026-06-30\",\n      \"period_raw\": \"2026-06-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"3000\",\n      \"value\": \"3000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"3000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 4,\n        \"line\": 3,\n        \"source_row\": \"B,2026-06-30,150,3000\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2026-06-30\",\n      \"period_raw\": \"2026-06-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 3,\n        \"line\": 4,\n        \"source_row\": \"C,2026-06-30,0,0\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2026-06-30\",\n      \"period_raw\": \"2026-06-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 4,\n        \"line\": 4,\n        \"source_row\": \"C,2026-06-30,0,0\"\n      }\n    }\n  ],\n  \"entities\": [\n    \"A\",\n    \"B\",\n    \"C\"\n  ],\n  \"periods\": [\n    \"2026-06-30\"\n  ],\n  \"metrics\": [\n    \"income_ytd\",\n    \"assets\"\n  ],\n  \"observation_count\": 6\n}\n"
+    },
+    {
+      "sha256": "eafccc609812a1c0e5ea01e89bea8e40ac086818ebcdf28e1a5b23c862c84fe6",
+      "text": "{\n  \"schema\": \"commons.bankregdata-view.v1\",\n  \"source_sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n  \"mapping\": {\n    \"authoredReference\": true\n  },\n  \"observations\": [\n    {\n      \"entity\": \"A\",\n      \"period\": \"2026-09-30\",\n      \"period_raw\": \"2026-09-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"120\",\n      \"value\": \"120\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"120\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 3,\n        \"line\": 2,\n        \"source_row\": \"A,2026-09-30,120,1000\"\n      }\n    },\n    {\n      \"entity\": \"A\",\n      \"period\": \"2026-09-30\",\n      \"period_raw\": \"2026-09-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"1000\",\n      \"value\": \"1000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"1000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n        \"table_id\": \"csv\",\n        \"row\": 2,\n        \"column\": 4,\n        \"line\": 2,\n        \"source_row\": \"A,2026-09-30,120,1000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2026-09-30\",\n      \"period_raw\": \"2026-09-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"240\",\n      \"value\": \"240\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"240\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 3,\n        \"line\": 3,\n        \"source_row\": \"B,2026-09-30,240,3000\"\n      }\n    },\n    {\n      \"entity\": \"B\",\n      \"period\": \"2026-09-30\",\n      \"period_raw\": \"2026-09-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"3000\",\n      \"value\": \"3000\",\n      \"status\": \"reported\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"3000\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n        \"table_id\": \"csv\",\n        \"row\": 3,\n        \"column\": 4,\n        \"line\": 3,\n        \"source_row\": \"B,2026-09-30,240,3000\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2026-09-30\",\n      \"period_raw\": \"2026-09-30\",\n      \"metric\": \"income_ytd\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"year_to_date\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 3,\n        \"line\": 4,\n        \"source_row\": \"C,2026-09-30,0,0\"\n      }\n    },\n    {\n      \"entity\": \"C\",\n      \"period\": \"2026-09-30\",\n      \"period_raw\": \"2026-09-30\",\n      \"metric\": \"assets\",\n      \"raw\": \"0\",\n      \"value\": \"0\",\n      \"status\": \"reported_zero\",\n      \"comparable\": true,\n      \"unit\": \"USD\",\n      \"basis\": \"instant\",\n      \"zero_policy\": \"reported_zero\",\n      \"normalized_value\": \"0\",\n      \"normalized_unit\": \"USD\",\n      \"scale\": \"1\",\n      \"metric_note\": \"Authored exact-decimal reference\",\n      \"source\": {\n        \"sha256\": \"993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12\",\n        \"table_id\": \"csv\",\n        \"row\": 4,\n        \"column\": 4,\n        \"line\": 4,\n        \"source_row\": \"C,2026-09-30,0,0\"\n      }\n    }\n  ],\n  \"entities\": [\n    \"A\",\n    \"B\",\n    \"C\"\n  ],\n  \"periods\": [\n    \"2026-09-30\"\n  ],\n  \"metrics\": [\n    \"income_ytd\",\n    \"assets\"\n  ],\n  \"observation_count\": 6\n}\n"
+    }
+  ],
+  "sourceSelections": [
+    {
+      "metric": "income_ytd",
+      "period": "2025-09-30",
+      "sourceSha256": "fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f",
+      "tableId": "csv",
+      "definitionId": "authored-income_ytd-v1",
+      "compatibility": {
+        "group": "authored-income_ytd-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Calendar YTD net income, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "assets",
+      "period": "2025-09-30",
+      "sourceSha256": "fe1c28c768538bd254d6a246771669d75b53f53aa216ad055d38b980d4f09e1f",
+      "tableId": "csv",
+      "definitionId": "authored-assets-v1",
+      "compatibility": {
+        "group": "authored-assets-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Quarter-end assets, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "income_ytd",
+      "period": "2025-12-31",
+      "sourceSha256": "77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851",
+      "tableId": "csv",
+      "definitionId": "authored-income_ytd-v1",
+      "compatibility": {
+        "group": "authored-income_ytd-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Calendar YTD net income, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "assets",
+      "period": "2025-12-31",
+      "sourceSha256": "77afc327c81dae6237ebf7f7e49da45a9e560f1fc56fe3b188a6f4d886a6d851",
+      "tableId": "csv",
+      "definitionId": "authored-assets-v1",
+      "compatibility": {
+        "group": "authored-assets-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Quarter-end assets, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "income_ytd",
+      "period": "2026-03-31",
+      "sourceSha256": "ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f",
+      "tableId": "csv",
+      "definitionId": "authored-income_ytd-v1",
+      "compatibility": {
+        "group": "authored-income_ytd-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Calendar YTD net income, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "assets",
+      "period": "2026-03-31",
+      "sourceSha256": "ef8e32038352c3b0864d3270000ad92ae2fb1cb4133bef93329b71f02174179f",
+      "tableId": "csv",
+      "definitionId": "authored-assets-v1",
+      "compatibility": {
+        "group": "authored-assets-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Quarter-end assets, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "income_ytd",
+      "period": "2026-06-30",
+      "sourceSha256": "338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1",
+      "tableId": "csv",
+      "definitionId": "authored-income_ytd-v1",
+      "compatibility": {
+        "group": "authored-income_ytd-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Calendar YTD net income, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "assets",
+      "period": "2026-06-30",
+      "sourceSha256": "338ba83d779e37017bfdbee5eec7cd8bea3c1370e8c13b461ce86bb22c88d8c1",
+      "tableId": "csv",
+      "definitionId": "authored-assets-v1",
+      "compatibility": {
+        "group": "authored-assets-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Quarter-end assets, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "income_ytd",
+      "period": "2026-09-30",
+      "sourceSha256": "993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12",
+      "tableId": "csv",
+      "definitionId": "authored-income_ytd-v1",
+      "compatibility": {
+        "group": "authored-income_ytd-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Calendar YTD net income, same authored definition across five periods"
+      }
+    },
+    {
+      "metric": "assets",
+      "period": "2026-09-30",
+      "sourceSha256": "993ac76e6c99b210940c24a2b52467eeec10d4f4abcc2cf21c642af767adec12",
+      "tableId": "csv",
+      "definitionId": "authored-assets-v1",
+      "compatibility": {
+        "group": "authored-assets-v1",
+        "approvedBy": "Reference author",
+        "approvedAt": "2026-10-15",
+        "note": "Quarter-end assets, same authored definition across five periods"
+      }
+    }
+  ],
+  "review": {
+    "reviewer": null,
+    "reviewedAt": null,
+    "corrections": [],
+    "note": "Authored operating reference; fill actual project review separately"
+  }
+}
