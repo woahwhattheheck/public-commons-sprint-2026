@@ -98,3 +98,14 @@ The [lossless source archive](source/SOURCE_ARCHIVES.md) stores repeated origina
 Use the core's existing complimentary edition with explicit earlier-edition inclusion when completing a free pack from a retained sample. The message composer accepts its zero-priced economics and preserves every earlier record; it does not withdraw or send an edition. New render-version4 messages use singular wording for one profile while independently receiving versions1–4 unchanged.
 
 An optional profile `company_url` preserves a full hosted product path with the same normalized company domain. The default remains unchanged for old input replay. The signal URL remains the separate original evidence link. See the current preparation and value-message guides.
+
+## Receive a later delivery outcome
+
+The complete toolkit also receives actual delivery reports into the original programme:
+
+```sh
+node native/receive-delivery-feedback.mjs ORIGINAL_SOURCE_DIRECTORY FEEDBACK_INPUT_JSON NEW_OUTPUT_DIRECTORY
+node NEW_OUTPUT_DIRECTORY/native/reopen-cohort.mjs REOPENED_CUSTOMER_DIRECTORY
+```
+
+The request binds complete original Gmail report/SENT objects and one stable operation ID. The maintained parser associates the actual message and records its failed, delayed or delivered outcome. Every prior source, customer edition, expanded ZIP, receipt and ordinary supplemental file stays retained. The output includes its receiving result inside the complete source so it can be received again. Read [DELIVERY_FEEDBACK.md](source/DELIVERY_FEEDBACK.md) for exact input, RAW binding and same-operation recovery.
