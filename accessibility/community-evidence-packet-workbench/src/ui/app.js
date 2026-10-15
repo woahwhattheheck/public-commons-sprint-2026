@@ -215,7 +215,8 @@ function wire() {
     $("text-box").hidden = !$("text-box").hidden;
   });
   $("save-text").addEventListener("click", async () => {
-    const name = $("paste-name").value || "testimony.txt";
+    const draftName = $("paste-name").value;
+    const name = draftName || "testimony.txt";
     const text = $("paste-text").value;
     generation += 1;
     const gen = generation;
@@ -237,9 +238,15 @@ function wire() {
       return;
     }
     target.items.push(item);
-    $("paste-text").value = "";
-    $("text-box").hidden = true;
+    const draftUnchanged = $("paste-name").value === draftName && $("paste-text").value === text;
+    if (draftUnchanged) {
+      $("paste-text").value = "";
+      $("text-box").hidden = true;
+    }
     render();
+    $("export-status").textContent = draftUnchanged
+      ? "Added the submitted text to this packet."
+      : "Added the submitted text. Your newer text or filename is still in the editor.";
   });
   $("import-json").addEventListener("change", async (ev) => {
     const file = ev.target.files[0];
