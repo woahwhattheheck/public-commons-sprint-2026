@@ -251,13 +251,22 @@ export function createArchiveCodec() {
     return {bytes:out,members};
   }
   function deflateRaw(input) {
-    const a=bytes(input), out=[];let buffer=0,buffered=0;
-    function write(v,n){buffer|=v<<buffered;buffered+=n;while(buffered>=8){out.push(buffer&255);buffer>>>=8;buffered-=8;}}
+    // Keep compressed bytes in typed chunks; a boxed-number array costs much more
+    // than the encoded output. Only the final return buffer is contiguous.
+    const a=bytes(input), chunkSize=65536, chunks=[];
+    let output=new Uint8Array(chunkSize), used=0, completed=0, buffer=0,buffered=0;
+    function emit(v){
+      if(used===chunkSize){chunks.push(output);completed+=used;output=new Uint8Array(chunkSize);used=0;}
+      output[used++]=v;
+    }
+    function write(v,n){buffer|=v<<buffered;buffered+=n;while(buffered>=8){emit(buffer&255);buffer>>>=8;buffered-=8;}}
     const symbol=(tree,s)=>{const pair=tree.codes[s];write(pair[0],pair[1]);};
     write(3,3);
-    const heads=new Int32Array(65536).fill(-1),previous=new Int32Array(a.length).fill(-1);
+    const heads=new Int32Array(65536).fill(-1),previous=new Int32Array(32768).fill(-1);
     const hash=p=>((a[p]*251+a[p+1])*251+a[p+2])&65535;
-    function insert(p){if(p+2<a.length){const h=hash(p);previous[p]=heads[h];heads[h]=p;}}
+    // Search before inserting p. A candidate at exactly p-32768 still owns its
+    // ring slot; the next insertion may replace it only after this search.
+    function insert(p){if(p+2<a.length){const h=hash(p);previous[p&32767]=heads[h];heads[h]=p;}}
     for(let p=0;p<a.length;){
       let best=2,bestDistance=0;
       if(p+2<a.length){
@@ -267,7 +276,9 @@ export function createArchiveCodec() {
             let len=2;while(len<maximum && a[candidate+len]===a[p+len])len++;
             if(len>best){best=len;bestDistance=p-candidate;if(len===maximum)break;}
           }
-          candidate=previous[candidate];
+          // Only read links of candidates still in the window. An older link
+          // ends the next iteration before its potentially reused slot is read.
+          candidate=previous[candidate&32767];
         }
       }
       if(bestDistance && best>=3){
@@ -278,7 +289,10 @@ export function createArchiveCodec() {
         for(let j=0;j<best;j++)insert(p+j);p+=best;
       }else{symbol(fixedLiteral,a[p]);insert(p);p++;}
     }
-    symbol(fixedLiteral,256);if(buffered)out.push(buffer&255);return Uint8Array.from(out);
+    symbol(fixedLiteral,256);if(buffered)emit(buffer&255);
+    const out=new Uint8Array(completed+used);let offset=0;
+    for(const chunk of chunks){out.set(chunk,offset);offset+=chunk.length;}
+    out.set(output.subarray(0,used),offset);return out;
   }
   function gzip(input) {
     const a=typeof input==="string"?utf8Encode(input):bytes(input), compressed=deflateRaw(a);
