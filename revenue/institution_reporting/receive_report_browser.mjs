@@ -27,6 +27,10 @@ for(const name of names){
   need(s.isFile()&&!s.isSymbolicLink()&&s.size<=128*1024*1024,'Choose exact ordinary report files');
   originals.set(name,await readFile(p));
 }
+const report=JSON.parse(originals.get('report.json').toString('utf8'));
+const four=report.reportLayout==='four_sections';
+const visibleValues=report.institutionRows.filter(x=>x.status==='available'&&report.cohorts.some(k=>k.subjectId===x.entity)).map(x=>x.display);
+const expectedValues=visibleValues.length?[...new Set(visibleValues)].slice(0,2):['Unavailable'];
 const manifest=JSON.parse(originals.get('manifest.json').toString('utf8'));
 need(manifest.schema==='commons.institution-report-delivery.v1','Unknown report delivery');
 for(const item of manifest.files){
@@ -73,12 +77,33 @@ try{
   need(headings.some(x=>x.includes('Institution'))&&headings.some(x=>x.includes('Peer'))&&
        headings.some(x=>x.includes('Source')),'All three report sections must render');
   need(await page.locator('table').count()>=3,'Complete readable report tables missing');
-  const wide=await page.screenshot({fullPage:true});await retain('report-wide.png',wide);
+  const screenshots=[],controls=[];
+  async function captureSections(prefix){
+    if(!four){const name=prefix+'.png';await retain(name,await page.screenshot({fullPage:true}));screenshots.push(name);return;}
+    for(const section of ['institution','periods','peers','sources']){
+      await page.locator('#'+section).scrollIntoViewIfNeeded();
+      const name=prefix+'-'+section+'.png';await retain(name,await page.screenshot({fullPage:false}));screenshots.push(name);
+    }
+  }
+  if(four){
+    need(headings.length===4&&headings.some(x=>x.includes('Period')),'Four distinct report sections must render');
+    const details=page.locator('details[data-subject]');
+    need(await details.count()===report.institutions.length,'All institution profiles must be retained');
+    await page.getByRole('button',{name:'Expand all institutions',exact:true}).click();
+    need(await page.locator('details[data-subject][open]').count()===report.institutions.length,'Expand-all failed');
+    await page.getByRole('button',{name:'Show subjects only',exact:true}).click();
+    need(await page.locator('details[data-subject][open]').count()===report.cohorts.length,'Subject-only view failed');
+    const peer=page.locator('details[data-subject="false"]').first();
+    await peer.locator('summary').click();need(await peer.getAttribute('open')!==null,'Individual profile did not open');
+    await peer.locator('summary').click();need(await peer.getAttribute('open')===null,'Individual profile did not close');
+    controls.push('expand all institutions','show subjects only','open and close a peer profile');
+  }
+  await captureSections('report-wide');
   await page.setViewportSize({width:390,height:844});
-  await page.screenshot({fullPage:true}).then(x=>retain('report-narrow.png',x));
+  await captureSections('report-narrow');
   const sizes=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth,
     text:document.body.innerText,headings:[...document.querySelectorAll('h2')].map(x=>x.textContent)}));
-  need(sizes.text.includes('30.00')&&sizes.text.includes('2.25'),'Actual expected results are not visible');
+  need(expectedValues.every(x=>sizes.text.includes(x)),'Actual expected results are not visible');
   need(sizes.document<=sizes.viewport+1,'Narrow report overflows the page; review table containers');
   const downloads=[{path:'report.html',bytes:servedHtml.length,sha256:sha(servedHtml),method:'actual_document_response'}];
   for(const name of names.filter(x=>x!=='report.html')){
@@ -102,14 +127,15 @@ try{
   need(await reopened.locator('h1').textContent()===JSON.parse(originals.get('report.json')).title,
        'Cold received report title differs');
   const coldText=await reopened.locator('body').innerText();
-  need(coldText.includes('30.00')&&coldText.includes('2.25'),'Cold report values differ');
-  await reopened.screenshot({fullPage:true}).then(x=>retain('report-reopened.png',x));
+  need(expectedValues.every(x=>coldText.includes(x)),'Cold report values differ');
+  await reopened.screenshot({fullPage:!four}).then(x=>retain('report-reopened.png',x));
+  screenshots.push('report-reopened.png');
   await cold.close();
   need(errors.length===0,'Browser errors: '+errors.join('; '));
   const result={schema:'commons.institution-browser-receiving.v1',state:'RENDERED_AND_DOWNLOADED',
     runtime:'Actual installed Playwright/Chromium',viewports:[{width:1360,height:960},{width:390,height:844}],
     headingText:headings,narrowDimensions:{viewport:sizes.viewport,document:sizes.document},
-    downloads,coldReopen:true,browserErrors:errors,
+    downloads,coldReopen:true,browserErrors:errors,controls,screenshots,
     visualInspection:'Open the actual screenshots or browser screen and record the observed layout/content before recipient-ready status.'};
   await retain('browser-result.json',Buffer.from(JSON.stringify(result,null,2)+'\n'));
   console.log(JSON.stringify(result,null,2));

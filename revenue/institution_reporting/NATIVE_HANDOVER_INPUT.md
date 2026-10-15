@@ -77,3 +77,11 @@ python3 -B receive_native_report.py \
 The directory must be new and empty. An interrupted course leaves its actual workspace and outputs for inspection; choose a new course directory for a fresh full run. The individual adapter/compiler commands retain their exact retry behavior.
 
 The course renders the exact generated report at wide and narrow sizes, exercises the readable report's downloads, checks those bytes, and cold-opens the downloaded report beside its companion files. It preserves actual screenshots and source/receiving results. Inspect those screenshots or the actual browser screen and record the observed layout and useful content before calling the report ready for a recipient. A scripted navigation result alone is not the visual inspection. The complete report remains internal until this actual rendering/inspection is done.
+
+## Extended eight-quarter course
+
+Add `--eight-quarters` to the same `receive_native_report.py` command to generate the complete 25-institution, 20-measure, eight-quarter authored example and map all nine full source editions through the existing native analyst. This uses the same trusted application selection and a new private output directory. It preserves the actual native views, handover, full backup, complete selection, compiler input and both independently rebuilt reports.
+
+The input adds `reportLayout: "four_sections"`, explicit `comparisonPairs` (with optional selected `measureIds`) and an empty actual `review.findings` list. These fields survive exact handover adaptation. The native course checks 4,000 institution rows, 160 peer rows, 178 selected period comparisons, the first standalone Q4 amount and the matching-quarter annual change, including actual missing-value peer coverage.
+
+The browser course operates Expand all institutions, Show subjects only, an individual peer profile and all four actual companion downloads. It captures each distinct report section at wide and narrow sizes and cold-reopens the received report. Open and view those actual screenshots or the live browser before presenting the report. Inspect the original source references, unavailable results, period endpoints, units, named actions and full institution content. Correct the affected result and repeat that affected operation when needed.

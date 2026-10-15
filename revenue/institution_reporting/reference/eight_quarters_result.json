@@ -1,0 +1,40 @@
+{
+  "runtime": "Functions V8",
+  "recordedAt": "2026-10-15T15:48:38.017Z",
+  "institutionRows": 4000,
+  "peerRows": 160,
+  "periodRows": 178,
+  "exceptions": 2,
+  "inputSha256": "475556b0ed9022c0a672c506d63904af95e834105607b5a62a10bab9cc6cdb10",
+  "reportSha256": "5a36b27d62ee012796fa8f030470247093a82e5bf26c8a3cc3edbcc6b52caa5a",
+  "cases": [
+    {
+      "case": "Original three-section calculation output",
+      "result": "exact unchanged"
+    },
+    {
+      "case": "Explicit unequal-duration YTD pair",
+      "result": "unavailable"
+    },
+    {
+      "case": "Exact zero absolute / undefined relative change",
+      "result": "passed"
+    },
+    {
+      "case": "Duplicate comparison endpoints",
+      "result": "rejected"
+    },
+    {
+      "case": "Unselected period",
+      "result": "rejected"
+    },
+    {
+      "case": "Unknown pair measure",
+      "result": "rejected"
+    },
+    {
+      "case": "Recorded action source/selection binding and HTML escaping",
+      "result": "passed"
+    }
+  ]
+}
