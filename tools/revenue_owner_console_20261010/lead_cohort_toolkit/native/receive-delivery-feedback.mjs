@@ -7,6 +7,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import receiver from '../source/receive-delivery-feedback.cjs';
 import publication from '../source/source-publication.cjs';
 const toolRoot=fileURLToPath(new URL('../',import.meta.url));
+const runtime='runtime/tools/revenue_owner_console_20261010';
 if(process.argv.length!==5)throw Error('Usage: node native/receive-delivery-feedback.mjs ORIGINAL_SOURCE_DIRECTORY ORIGINAL_FEEDBACK_INPUT_JSON NEW_OUTPUT_DIRECTORY');
 const source=await fs.realpath(path.resolve(process.argv[2])),inputPath=path.resolve(process.argv[3]),output=path.resolve(process.argv[4]);
 const outputReal=path.join(await fs.realpath(path.dirname(output)),path.basename(output));
