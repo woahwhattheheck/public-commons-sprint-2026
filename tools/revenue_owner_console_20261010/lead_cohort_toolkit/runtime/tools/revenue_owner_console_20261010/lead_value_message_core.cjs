@@ -53,7 +53,7 @@ function createLeadValueMessage({sha256Utf8}) {
     const edition=JSON.parse(editionText);
     need(plain(edition)&&edition.version==='dealscout.lead-pack.v1','Select the maintained exported lead-pack JSON.');
     need(Array.isArray(edition.leads)&&edition.leads.length>0&&edition.quantity===edition.leads.length,'Keep the entire selected edition and its exact quantity.');
-    need(['sample','paid','replacement'].includes(edition.delivery_type),'Use a maintained sample, paid or replacement edition.');
+    need(['sample','paid','replacement','complimentary'].includes(edition.delivery_type),'Use a maintained sample, paid, replacement or complimentary edition.');
     const buyer=recipe.buyer;
     need(plain(buyer)&&buyer.name===edition.customer,'Buyer name must equal the selected customer edition.');
     text(buyer.name,'buyer.name',{line:true});text(buyer.recipient_name,'buyer.recipient_name',{line:true});mailbox(buyer.email);
@@ -66,7 +66,7 @@ function createLeadValueMessage({sha256Utf8}) {
     const current=recipe.offer.current,next=recipe.offer.next;
     offerPart(current,'offer.current');
     need(current.quantity===edition.quantity&&current.price_minor===edition.price_minor&&current.currency===edition.currency,'Message quantity, currency and price must equal the actual selected edition.');
-    if(edition.delivery_type==='sample')need(current.price_minor===0,'The original sample edition must remain free.');
+    if(['sample','complimentary'].includes(edition.delivery_type))need(current.price_minor===0,'The original free edition must remain free.');
     need(next===null||plain(next),'Set offer.next to null or explicit proposed follow-on terms.');
     if(next!==null){
       offerPart(next,'offer.next');text(next.timing,'offer.next.timing');text(next.corrections,'offer.next.corrections');
@@ -116,7 +116,7 @@ function createLeadValueMessage({sha256Utf8}) {
         return {plain:title+'\n\n'+lead.opening_message,html:'<section><h2>'+esc(title)+'</h2><blockquote style="white-space:pre-wrap">'+esc(lead.opening_message)+'</blockquote></section>'};
       });
     }
-    const currentLine='Included now: '+current.quantity+' complete profiles — '+(current.price_minor===0?'free ('+money(0,current.currency)+')':money(current.price_minor,current.currency))+'. '+current.description;
+    const currentLine='Included now: '+current.quantity+' complete '+(renderVersion>=4&&current.quantity===1?'profile':'profiles')+' — '+(current.price_minor===0?'free ('+money(0,current.currency)+')':money(current.price_minor,current.currency))+'. '+current.description;
     const nextLine=next===null?'':'Optional follow-on: '+next.quantity+' new, distinct profiles — '+money(next.price_minor,next.currency)+' total. '+next.description+' '+next.timing+' '+next.corrections;
     const intro=layout.mode==='concise'?[recipe.opening]:[recipe.opening,buyer.fit,buyer.product_scope,...(legacy?[buyer.pricing_fit,currentLine]:[])];
     const closing=legacy
@@ -134,10 +134,10 @@ function createLeadValueMessage({sha256Utf8}) {
       interpretation:'Prepared content only. The original edition, prospect interest, existing delivery events and buyer decisions are unchanged. Actual sending and reply ownership remain with the original authorized case.'};
     return {...basis,sha256:sha256Utf8(JSON.stringify(canonical(basis))).sha256};
   }
-  function compose(input){return composeRecord(input,3);}
+  function compose(input){return composeRecord(input,4);}
   function receive(record){
     need(plain(record)&&record.schema===VERSION&&record.state==='PREPARED_UNSENT','Reopen the complete unsent value-message record.');
-    need(record.render_version===undefined||record.render_version===2||record.render_version===3,'Use a supported complete message rendering version.');
+    need(record.render_version===undefined||record.render_version===2||record.render_version===3||record.render_version===4,'Use a supported complete message rendering version.');
     const expected=composeRecord({editionText:record.original_edition_text,recipe:record.recipe},record.render_version===undefined?1:record.render_version);
     need(JSON.stringify(canonical(expected))===JSON.stringify(canonical(record)),'The prepared message, exact source or reviewed recipe changed.');
     return expected;

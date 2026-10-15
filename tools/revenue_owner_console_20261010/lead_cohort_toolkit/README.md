@@ -91,3 +91,10 @@ The focused publication exercise executed the actual prepare, reopen and compose
 ## Pack complete history for transfer
 
 The [lossless source archive](source/SOURCE_ARCHIVES.md) stores repeated original text once while reconstructing the exact original bank and every historical file. Run `node native/pack-source.mjs ORIGINAL_COMPLETE_SOURCE_JSON NEW_ARCHIVE_DIRECTORY`, then use the supplied standalone Python opener on its raw archive or gzip carrier. The archive adds a transport choice; original customer files, paths and complete-source identities are retained after opening. Preparation, message composition and delivery successors include the full archive tool closure for continued use.
+
+
+## Complete complimentary follow-through and hosted URLs
+
+Use the core's existing complimentary edition with explicit earlier-edition inclusion when completing a free pack from a retained sample. The message composer accepts its zero-priced economics and preserves every earlier record; it does not withdraw or send an edition. New render-version4 messages use singular wording for one profile while independently receiving versions1–4 unchanged.
+
+An optional profile `company_url` preserves a full hosted product path with the same normalized company domain. The default remains unchanged for old input replay. The signal URL remains the separate original evidence link. See the current preparation and value-message guides.
