@@ -15,7 +15,7 @@ function busy(flag){S.busy=flag;$('audit-app').setAttribute('aria-busy',String(f
 async function act(fn){if(S.busy)return;busy(true);try{await draftWrites;await fn();}catch(error){notice(error.message||String(error),true);}finally{busy(false);}}
 function on(id,fn){const node=$(id);if(node)node.addEventListener('click',event=>{event.preventDefault();act(fn);});}
 function input(name,title,initial='',type='text',help=''){return '<div class="field"><label for="'+esc(name)+'">'+esc(title)+'</label><input id="'+esc(name)+'" name="'+esc(name)+'" type="'+esc(type)+'" value="'+esc(initial)+'">'+(help?'<small>'+esc(help)+'</small>':'')+'</div>';}
-function area(name,title,initial='',help='',code=false){return '<div class="field"><label for="'+esc(name)+'">'+esc(title)+'</label><textarea id="'+esc(name)+'" name="'+esc(name)+'"'+(code?' class="code"':'')+'>'+esc(initial)+'</textarea>'+(help?'<small>'+esc(help)+'</small>':'')+'</div>';}
+function area(name,title,initial='',help='',code=false){return '<div class="field"><label for="'+esc(name)+'">'+esc(title)+'</label><textarea id="'+esc(name)+'" name="'+esc(name)+'" data-literal-value="'+esc(JSON.stringify(String(initial)))+'"'+(code?' class="code"':'')+'>'+esc(initial)+'</textarea>'+(help?'<small>'+esc(help)+'</small>':'')+'</div>';}
 function select(name,title,options,current='',help=''){return '<div class="field"><label for="'+esc(name)+'">'+esc(title)+'</label><select id="'+esc(name)+'" name="'+esc(name)+'">'+options.map(o=>{const v=typeof o==='string'?o:o.value,t=typeof o==='string'?label(o):o.label;return '<option value="'+esc(v)+'"'+selected(v,current)+'>'+esc(t)+'</option>';}).join('')+'</select>'+(help?'<small>'+esc(help)+'</small>':'')+'</div>';}
 function checks(name,title,options,current=[]){return '<fieldset><legend>'+esc(title)+'</legend>'+options.map(o=>'<label class="check"><input type="checkbox" name="'+esc(name+':'+o.value)+'" value="'+esc(o.value)+'"'+(current.includes(o.value)?' checked':'')+'><span>'+esc(o.label)+'</span></label>').join('')+'</fieldset>';}
 function details(title,body){return '<details><summary>'+esc(title)+'</summary><div>'+body+'</div></details>';}
@@ -27,8 +27,18 @@ function options(rows,title='id'){return rows.map(r=>({value:r.id,label:r[title]
 function currentScope(){return S.selection.scope||S.ws?.selections.at(-1)?.id||'';}
 function listIds(fields,prefix){return Object.entries(fields).filter(([key,v])=>key.startsWith(prefix+':')&&v===true).map(([key])=>key.slice(prefix.length+1));}
 function parsed(text,title){try{return JSON.parse(text);}catch(error){throw Error(title+': '+error.message);}}
-function capture(form){const fields={};for(const el of form.elements){if(!el.name||el.type==='file'||el.type==='submit'||el.type==='button')continue;fields[el.name]=el.type==='checkbox'?el.checked:el.value;}return fields;}
-function restore(form,fields){for(const el of form.elements){if(!el.name||!Object.hasOwn(fields,el.name)||el.type==='file')continue;if(el.type==='checkbox')el.checked=fields[el.name]===true;else el.value=fields[el.name];}}
+// Keep source literals until the operator edits that control. Browsers normalize
+// textarea CRLF/CR and the first newline; unrelated control changes must not rewrite them.
+const literalFields=new WeakMap();
+function rememberLiteral(el,raw){literalFields.set(el,{raw:String(raw),display:el.value,edited:false});}
+function literalValue(el){
+  if(!literalFields.has(el)&&el.dataset?.literalValue!==undefined)rememberLiteral(el,JSON.parse(el.dataset.literalValue));
+  const held=literalFields.get(el);
+  return held&&!held.edited&&el.value===held.display?held.raw:el.value;
+}
+function markLiteralEdit(el){if(el&&literalFields.has(el))literalFields.get(el).edited=true;}
+function capture(form){const fields={};for(const el of form.elements){if(!el.name||el.type==='file'||el.type==='submit'||el.type==='button')continue;fields[el.name]=el.type==='checkbox'?el.checked:literalValue(el);}return fields;}
+function restore(form,fields){for(const el of form.elements){if(!el.name||!Object.hasOwn(fields,el.name)||el.type==='file')continue;if(el.type==='checkbox')el.checked=fields[el.name]===true;else{el.value=fields[el.name];rememberLiteral(el,fields[el.name]);}}}
 function draft(formId){return S.drafts[$(formId)?.dataset.draft||formId]||null;}
 function queueDraft(formNode){
   if(!S.ws||!S.key)return;const key=S.key,fields=capture(formNode),old=draft(formNode.id),record={baseRevision:old?.baseRevision??S.ws.revision,baseHead:old?.baseHead||Portable.head(S.ws),fields};
@@ -37,7 +47,8 @@ function queueDraft(formNode){
 function bindDrafts(){
   for(const node of document.querySelectorAll('form[data-draft]')){
     if(S.drafts[node.dataset.draft])restore(node,S.drafts[node.dataset.draft].fields);
-    node.addEventListener('input',()=>queueDraft(node));node.addEventListener('change',()=>queueDraft(node));
+    for(const el of node.elements)if(el.name&&el.type!=='checkbox'&&el.type!=='file')literalValue(el);
+    node.addEventListener('input',event=>{markLiteralEdit(event.target);queueDraft(node);});node.addEventListener('change',event=>{markLiteralEdit(event.target);queueDraft(node);});
     const record=draft(node.id);if(record&&record.baseHead!==Portable.head(S.ws)){const p=document.createElement('p');p.className='inline-note';p.textContent='This unfinished form began at revision '+record.baseRevision+'. Review its values against the current source before submitting.';node.prepend(p);const button=document.createElement('button');button.type='button';button.textContent='Keep these values against current revision';button.addEventListener('click',()=>act(async()=>{record.baseRevision=S.ws.revision;record.baseHead=Portable.head(S.ws);record.fields=capture(node);await Store.saveDraft(S.key,tab,node.dataset.draft,record);render();notice('The unchanged unfinished values now reference the current revision.');}));p.after(button);}
   }
 }
