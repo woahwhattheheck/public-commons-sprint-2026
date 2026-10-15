@@ -55,7 +55,28 @@ function selectedFields(current,incoming,selection,api,normalize){
   }
   return normalize(result);
 }
-const ASSETS=['editions','deliveries','withdrawals','commercial_links','commercial_deliveries','delivery_feedback_sources','delivery_feedback','capture_plans','capture_results','capture_reviews'];
+const ASSETS=['editions','deliveries','withdrawals','commercial_links','commercial_deliveries','delivery_feedback_sources','delivery_feedback','capture_plans','capture_results','capture_reviews',
+  'customer_files','customer_packages','customer_package_exports','customer_contacts'];
+/** Keep selected histories whole; never replace a later continuation with an older copy. */
+function assetContains(key,current,incoming,api){
+  if(!current||!incoming||current.id!==incoming.id)return false;
+  if(api.hash(current)===api.hash(incoming))return true;
+  if(key==='customer_contacts'){
+    if(!Array.isArray(current.events)||!Array.isArray(incoming.events))return false;
+    const basis=row=>Object.fromEntries(Object.entries(row).filter(([k])=>!['sha256','events'].includes(k)));
+    return api.hash(basis(current))===api.hash(basis(incoming))&&
+      current.events.length>=incoming.events.length&&
+      api.hash(current.events.slice(0,incoming.events.length))===api.hash(incoming.events);
+  }
+  if(key==='customer_files'){
+    if(!Array.isArray(current.history)||!Array.isArray(incoming.history))return false;
+    const basis=row=>Object.fromEntries(Object.entries(row).filter(([k])=>!['revision','document','sha256','updated_at','history'].includes(k)));
+    const a=values(current),b=values(incoming);
+    return api.hash(basis(current))===api.hash(basis(incoming))&&a.length>=b.length&&
+      api.hash(a.slice(0,b.length))===api.hash(b);
+  }
+  return false;
+}
 function assetRows(root,key){
   if(key.startsWith('capture_'))return root.captures?.[key.slice(8)]||[];
   return root[key]||[];
@@ -104,7 +125,7 @@ function validate(root,api){
       need(!assetKeys.has(key),'The completed review repeats an original asset.');assetKeys.add(key);
       const original=find(sourceAssetRows(source.source,asset.entity),asset.id,'reviewed original source asset');
       const current=find(assetRows(root,asset.entity),asset.id,'reviewed current asset');
-      need(api.hash(original)===asset.sha256&&api.hash(current)===asset.sha256,
+      need(api.hash(original)===asset.sha256&&assetContains(asset.entity,current,original,api),
         'The reviewed original asset has changed or lost its complete current copy.');
     }
   }
@@ -180,9 +201,12 @@ function plan(root,source,choices,at,api){
     const selection=choices.assets[key]??[];need(Array.isArray(selection)&&new Set(selection).size===selection.length,'Choose each original asset once.');
     for(const assetId of selection){
       const incoming=find(sourceAssetRows(source.source,key),id(assetId,'original asset ID'),'original '+key),rows=assetRows(candidate,key),current=rows.find(r=>r.id===incoming.id);
-      need(!current||api.hash(current)===api.hash(incoming),'The selected original asset ID has different current content. Keep it in its source branch.',409,[{entity:key,id:incoming.id,reason:'The frozen original ID has different content.'}]);
+      const retained=current&&assetContains(key,current,incoming,api);
+      const advanced=Boolean(current&&!retained&&assetContains(key,incoming,current,api));
+      need(!current||retained||advanced,'The selected original asset ID has divergent current content. Keep it in its source branch.',409,[{entity:key,id:incoming.id,reason:'The original ID has different content or divergent history.'}]);
       if(!current)setAssetRows(candidate,key,[...rows,clone(incoming)]);
-      assets.push({entity:key,id:incoming.id,sha256:api.hash(incoming),added:!current});
+      else if(advanced)rows[rows.indexOf(current)]=clone(incoming);
+      assets.push({entity:key,id:incoming.id,sha256:api.hash(incoming),added:!current,...(advanced?{advanced:true}:{})});
     }
   }
   const received=api.validateCandidate(root,candidate,packId);
@@ -214,7 +238,7 @@ function preview(root,input,at,api){
   for(const key of ASSETS)for(const row of sourceAssetRows(source.source,key)){
     const current=assetRows(root,key).find(r=>r.id===row.id);
     result.assets.push({entity:key,id:row.id,label:row.title||row.kind||row.id,
-      state:current?(api.hash(current)===api.hash(row)?'current':'different'):'source',
+      state:current?(assetContains(key,current,row,api)?'current':'different'):'source',
       lead_ids:(row.leads||[]).map(r=>r.id),sha256:api.hash(row)});
   }
   if(result.review){result.conflicts=[{reason:'This retained source has its completed review. Its original decisions are available below.'}];return result;}
