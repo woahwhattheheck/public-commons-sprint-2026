@@ -7,15 +7,39 @@ import hashlib
 import json
 import re
 import subprocess
+import tempfile
 import zipfile
 from pathlib import Path, PurePosixPath
 
 MAX_BYTES = 100 * 1024 * 1024
 MAX_FILES = 20_000
+CHUNK_BYTES = 1024 * 1024
 
 
 def git(*args: str) -> bytes:
     return subprocess.check_output(["git", *args], stderr=subprocess.PIPE)
+
+
+def copy_blob(reader: subprocess.Popen, blob: str, size: int, output) -> str:
+    """Copy one batch response into the archive with bounded memory."""
+    reader.stdin.write((blob + "\n").encode("ascii"))
+    reader.stdin.flush()
+    if reader.stdout.readline() != f"{blob} blob {size}\n".encode("ascii"):
+        raise ValueError("Git blob header changed during export")
+    identity = hashlib.sha1(f"blob {size}\0".encode())
+    digest = hashlib.sha256()
+    remaining = size
+    while remaining:
+        data = reader.stdout.read(min(remaining, CHUNK_BYTES))
+        if not data:
+            raise ValueError("Git blob ended before its declared size")
+        output.write(data)
+        identity.update(data)
+        digest.update(data)
+        remaining -= len(data)
+    if reader.stdout.read(1) != b"\n" or identity.hexdigest() != blob:
+        raise ValueError("Git blob identity mismatch")
+    return digest.hexdigest()
 
 
 def export_source(source_path: str, destination: Path) -> dict:
@@ -28,14 +52,14 @@ def export_source(source_path: str, destination: Path) -> dict:
     tree = git("rev-parse", f"{commit}:{source_path}").decode().strip()
     if git("cat-file", "-t", tree).strip() != b"tree":
         raise ValueError("source path must identify a tracked directory")
-    entries = git("ls-tree", "-r", "-z", "--full-tree", commit, "--", source_path + "/")
+    entries = git("ls-tree", "-r", "-l", "-z", "--full-tree", commit, "--", source_path + "/")
     rows = []
     total = 0
     for record in entries.split(b"\0"):
         if not record:
             continue
         meta, raw_path = record.split(b"\t", 1)
-        mode, kind, blob = meta.decode("ascii").split()
+        mode, kind, blob, raw_size = meta.decode("ascii").split()
         name = raw_path.decode("utf-8")
         if kind != "blob" or mode not in ("100644", "100755"):
             raise ValueError(f"symlinks, submodules and non-regular entries are unsupported: {name!r}")
@@ -44,7 +68,7 @@ def export_source(source_path: str, destination: Path) -> dict:
             raise ValueError("archive entry escaped its selected source directory")
         if "\\" in name or any(ord(c) < 32 for c in name):
             raise ValueError(f"unsafe archive filename: {name!r}")
-        size = int(git("cat-file", "-s", blob))
+        size = int(raw_size)
         total += size
         rows.append((name, mode, blob, size))
         if total > MAX_BYTES or len(rows) > MAX_FILES:
@@ -56,26 +80,43 @@ def export_source(source_path: str, destination: Path) -> dict:
     manifest = {"schema_version": 1, "source_commit": commit, "source_tree": tree,
                 "source_path": source_path, "files": [], "total_bytes": total}
     try:
-        with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as output:
-            for name, mode, blob, size in rows:
-                data = git("cat-file", "blob", blob)
-                if len(data) != size:
-                    raise ValueError("Git blob size changed during export")
-                actual = hashlib.sha1(f"blob {len(data)}\0".encode() + data).hexdigest()
-                if actual != blob:
-                    raise ValueError("Git blob identity mismatch")
-                info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
-                info.create_system = 3
-                info.external_attr = int(mode, 8) << 16
-                info.compress_type = zipfile.ZIP_DEFLATED
-                output.writestr(info, data)
-                manifest["files"].append({"path": name, "mode": mode, "git_blob": blob,
-                                          "size": size, "sha256": hashlib.sha256(data).hexdigest()})
-        manifest["archive_sha256"] = hashlib.sha256(archive.read_bytes()).hexdigest()
+        # A file-backed stderr keeps unexpected Git diagnostics from filling a pipe.
+        with tempfile.TemporaryFile() as errors:
+            reader = subprocess.Popen(["git", "cat-file", "--batch"], stdin=subprocess.PIPE,
+                                      stdout=subprocess.PIPE, stderr=errors)
+            try:
+                with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as output:
+                    for name, mode, blob, size in rows:
+                        info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+                        info.create_system = 3
+                        info.external_attr = int(mode, 8) << 16
+                        info.compress_type = zipfile.ZIP_DEFLATED
+                        with output.open(info, "w") as member:
+                            digest = copy_blob(reader, blob, size, member)
+                        manifest["files"].append({"path": name, "mode": mode, "git_blob": blob,
+                                                  "size": size, "sha256": digest})
+                reader.stdin.close()
+                if reader.wait() != 0:
+                    errors.seek(0)
+                    raise subprocess.CalledProcessError(reader.returncode, reader.args, stderr=errors.read())
+            except BaseException:
+                reader.kill()
+                reader.wait()
+                raise
+            finally:
+                reader.stdin.close()
+                reader.stdout.close()
+        digest = hashlib.sha256()
+        with archive.open("rb") as source:
+            while data := source.read(CHUNK_BYTES):
+                digest.update(data)
+        manifest["archive_sha256"] = digest.hexdigest()
         manifest["file_count"] = len(rows)
         (destination / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     except BaseException:
         archive.unlink(missing_ok=True)
+        (destination / "manifest.json").unlink(missing_ok=True)
+        destination.rmdir()
         raise
     return manifest
 
