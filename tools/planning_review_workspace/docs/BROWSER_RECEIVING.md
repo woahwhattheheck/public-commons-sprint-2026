@@ -1,0 +1,11 @@
+# Complete browser receiving course
+
+Open the blank standalone HTML in an actual browser. Confirm 0 originals and no fictional data. Upload one actual authorized CSV and download its exact original. Open the explicitly authored example through Open and restore; prior work must remain in backups. Select the recovery edition, copy it to a new draft, inspect/map its original resources table, then correct the tank hourly rate from 60 to 61 with a named reason. Preview/adopt the new source and freeze a successor. The known total becomes 473 while the earlier editions at 470 remain.
+
+Inspect every report section: scope/coverage, schedule, job lateness, resource intervals with capacities and denominators, material ledger, minimum/maximum lags, setup intervals, findings and all nine mapped original tables. Compare original baseline to successor, retain a proposal, add PLANNING and OPERATIONS decisions, then supersede one with needs-work and restore approval. Exact comparison binding and full decision history must remain.
+
+Leave incomplete JSON in input, mapping and correction fields and unfinished proposal/review text. Export working JSON, editableHTML, complete source, domain and ZIP. Close the tab, reopen editableHTML, compare the exact working export, then reopen JSON in a fresh blank desk. Inspect ZIP source/working/original bytes. A changed carrier must reject and preserve current work. Record actual browser/runtime and first observed exception; do not substitute the source-adapter course for this rendered check.
+
+## Durable storage continuation
+
+Use the same complete receiving journey. Additionally, leave unfinished input, mapping, correction and review text; attempt close before persistence and confirm the prompt. Exercise an unavailable/full IndexedDB store, download complete current JSON, edit again and confirm the guard returns. Open two copies of the same browser head and retain both conflicting proposals; browse and export each, then continue one as an independent copy. Reopen the same editable HTML after later drafts were saved and verify its exact retained branch. Import/download the earlier localStorage body and verify the original bytes remain unchanged. The source course uses explicit IndexedDB transaction adapters; these steps exercise actual browser persistence.

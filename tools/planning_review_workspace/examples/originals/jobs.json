@@ -1,0 +1,23 @@
+[
+  {
+    "id": "A",
+    "product": "Authored blend A",
+    "quantity": "600",
+    "unit": "L",
+    "due": "2026-10-15T09:00:00Z"
+  },
+  {
+    "id": "B",
+    "product": "Authored blend B",
+    "quantity": "600",
+    "unit": "L",
+    "due": "2026-10-15T11:00:00Z"
+  },
+  {
+    "id": "C",
+    "product": "Authored blend C",
+    "quantity": "600",
+    "unit": "L",
+    "due": "2026-10-15T12:00:00Z"
+  }
+]

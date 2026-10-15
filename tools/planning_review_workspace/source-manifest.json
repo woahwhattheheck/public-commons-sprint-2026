@@ -1,0 +1,488 @@
+{
+  "schema": "tjlabs.planning-source-manifest.v1",
+  "files": [
+    {
+      "path": "NOTICE.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 512,
+      "sha256": "e6c5e39e19b856756250db3cc0dafa8a96b19f578186419e6d396bbe86f06060"
+    },
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4544,
+      "sha256": "ca54b08fa7fb2d3a10e7ccb7bda764c35c9e74bf2820879211c7eefa0e5bc648"
+    },
+    {
+      "path": "commissioning/RECEIVING_RESULTS.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 2666,
+      "sha256": "23b875f6c62bca380552e002ca7004d0a40368b3047440e68a9302621b151a49"
+    },
+    {
+      "path": "commissioning/capacity-transport.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 5139,
+      "sha256": "cbcb7502a8c42040bb6e1514d44aaee1d86e599e3cc328e3590fe208359e3227"
+    },
+    {
+      "path": "commissioning/memory-indexeddb.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 3356,
+      "sha256": "529b0bce0d8100c02cb2fd7d2df0d564f84204d522601f661987858f901c9dd2"
+    },
+    {
+      "path": "commissioning/operator-course.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 21610,
+      "sha256": "5c4d36593692af3371649277ebd7ca38edce1f8496ef95fb2e77aa9863924c8a"
+    },
+    {
+      "path": "commissioning/storage-capacity.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4404,
+      "sha256": "8fb0792e7332adb512c8cd728736b97fee8ce86e4e35ad6b2e88b467c973e8ef"
+    },
+    {
+      "path": "docs/BROWSER_RECEIVING.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 2314,
+      "sha256": "47acdd2050355915d98982f4cd3f3ddf237bd408a9341bfe4cee608d79c9af70"
+    },
+    {
+      "path": "docs/CONTRACT.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 6531,
+      "sha256": "3eed17a20b865eaf0414c431853beeacaf1b0034b4217f35096c207a0d8e44f6"
+    },
+    {
+      "path": "docs/NATIVE_RECEIVING.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 2211,
+      "sha256": "b853c016811194e6a01b7b9be42db172179739e1e2d3be79eb52a287c2326d08"
+    },
+    {
+      "path": "docs/OPERATOR.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 8418,
+      "sha256": "0c0e510e8277006d7eb21c53f4d98986f121f1209d2e4f50a1f3591a2f07938b"
+    },
+    {
+      "path": "examples/Blank_Input.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 3578,
+      "sha256": "45683667d8af792842ed58f95ed31feb2bbb5dcb8fbb16cac35d4fc9b3c93d15"
+    },
+    {
+      "path": "examples/authored-workspace.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 176485,
+      "sha256": "35501c2cefb8c635f2c2ca96708cc076a1847274853c5ab3657807100b46c11c"
+    },
+    {
+      "path": "examples/blank-workspace.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 340,
+      "sha256": "190242538739ecbd11a8bced94c363d9af98fcac61133d3b446e0e7476ef36b7"
+    },
+    {
+      "path": "examples/originals/assignments.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 969,
+      "sha256": "6105e9774e7d24a57fcd1405dfccbc52ae281976b6488dce1f00a642ac031cf9"
+    },
+    {
+      "path": "examples/originals/availability.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 362,
+      "sha256": "073515adb904e56f5716ed0d30ec7968e1e6d5386613493d138aa705c4bd60ac"
+    },
+    {
+      "path": "examples/originals/candidate-assignments.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 969,
+      "sha256": "e527ffbfea771c306ab0a03c250fd092b9dcb0607f74e70cc3c563e46d6ab7a3"
+    },
+    {
+      "path": "examples/originals/changeovers.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 991,
+      "sha256": "ad264c7870083a7ed2717c6bd9c3f098f1dd253cf243e977f1712b6536e43fd8"
+    },
+    {
+      "path": "examples/originals/disrupted-availability.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 551,
+      "sha256": "e9db71da3941c48e75408ec7a239a98817bd57eb31a01811c640cfc48edb2039"
+    },
+    {
+      "path": "examples/originals/jobs.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 402,
+      "sha256": "c6e0d0a5e375e90e2582eb8c720c20cec848d76c99079f027d7fc3fe2bca45b5"
+    },
+    {
+      "path": "examples/originals/operations.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 1997,
+      "sha256": "45b41bd0409c0b9ac2d2a4f9c46d4c6a9d2a0da114b64d607c2e08c219236a4b"
+    },
+    {
+      "path": "examples/originals/precedence.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 432,
+      "sha256": "cbb650666b1a3ffedd89fd90836b49e71760f5340e4de4a43800ffa5a2956c97"
+    },
+    {
+      "path": "examples/originals/requirements.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 453,
+      "sha256": "a70f7b4e74f9f7d1394ccc1880254dfbfd8e36824a4d79838c006180556d6810"
+    },
+    {
+      "path": "examples/originals/resources.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 539,
+      "sha256": "ec4ea486713fd8ead650468ca803e9f4853ec5156734a930e389044d7f4c5010"
+    },
+    {
+      "path": "examples/originals/supplies.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 143,
+      "sha256": "7fdb088492d72e59e28ad879b7dda527797cd36d0a18ee34c40922240ec9c454"
+    },
+    {
+      "path": "examples/selected-input.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4343,
+      "sha256": "3bd8b7d7fecd173a48474b493811227c4f3df6b5f533f186b694936a9514f12a"
+    },
+    {
+      "path": "history/INDEXEDDB_JOIN.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 1024,
+      "sha256": "e3b54a5bf4d1120efa2e5b8157805639a3c274dcec908edd8669481c0ec48331"
+    },
+    {
+      "path": "history/before-indexeddb/README.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 862,
+      "sha256": "64b1fe364a2db082e7a716ef3c375ecfa89d5f71a7fb850d43a8a3dd7298f6d6"
+    },
+    {
+      "path": "history/before-indexeddb/commissioning/operator-course.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 17115,
+      "sha256": "b897d4ad9136b6482f7fdc942d8e1cb0e84fb58ce1da14e7de8297cb998df8a4"
+    },
+    {
+      "path": "history/before-indexeddb/docs/BROWSER_RECEIVING.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 1513,
+      "sha256": "0125a3c39a56c445f2455b1c8cf07f832a6fe59a2bfe4a0cc5d15a755f4022f4"
+    },
+    {
+      "path": "history/before-indexeddb/docs/OPERATOR.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 6562,
+      "sha256": "2e437ac23df40722d5c16e9ba290903781fb8a8ae18125b38ae1e8fbce1cc641"
+    },
+    {
+      "path": "history/before-indexeddb/native/build-desk.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 2385,
+      "sha256": "442f935bca5ff538e6982d32c47aba41c2c8571e644569a12b118cbab05859cb"
+    },
+    {
+      "path": "history/before-indexeddb/operator/build.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 3992,
+      "sha256": "7f2379ba656a0b5051d0803dabd4c36f36933d4e02b85f0aecb5afc46daf0032"
+    },
+    {
+      "path": "history/before-indexeddb/operator/controller.js",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 46158,
+      "sha256": "cba91a97a6a45e0a6690a1d36103dc7437fc87e4cd4594c05a53b6c8163244ba"
+    },
+    {
+      "path": "history/before-indexeddb/operator/session.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 6842,
+      "sha256": "9c4dbe2a373567e8ca49582e0efae8cb5394f8b4c1b53daf01bff51e64217348"
+    },
+    {
+      "path": "history/maintained-telemetry-storage/archive.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 6236,
+      "sha256": "9a537096a5cf146b6a4e81421f6289e9e7c642e0fa71d1fb3afcaeb06630f18f"
+    },
+    {
+      "path": "history/maintained-telemetry-storage/portable.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 1510,
+      "sha256": "76a790cbc5bd1c36c0743b61038766ba436a4a3a732aec342e2fab56c86f95db"
+    },
+    {
+      "path": "history/maintained-telemetry-storage/storage.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 8027,
+      "sha256": "973588d9a5bdfaf355417b798282fd3546bb57e4b4a7f5e0d7b6f01e77f5c996"
+    },
+    {
+      "path": "history/planning-core-first-operator.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 45039,
+      "sha256": "8b663d97a1bc254f99bac6b68a650a5607c295f65260d7eea3587632ed568067"
+    },
+    {
+      "path": "history/production-core-predecessor.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 46090,
+      "sha256": "61f8298f03ed6acd133f69fd0aaa0601a7c8c5991f75c85ad239ac4712f0c101"
+    },
+    {
+      "path": "history/production-operator/README.md",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 230,
+      "sha256": "389757ff23cd72ece0bf133ec5c2befc1d2d39f9e3e2100f50abfc6b837b7423"
+    },
+    {
+      "path": "history/production-operator/build.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4045,
+      "sha256": "0f56af24b30a0c0b4cc14d0bb1d4f833e6f59b19b844bedac5f8511954e36c36"
+    },
+    {
+      "path": "history/production-operator/controller.js",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 47049,
+      "sha256": "d3fb5bf59323e2d1dcc60f70efe8e550c79204caf98de1c34a094b964f186406"
+    },
+    {
+      "path": "history/production-operator/session.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 6876,
+      "sha256": "758bbe6ba9f4b15cdd1b9a5dbb9a38d3f0daed5e6363b10f722a9fc3a0664175"
+    },
+    {
+      "path": "native/build-desk.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 2674,
+      "sha256": "bbf0d83855c3665fc1a98a2819dfbc0fd4238ed5b28cfe0a40465a293f06e129"
+    },
+    {
+      "path": "native/io.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 2761,
+      "sha256": "ea8bb05b2cd0c66622bffe83d419eea3ec9212a97cc34b3b2b2f2933c661a67f"
+    },
+    {
+      "path": "native/materialize-source.py",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 18786,
+      "sha256": "a1074978c5dd61e5cfe21087de116730cfab4b29e30682d780c8802e5ec265b4"
+    },
+    {
+      "path": "native/planning-cli.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 7129,
+      "sha256": "79ca64544afa18a93edfca4ec4f3c21b5439258086176a01e6b2d04adb61704c"
+    },
+    {
+      "path": "native/receive-capacity-transport.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 2140,
+      "sha256": "5fbee1a8e2810749818560c3279cc3af51b93e4d1ecb0932ae4cae5b1d7531dc"
+    },
+    {
+      "path": "native/receive-operator.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 1810,
+      "sha256": "38f6221f1bd90a00bc46f2d3bb93c2bd091dcfd2e5ae58c9fc41f6fa442e73c1"
+    },
+    {
+      "path": "native/receive-storage-capacity.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 2202,
+      "sha256": "ac29e00aee47f6d0affcde2a94a42b7973f542e9070c5e8c30d1be0a9f73e8da"
+    },
+    {
+      "path": "native/runtime.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 674,
+      "sha256": "a14a73d919c3259f99541effeb41f483e1c234043e6308693c4b5e7493e819cf"
+    },
+    {
+      "path": "native/source.mjs",
+      "mode": "100755",
+      "encoding": "utf8",
+      "bytes": 1603,
+      "sha256": "3484c75151b01cebb9c82666cd69890362ba5a707afc62411e370ce98103a8ec"
+    },
+    {
+      "path": "operator/body.html",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 1430,
+      "sha256": "9ae91bdba73b11784da3670f79880dd56f97bbcd22a4113ec21eb08cd8c4ed61"
+    },
+    {
+      "path": "operator/build.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4132,
+      "sha256": "20086aaac622ce4f75a0b5f926e5fc10db2f8b1d13c172d6e4605cfde3038416"
+    },
+    {
+      "path": "operator/codec.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 27651,
+      "sha256": "89f88fd456de6e180e6743f3eb66bbc31fc4449e8cc0259e199587ebc327d121"
+    },
+    {
+      "path": "operator/connected_zip.cjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 12090,
+      "sha256": "857c79f789e9cf4f6321bf22804e1c8d55af6758495ae1ba09d4fa72fd97bb26"
+    },
+    {
+      "path": "operator/controller.js",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 52488,
+      "sha256": "d0c6ecb9ec74914453d030204c2cf9ba241c836cc1422c0124a23af474e18630"
+    },
+    {
+      "path": "operator/fields.json",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 319,
+      "sha256": "724047c2d3850bfa732f331c8794d360a92b61b009757c4c959e97add606fdc3"
+    },
+    {
+      "path": "operator/portable.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 1505,
+      "sha256": "9e8b128c1e4f2b8d071f92a0d543e225e4481b01221fa5aed74c16c4aaf9d310"
+    },
+    {
+      "path": "operator/session.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 7719,
+      "sha256": "d2a3d280768a6a0a0dd7ebdc3efc76065ec37b7bd4efcb30faf7f14410344c9a"
+    },
+    {
+      "path": "operator/storage.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 8022,
+      "sha256": "b3b758bccc1e8ca9cc041331c7b5a77b0e1559ebcffabfe1851ab8c92fd70c1c"
+    },
+    {
+      "path": "operator/style.css",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 3920,
+      "sha256": "9b849cb7d15308f378d65327d438fe1bf6c4b78b2375acfc68d7a34157442cc5"
+    },
+    {
+      "path": "operator/view.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4167,
+      "sha256": "ce66d2e237ad2e8f580420ea09f48773e00c26aef0945931da39a76b606a7717"
+    },
+    {
+      "path": "planning/archive.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 6233,
+      "sha256": "193d471b93d56296ca8eff46f9edda27143952d303901d342124f97ea4f9b6f3"
+    },
+    {
+      "path": "planning/core.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 45124,
+      "sha256": "2481a2005f25557781202ae8322fd86a1016ec22d06afe9b098516fa8fc15f8a"
+    },
+    {
+      "path": "planning/course.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 5975,
+      "sha256": "1ee88e6cca65f87665e413b02ba632785671a9a4fbd1772a04a1525ecff27afd"
+    },
+    {
+      "path": "planning/example.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 5785,
+      "sha256": "6aeaccc05e965a02117309253e43f89ad7c397a9de11b384c1387b1e48c785a0"
+    },
+    {
+      "path": "planning/report.mjs",
+      "mode": "100644",
+      "encoding": "utf8",
+      "bytes": 4736,
+      "sha256": "c79f5920f574fa5cd184321d1ff7dc75f3d2916efbbac9cc3a25f4027405af81"
+    }
+  ]
+}
