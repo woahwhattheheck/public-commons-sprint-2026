@@ -4,7 +4,7 @@
 from __future__ import annotations
 import copy
 import csv
-from decimal import localcontext
+from decimal import Decimal, localcontext
 import io
 import json
 from pathlib import Path
@@ -73,6 +73,20 @@ def run():
         changed["rows"][0].update(assessmentBasis="county-assessed",areaUnit="square-feet",asOfDate=None)
         absent=comparison._build_values(frozen([original_left[0]]),changed,{**chosen,"periodPolicy":"compare-declared-periods"})["rows"][0]
         check("An undeclared period never becomes cross-period evidence","period-missing" in absent["assessment"]["reasons"])
+    extreme_left=frozen([row("0000000000000001", "1E5000")])
+    extreme_right=frozen([row("0000000000000001", "0.01")])
+    with localcontext() as ctx:
+        ctx.prec=6000
+        expected=str(Decimal("0.01")-Decimal("1E5000"))
+    extreme=comparison._build_values(extreme_left,extreme_right,chosen)
+    check("Accepted exponent source preserves every significant digit",
+          extreme["rows"][0]["assessment"]["delta"]==expected and
+          extreme["groups"][0]["assessmentDeltaTotal"]==expected)
+    extreme_left["rows"][0]["assessment"]="1E1000000"
+    excessive=comparison._build_values(extreme_left,extreme_right,chosen)["rows"][0]
+    check("Impractical exponent expansion retains original values with explicit attention",
+          excessive["left"]["assessment"]=="1E1000000" and excessive["assessment"]["delta"] is None and
+          "numeric-range-exceeded" in excessive["assessment"]["reasons"])
     check("All complete original rows remain unchanged",(left,right)==untouched)
     value={"schema":comparison.SCHEMA,"definition":chosen,
            "left":{"title":"Authored left"},"right":{"title":"Authored right"},**result}

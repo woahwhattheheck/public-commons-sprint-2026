@@ -581,7 +581,7 @@ export async function renderParcels(ctx) {
         e('div',{},'Right '+cell(m.right)+' '+cell(m.rightUnit)),
         note('Basis: '+cell(m.leftBasis)+' → '+cell(m.rightBasis)),
         key==='assessment'?note('Tax year/as of: '+cell(m.leftPeriod?.taxYear)+' / '+cell(m.leftPeriod?.asOfDate)+' → '+cell(m.rightPeriod?.taxYear)+' / '+cell(m.rightPeriod?.asOfDate)):null,
-        e('strong',{},m.comparable?'Change '+m.delta:'No numeric change'),
+        e('strong',{},m.comparable?'Change '+m.delta:'Change not comparable'),
         m.reasons.length?note(m.reasons.join(' · ')):null];
     };
     const columns = [
@@ -597,8 +597,8 @@ export async function renderParcels(ctx) {
         ['Left → right group',row => detail('Exact grouping and measurement periods',row.transition)],
         ['Parcels',row => String(row.parcels)],
         ['Added / removed / common',row => row.added+' / '+row.removed+' / '+row.common],
-        ['Comparable amount change',row => cell(row.assessmentDeltaTotal)+' ('+row.comparableAssessmentCount+' parcels)'],
-        ['Comparable area change',row => cell(row.areaDeltaTotal)+' ('+row.comparableAreaCount+' parcels)']
+        ['Comparable amount change',row => [cell(row.assessmentDeltaTotal)+' ('+row.comparableAssessmentCount+' parcels)',row.assessmentTotalAttention?.length?note(row.assessmentTotalAttention.join(' · ')):null]],
+        ['Comparable area change',row => [cell(row.areaDeltaTotal)+' ('+row.comparableAreaCount+' parcels)',row.areaTotalAttention?.length?note(row.areaTotalAttention.join(' · ')):null]]
       ],groups.slice(0,50)),
       groups.length>50 && note('Showing the first 50 of '+groups.length+' exact groups. Download the complete comparison JSON for all groups and keys.'));
     const items = [panel('Compare two frozen portfolios',

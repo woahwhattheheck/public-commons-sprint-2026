@@ -3,7 +3,7 @@
 from __future__ import annotations
 import copy
 import csv
-from decimal import Decimal, InvalidOperation, localcontext
+from decimal import Decimal, DecimalException, InvalidOperation, Inexact, localcontext, MAX_EMAX, MIN_EMIN
 import html
 import io
 
@@ -14,6 +14,7 @@ from .state import parcel_state
 
 SCHEMA = "starforge.parcel-portfolio-comparison.v1"
 GROUPS = frozenset(("owner", "accountable", "status", "ward"))
+MAX_EXACT_DIGITS = 16384
 
 def definition(value):
     require(isinstance(value, dict) and set(value) == {"title", "leftPortfolioId", "rightPortfolioId",
@@ -39,6 +40,27 @@ def _number(value):
         raise ValueError("Invalid original decimal value") from exc
     require(result.is_finite(), "PARCEL_COMPARISON_NUMBER", "The original measure must be a finite decimal.")
     return result
+
+
+def _combine(left, right, *, subtract=False):
+    """Exact arithmetic within a declared expansion range; original values always survive."""
+    if left.is_zero() and right.is_zero():
+        return Decimal((0, (0,), min(left.as_tuple().exponent, right.as_tuple().exponent)))
+    if right.is_zero(): return left
+    if left.is_zero(): return right.copy_negate() if subtract else right
+    precision = max(left.adjusted(), right.adjusted()) - min(
+        left.as_tuple().exponent, right.as_tuple().exponent) + 2
+    if precision > MAX_EXACT_DIGITS: return None
+    try:
+        with localcontext() as context:
+            context.prec = max(2, precision)
+            context.Emax = MAX_EMAX
+            context.Emin = MIN_EMIN
+            context.traps[Inexact] = True
+            value = left - right if subtract else left + right
+        return value if value.is_finite() else None
+    except DecimalException:
+        return None
 
 def _measure(left, right, kind, policy):
     name = "assessment" if kind == "assessment" else "area"
@@ -66,8 +88,12 @@ def _measure(left, right, kind, policy):
         elif policy == "same-period" and periods[0] != periods[1]:
             reasons.append("period-differs")
     if not reasons:
-        result["comparable"] = True
-        result["delta"] = str(b - a)
+        delta = _combine(b, a, subtract=True)
+        if delta is None:
+            reasons.append("numeric-range-exceeded")
+        else:
+            result["comparable"] = True
+            result["delta"] = str(delta)
     return result
 
 def _group(row, fields):
@@ -122,16 +148,20 @@ def _build_values(left, right, chosen):
         group["parcelKeys"].append(key)
         if amount["comparable"]:
             group["comparableAssessmentCount"] += 1
-            group["assessmentDeltaTotal"] += Decimal(amount["delta"])
+            if group["assessmentDeltaTotal"] is not None:
+                group["assessmentDeltaTotal"] = _combine(group["assessmentDeltaTotal"], Decimal(amount["delta"]))
+                if group["assessmentDeltaTotal"] is None: group["assessmentTotalAttention"] = ["numeric-range-exceeded"]
         if area["comparable"]:
             group["comparableAreaCount"] += 1
-            group["areaDeltaTotal"] += Decimal(area["delta"])
+            if group["areaDeltaTotal"] is not None:
+                group["areaDeltaTotal"] = _combine(group["areaDeltaTotal"], Decimal(area["delta"]))
+                if group["areaDeltaTotal"] is None: group["areaTotalAttention"] = ["numeric-range-exceeded"]
     group_rows = []
     for gid in sorted(groups):
         group = groups[gid]
         for count, total in (("comparableAssessmentCount", "assessmentDeltaTotal"),
                              ("comparableAreaCount", "areaDeltaTotal")):
-            group[total] = str(group[total]) if group[count] else None
+            group[total] = str(group[total]) if group[count] and group[total] is not None else None
         group_rows.append(group)
     return {"rows": rows, "groups": group_rows, "summary": {
         "leftParcels": len(lmap), "rightParcels": len(rmap),
