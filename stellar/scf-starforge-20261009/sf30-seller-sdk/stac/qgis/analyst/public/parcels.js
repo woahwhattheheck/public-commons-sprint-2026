@@ -38,6 +38,10 @@ export function acceptParcelResult(draft, input, result) {
   }
   if (action === 'portfolio.preview') draft.portfolioPreview = {payload: clone(payload), result: clone(result)};
   if (action === 'portfolio.create') draft.portfolioId = result.portfolio.id;
+  if (action === 'comparison.preview') draft.portfolioComparisonPreview = {payload: clone(payload), result: clone(result)};
+  if (action === 'comparison.create') {
+    draft.portfolioComparisonId = result.comparison.id; draft.portfolioComparisonOffset = 0;
+  }
   if (action === 'successor.compare') draft.comparison = clone(result);
 }
 
@@ -60,7 +64,7 @@ export async function renderParcels(ctx) {
   const editionId = data.editions.some(row => row.id === p.editionId) ? p.editionId : data.activeEditionId;
   p.editionId = editionId || '';
   const edition = data.editions.find(row => row.id === editionId);
-  const tabs = ['Sources', 'Capture', 'Parcels', 'Responsibility', 'Portfolios', 'Later edition'];
+  const tabs = ['Sources', 'Capture', 'Parcels', 'Responsibility', 'Portfolios', 'Portfolio comparison', 'Later edition'];
   const tab = tabs.includes(p.section) ? p.section : 'Sources';
   const update = (name, value) => { p[name] = value; save(); };
   const mutate = (target, field, value) => { target[field] = value; save(); };
@@ -83,7 +87,7 @@ export async function renderParcels(ctx) {
       edition.id !== data.activeEditionId && button('Make current parcel edition', () => run('source.select', {editionId: edition.id})),
       button('Refresh parcel workspace', render)));
   const sections = {Sources: sources, Capture: captures, Parcels: parcels, Responsibility: responsibility,
-    Portfolios: portfolios, 'Later edition': laterEdition};
+    Portfolios: portfolios, 'Portfolio comparison': portfolioComparison, 'Later edition': laterEdition};
   return [toolbar, ...await sections[tab]()];
 
 
@@ -553,6 +557,114 @@ export async function renderParcels(ctx) {
         button('Publish reviewed polygons to the layer draft',() => run('map.publish',{portfolioId:saved.portfolio.id})),
         note('The map source retains the selected original polygons and this frozen portfolio. Continue in Layers to inspect and save the real QGIS layer, then save or render the map in Maps. Export the complete project in Transfers to carry every raw source and review file.'),
         detail('First 25 saved parcel rows',saved.examples)));
+    }
+    return items;
+  }
+
+
+  async function portfolioComparison() {
+    p.portfolioComparisonDraft ||= {title:'',leftPortfolioId:'',rightPortfolioId:'',
+      periodPolicy:'same-period',groupBy:['owner','ward'],note:''};
+    const form = p.portfolioComparisonDraft;
+    const set = (key,value) => {form[key]=value; save();};
+    const chosen = () => ({title:form.title.trim(),leftPortfolioId:form.leftPortfolioId,
+      rightPortfolioId:form.rightPortfolioId,periodPolicy:form.periodPolicy,
+      groupBy:[...form.groupBy],note:form.note.trim()});
+    const choices = [['','Choose a saved portfolio'],...data.portfolios.map(row =>
+      [row.id,row.title+' · '+compact(row.editionId)+' · '+row.summary.parcels+' parcels'])];
+    const preview = p.portfolioComparisonPreview && same(chosen(),p.portfolioComparisonPreview.payload.definition)
+      ? p.portfolioComparisonPreview.result : null;
+    const cell = value => value === null || value === undefined ? 'Missing' : String(value);
+    const measures = (row,key) => {
+      const m=row[key];
+      return [e('div',{},'Left '+cell(m.left)+' '+cell(m.leftUnit)),
+        e('div',{},'Right '+cell(m.right)+' '+cell(m.rightUnit)),
+        note('Basis: '+cell(m.leftBasis)+' → '+cell(m.rightBasis)),
+        key==='assessment'?note('Tax year/as of: '+cell(m.leftPeriod?.taxYear)+' / '+cell(m.leftPeriod?.asOfDate)+' → '+cell(m.rightPeriod?.taxYear)+' / '+cell(m.rightPeriod?.asOfDate)):null,
+        e('strong',{},m.comparable?'Change '+m.delta:'No numeric change'),
+        m.reasons.length?note(m.reasons.join(' · ')):null];
+    };
+    const columns = [
+      ['Parcel / cohort',row => [clean(row.parcelKey),note(row.cohort)]],
+      ['Source and review changes',row => row.changedFields.join(', ')||'No changed fields'],
+      ['Assessment',row => measures(row,'assessment')],
+      ['Area',row => measures(row,'area')],
+      ['Exact retained rows',row => detail('Read both source rows, periods and original decisions',row)]
+    ];
+    const groupPanel = groups => panel('Grouped transitions',
+      note('Every transition retains both original groups, bases, currencies and declared periods. Totals count comparable common parcels only. Added/removed rows are never valued as zero.'),
+      table([
+        ['Left → right group',row => detail('Exact grouping and measurement periods',row.transition)],
+        ['Parcels',row => String(row.parcels)],
+        ['Added / removed / common',row => row.added+' / '+row.removed+' / '+row.common],
+        ['Comparable amount change',row => cell(row.assessmentDeltaTotal)+' ('+row.comparableAssessmentCount+' parcels)'],
+        ['Comparable area change',row => cell(row.areaDeltaTotal)+' ('+row.comparableAreaCount+' parcels)']
+      ],groups.slice(0,50)),
+      groups.length>50 && note('Showing the first 50 of '+groups.length+' exact groups. Download the complete comparison JSON for all groups and keys.'));
+    const items = [panel('Compare two frozen portfolios',
+      note('Select independently saved left and right portfolios. This comparison uses their retained source rows and review decisions. The current working parcel edition does not change either frozen input.'),
+      data.portfolios.length<2 && note('Save at least two portfolios in Portfolios first. They may share an edition or represent separately reviewed source editions.'),
+      e('div',{class:'fields'},
+        label('Comparison title',inputValue(form.title,value=>set('title',value))),
+        label('Left portfolio',selectValue(form.leftPortfolioId,choices,value=>set('leftPortfolioId',value))),
+        label('Right portfolio',selectValue(form.rightPortfolioId,choices,value=>set('rightPortfolioId',value))),
+        label('Assessment period policy',selectValue(form.periodPolicy,[
+          ['same-period','Require identical declared tax year and as-of date'],
+          ['compare-declared-periods','Explicitly compare different declared periods']
+        ],value=>set('periodPolicy',value)))),
+      note('Both assessment periods must be present. Assessment basis and currency must match under either policy. Area basis and units must match separately. Missing data stays visible without a numeric delta.'),
+      e('div',{class:'fields'},...['owner','accountable','status','ward'].map(group =>
+        label('Group transitions by '+group,inputValue(form.groupBy.includes(group),value=>{
+          form.groupBy=value?[...new Set([...form.groupBy,group])]:form.groupBy.filter(x=>x!==group);save();
+        },{type:'checkbox',checked:form.groupBy.includes(group)})))),
+      label('Purpose, cohort scope and period interpretation',textArea(form.note,value=>set('note',value),{rows:4})),
+      button('Preview this portfolio comparison',()=>{
+        const definition=chosen();
+        requireValue(definition.title&&definition.note,'Name the comparison and record its interpretation.');
+        requireValue(definition.leftPortfolioId&&definition.rightPortfolioId&&
+          definition.leftPortfolioId!==definition.rightPortfolioId,'Choose two distinct saved portfolios.');
+        return run('comparison.preview',{definition});
+      }),
+      preview && panel('Exact comparison preview',detail('Coverage and compatible-measure counts',preview.summary,true),
+        groupPanel(preview.groups),table(columns,preview.examples),
+        note('Preview shows up to 50 of '+preview.rowCount+' parcel rows. The saved comparison retains every row.'),
+        button('Save this exact comparison',()=>{
+          const current=chosen();
+          requireValue(p.portfolioComparisonPreview&&same(current,p.portfolioComparisonPreview.payload.definition),
+            'Preview the changed portfolio pair, grouping and policy before saving.');
+          return run('comparison.create',{definition:clone(current),previewSha256:preview.previewSha256});
+        }),detail('Both frozen portfolio identities', {left:preview.left,right:preview.right,previewSha256:preview.previewSha256})))];
+    const records=data.comparisons||[];
+    items.push(panel('Saved portfolio comparisons',table([
+      ['Comparison',row=>button(row.title,async()=>{
+        p.portfolioComparisonId=row.id;p.portfolioComparisonOffset=0;p.portfolioComparisonQuery='';
+        p.portfolioComparisonCohort='';save();await render();
+      })],
+      ['Left / right',row=>[clean(data.portfolios.find(x=>x.id===row.leftPortfolioId)?.title||row.leftPortfolioId),
+        note(data.portfolios.find(x=>x.id===row.rightPortfolioId)?.title||row.rightPortfolioId)]],
+      ['Added / removed / common',row=>row.summary.added+' / '+row.summary.removed+' / '+row.summary.common],
+      ['Saved',row=>row.createdAt],['Analyst',row=>row.actor]
+    ],records)));
+    if(p.portfolioComparisonId&&records.some(row=>row.id===p.portfolioComparisonId)){
+      const saved=await request('/api/parcels/comparison?'+new URLSearchParams({
+        comparisonId:p.portfolioComparisonId,offset:String(p.portfolioComparisonOffset||0),limit:'50',
+        query:p.portfolioComparisonQuery||'',cohort:p.portfolioComparisonCohort||''}));
+      items.push(panel('Saved comparison: '+saved.comparison.title,
+        detail('Both original portfolio identities and complete comparison definition',saved.comparison,true),
+        detail('Complete coverage',saved.summary),groupPanel(saved.groups),
+        actions(...['comparison.json','changes.csv','report.html'].map(name=>link('Download '+name,
+          '/download/parcels/comparisons/'+saved.comparison.id+'/'+name))),
+        note('The complete project export also includes this comparison, both frozen portfolios and their original source/review histories. The report is an independent read-only opening.'),
+        e('div',{class:'fields'},
+          label('Search parcel, owner, responsible entity or ward',inputValue(p.portfolioComparisonQuery||'',value=>update('portfolioComparisonQuery',value))),
+          label('Cohort filter',selectValue(p.portfolioComparisonCohort||'',[
+            ['','All rows'],['added','Added'],['removed','Removed'],['common','Common'],
+            ['changed','Changed common rows'],['attention','Common rows with amount or area attention']
+          ],value=>update('portfolioComparisonCohort',value)))),
+        button('Apply comparison filters',async()=>{p.portfolioComparisonOffset=0;save();await render();}),
+        note(saved.total+' matching rows of '+saved.sourceRowCount+' complete retained rows.'),
+        table(columns,saved.rows),
+        pager(saved,async offset=>{p.portfolioComparisonOffset=offset;save();await render();})));
     }
     return items;
   }

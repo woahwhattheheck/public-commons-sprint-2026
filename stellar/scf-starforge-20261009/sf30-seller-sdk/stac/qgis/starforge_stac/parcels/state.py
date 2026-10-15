@@ -6,11 +6,11 @@ from pathlib import Path
 from ..model import require, descriptor, HASH, REQUEST
 
 SCHEMA = "starforge.qgis-parcel-workspace.v1"
-MODULES = ("__init__.py", "intake.py", "state.py", "workspace.py", "portfolio.py", "projection.py", "review.py", "operator.py", "formats.py", "capture/__init__.py", "capture/providers.py", "capture/workspace.py", "capture/__main__.py", "capture/OPERATIONS.md", "capture_operator.py")
+MODULES = ("__init__.py", "intake.py", "state.py", "workspace.py", "portfolio.py", "comparison.py", "projection.py", "review.py", "operator.py", "formats.py", "capture/__init__.py", "capture/providers.py", "capture/workspace.py", "capture/__main__.py", "capture/OPERATIONS.md", "capture_operator.py")
 
 def empty_state():
     return {"schema": SCHEMA, "activeEditionId": None, "editions": [], "entities": [],
-            "activeEntities": {}, "reviews": [], "portfolios": [], "successors": [], "maps": []}
+            "activeEntities": {}, "reviews": [], "portfolios": [], "successors": [], "maps": [], "comparisons": []}
 
 def parcel_state(state):
     return state.get("parcels") or empty_state()
@@ -27,6 +27,8 @@ def _files(data):
         for item in review["files"]: yield item
     for portfolio in data["portfolios"]:
         for item in portfolio["files"]: yield item
+    for comparison in data.get("comparisons", []):
+        for item in comparison["files"]: yield item
     for successor in data["successors"]:
         for item in successor.get("files", []): yield item
 
@@ -62,6 +64,21 @@ def validate_parcels(state, *, records=None):
     for row in data["successors"]:
         require(row.get("leftEditionId") in editions and row.get("rightEditionId") in editions,
                 "PARCEL_SUCCESSOR_IDENTITY", "The successor review requires both original source editions.")
+    comparisons = data.get("comparisons", [])
+    require(isinstance(comparisons, list) and len(comparisons) <= 100000 and
+            all(isinstance(row, dict) and isinstance(row.get("id"), str) for row in comparisons) and
+            len({row["id"] for row in comparisons}) == len(comparisons),
+            "PARCEL_COMPARISON_REGISTER", "Retain unique named comparison identities.")
+    portfolio_ids = {row["id"] for row in data["portfolios"]}
+    for row in comparisons:
+        require(row.get("leftPortfolioId") in portfolio_ids and row.get("rightPortfolioId") in portfolio_ids and
+                row["leftPortfolioId"] != row["rightPortfolioId"] and isinstance(row.get("definition"), dict) and
+                isinstance(row.get("files"), list) and len(row["files"]) == 3 and
+                isinstance(row.get("summary"), dict) and HASH.fullmatch(row.get("previewSha256", "")),
+                "PARCEL_COMPARISON_IDENTITY", "A comparison requires both complete retained portfolios and its files.")
+        require(row["definition"].get("leftPortfolioId") == row["leftPortfolioId"] and
+                row["definition"].get("rightPortfolioId") == row["rightPortfolioId"],
+                "PARCEL_COMPARISON_PAIR", "Retain the exact selected comparison pair.")
     sources = {row["id"] for row in state["sources"]}
     portfolios = {row["id"] for row in data["portfolios"]}
     for row in data["maps"]:
