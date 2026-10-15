@@ -35,7 +35,7 @@ ANALYST_MODULES = (
 ANALYST_ROOT_FILES = (
     "analyst.mjs", "application.mjs", "application-provider.mjs",
     "analyst-browser-assets.json", "ANALYST.md", "ANALYST_NATIVE.md",
-    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs", "parcel-successor-receiving.py", "parcel-operation-restore.py",
+    "analyst-native-receiving.mjs", "plugin-package.py", "cli.mjs", "bridge.mjs", "PARCELS.md", "parcel-native-receiving.py", "parcel-native-browser.mjs", "parcel-successor-receiving.py", "parcel-operation-restore.py", "parcel-comparison-receiving.py", "parcel-comparison-course.py", "PARCEL_COMPARISON.md",
     "evidence_cli.py", "evidence-native-receiving.py", "EVIDENCE_RECEIVING.md", "PARCEL_EVIDENCE.md", "AGENTS.md",
     "evidence-native-bootstrap.py", "EVIDENCE_BOOTSTRAP_INPUTS.example.json", "EVIDENCE_BOOTSTRAP.md",
     "evidence-foreground-receiving.mjs", "EVIDENCE_FOREGROUND.md",

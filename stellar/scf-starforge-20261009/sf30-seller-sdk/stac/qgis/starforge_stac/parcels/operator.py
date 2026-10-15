@@ -8,11 +8,11 @@ import re
 
 from ..model import QgisWorkspace, require, read_json, MAX_JSON, HASH
 from .workspace import ParcelWorkspace, json_file
-from . import portfolio, projection, review
+from . import portfolio, comparison, projection, review
 
 ACTIONS = frozenset(("source.preview", "source.import", "source.select", "entity.save", "review.prepare", "review.preview", "review.save",
-                     "successor.compare", "successor.review", "portfolio.preview", "portfolio.create", "map.publish"))
-WRITES = ACTIONS - {"source.preview", "review.prepare", "review.preview", "successor.compare", "portfolio.preview"}
+                     "successor.compare", "successor.review", "portfolio.preview", "portfolio.create", "comparison.preview", "comparison.create", "map.publish"))
+WRITES = ACTIONS - {"source.preview", "review.prepare", "review.preview", "successor.compare", "portfolio.preview", "comparison.preview"}
 
 def normalize(action, raw):
     keys = {
@@ -25,6 +25,7 @@ def normalize(action, raw):
         "successor.compare": {"leftEditionId", "rightEditionId"},
         "successor.review": {"definition"}, "portfolio.preview": {"definition"},
         "portfolio.create": {"definition", "previewSha256"}, "map.publish": {"portfolioId"},
+        "comparison.preview": {"definition"}, "comparison.create": {"definition", "previewSha256"},
     }
     require(action in ACTIONS and isinstance(raw, dict) and set(raw) <= keys[action],
             "PARCEL_ACTION_INPUT", "Use the selected original parcel action fields.")
@@ -41,6 +42,8 @@ def normalize(action, raw):
         if field in value:
             require(isinstance(value[field], str) and HASH.fullmatch(value[field]),
                     "PARCEL_ACTION_IDENTITY", "Use the exact original source or preview SHA-256.", field=field)
+    if action.startswith("comparison."):
+        value["definition"] = comparison.definition(value["definition"])
     return value
 
 def execute(workspace, action, payload, common, progress=None):
@@ -61,6 +64,8 @@ def execute(workspace, action, payload, common, progress=None):
     if action == "successor.review": return parcel.review_successor(payload["definition"], **common)
     if action == "portfolio.preview": return portfolio.preview(parcel, payload["definition"])
     if action == "portfolio.create": return portfolio.create(parcel, payload["definition"], payload["previewSha256"], **common)
+    if action == "comparison.preview": return comparison.preview(parcel, payload["definition"])
+    if action == "comparison.create": return comparison.create(parcel, payload["definition"], payload["previewSha256"], **common)
     if action == "map.publish": return projection.publish(parcel, payload["portfolioId"], progress=progress, **common)
     raise AssertionError(action)
 
@@ -107,6 +112,37 @@ def read_route(workspace, path, query):
         record, value = portfolio.get(parcel, values["portfolioId"])
         return {"portfolio": record, "groups": value["groups"], "summary": value["summary"],
                 "examples": value["rows"][:25], "selectedKeys": value["selectedKeys"]}
+    if path == "/api/parcels/comparison":
+        values = _query(query, {"comparisonId", "offset", "limit", "query", "cohort"})
+        require("comparisonId" in values, "PARCEL_COMPARISON_REQUIRED", "Select a saved comparison.")
+        record, value = comparison.get(parcel, values["comparisonId"])
+        for field, default in (("offset", "0"), ("limit", "50")):
+            text = values.get(field, default)
+            require(re.fullmatch(r"[0-9]{1,9}", text) is not None,
+                    "PARCEL_COMPARISON_PAGE", "Choose a comparison row page.")
+            values[field] = int(text)
+        require(1 <= values["limit"] <= 250, "PARCEL_COMPARISON_PAGE", "Use 1–250 rows per page.")
+        cohort = values.get("cohort", "")
+        require(cohort in ("", "added", "removed", "common", "changed", "attention"),
+                "PARCEL_COMPARISON_FILTER", "Choose a supported comparison cohort.")
+        needle = values.get("query", "").casefold()
+        require(len(needle) <= 1000, "PARCEL_COMPARISON_FILTER", "Keep the search text within 1000 characters.")
+        rows = value["rows"]
+        def matches(row):
+            a, b = row["left"] or {}, row["right"] or {}
+            text = " ".join(str(x or "") for x in (row["parcelKey"], a.get("owner"), b.get("owner"),
+                a.get("accountable"), b.get("accountable"), a.get("ward"), b.get("ward"))).casefold()
+            selected = not cohort or row["cohort"] == cohort or (
+                cohort == "changed" and row["cohort"] == "common" and row["changed"]) or (
+                cohort == "attention" and row["cohort"] == "common" and (
+                    not row["assessment"]["comparable"] or not row["area"]["comparable"]))
+            return selected and (not needle or needle in text)
+        rows = [row for row in rows if matches(row)]
+        offset, limit = values["offset"], values["limit"]
+        return {"comparison": record, "summary": value["summary"], "groups": value["groups"],
+                "left": value["left"], "right": value["right"],
+                "rows": rows[offset:offset + limit], "total": len(rows),
+                "offset": offset, "limit": limit, "sourceRowCount": len(value["rows"])}
     if path == "/api/parcels/compare":
         values = _query(query, {"leftEditionId", "rightEditionId"})
         require(set(values) == {"leftEditionId", "rightEditionId"}, "PARCEL_QUERY", "Select both original parcel editions.")
@@ -136,6 +172,13 @@ def download_route(workspace, path, query):
         require(file is not None, "PARCEL_DOWNLOAD", "Choose an original saved portfolio file.")
         return {"record": file, "name": match[2],
                 "type": "text/csv; charset=utf-8" if match[2].endswith(".csv") else "application/json; charset=utf-8"}
+    match = re.fullmatch(r"/download/parcels/comparisons/(comparison-[a-f0-9]{64})/(comparison.json|changes.csv|report.html)", path)
+    if match:
+        record, _ = comparison.get(parcel, match[1])
+        file = next((item for item in record["files"] if item["path"].endswith("/" + match[2])), None)
+        require(file is not None, "PARCEL_DOWNLOAD", "Choose an original saved comparison file.")
+        mime = "text/csv" if match[2].endswith(".csv") else "text/html" if match[2].endswith(".html") else "application/json"
+        return {"record": file, "name": match[2], "type": mime + "; charset=utf-8"}
     raise ValueError("Unknown original parcel download.")
 
 def run_file(workspace, path, progress=None):

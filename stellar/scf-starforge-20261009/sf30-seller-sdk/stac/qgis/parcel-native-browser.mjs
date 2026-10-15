@@ -52,7 +52,10 @@ async function write(file,body,immutable=false) {
 async function measured(file) {const body=await fs.readFile(file);return{path:file,bytes:body.length,sha256:sha(body)};}
 const frozen={schema:'starforge.parcel-browser-input.v1',mode:config.mode,workspaceId:original.workspaceId,
   editionId:config.editionId,keys:config.keys,review:config.review,sourceManifestSha256:config.sourceManifestSha256,
-  portfolioId:config.portfolioId,projectId:config.projectId??null,mapRequestId:config.mapRequestId??null};
+  portfolioId:config.portfolioId,projectId:config.projectId??null,mapRequestId:config.mapRequestId??null,
+  ...(config.portfolioComparisonId?{portfolioComparisonId:config.portfolioComparisonId,
+    portfolioComparisonDefinition:config.portfolioComparisonDefinition,
+    comparisonCreateFromUI:!!config.comparisonCreateFromUI}:{})};
 await write(path.join(output,'input.json'),bytes(frozen),true);
 const finalPath=path.join(output,'result.json');
 if (await exists(finalPath)) {
@@ -166,7 +169,7 @@ async function parcelTab(name) {
   await activate(toolbar.getByRole('button',{name,exact:true}));
   const heading={Sources:'Receive an original parcel source edition',Parcels:'Original parcels and source assertions',
     Responsibility:'Named accountable entities',Portfolios:'Build an assessment and area portfolio',
-    'Later edition':'Review a later parcel source edition'}[name];
+    'Later edition':'Review a later parcel source edition','Portfolio comparison':'Compare two frozen portfolios'}[name];
   await page.getByRole('heading',{name:heading,exact:true}).waitFor();
   const edition=field('Working parcel edition');
   if(await edition.count()&&await edition.inputValue()!==config.editionId) {
@@ -316,6 +319,85 @@ try {
     await download(page.getByRole('link',{name:'Download '+name,exact:true}),name,file);
   }
   await screenshot('04-frozen-portfolio');
+
+  if(config.portfolioComparisonId){
+    await parcelTab('Portfolio comparison');
+    const incoming=config.portfolioComparisonDefinition;
+    ensure(incoming&&incoming.leftPortfolioId&&incoming.rightPortfolioId,'Retain the exact original comparison definition.');
+    const savedPath=path.join(output,'steps','comparison-save.json');
+    if(config.comparisonCreateFromUI){
+      if(!await exists(savedPath)){
+        if(!await exists(path.join(output,'steps','comparison-preview.json'))){
+          await field('Comparison title').fill(('Browser: '+incoming.title).slice(0,512));
+          await field('Left portfolio').selectOption(incoming.leftPortfolioId);
+          await field('Right portfolio').selectOption(incoming.rightPortfolioId);
+          await field('Assessment period policy').selectOption(incoming.periodPolicy);
+          for(const group of ['owner','accountable','status','ward']){
+            const control=field('Group transitions by '+group);
+            if(incoming.groupBy.includes(group))await control.check();else await control.uncheck();
+          }
+          await field('Purpose, cohort scope and period interpretation').fill(incoming.note);
+          await screenshot('08-comparison-original-input');
+        }
+        await step('comparison-preview',()=>page.getByRole('button',{name:'Preview this portfolio comparison',exact:true}).click());
+        await parcelTab('Portfolio comparison');
+        await page.getByRole('heading',{name:'Exact comparison preview',exact:true}).waitFor();
+      }
+      const created=await step('comparison-save',()=>page.getByRole('button',{name:'Save this exact comparison',exact:true}).click());
+      ensure(created.input.payload.payload.definition.leftPortfolioId===incoming.leftPortfolioId&&
+        created.input.payload.payload.definition.rightPortfolioId===incoming.rightPortfolioId,
+        'The visible comparison must preserve its exact original source pair.');
+      results.browserComparison=created.result.comparison;
+    }
+    await parcelTab('Portfolio comparison');
+    data=await api('/api/parcels');
+    const retained=data.comparisons.find(row=>row.id===config.portfolioComparisonId);
+    ensure(retained,'The complete original comparison is missing.');
+    await activate(page.getByRole('button',{name:retained.title,exact:true}));
+    await page.getByRole('heading',{name:'Saved comparison: '+retained.title,exact:true}).waitFor();
+    const expected=await api('/api/parcels/comparison?'+new URLSearchParams({comparisonId:retained.id,limit:'50'}));
+    ensure(expected.sourceRowCount===retained.summary.added+retained.summary.removed+retained.summary.common,
+      'The saved comparison coverage must retain the complete source-key union.');
+    await field('Cohort filter').selectOption('attention');
+    await activate(page.getByRole('button',{name:'Apply comparison filters',exact:true}));
+    await screenshot('09-comparison-attention');
+    await field('Cohort filter').selectOption('');
+    await field('Search parcel, owner, responsible entity or ward').fill('');
+    await activate(page.getByRole('button',{name:'Apply comparison filters',exact:true}));
+    for(const file of retained.files){
+      const name=path.basename(file.path);
+      await download(page.getByRole('link',{name:'Download '+name,exact:true}),'comparison-'+name,file);
+    }
+    const actualJSON=JSON.parse(await fs.readFile(path.join(output,'downloads','comparison-comparison.json'),'utf8'));
+    ensure(actualJSON.id===retained.id&&actualJSON.previewSha256===retained.previewSha256&&
+      actualJSON.rows.length===expected.sourceRowCount,'The actual downloaded comparison lost source rows.');
+    await screenshot('10-comparison-desktop');
+    await page.setViewportSize({width:390,height:844});
+    await screenshot('11-comparison-narrow');
+    const comparisonOverflow=await page.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));
+    ensure(comparisonOverflow.document<=comparisonOverflow.viewport+2,'The saved comparison overflows the narrow desk.');
+    await page.setViewportSize({width:1440,height:1050});
+    const reportBytes=await fs.readFile(path.join(output,'downloads','comparison-report.html'));
+    const reportRoute=origin+'/retained-comparison-report-'+retained.id+'.html';
+    const reportPage=await context.newPage();
+    await reportPage.route(reportRoute,route=>route.fulfill({status:200,contentType:'text/html; charset=utf-8',body:reportBytes}));
+    try{
+      await reportPage.goto(reportRoute,{waitUntil:'domcontentloaded'});
+      await reportPage.getByRole('heading',{name:retained.title,exact:true}).waitFor();
+      const reportDesktop=path.join(output,'12-comparison-report-desktop.png');
+      await reportPage.screenshot({path:reportDesktop,fullPage:true});files.push(await measured(reportDesktop));
+      const details=reportPage.locator('details').first();
+      if(await details.count())await details.locator('summary').click();
+      await reportPage.setViewportSize({width:390,height:844});
+      const reportNarrow=path.join(output,'13-comparison-report-narrow.png');
+      await reportPage.screenshot({path:reportNarrow,fullPage:true});files.push(await measured(reportNarrow));
+      const reportOverflow=await reportPage.evaluate(()=>({viewport:innerWidth,document:document.documentElement.scrollWidth}));
+      ensure(reportOverflow.document<=reportOverflow.viewport+2,'The exact downloaded comparison report overflows the narrow page.');
+    }finally{await reportPage.unroute(reportRoute);await reportPage.close();}
+    results.retainedComparison={id:retained.id,previewSha256:retained.previewSha256,
+      completeRows:actualJSON.rows.length,definition:actualJSON.definition,narrow:comparisonOverflow};
+  }
+
   await parcelTab('Later edition');
   await page.getByRole('heading',{name:'Retained successor decisions',exact:true}).waitFor();
   ensure(data.successors.some(row=>row.rightEditionId===config.editionId),'The received source successor is missing.');

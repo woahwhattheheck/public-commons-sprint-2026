@@ -546,3 +546,10 @@ journal (limit 1–100). Completed action results include the exact checkpoint
 request ID, file count, expanded bytes and snapshot path. Each checkpoint
 supports at most 25,000 files and 16 GiB of expanded working files, within the
 original receiving system's applicable package limits.
+
+
+## 17. Compare two retained portfolios
+
+**Parcels → Portfolio comparison** compares two already saved portfolios by exact original parcel key. It preserves cohort additions/removals, complete reviewed source rows, explicit valuation periods/bases, compatible exact decimal changes and owner/responsibility/ward transitions. Named comparisons, ordinary CSV/HTML/JSON and both source histories travel in the original complete project export.
+
+Follow [PARCEL_COMPARISON.md](PARCEL_COMPARISON.md) for the complete operator, interpretation, original command route and same-operation native receiving chapter. The default requires identical declared assessment periods; comparing distinct declared periods is an explicit saved choice. Missing measures remain missing, and incompatible bases or units never create a numeric delta.
