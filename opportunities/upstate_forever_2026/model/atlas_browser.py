@@ -127,11 +127,14 @@ def _dataset_links(panel, included):
     if not isinstance(dataset, dict):
         return '<span class="muted">Original raster is retained in the editable workspace for this atlas edition.</span>'
     raster, metadata = dataset.get("file") or {}, dataset.get("metadata") or {}
-    required = [raster, metadata, *dataset.get("companions", [])]
+    required = [raster, *dataset.get("companions", [])]
+    if metadata:
+        required.append(metadata)
     if any(not isinstance(item, dict) or item.get("path") not in included for item in required):
         return '<span class="muted">Dataset members are unavailable in this captured edition. Open its editable workspace.</span>'
-    links = [_link(raster["path"], "Download GeoTIFF", download=True),
-             _link(metadata["path"], "FGDC metadata XML", download=True)]
+    links = [_link(raster["path"], "Download GeoTIFF", download=True)]
+    if metadata:
+        links.append(_link(metadata["path"], "FGDC metadata XML", download=True))
     for item in dataset.get("companions", []):
         links.append(_link(item["path"], "Companion " + PurePosixPath(item["path"]).name, download=True))
     return '<div class="actions">' + "".join(links) + '</div><code class="hash">' + _text(raster["path"]) + "</code>"
