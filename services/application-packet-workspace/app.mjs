@@ -49,8 +49,7 @@ function draftKey(name){return S.copyId+'|'+tabId+'|'+name;}
 function retainDraft(name,row){S.drafts[name]=row;const key=draftKey(name),copyId=S.copyId;S.draftQueue=S.draftQueue.then(()=>transaction(['drafts'],tx=>tx.objectStore('drafts').put({key,copyId,tabId,name,...copy(row)}))).catch(e=>{S.storageError=e; say('The unfinished text remains visible, but browser storage failed. Download working HTML or recovery JSON now. '+e.message,true);});return S.draftQueue;}
 function captureDraft(form,name){const old=S.drafts[name];const row={fields:plainValues(form),baseHead:old?.baseHead||Portable.head(S.workspace),baseRevision:old?.baseRevision??S.workspace.journal.length,token:uid('draft'),updatedAt:stamp()};retainDraft(name,row);return row;}
 function form(name,title,fields,prepare,options={}){
-  const form=el('form',{dataset:{action:name},noValidate:true});const box=el('fieldset');const saved=S.drafts[name];const flag=el('p',{class:'muted'});
-  box.append(el('h3',{},title),fields);
+  const form=el('form',{dataset:{action:name},noValidate:true});const box=el('fieldset',{},el('h3',{},title),fields);const saved=S.drafts[name];const flag=el('p',{class:'muted'});
   const updateFlag=()=>{const d=S.drafts[name];flag.textContent=d?'Unfinished values retained from revision '+d.baseRevision+(d.baseHead!==Portable.head(S.workspace)?'. Review these values against the current edition, then explicitly use them below.':'.'):'';};
   const adopt=button('Use these values for the current revision',async()=>{const row={fields:plainValues(form),baseHead:Portable.head(S.workspace),baseRevision:S.workspace.journal.length,token:uid('draft'),updatedAt:stamp()};await retainDraft(name,row);updateFlag();});
   adopt.hidden=!saved||saved.baseHead===Portable.head(S.workspace);
