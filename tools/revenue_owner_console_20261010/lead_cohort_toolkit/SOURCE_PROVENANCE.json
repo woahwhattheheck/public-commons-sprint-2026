@@ -211,8 +211,8 @@
     },
     {
       "path": "source/message-receipt.cjs",
-      "bytes": 6274,
-      "sha256": "7b78ea323c99585b393fac1e4b9a1243649fa9fbf01c3c8d08605bd95691b46f"
+      "bytes": 6667,
+      "sha256": "a801c5d01c2b52a67c4c2068d96fc40ba518e63bcdddbdc8ff99cc6282a5444e"
     },
     {
       "path": "runtime/host/connected_archive_bytes.cjs",
@@ -321,13 +321,13 @@
     },
     {
       "path": "native/receive-delivery-feedback.mjs",
-      "bytes": 8732,
-      "sha256": "0801706e05df6ff93298ae9aad1e256d80c2c20c11cc35fb32093141a568c0f7"
+      "bytes": 8794,
+      "sha256": "2bbb05921640b8df2a8c59ce0c9f56283763ef2ed2cb0f73d67fc1c6bf3c25a6"
     },
     {
       "path": "source/DELIVERY_FEEDBACK.md",
-      "bytes": 3908,
-      "sha256": "bd554d6c7e792ad24ed0d3765e9f79eb6ced6b894e9bc42184a1fac7afb3263d"
+      "bytes": 4285,
+      "sha256": "3ca50ee461b2f911be5ae0f21366bbc09174cbeffab3bfc25ae54725632e8527"
     },
     {
       "path": "LICENSE",
@@ -355,5 +355,5 @@
       "sha256": "27c9bd6857c94d8ed82dd81408ca83f3224a530ba1fa58a5b00b2bcef0ba8bca"
     }
   ],
-  "continuation_operation_id": "LEAD-DELIVERY-FEEDBACK-20261015"
+  "continuation_operation_id": "LEAD-DELIVERY-FEEDBACK-RUNTIME-20261015"
 }

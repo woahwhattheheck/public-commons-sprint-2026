@@ -19,3 +19,7 @@ The native receiver checks every declared original text/binary file against the 
 The complete predecessor bank and replaced tool bodies remain in history. Source-publication recovery state is a sibling of the output, outside the delivered tree; leave it beside the original output for an interrupted retry. Repeating the same original input/output uses the same create-only plan. Receiving the same original feedback into a later complete source remains an event no-op while preserving the new source handover.
 
 The successor carries the full current recorder, independent opener and their exact source-tool closure, including MIME/RAW helpers, archive tools, materializer and receiving guides. Replaced bodies remain under history. This applies equally to an older selected project that did not yet include these later entrypoints.
+
+## Native runtime lookup
+
+The native receiver declares the portable runtime directory before loading the original source's core. This keeps feedback receiving on the selected customer's retained engine while the current receiver supplies the complete source-preserving handover. Both paths remain ordinary files under the selected source directory; no provider action occurs.
