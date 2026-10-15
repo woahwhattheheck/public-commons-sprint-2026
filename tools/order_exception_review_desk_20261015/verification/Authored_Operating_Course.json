@@ -1,0 +1,681 @@
+{
+  "schema": "tjl-order-review-portable.v1",
+  "sha256": "71b65f63e33e00bbfd08c224a9ba0b2ba878eb4c625f8d328246a566d957beab",
+  "workspace": {
+    "schema": "tjl-order-review-workspace.v1",
+    "id": "authored-course",
+    "name": "Authored order-review operating course",
+    "created_at": "2026-10-15T05:30:00.000Z",
+    "revision": 14,
+    "origin": null,
+    "sources": [
+      {
+        "id": "before",
+        "kind": "orders",
+        "filename": "before.csv",
+        "system": "Authored ERP export",
+        "captured_at": "2026-10-15T05:30:00.000Z",
+        "effective_at": "Authored scenario only",
+        "format": "csv",
+        "delimiter": ",",
+        "sha256": "123d521477f1405ba99c4bab0fff47f14c382a88210b2eb526ce6bda393ee48b",
+        "original_text": "﻿Company,Order,Line,Quantity,Unit,Promise,Status,Note\r\nNorth,100,1,10,EA,2026-10-20,Open,\"Original, approved order\"\r\nNorth,200,1,5,EA,2026-10-21,Open,Unchanged\r\nNorth,300,1,2,EA,2026-10-22,Open,Missing later\r\nNorth,500,1,1,EA,2026-10-22,Open,First duplicate\r\nNorth,500,1,2,EA,2026-10-22,Open,Second duplicate\r\n",
+        "columns": [
+          "Company",
+          "Order",
+          "Line",
+          "Quantity",
+          "Unit",
+          "Promise",
+          "Status",
+          "Note"
+        ],
+        "rows": [
+          {
+            "Company": "North",
+            "Order": "100",
+            "Line": "1",
+            "Quantity": "10",
+            "Unit": "EA",
+            "Promise": "2026-10-20",
+            "Status": "Open",
+            "Note": "Original, approved order"
+          },
+          {
+            "Company": "North",
+            "Order": "200",
+            "Line": "1",
+            "Quantity": "5",
+            "Unit": "EA",
+            "Promise": "2026-10-21",
+            "Status": "Open",
+            "Note": "Unchanged"
+          },
+          {
+            "Company": "North",
+            "Order": "300",
+            "Line": "1",
+            "Quantity": "2",
+            "Unit": "EA",
+            "Promise": "2026-10-22",
+            "Status": "Open",
+            "Note": "Missing later"
+          },
+          {
+            "Company": "North",
+            "Order": "500",
+            "Line": "1",
+            "Quantity": "1",
+            "Unit": "EA",
+            "Promise": "2026-10-22",
+            "Status": "Open",
+            "Note": "First duplicate"
+          },
+          {
+            "Company": "North",
+            "Order": "500",
+            "Line": "1",
+            "Quantity": "2",
+            "Unit": "EA",
+            "Promise": "2026-10-22",
+            "Status": "Open",
+            "Note": "Second duplicate"
+          }
+        ]
+      },
+      {
+        "id": "after",
+        "kind": "orders",
+        "filename": "after.csv",
+        "system": "Authored ERP export",
+        "captured_at": "2026-10-15T05:30:00.000Z",
+        "effective_at": "Authored scenario only",
+        "format": "csv",
+        "delimiter": ",",
+        "sha256": "619d43ff14dbd3c5e2da84683aad3545c6fd715432b1b2387fed19dffd4c0032",
+        "original_text": "Company,Order,Line,Quantity,Unit,Promise,Status,Note\nNorth,100,1,12,EA,2026-10-23,Open,Customer change\nNorth,200,1,5,EA,2026-10-21,Open,Unchanged\nNorth,400,1,3,EA,2026-10-24,Open,New order\nNorth,500,1,1,EA,2026-10-22,Open,Needs resolution\n",
+        "columns": [
+          "Company",
+          "Order",
+          "Line",
+          "Quantity",
+          "Unit",
+          "Promise",
+          "Status",
+          "Note"
+        ],
+        "rows": [
+          {
+            "Company": "North",
+            "Order": "100",
+            "Line": "1",
+            "Quantity": "12",
+            "Unit": "EA",
+            "Promise": "2026-10-23",
+            "Status": "Open",
+            "Note": "Customer change"
+          },
+          {
+            "Company": "North",
+            "Order": "200",
+            "Line": "1",
+            "Quantity": "5",
+            "Unit": "EA",
+            "Promise": "2026-10-21",
+            "Status": "Open",
+            "Note": "Unchanged"
+          },
+          {
+            "Company": "North",
+            "Order": "400",
+            "Line": "1",
+            "Quantity": "3",
+            "Unit": "EA",
+            "Promise": "2026-10-24",
+            "Status": "Open",
+            "Note": "New order"
+          },
+          {
+            "Company": "North",
+            "Order": "500",
+            "Line": "1",
+            "Quantity": "1",
+            "Unit": "EA",
+            "Promise": "2026-10-22",
+            "Status": "Open",
+            "Note": "Needs resolution"
+          }
+        ]
+      },
+      {
+        "id": "requests",
+        "kind": "requests",
+        "filename": "requests.json",
+        "system": "Authored mailbox export",
+        "captured_at": "2026-10-15T05:30:00.000Z",
+        "effective_at": "Authored scenario only",
+        "format": "json",
+        "delimiter": ",",
+        "sha256": "8220cfbc355c64818d51d6753226dfdb292581cd223b9d586cbb06d5759a84ad",
+        "original_text": "[{\"order\":\"100\",\"line\":\"1\",\"message\":\"Please increase to12 and confirm delivery.\",\"message_id\":\"mail-a\"},{\"order\":\"500\",\"line\":\"1\",\"message\":\"Which line is correct?\",\"message_id\":\"mail-b\"},{\"order\":\"00100\",\"line\":\"1\",\"message\":\"Keep leading zeros.\",\"message_id\":\"mail-c\"}]",
+        "columns": [
+          "order",
+          "line",
+          "message",
+          "message_id"
+        ],
+        "rows": [
+          {
+            "order": "100",
+            "line": "1",
+            "message": "Please increase to12 and confirm delivery.",
+            "message_id": "mail-a"
+          },
+          {
+            "order": "500",
+            "line": "1",
+            "message": "Which line is correct?",
+            "message_id": "mail-b"
+          },
+          {
+            "order": "00100",
+            "line": "1",
+            "message": "Keep leading zeros.",
+            "message_id": "mail-c"
+          }
+        ]
+      },
+      {
+        "id": "foreign",
+        "kind": "requests",
+        "filename": "foreign.json",
+        "system": "Authored mailbox export",
+        "captured_at": "2026-10-15T05:30:00.000Z",
+        "effective_at": "Authored scenario only",
+        "format": "json",
+        "delimiter": ",",
+        "sha256": "94b1aa649941a3952187d9b5b429fa039549e8d1f888b2ab87e021f03bea8575",
+        "original_text": "[{\"order\":\"100\",\"line\":\"1\",\"message\":\"Different company.\",\"message_id\":\"mail-other\"}]",
+        "columns": [
+          "order",
+          "line",
+          "message",
+          "message_id"
+        ],
+        "rows": [
+          {
+            "order": "100",
+            "line": "1",
+            "message": "Different company.",
+            "message_id": "mail-other"
+          }
+        ]
+      }
+    ],
+    "mappings": [
+      {
+        "source_id": "before",
+        "company": "North",
+        "grain": "line",
+        "order_column": "Order",
+        "line_column": "Line",
+        "fields": {
+          "quantity": "Quantity",
+          "unit": "Unit",
+          "promised_date": "Promise",
+          "status": "Status"
+        }
+      },
+      {
+        "source_id": "after",
+        "company": "North",
+        "grain": "line",
+        "order_column": "Order",
+        "line_column": "Line",
+        "fields": {
+          "quantity": "Quantity",
+          "unit": "Unit",
+          "promised_date": "Promise",
+          "status": "Status"
+        }
+      },
+      {
+        "source_id": "requests",
+        "company": "North",
+        "grain": "line",
+        "order_column": "order",
+        "line_column": "line",
+        "fields": {}
+      },
+      {
+        "source_id": "foreign",
+        "company": "South",
+        "grain": "line",
+        "order_column": "order",
+        "line_column": "line",
+        "fields": {}
+      }
+    ],
+    "bindings": [
+      {
+        "id": "binding-1",
+        "request": {
+          "source_id": "requests",
+          "row": 0
+        },
+        "targets": [
+          {
+            "source_id": "before",
+            "row": 0
+          },
+          {
+            "source_id": "after",
+            "row": 0
+          }
+        ],
+        "actor": "Authored operator",
+        "reason": "Reviewed original message and both order records.",
+        "at": "2026-10-15T05:30:00.000Z"
+      }
+    ],
+    "reviews": [
+      {
+        "id": "review-1",
+        "title": "Review quantity and date change",
+        "source_refs": [
+          {
+            "source_id": "requests",
+            "row": 0
+          },
+          {
+            "source_id": "before",
+            "row": 0
+          },
+          {
+            "source_id": "after",
+            "row": 0
+          }
+        ],
+        "binding_ids": [
+          "binding-1"
+        ],
+        "versions": [
+          {
+            "version": 1,
+            "at": "2026-10-15T05:30:00.000Z",
+            "actor": "Authored operator",
+            "status": "proposed",
+            "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+            "reason": "Customer requested a quantity and delivery change.",
+            "observed_result": "",
+            "evidence_refs": []
+          },
+          {
+            "version": 2,
+            "at": "2026-10-15T05:30:00.000Z",
+            "actor": "Authored approver",
+            "status": "approved",
+            "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+            "reason": "Reviewed customer authorization and revised supply date.",
+            "observed_result": "",
+            "evidence_refs": []
+          },
+          {
+            "version": 3,
+            "at": "2026-10-15T05:30:00.000Z",
+            "actor": "Authored operator",
+            "status": "observed",
+            "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+            "reason": "Compared the supplied later order record.",
+            "observed_result": "Later export contains12EA and2026-10-23.",
+            "evidence_refs": [
+              {
+                "source_id": "after",
+                "row": 0
+              }
+            ]
+          },
+          {
+            "version": 4,
+            "at": "2026-10-15T05:30:00.000Z",
+            "actor": "Authored reviewer",
+            "status": "closed",
+            "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+            "reason": "Reviewed the later original record and customer request.",
+            "observed_result": "Later export contains12EA and2026-10-23.",
+            "evidence_refs": [
+              {
+                "source_id": "after",
+                "row": 0
+              }
+            ]
+          },
+          {
+            "version": 5,
+            "at": "2026-10-15T05:30:00.000Z",
+            "actor": "Authored operator",
+            "status": "proposed",
+            "proposal": "Assess a later requested amendment separately.",
+            "reason": "New change requires its own approval.",
+            "observed_result": "",
+            "evidence_refs": []
+          }
+        ]
+      }
+    ],
+    "events": [
+      {
+        "id": "event-1",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 1,
+        "type": "add_source",
+        "result": "before",
+        "action": {
+          "type": "add_source",
+          "id": "before",
+          "filename": "before.csv",
+          "kind": "orders",
+          "system": "Authored ERP export",
+          "captured_at": "2026-10-15T05:30:00.000Z",
+          "effective_at": "Authored scenario only",
+          "format": "csv",
+          "delimiter": ",",
+          "sha256": "123d521477f1405ba99c4bab0fff47f14c382a88210b2eb526ce6bda393ee48b",
+          "original_retained_at": {
+            "source_id": "before",
+            "sha256": "123d521477f1405ba99c4bab0fff47f14c382a88210b2eb526ce6bda393ee48b"
+          }
+        }
+      },
+      {
+        "id": "event-2",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 2,
+        "type": "add_source",
+        "result": "after",
+        "action": {
+          "type": "add_source",
+          "id": "after",
+          "filename": "after.csv",
+          "kind": "orders",
+          "system": "Authored ERP export",
+          "captured_at": "2026-10-15T05:30:00.000Z",
+          "effective_at": "Authored scenario only",
+          "format": "csv",
+          "delimiter": ",",
+          "sha256": "619d43ff14dbd3c5e2da84683aad3545c6fd715432b1b2387fed19dffd4c0032",
+          "original_retained_at": {
+            "source_id": "after",
+            "sha256": "619d43ff14dbd3c5e2da84683aad3545c6fd715432b1b2387fed19dffd4c0032"
+          }
+        }
+      },
+      {
+        "id": "event-3",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 3,
+        "type": "add_source",
+        "result": "requests",
+        "action": {
+          "type": "add_source",
+          "id": "requests",
+          "filename": "requests.json",
+          "kind": "requests",
+          "system": "Authored mailbox export",
+          "captured_at": "2026-10-15T05:30:00.000Z",
+          "effective_at": "Authored scenario only",
+          "format": "json",
+          "delimiter": ",",
+          "sha256": "8220cfbc355c64818d51d6753226dfdb292581cd223b9d586cbb06d5759a84ad",
+          "original_retained_at": {
+            "source_id": "requests",
+            "sha256": "8220cfbc355c64818d51d6753226dfdb292581cd223b9d586cbb06d5759a84ad"
+          }
+        }
+      },
+      {
+        "id": "event-4",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 4,
+        "type": "add_source",
+        "result": "foreign",
+        "action": {
+          "type": "add_source",
+          "id": "foreign",
+          "filename": "foreign.json",
+          "kind": "requests",
+          "system": "Authored mailbox export",
+          "captured_at": "2026-10-15T05:30:00.000Z",
+          "effective_at": "Authored scenario only",
+          "format": "json",
+          "delimiter": ",",
+          "sha256": "94b1aa649941a3952187d9b5b429fa039549e8d1f888b2ab87e021f03bea8575",
+          "original_retained_at": {
+            "source_id": "foreign",
+            "sha256": "94b1aa649941a3952187d9b5b429fa039549e8d1f888b2ab87e021f03bea8575"
+          }
+        }
+      },
+      {
+        "id": "event-5",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 5,
+        "type": "map_source",
+        "result": "before",
+        "action": {
+          "type": "map_source",
+          "source_id": "before",
+          "company": "North",
+          "grain": "line",
+          "order_column": "Order",
+          "line_column": "Line",
+          "fields": {
+            "quantity": "Quantity",
+            "unit": "Unit",
+            "promised_date": "Promise",
+            "status": "Status"
+          }
+        }
+      },
+      {
+        "id": "event-6",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 6,
+        "type": "map_source",
+        "result": "after",
+        "action": {
+          "type": "map_source",
+          "source_id": "after",
+          "company": "North",
+          "grain": "line",
+          "order_column": "Order",
+          "line_column": "Line",
+          "fields": {
+            "quantity": "Quantity",
+            "unit": "Unit",
+            "promised_date": "Promise",
+            "status": "Status"
+          }
+        }
+      },
+      {
+        "id": "event-7",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 7,
+        "type": "map_source",
+        "result": "requests",
+        "action": {
+          "type": "map_source",
+          "source_id": "requests",
+          "company": "North",
+          "grain": "line",
+          "order_column": "order",
+          "line_column": "line",
+          "fields": {}
+        }
+      },
+      {
+        "id": "event-8",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 8,
+        "type": "map_source",
+        "result": "foreign",
+        "action": {
+          "type": "map_source",
+          "source_id": "foreign",
+          "company": "South",
+          "grain": "line",
+          "order_column": "order",
+          "line_column": "line",
+          "fields": {}
+        }
+      },
+      {
+        "id": "event-9",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 9,
+        "type": "bind_request",
+        "result": "binding-1",
+        "action": {
+          "type": "bind_request",
+          "id": "binding-1",
+          "request": {
+            "source_id": "requests",
+            "row": 0
+          },
+          "targets": [
+            {
+              "source_id": "before",
+              "row": 0
+            },
+            {
+              "source_id": "after",
+              "row": 0
+            }
+          ],
+          "actor": "Authored operator",
+          "reason": "Reviewed original message and both order records."
+        }
+      },
+      {
+        "id": "event-10",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 10,
+        "type": "create_review",
+        "result": "review-1",
+        "action": {
+          "type": "create_review",
+          "id": "review-1",
+          "title": "Review quantity and date change",
+          "actor": "Authored operator",
+          "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+          "reason": "Customer requested a quantity and delivery change.",
+          "source_refs": [
+            {
+              "source_id": "requests",
+              "row": 0
+            },
+            {
+              "source_id": "before",
+              "row": 0
+            },
+            {
+              "source_id": "after",
+              "row": 0
+            }
+          ],
+          "binding_ids": [
+            "binding-1"
+          ]
+        }
+      },
+      {
+        "id": "event-11",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 11,
+        "type": "record_decision",
+        "result": "review-1",
+        "action": {
+          "type": "record_decision",
+          "review_id": "review-1",
+          "expected_version": 1,
+          "status": "approved",
+          "actor": "Authored approver",
+          "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+          "reason": "Reviewed customer authorization and revised supply date.",
+          "observed_result": "",
+          "evidence_refs": []
+        }
+      },
+      {
+        "id": "event-12",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 12,
+        "type": "record_decision",
+        "result": "review-1",
+        "action": {
+          "type": "record_decision",
+          "review_id": "review-1",
+          "expected_version": 2,
+          "status": "observed",
+          "actor": "Authored operator",
+          "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+          "reason": "Compared the supplied later order record.",
+          "observed_result": "Later export contains12EA and2026-10-23.",
+          "evidence_refs": [
+            {
+              "source_id": "after",
+              "row": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "event-13",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 13,
+        "type": "record_decision",
+        "result": "review-1",
+        "action": {
+          "type": "record_decision",
+          "review_id": "review-1",
+          "expected_version": 3,
+          "status": "closed",
+          "actor": "Authored reviewer",
+          "proposal": "Confirm12EA and2026-10-23 in the operating system after approval.",
+          "reason": "Reviewed the later original record and customer request.",
+          "observed_result": "Later export contains12EA and2026-10-23.",
+          "evidence_refs": [
+            {
+              "source_id": "after",
+              "row": 0
+            }
+          ]
+        }
+      },
+      {
+        "id": "event-14",
+        "at": "2026-10-15T05:30:00.000Z",
+        "revision": 14,
+        "type": "record_decision",
+        "result": "review-1",
+        "action": {
+          "type": "record_decision",
+          "review_id": "review-1",
+          "expected_version": 4,
+          "status": "proposed",
+          "actor": "Authored operator",
+          "proposal": "Assess a later requested amendment separately.",
+          "reason": "New change requires its own approval.",
+          "observed_result": "",
+          "evidence_refs": []
+        }
+      }
+    ],
+    "writing": {
+      "forms": {},
+      "view": {},
+      "pending_source": null
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "writing": {
+    "environment": "Production unfinished-writing controller with explicit DOM/storage/timer adapters",
+    "strict_json": "duplicate keys and lossy numeric cells rejected",
+    "writes": 4,
+    "revision": 4,
+    "writing_sha256": "d3f83627a0b362008482b65d4c8f774091c417f4c2942a1f573e773b8d3f2e84",
+    "retained_forms": [
+      "sources:source-before",
+      "reviews:review-a"
+    ],
+    "pending_file": "unfinished.csv"
+  },
+  "mutation": {
+    "environment": "Actual mutate plus unfinished-writing controller with explicit DOM/storage/timer adapters",
+    "writes": 4,
+    "revision": 4,
+    "retained": {
+      "decision-proposal": "New typing during accepted-operation save"
+    }
+  }
+}

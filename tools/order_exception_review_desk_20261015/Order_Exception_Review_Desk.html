@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Order Exception Review Desk</title>
+<style>
+:root{font:15px/1.55 system-ui,sans-serif;color:#252525;background:#f3f3f3}*{box-sizing:border-box}body{margin:0}header,main,footer{max-width:1320px;margin:auto;padding:22px}header{border-bottom:1px solid #bbb;background:#fff}h1{font-size:26px;margin:0 0 7px}h2{font-size:20px;margin:0 0 14px}h3{font-size:16px;margin:18px 0 8px}p{margin:8px 0}button,input,select,textarea{font:inherit;color:inherit;background:#fff;border:1px solid #999;border-radius:2px;padding:8px 10px;min-height:40px}button{cursor:pointer;font-weight:600}button:hover{background:#eee}button:disabled{opacity:.5;cursor:default}button.primary{background:#282828;color:#fff}button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:2px solid #333;outline-offset:3px}input,select,textarea{width:100%;min-width:0}textarea{min-height:90px;resize:vertical}label{display:block;font-size:13px;font-weight:600;margin-bottom:4px}.bar{display:flex;gap:9px;flex-wrap:wrap;align-items:center}.bar>*{flex:0 1 auto}.bar select{max-width:420px}.bar input{max-width:320px}.tabs{display:flex;flex-wrap:wrap;gap:0;border-bottom:1px solid #999;margin:18px 0}.tabs button{border:0;border-bottom:3px solid transparent;background:transparent}.tabs button[aria-current=page]{border-bottom-color:#222;background:#e4e4e4}.card{padding:20px;background:#fff;border:1px solid #c5c5c5;margin:16px 0;min-width:0}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.wide{grid-column:1/-1}.muted{color:#606060}.small{font-size:12px}.notice{padding:11px 14px;border-left:3px solid #555;background:#e7e7e7;white-space:pre-wrap;overflow-wrap:anywhere}.notice:empty{display:none}.table{overflow:auto;max-height:570px;border:1px solid #ccc}table{border-collapse:collapse;width:100%;font-size:13px}th,td{padding:9px;border-bottom:1px solid #ddd;text-align:left;vertical-align:top;min-width:100px;max-width:500px;overflow-wrap:anywhere}th{background:#eee;position:sticky;top:0}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f5f5f5;border:1px solid #ddd;padding:12px;max-height:430px;overflow:auto;font:12px/1.6 ui-monospace,monospace}.tag{font-size:12px;border:1px solid #aaa;padding:2px 6px;display:inline-block;margin-right:5px}.links button{padding:4px;min-height:30px;text-decoration:underline;border:0;background:none}.metrics{display:flex;gap:18px;flex-wrap:wrap}.metrics strong{font-size:20px;display:block}details{margin:10px 0}summary{cursor:pointer;font-weight:600}.empty{padding:20px;color:#666}footer{font-size:12px;color:#666}.file{overflow-wrap:anywhere}#save-state{font-size:13px;min-height:23px}.hidden{display:none!important}
+@media(max-width:680px){header,main,footer{padding:14px}.grid{grid-template-columns:1fr}.wide{grid-column:auto}.card{padding:14px}.bar>*{flex:1 1 130px}.bar select,.bar input{max-width:none}h1{font-size:23px}.tabs button{padding:9px}.table{max-height:430px}}
+</style></head><body>
+<header><h1>Order Exception Review Desk</h1><p class="muted">Compare original order snapshots, connect customer requests and retain the full decision history.</p>
+<div class="bar"><select id="workspace" aria-label="Saved local workspace"></select><button id="new-workspace">New workspace</button><button id="open-workspace">Open complete file</button><button id="export-workspace" class="primary">Download complete workspace</button></div><input id="open-file" type="file" accept=".json" class="hidden"><p id="save-state" role="status"></p></header>
+<main><div id="notice" class="notice" role="alert"></div><nav id="tabs" class="tabs" aria-label="Workspace views"></nav><div id="view"></div></main>
+<footer>Files stay in this browser. The desk records a reviewer's decisions alongside supplied records. Use your approved business systems to carry out a disposition. Download the complete workspace before moving browsers or clearing browser storage.</footer>
+<script>(function(root,factory){if(typeof module==='object'&&module.exports)module.exports=factory();else root.OrderDesk=factory();})(typeof globalThis!=='undefined'?globalThis:this,function OrderDeskCore(){
+"use strict";
+const SCHEMA="tjl-order-review-workspace.v1", TYPES=["orders","requests"], STATES=["proposed","approved","observed","closed","rejected"];
+const fail=(ok,msg)=>{if(!ok)throw Error(msg);},copy=x=>JSON.parse(JSON.stringify(x)),str=x=>typeof x==="string",stable=x=>x===null?"null":Array.isArray(x)?"["+x.map(stable).join(",")+"]":typeof x==="object"?"{"+Object.keys(x).sort().map(k=>JSON.stringify(k)+":"+stable(x[k])).join(",")+"}":JSON.stringify(x);
+const text=(v,label,max=20000)=>{fail(str(v)&&v.length<=max,label+" must be text within "+max+" characters.");return v;};
+const nonempty=(v,label,max=500)=>{text(v,label,max);fail(v.trim().length>0,label+" is required.");return v;};
+const ident=(v,label)=>{fail(str(v)&&/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,199}$/.test(v),label+" has an invalid identity.");return v;};
+const stamp=(v,label)=>{fail(str(v)&&/^\d{4}-\d{2}-\d{2}T/.test(v)&&Number.isFinite(Date.parse(v)),label+" needs an explicit ISO date and time.");return v;};
+const sha=v=>{fail(str(v)&&/^[a-f0-9]{64}$/.test(v),"A complete SHA-256 is required.");return v;};
+const finiteCell=x=>x===null||typeof x==="boolean"||str(x)||(typeof x==="number"&&Number.isFinite(x));
+function csv(raw,delimiter=","){
+ fail([",","\t",";"].includes(delimiter),"Choose comma, tab or semicolon.");
+ const rows=[];let row=[],cell="",quoted=false,closed=false,started=false;
+ for(let i=0;i<raw.length;i++){
+  const ch=raw[i];
+  if(quoted){if(ch==='"'){if(raw[i+1]==='"'){cell+='"';i++;}else{quoted=false;closed=true;}}else cell+=ch;continue;}
+  if(ch===delimiter){row.push(cell);cell="";closed=false;started=false;continue;}
+  if(ch==="\n"||ch==="\r"){if(ch==="\r"&&raw[i+1]==="\n")i++;row.push(cell);if(row.some(x=>x!==""))rows.push(row);row=[];cell="";closed=false;started=false;continue;}
+  if(ch==='"'){fail(!started&&!closed,"Unexpected quote in CSV field.");quoted=true;started=true;continue;}
+  fail(!closed,"Characters follow a closing CSV quote.");cell+=ch;started=true;
+ }
+ fail(!quoted,"The CSV ends inside a quoted field.");
+ if(cell!==""||row.length||closed){row.push(cell);if(row.some(x=>x!==""))rows.push(row);}
+ return rows;
+}
+
+function parseJSON(raw){
+ let p=0,depth=0;const ws=()=>{while(p<raw.length&&/[ \t\r\n]/.test(raw[p]))p++;};
+ function string(){const start=p++;let closed=false;while(p<raw.length){const ch=raw[p++];if(ch==="\\"){p++;continue;}if(ch==='"'){closed=true;break;}}fail(closed,"An original JSON string is incomplete.");return JSON.parse(raw.slice(start,p));}
+ function read(){ws();fail(++depth<=128,"JSON nesting is too deep.");let v;const ch=raw[p];
+  if(ch==='"')v=string();
+  else if(ch==="{"){p++;v=Object.create(null);const names=new Set();ws();if(raw[p]==="}")p++;else for(;;){ws();fail(raw[p]==='"',"JSON object keys must be quoted.");const k=string();fail(!names.has(k),"Duplicate JSON key: "+k);names.add(k);ws();fail(raw[p++]===":","A JSON key needs a colon.");v[k]=read();ws();const end=raw[p++];if(end==="}")break;fail(end===",","JSON object is incomplete.");}}
+  else if(ch==="["){p++;v=[];ws();if(raw[p]==="]")p++;else for(;;){v.push(read());ws();const end=raw[p++];if(end==="]")break;fail(end===",","JSON array is incomplete.");}}
+  else if(raw.slice(p,p+4)==="true"){p+=4;v=true;}
+  else if(raw.slice(p,p+5)==="false"){p+=5;v=false;}
+  else if(raw.slice(p,p+4)==="null"){p+=4;v=null;}
+  else{const m=raw.slice(p).match(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:[eE][+-]?\d+)?/);fail(m,"Unexpected JSON value.");const token=m[0];fail(/^-?(?:0|[1-9]\d*)$/.test(token)&&token!=="-0"&&Number.isSafeInteger(Number(token)),"Quote decimal/exponent values, negative zero and long numeric identifiers as JSON strings to preserve their exact original value.");v=Number(token);p+=token.length;}
+  depth--;return v;
+ }
+ const result=read();ws();fail(p===raw.length,"Unexpected trailing JSON content.");return result;
+}
+function checkedWriting(value){
+ fail(value&&typeof value==="object"&&!Array.isArray(value),"Retain complete unfinished writing.");
+ fail(value.forms&&typeof value.forms==="object"&&!Array.isArray(value.forms)&&Object.keys(value.forms).length<=300,"Too many unfinished forms.");
+ for(const[k,f]of Object.entries(value.forms)){text(k,"Form identity",500);fail(f&&typeof f==="object"&&!Array.isArray(f)&&Object.keys(f).length<=100,"Invalid unfinished form.");for(const[id,v]of Object.entries(f)){text(id,"Field identity",300);text(v,"Unfinished field",100000);}}
+ fail(value.view&&typeof value.view==="object"&&!Array.isArray(value.view),"Retain selected workspace view.");
+ for(const[k,v]of Object.entries(value.view)){text(k,"View field",100);fail(str(v)||Number.isSafeInteger(v),"A view value must be text or an exact integer.");}
+ if(value.pending_source){const f=value.pending_source;nonempty(f.filename,"Pending original filename",500);sha(f.sha256);fail(Number.isSafeInteger(f.bytes)&&f.bytes>=0&&f.bytes<=24*1024*1024&&str(f.base64)&&f.base64.length<=33554432&&/^[A-Za-z0-9+/]*={0,2}$/.test(f.base64),"Retain the whole pending original within24MiB.");}
+ return value;
+}
+
+function parse(raw,format="csv",delimiter=","){
+ text(raw,"Original source",24*1024*1024);fail(raw.length>0,"The source is empty.");
+ const body=raw.charCodeAt(0)===0xfeff?raw.slice(1):raw;let rows,columns;
+ if(format==="json"){
+  const value=parseJSON(body);fail(Array.isArray(value)&&value.length>0,"JSON must be a nonempty array of flat row objects.");
+  rows=value;columns=[];const seen=new Set();
+  for(const r of rows){fail(r&&typeof r==="object"&&!Array.isArray(r),"Each JSON row must be an object.");for(const [k,v]of Object.entries(r)){nonempty(k,"Column",300);fail(finiteCell(v),"Nested JSON cells are not supported; retain a flat export.");if(!seen.has(k)){seen.add(k);columns.push(k);}}}
+ }else{
+  fail(format==="csv","Choose CSV or JSON.");const table=csv(body,delimiter);fail(table.length>=2,"Retain a header and at least one data row.");
+  columns=table[0];fail(columns.every(k=>str(k)&&k.trim()),"Every CSV column needs a name.");
+  fail(new Set(columns).size===columns.length,"CSV headers must be unique, including case and spaces.");
+  rows=table.slice(1).map((r,i)=>{fail(r.length===columns.length,"CSV row "+(i+2)+" has "+r.length+" cells; expected "+columns.length+".");const o=Object.create(null);columns.forEach((k,j)=>{o[k]=r[j];});return o;});
+ }
+ fail(rows.length<=50000&&columns.length<=200,"Use at most 50,000 rows and 200 columns per original file.");
+ fail(columns.length>0,"At least one column is required.");return{columns,rows};
+}
+function create({id,name,at}){return{schema:SCHEMA,id:ident(id,"Workspace"),name:nonempty(name,"Workspace name",200),created_at:stamp(at,"Creation time"),revision:0,origin:null,sources:[],mappings:[],bindings:[],reviews:[],events:[],writing:{forms:{},view:{},pending_source:null}};}
+function source(s,id){const x=s.sources.find(x=>x.id===id);fail(x,"The original source is missing: "+id);return x;}
+function row(s,ref){fail(ref&&str(ref.source_id)&&Number.isInteger(ref.row)&&ref.row>=0,"An exact source row is required.");const src=source(s,ref.source_id);fail(ref.row<src.rows.length,"Source row is outside the original file.");return{source:src,data:src.rows[ref.row],ref:{source_id:ref.source_id,row:ref.row}};}
+function mapping(s,id){return s.mappings.find(x=>x.source_id===id)||null;}
+function value(data,field){return field&&Object.prototype.hasOwnProperty.call(data,field)?data[field]:null;}
+function key(s,ref){
+ const r=row(s,ref),m=mapping(s,ref.source_id);if(!m)return null;
+ const order=value(r.data,m.order_column),line=m.grain==="line"?value(r.data,m.line_column):"";
+ if(order===null||String(order).trim()===""||(m.grain==="line"&&(line===null||String(line).trim()==="")))return null;
+ return stable({company:m.company,grain:m.grain,order:String(order),line:String(line)});
+}
+function keyLabel(s,ref){const k=key(s,ref);if(!k)return"Unmapped / missing key";const x=JSON.parse(k);return x.company+" · order "+x.order+(x.grain==="line"?" · line "+x.line:"");}
+function index(s,sourceId){const src=source(s,sourceId),entries=new Map(),unkeyed=[];src.rows.forEach((_,i)=>{const ref={source_id:sourceId,row:i},k=key(s,ref);if(k===null)unkeyed.push(ref);else{if(!entries.has(k))entries.set(k,[]);entries.get(k).push(ref);}});return{entries,unkeyed};}
+function compare(s,beforeId,afterId){
+ const a=source(s,beforeId),b=source(s,afterId);fail(a.kind==="orders"&&b.kind==="orders"&&a.id!==b.id,"Choose two different original order snapshots.");
+ const ma=mapping(s,a.id),mb=mapping(s,b.id);fail(ma&&mb,"Map both snapshots first.");
+ fail(ma.company===mb.company&&ma.grain===mb.grain,"Both snapshots must use the same company scope and order/line grain.");
+ const aa=index(s,a.id),bb=index(s,b.id),keys=new Set([...aa.entries.keys(),...bb.entries.keys()]),results=[];
+ const fields=new Set([...Object.keys(ma.fields),...Object.keys(mb.fields)]);fail(fields.size>0,"Map at least one comparison field in the order snapshots.");
+ for(const k of keys){
+  const left=aa.entries.get(k)||[],right=bb.entries.get(k)||[];
+  if(left.length>1||right.length>1){results.push({key:k,status:"ambiguous",before:left,after:right,changes:[]});continue;}
+  if(!left.length||!right.length){results.push({key:k,status:left.length?"missing_from_later":"new_in_later",before:left,after:right,changes:[]});continue;}
+  const la=row(s,left[0]).data,rb=row(s,right[0]).data,changes=[];
+  for(const f of fields){const presentBefore=Object.prototype.hasOwnProperty.call(ma.fields,f),presentAfter=Object.prototype.hasOwnProperty.call(mb.fields,f);const av=presentBefore?value(la,ma.fields[f]):null,bv=presentAfter?value(rb,mb.fields[f]):null;if(!presentBefore||!presentAfter||stable(av)!==stable(bv))changes.push({field:f,before:av,after:bv,before_mapped:presentBefore,after_mapped:presentAfter});}
+  results.push({key:k,status:changes.length?"changed":"unchanged",before:left,after:right,changes});
+ }
+ return{before_id:a.id,after_id:b.id,results,unkeyed_before:aa.unkeyed,unkeyed_after:bb.unkeyed,
+  counts:results.reduce((o,r)=>(o[r.status]=(o[r.status]||0)+1,o),{})};
+}
+function suggestions(s,requestSourceId,orderSourceId){
+ fail(source(s,requestSourceId).kind==="requests"&&source(s,orderSourceId).kind==="orders","Select customer requests and an order snapshot.");
+ const req=source(s,requestSourceId),ix=index(s,orderSourceId);
+ return req.rows.map((_,i)=>{const ref={source_id:requestSourceId,row:i},k=key(s,ref),matches=k===null?[]:(ix.entries.get(k)||[]);return{request:ref,candidates:matches,state:k===null?"unmapped":matches.length===1?"unique_exact_key":matches.length>1?"ambiguous":"no_exact_key"};});
+}
+function currentReview(s,id){const r=s.reviews.find(x=>x.id===id);fail(r,"The review is missing.");return r;}
+function appendReview(s,a,at){
+ const review=currentReview(s,a.review_id),prior=review.versions[review.versions.length-1];
+ fail(a.expected_version===prior.version,"This review changed. Reopen the current version before recording a decision.");
+ nonempty(a.actor,"Recorded reviewer",300);nonempty(a.reason,"Decision reason",6000);fail(STATES.includes(a.status),"Choose a review status.");text(a.proposal,"Proposed disposition",12000);text(a.observed_result,"Observed result",12000);
+ const changed=a.proposal!==prior.proposal;
+ if(changed)fail(a.status==="proposed","A changed disposition starts a new proposed version.");
+ if(a.status==="approved")fail(["proposed","approved"].includes(prior.status)&&a.proposal.trim(),"Approve a complete proposed disposition.");
+ if(a.status==="observed")fail(["approved","observed"].includes(prior.status)&&a.observed_result.trim(),"Record an observed result after an approved disposition.");
+ if(a.status==="closed")fail(["observed","closed","rejected"].includes(prior.status),"Close a reviewed observed result or rejection.");
+ if(a.status==="rejected")fail(a.reason.trim(),"A rejection needs its reason.");
+ const refs=copy(a.evidence_refs||[]);refs.forEach(r=>row(s,r));
+ if(a.status==="observed")fail(refs.length>0,"Bind at least one original record for the observed result.");
+ const version={version:prior.version+1,at,actor:a.actor,status:a.status,proposal:a.proposal,reason:a.reason,observed_result:a.observed_result,evidence_refs:refs};
+ review.versions.push(version);return review.id;
+}
+function apply(input,action,{id,at}){
+ validate(input,false);ident(id,"Event");stamp(at,"Event time");fail(!input.events.some(e=>e.id===id),"This event has already been recorded.");
+ const s=copy(input),a=copy(action);let result;
+ if(a.type==="edit_writing"){s.writing=copy(checkedWriting(a.writing));result=s.id;
+ }else if(a.type==="add_source"){
+  ident(a.id,"Source");fail(!s.sources.some(x=>x.id===a.id),"This source identity already exists.");fail(TYPES.includes(a.kind),"Choose orders or requests.");nonempty(a.filename,"Original filename",500);nonempty(a.system,"Source system",200);stamp(a.captured_at,"Export/receipt time");text(a.effective_at||"","Source period",200);sha(a.sha256);
+  const parsed=parse(a.original_text,a.format,a.delimiter);
+  s.sources.push({id:a.id,kind:a.kind,filename:a.filename,system:a.system,captured_at:a.captured_at,effective_at:a.effective_at||"",format:a.format,delimiter:a.delimiter||",",sha256:a.sha256,original_text:a.original_text,columns:parsed.columns,rows:parsed.rows});result=a.id;
+ }else if(a.type==="map_source"){
+  const src=source(s,a.source_id);nonempty(a.company,"Company scope",300);fail(["order","line"].includes(a.grain),"Choose order or line grain.");
+  fail(src.columns.includes(a.order_column),"Choose an original order-ID column.");if(a.grain==="line")fail(src.columns.includes(a.line_column),"Choose an original line-ID column.");
+  fail(a.fields&&typeof a.fields==="object"&&!Array.isArray(a.fields),"Retain the complete field mapping.");
+  for(const[k,v]of Object.entries(a.fields)){nonempty(k,"Comparison field",200);fail(src.columns.includes(v),"Mapped column is absent: "+v);}
+  fail(!s.bindings.some(b=>b.request.source_id===a.source_id||b.targets.some(r=>r.source_id===a.source_id))&&!s.reviews.some(r=>r.source_refs.some(x=>x.source_id===a.source_id)||r.versions.some(v=>v.evidence_refs.some(x=>x.source_id===a.source_id))),"This mapping is already used in a review. Import another source identity to revise the mapping while preserving the original decision context.");
+  const m={source_id:a.source_id,company:a.company,grain:a.grain,order_column:a.order_column,line_column:a.grain==="line"?a.line_column:"",fields:a.fields};
+  const i=s.mappings.findIndex(x=>x.source_id===a.source_id);if(i<0)s.mappings.push(m);else s.mappings[i]=m;result=a.source_id;
+ }else if(a.type==="bind_request"){
+  ident(a.id,"Binding");fail(!s.bindings.some(x=>x.id===a.id),"Binding identity already exists.");const rq=row(s,a.request);fail(rq.source.kind==="requests","Bind an original customer-request row.");
+  nonempty(a.actor,"Recorded reviewer",300);nonempty(a.reason,"Binding reason",6000);fail(Array.isArray(a.targets)&&a.targets.length>0,"Choose one or more original order rows.");
+  a.targets.forEach(ref=>fail(row(s,ref).source.kind==="orders","Targets must be original order rows."));
+  fail(new Set(a.targets.map(stable)).size===a.targets.length,"An order row is repeated.");
+  fail(!s.bindings.some(x=>stable(x.request)===stable(a.request)),"This request already has a retained binding. Import a new request snapshot to amend it.");
+  const b={id:a.id,request:a.request,targets:a.targets,actor:a.actor,reason:a.reason,at};
+  s.bindings.push(b);result=a.id;
+ }else if(a.type==="create_review"){
+  ident(a.id,"Review");fail(!s.reviews.some(x=>x.id===a.id),"Review identity already exists.");nonempty(a.title,"Review title",300);nonempty(a.actor,"Recorded reviewer",300);nonempty(a.proposal,"Proposed disposition",12000);nonempty(a.reason,"Review reason",6000);fail(Array.isArray(a.source_refs)&&a.source_refs.length>0,"Bind the original records being reviewed.");a.source_refs.forEach(r=>row(s,r));
+  const bindingIds=a.binding_ids||[];bindingIds.forEach(i=>fail(s.bindings.some(b=>b.id===i),"A selected request binding is absent."));
+  s.reviews.push({id:a.id,title:a.title,source_refs:a.source_refs,binding_ids:bindingIds,versions:[{version:1,at,actor:a.actor,status:"proposed",proposal:a.proposal,reason:a.reason,observed_result:"",evidence_refs:[]}]});result=a.id;
+ }else if(a.type==="record_decision"){result=appendReview(s,a,at);
+ }else if(a.type==="rename"){s.name=nonempty(a.name,"Workspace name",200);result=s.id;
+ }else throw Error("Unknown workspace operation.");
+ let retainedAction=a;
+ if(a.type==="add_source"){retainedAction={...a};delete retainedAction.original_text;retainedAction.original_retained_at={source_id:a.id,sha256:a.sha256};}
+ if(a.type==="edit_writing"){const w=s.writing;retainedAction={type:a.type,retained_current_writing:true,form_keys:Object.keys(w.forms||{}),view:copy(w.view||{}),pending_source:w.pending_source?{filename:w.pending_source.filename,bytes:w.pending_source.bytes,sha256:w.pending_source.sha256}:null};}
+ s.revision++;s.events.push({id,at,revision:s.revision,type:a.type,result,action:retainedAction});validate(s,false);return s;
+}
+function validate(s,deep=true){
+ fail(s&&s.schema===SCHEMA,"Choose a complete supported order-review workspace.");ident(s.id,"Workspace");nonempty(s.name,"Workspace name",200);stamp(s.created_at,"Creation time");fail(Number.isInteger(s.revision)&&s.revision>=0,"Workspace revision is invalid.");
+ if(s.writing)checkedWriting(s.writing);
+ for(const k of ["sources","mappings","bindings","reviews","events"])fail(Array.isArray(s[k]),"Missing "+k+".");
+ fail(s.events.length===s.revision&&s.events.every((e,i)=>e.revision===i+1),"The complete operation history must be consecutive.");
+ for(const k of ["sources","bindings","reviews","events"])fail(new Set(s[k].map(x=>x.id)).size===s[k].length,"Duplicate "+k+" identity.");
+ fail(new Set(s.mappings.map(x=>x.source_id)).size===s.mappings.length,"Duplicate source mapping.");
+ for(const src of s.sources){ident(src.id,"Source");sha(src.sha256);fail(TYPES.includes(src.kind),"Unknown source role.");if(deep){const p=parse(src.original_text,src.format,src.delimiter);fail(stable(p.rows)===stable(src.rows)&&stable(p.columns)===stable(src.columns),"A parsed table differs from its complete original file: "+src.filename);}}
+ for(const m of s.mappings){const src=source(s,m.source_id);nonempty(m.company,"Company scope");fail(["order","line"].includes(m.grain)&&src.columns.includes(m.order_column)&&(m.grain!=="line"||src.columns.includes(m.line_column)),"A source key mapping is incomplete.");fail(m.fields&&Object.values(m.fields).every(x=>src.columns.includes(x)),"A comparison field mapping is incomplete.");}
+ for(const b of s.bindings){row(s,b.request);fail(b.targets.length>0,"Binding targets are missing.");b.targets.forEach(r=>row(s,r));}
+ for(const r of s.reviews){fail(r.source_refs.length&&r.versions.length,"A review must retain its source and versions.");r.source_refs.forEach(x=>row(s,x));r.binding_ids.forEach(i=>fail(s.bindings.some(b=>b.id===i),"A review binding is missing."));r.versions.forEach((v,i)=>{fail(v.version===i+1&&STATES.includes(v.status),"A review version is incomplete.");v.evidence_refs.forEach(x=>row(s,x));});}
+ return true;
+}
+function branch(s,{id,name,at}){validate(s);const n=copy(s);n.origin={workspace_id:s.id,revision:s.revision,prior_origin:s.origin||null,opened_at:stamp(at,"Branch time")};n.id=ident(id,"New workspace");n.name=nonempty(name||s.name,"Workspace name",200);return n;}
+function csvCell(v){let t=v==null?"":typeof v==="object"?stable(v):String(v);if(/^[=+\-@\t\r]/.test(t))t="'"+t;return'"'+t.replace(/"/g,'""')+'"';}
+function decisionsCSV(s){validate(s,false);const rows=[["review_id","title","version","status","reviewer","recorded_at","proposal","reason","observed_result","source_refs","evidence_refs"]];for(const r of s.reviews)for(const v of r.versions)rows.push([r.id,r.title,v.version,v.status,v.actor,v.at,v.proposal,v.reason,v.observed_result,stable(r.source_refs),stable(v.evidence_refs)]);return rows.map(r=>r.map(csvCell).join(",")).join("\r\n")+"\r\n";}
+return{SCHEMA,TYPES,STATES,copy,stable,parseJSON,checkedWriting,parse,create,source,row,mapping,key,keyLabel,index,compare,suggestions,currentReview,apply,validate,branch,decisionsCSV};
+});
+</script>
+<script>
+(function(){
+"use strict";
+const C=OrderDesk,$=id=>document.getElementById(id),esc=x=>String(x==null?"":x).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let db=null,state=null,persisted=-1,tab="overview",busy=false,dirty=false,viewSource="",page=0,query="",selectedRequest=null,selectedReview="",comparison=null,drafts={forms:{},view:{},pending_source:null},writingDirty=false,writingTimer=null,writingSaving=null;
+const uuid=()=>crypto.randomUUID(),now=()=>new Date().toISOString(),bytes=t=>new TextEncoder().encode(t);
+const hashRaw=async raw=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",raw)),n=>n.toString(16).padStart(2,"0")).join("");
+const hash=t=>hashRaw(bytes(t));
+const msg=t=>{$("notice").textContent=t||"";};
+const fmt=x=>typeof x==="object"?JSON.stringify(x):String(x==null?"":x);
+const field=(label,id,control,wide=false)=>'<div class="'+(wide?"wide":"")+'"><label for="'+id+'">'+esc(label)+'</label>'+control+'</div>';
+const input=(id,value="",placeholder="")=>'<input id="'+id+'" value="'+esc(value)+'" placeholder="'+esc(placeholder)+'">';
+const area=(id,value="")=>'<textarea id="'+id+'">'+esc(value)+'</textarea>';
+function select(id,options,value,blank=true){return'<select id="'+id+'">'+(blank?'<option value="">Choose…</option>':"")+options.map(o=>{const v=Array.isArray(o)?o[0]:o,t=Array.isArray(o)?o[1]:o;return'<option value="'+esc(v)+'"'+(v===value?" selected":"")+'>'+esc(t)+'</option>';}).join("")+'</select>';}
+const sources=kind=>state.sources.filter(s=>!kind||s.kind===kind).map(s=>[s.id,s.filename+" · "+s.system+" · "+s.rows.length+" rows"]);
+function table(headers,rows){return'<div class="table"><table><thead><tr>'+headers.map(h=>'<th>'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+v+'</td>').join("")+'</tr>').join("")+'</tbody></table></div>';}
+function wire(id,fn){const e=$(id);if(e)e.onclick=()=>run(fn);}
+async function run(fn){if(busy)return;try{busy=true;status();await fn();}catch(e){msg(e.message||String(e));}finally{busy=false;status();}}
+function status(){$("save-state").textContent=!state?"Open or create a workspace.":(dirty?"Changes are in memory; download the complete workspace.":writingDirty||writingSaving?"Unfinished writing is saving; keep this page open or download.":busy?"Working…":"Saved in this browser")+" · "+state.name+" · revision "+state.revision;$("export-workspace").disabled=!state; $("workspace").disabled=busy;}
+function openDB(){return new Promise((resolve,reject)=>{const r=indexedDB.open("tjl-order-review-desk",1);r.onupgradeneeded=()=>{r.result.createObjectStore("workspaces",{keyPath:"id"});};r.onerror=()=>reject(r.error);r.onsuccess=()=>resolve(r.result);});}
+function list(){return new Promise((res,rej)=>{const t=db.transaction("workspaces"),r=t.objectStore("workspaces").getAll();r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function read(id){return new Promise((res,rej)=>{const r=db.transaction("workspaces").objectStore("workspaces").get(id);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+function save(snapshot,expected){return new Promise((res,rej)=>{
+ if(!db){rej(Error("Browser storage is unavailable. Download this workspace to retain your changes."));return;}
+ const tx=db.transaction("workspaces","readwrite"),os=tx.objectStore("workspaces"),r=os.get(snapshot.id);let problem;
+ r.onsuccess=()=>{const old=r.result;if((old?old.revision:-1)!==expected){problem=Error("Another tab saved this workspace. Your complete copy remains here: download it, then open that file as a separate workspace.");tx.abort();return;}os.put(snapshot);};
+ tx.oncomplete=()=>res();tx.onerror=()=>rej(problem||tx.error);tx.onabort=()=>rej(problem||tx.error||Error("Browser save was interrupted."));
+ });}
+async function refreshList(){if(!db)return;const all=await list();$("workspace").innerHTML='<option value="">Saved local workspaces…</option>'+all.map(s=>'<option value="'+esc(s.id)+'"'+(state&&s.id===state.id?" selected":"")+'>'+esc(s.name)+" · r"+s.revision+'</option>').join("");}
+async function mutate(action){captureDraft(false);const submittedKey=formKey(),submittedForm=C.copy(drafts.forms[submittedKey]||{});await flushWriting();if(dirty)throw Error("Download your retained changes and reopen the file as a separate workspace before continuing.");const next=C.apply(state,action,{id:uuid(),at:now()});state=next;dirty=true;status();await save(next,persisted);persisted=next.revision;dirty=false;if(C.stable(drafts.forms[submittedKey]||{})===C.stable(submittedForm))delete drafts.forms[submittedKey];writingDirty=true;await flushWriting();await refreshList();render();}
+async function newWorkspace(){await flushWriting();if(dirty&&!confirm("The current in-memory changes are not saved. Download them before switching. Continue anyway?"))return;const name=prompt("Workspace name","Order exception review");if(!name)return;state=C.create({id:uuid(),name,at:now()});persisted=-1;dirty=true;drafts=C.copy(state.writing);writingDirty=false;await save(state,-1);persisted=0;dirty=false;comparison=null;selectedRequest=null;selectedReview="";viewSource="";await refreshList();render();}
+function download(name,body,type="application/json"){const url=URL.createObjectURL(new Blob([body],{type})),a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);}
+async function packageText(){captureDraft(false);const portable=C.copy(state);portable.writing=C.copy(drafts);C.validate(portable);const payload=C.stable(portable);return JSON.stringify({schema:"tjl-order-review-portable.v1",sha256:await hash(payload),workspace:portable},null,2)+"\n";}
+async function exportWorkspace(){download("Order_Review_"+state.id+"_r"+state.revision+".json",await packageText());msg("Complete editable workspace downloaded, including all original source text, mappings, bindings and decision versions.");}
+async function openFile(file){
+ if(file.size===0)throw Error("Choose a complete nonempty workspace file.");
+ const text=new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(await file.arrayBuffer()),e=C.parseJSON(text.charCodeAt(0)===0xfeff?text.slice(1):text);
+ if(e.schema!=="tjl-order-review-portable.v1")throw Error("Choose the complete exported workspace JSON.");
+ C.validate(e.workspace);if(await hash(C.stable(e.workspace))!==e.sha256)throw Error("The workspace differs from its retained checksum.");
+ for(const s of e.workspace.sources)if(await hash(s.original_text)!==s.sha256)throw Error("Original source bytes differ: "+s.filename);
+ const pending=e.workspace.writing&&e.workspace.writing.pending_source;if(pending){const raw=fromBase64(pending.base64);if(raw.length!==pending.bytes||await hashRaw(raw)!==pending.sha256)throw Error("Pending original source bytes differ.");}
+ await flushWriting();if(dirty&&!confirm("Download current unsaved work before switching. Continue anyway?"))return;
+ state=C.branch(e.workspace,{id:uuid(),name:e.workspace.name+" — continued",at:now()});persisted=-1;dirty=true;drafts=C.copy(state.writing||{forms:{},view:{},pending_source:null});writingDirty=false;
+ await save(state,-1);persisted=state.revision;dirty=false;comparison=null;selectedRequest=null;selectedReview="";viewSource="";tab="overview";restoreView();await refreshList();render();msg("Opened the complete file as a separate local workspace. Its source and full prior decision history are retained.");
+}
+function render(){
+ status();const tabs=[["overview","Overview"],["sources","Original files"],["compare","Compare snapshots"],["requests","Customer requests"],["reviews","Decision review"],["handoff","Handoff"]];
+ $("tabs").innerHTML=tabs.map(([id,label])=>'<button data-tab="'+id+'"'+(id===tab?' aria-current="page"':"")+'>'+label+'</button>').join("");
+ for(const b of $("tabs").querySelectorAll("button"))b.onclick=()=>{tab=b.dataset.tab;msg("");render();};
+ if(!state){$("view").innerHTML='<section class="card"><h2>Start with your actual records</h2><p>Create a workspace and import an original order CSV or flat JSON export. Map the business company and exact order/line keys. A second snapshot shows changes; a request export can be linked deliberately to the affected order rows.</p><p>Every original file and recorded decision remains in the complete workspace download.</p></section>';return;}
+ ({overview:overview,sources:sourceView,compare:compareView,requests:requestView,reviews:reviewView,handoff:handoffView})[tab]();
+}
+function overview(){
+ const current=state.reviews.map(r=>r.versions[r.versions.length-1]),counts=current.reduce((o,v)=>(o[v.status]=(o[v.status]||0)+1,o),{});
+ $("view").innerHTML='<section class="card"><h2>'+esc(state.name)+'</h2><div class="metrics"><div><strong>'+state.sources.length+'</strong>original files</div><div><strong>'+state.bindings.length+'</strong>reviewed request bindings</div><div><strong>'+state.reviews.length+'</strong>decision cases</div><div><strong>'+(counts.proposed||0)+'</strong>proposals awaiting review</div></div><p class="muted">A practical sequence: retain original files → declare exact keys → compare snapshots and link requests → record a proposal → approve → record an observed result → close.</p><div class="bar"><button id="go-source">Import original files</button><button id="rename">Rename workspace</button></div></section><section class="card"><h2>Current review queue</h2>'+(!state.reviews.length?'<p class="empty">No decision cases yet.</p>':table(["Case","Status","Version","Recorded reviewer"],state.reviews.map(r=>{const v=r.versions[r.versions.length-1];return['<button data-review="'+esc(r.id)+'">'+esc(r.title)+'</button>',esc(v.status),v.version,esc(v.actor)];})))+'</section>';
+ wire("go-source",()=>{tab="sources";render();});wire("rename",async()=>{const name=prompt("Workspace name",state.name);if(name)await mutate({type:"rename",name});});
+ for(const b of $("view").querySelectorAll("[data-review]"))b.onclick=()=>{selectedReview=b.dataset.review;tab="reviews";render();};
+}
+function sourceView(){
+ $("view").innerHTML='<section class="card"><h2>Import an original export</h2><p class="muted">UTF-8 CSV/TSV or a JSON array of flat objects. Original text and every parsed row are retained. Company keys and comparison fields are declared after import.</p><div class="grid">'+field("Original file","source-file",'<input id="source-file" type="file" accept=".csv,.tsv,.json,.txt">')+field("Role","source-kind",select("source-kind",[["orders","Order snapshot"],["requests","Customer requests"]],"orders",false))+field("Source system","source-system",input("source-system","","For example: Sage100 export, CRM or mailbox export"))+field("File format","source-format",select("source-format",[["csv","CSV / delimited text"],["json","JSON rows"]],"csv",false))+field("Delimiter","source-delimiter",select("source-delimiter",[[",","Comma"],["\t","Tab"],[";","Semicolon"]],",",false))+field("Original export/receipt time (ISO)","source-at",input("source-at",now()))+field("Declared source period / snapshot label","source-period",input("source-period","","Use the source's actual as-of time or period"),true)+'</div><p><button id="import-source" class="primary">Retain original file</button></p></section><section class="card"><h2>Retained originals</h2><div class="bar">'+select("source-select",sources(),viewSource)+'<button id="download-original">Download selected original</button></div><div id="source-detail"></div></section>';
+ $("source-select").onchange=()=>{viewSource=$("source-select").value;page=0;query="";sourceDetail();};
+ wire("import-source",async()=>{
+  const f=$("source-file").files[0],pending=drafts.pending_source;if(!f&&!pending)throw Error("Choose an original file.");
+  if(f&&f.size>24*1024*1024)throw Error("Use an original file up to24MiB.");
+  const buffer=f?new Uint8Array(await f.arrayBuffer()):fromBase64(pending.base64),filename=f?f.name:pending.filename;
+  const raw=new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(buffer),id=uuid();
+  const action={type:"add_source",id,filename,kind:$("source-kind").value,system:$("source-system").value,format:$("source-format").value,delimiter:$("source-delimiter").value,captured_at:$("source-at").value,effective_at:$("source-period").value,original_text:raw,sha256:await hash(raw)};
+  viewSource=id;await mutate(action);drafts.pending_source=null;writingDirty=true;await flushWriting();render();msg("Original file retained. Declare its exact company and key mapping below.");
+ });
+ wire("download-original",()=>{if(!viewSource)throw Error("Select an original file.");const s=C.source(state,viewSource);download(s.filename,s.original_text,s.format==="json"?"application/json":"text/plain;charset=utf-8");});
+ sourceDetail();
+}
+function sourceDetail(){
+ const el=$("source-detail");if(viewSource&&!state.sources.some(s=>s.id===viewSource))viewSource="";if(!viewSource){el.innerHTML='<p class="empty">Choose a retained original.</p>';return;}
+ const s=C.source(state,viewSource),m=C.mapping(state,viewSource),fields=m?Object.entries(m.fields).map(([k,v])=>k+"="+v).join("\n"):"";
+ el.innerHTML='<p class="file"><strong>'+esc(s.filename)+'</strong> · '+esc(s.kind)+' · '+s.rows.length+' rows · '+esc(s.captured_at)+'</p><p class="small muted">'+esc(s.sha256)+'</p><div class="grid">'+field("Company / ledger scope","map-company",input("map-company",m?m.company:"","One exact business/company scope"))+field("Key grain","map-grain",select("map-grain",[["order","Order-level"],["line","Order + line"]],m?m.grain:"line",false))+field("Original order ID column","map-order",select("map-order",s.columns,m?m.order_column:""))+field("Original line ID column","map-line",select("map-line",s.columns,m?m.line_column:""))+field("Comparison fields: one canonical name = original column per line","map-fields",area("map-fields",fields),true)+'</div><p class="small muted">For example: quantity=Qty, promised_date=Promise Date, status=Status. Enter one mapping per line. Compare exact source values; the desk does not convert dates, quantities or units. Request exports may leave comparison fields blank.</p><button id="save-map">Save complete mapping</button><h3>Original rows</h3><div class="bar">'+input("source-query",query,"Filter source values")+'<button id="filter-source">Filter</button><button id="prev-source">Previous25</button><button id="next-source">Next25</button></div><p id="row-range" class="small"></p><div id="source-table"></div>';
+ wire("save-map",async()=>{const f={};for(const line of $("map-fields").value.split("\n").filter(x=>x.trim())){const p=line.indexOf("=");if(p<=0)throw Error("Each comparison mapping needs canonical name = original column.");const k=line.slice(0,p).trim(),v=line.slice(p+1).trim();if(Object.prototype.hasOwnProperty.call(f,k))throw Error("Comparison field repeated: "+k);Object.defineProperty(f,k,{value:v,enumerable:true,configurable:true,writable:true});}
+  await mutate({type:"map_source",source_id:s.id,company:$("map-company").value,grain:$("map-grain").value,order_column:$("map-order").value,line_column:$("map-line").value,fields:f});msg("Mapping saved. Keys preserve source spelling, spacing and case.");});
+ wire("filter-source",()=>{query=$("source-query").value;page=0;drawRows();});wire("prev-source",()=>{page=Math.max(0,page-1);drawRows();});wire("next-source",()=>{page++;drawRows();});
+ function drawRows(){const rows=s.rows.map((r,i)=>({r,i})).filter(x=>!query||JSON.stringify(x.r).toLowerCase().includes(query.toLowerCase()));const max=Math.max(0,Math.ceil(rows.length/25)-1);page=Math.min(page,max);const visible=rows.slice(page*25,page*25+25);$("row-range").textContent=rows.length?"Rows "+(page*25+1)+"–"+Math.min(page*25+25,rows.length)+" of "+rows.length+" matching rows; source row numbers remain original.":"No matching rows."; $("source-table").innerHTML=table(["Source row",...s.columns],visible.map(x=>[x.i+1,...s.columns.map(k=>esc(fmt(x.r[k])))]));}
+ drawRows();
+}
+function compareView(){
+ $("view").innerHTML='<section class="card"><h2>Compare order snapshots</h2><div class="grid">'+field("Earlier / baseline snapshot","compare-before",select("compare-before",sources("orders"),comparison?comparison.before_id:""))+field("Later / comparison snapshot","compare-after",select("compare-after",sources("orders"),comparison?comparison.after_id:""))+'</div><p class="muted">Use the same declared company and key grain. Duplicate keys are shown as ambiguous. Missing rows describe the supplied files; they do not by themselves prove an order was cancelled.</p><button id="compare-now" class="primary">Compare complete snapshots</button><div id="comparison"></div></section>';
+ wire("compare-now",()=>{comparison=C.compare(state,$("compare-before").value,$("compare-after").value);drawComparison();});drawComparison();
+}
+function drawComparison(){
+ if(!comparison)return;const out=$("comparison");
+ out.innerHTML='<h3>Comparison results</h3><p>'+Object.entries(comparison.counts).map(([k,v])=>'<span class="tag">'+esc(k)+": "+v+'</span>').join("")+'</p><p class="small">Unmapped or empty keys: baseline '+comparison.unkeyed_before.length+"; later "+comparison.unkeyed_after.length+'.</p><div class="bar">'+select("compare-status",["all","changed","new_in_later","missing_from_later","ambiguous","unchanged"],"changed",false)+input("compare-query","","Filter exact key or changed value")+'<button id="filter-comparison">Filter</button></div><div id="compare-results"></div>';
+ function draw(){const status=$("compare-status").value,q=$("compare-query").value.toLowerCase(),all=comparison.results.filter(x=>(status==="all"||x.status===status)&&(!q||JSON.stringify(x).toLowerCase().includes(q)));$("compare-results").innerHTML='<p class="small">'+all.length+" matching results. Showing first100; narrow the filter for other keys.</p>"+table(["Exact key","Result","Changed values","Review"],all.slice(0,100).map(x=>[esc(x.key),esc(x.status),x.changes.map(c=>'<div><strong>'+esc(c.field)+'</strong>: '+esc(fmt(c.before))+" → "+esc(fmt(c.after))+(c.before_mapped&&c.after_mapped?"":" (field mapping differs)")+'</div>').join(""),'<button data-compare="'+esc(x.key)+'">Start decision case</button>']));
+ for(const b of $("compare-results").querySelectorAll("[data-compare]"))b.onclick=()=>run(async()=>{const r=comparison.results.find(x=>x.key===b.dataset.compare);await startReview([...r.before,...r.after],[],"Order change: "+JSON.parse(r.key).order);});}
+ wire("filter-comparison",draw);$("compare-status").onchange=draw;draw();
+}
+async function startReview(refs,bindings,title){
+ const actor=prompt("Recorded reviewer / operator");if(!actor)return;const proposal=prompt("Proposed disposition (what should happen, subject to approval)");if(!proposal)return;const reason=prompt("Why is this review needed?");if(!reason)return;const id=uuid();await mutate({type:"create_review",id,title,actor,proposal,reason,source_refs:refs,binding_ids:bindings});selectedReview=id;tab="reviews";render();
+}
+function requestView(){
+ $("view").innerHTML='<section class="card"><h2>Connect customer requests</h2><div class="grid">'+field("Original requests","requests-source",select("requests-source",sources("requests"),selectedRequest?selectedRequest.source_id:""))+field("Current order snapshot","orders-source",select("orders-source",sources("orders"),""))+'</div><p class="muted">Exact key matches are suggestions. Read the original message and order record, then deliberately bind them. Shared order numbers across company scopes never match.</p><button id="suggest-requests">Show exact-key suggestions</button><div id="request-suggestions"></div></section><section class="card"><h2>Record an explicit binding</h2><div class="grid">'+field("Request source","bind-requests",select("bind-requests",sources("requests"),selectedRequest?selectedRequest.source_id:""))+field("Original request row (1-based)","bind-row",input("bind-row",selectedRequest?selectedRequest.row+1:""))+field("Order snapshot","bind-orders",select("bind-orders",sources("orders"),""))+field("Original order row(s), comma-separated","bind-targets",input("bind-targets","","For example: 8, 9"))+field("Recorded reviewer","bind-actor",input("bind-actor",""))+field("Reason / relationship","bind-reason",area("bind-reason",""))+'</div><div class="bar"><button id="preview-binding">Read selected original rows</button><button id="save-binding" class="primary">Retain reviewed binding</button></div><div id="binding-preview"></div></section><section class="card"><h2>Retained bindings</h2>'+table(["Request","Orders","Reviewer / reason","Decision"],state.bindings.map(b=>[esc(C.source(state,b.request.source_id).filename)+" row"+(b.request.row+1),b.targets.map(r=>esc(C.keyLabel(state,r))+" [row"+(r.row+1)+"]").join("<br>"),esc(b.actor)+"<br>"+esc(b.reason),'<button data-binding="'+esc(b.id)+'">Start decision case</button>']))+'</section>';
+ wire("suggest-requests",()=>{const list=C.suggestions(state,$("requests-source").value,$("orders-source").value);$("request-suggestions").innerHTML='<p>'+list.length+' requests. Showing first100; bind any original row below.</p>'+table(["Request row","Source content","Match","Review"],list.slice(0,100).map(x=>[x.request.row+1,esc(JSON.stringify(C.row(state,x.request).data)),esc(x.state)+(x.candidates.length?" · rows"+x.candidates.map(r=>r.row+1).join(","):""),'<button data-request="'+x.request.row+'">Use this request</button>']));
+ for(const b of $("request-suggestions").querySelectorAll("[data-request]"))b.onclick=()=>{const x=list.find(x=>x.request.row===Number(b.dataset.request));$("bind-requests").value=x.request.source_id;$("bind-row").value=x.request.row+1;$("bind-orders").value=$("orders-source").value;$("bind-targets").value=x.candidates.map(r=>r.row+1).join(", ");captureDraft();};});
+ function selected(){const rs=$("bind-requests").value,os=$("bind-orders").value,n=Number($("bind-row").value);if(!Number.isInteger(n)||n<1)throw Error("Choose the original request row number.");const tokens=$("bind-targets").value.split(",").map(x=>x.trim());if(!tokens.length||tokens.some(x=>!x||!/^\d+$/.test(x)||Number(x)<1))throw Error("Choose positive original order row numbers.");return{request:{source_id:rs,row:n-1},targets:tokens.map(x=>({source_id:os,row:Number(x)-1}))};}
+ wire("preview-binding",()=>{const r=selected();$("binding-preview").innerHTML='<pre>'+esc(JSON.stringify({request:C.row(state,r.request),orders:r.targets.map(x=>C.row(state,x))},(k,v)=>k==="source"?{id:v.id,filename:v.filename,system:v.system,sha256:v.sha256}:v,2))+'</pre>';});
+ wire("save-binding",async()=>{const r=selected();await mutate({type:"bind_request",id:uuid(),request:r.request,targets:r.targets,actor:$("bind-actor").value,reason:$("bind-reason").value});msg("Reviewed binding retained with its exact original rows.");});
+ for(const b of $("view").querySelectorAll("[data-binding]"))b.onclick=()=>run(async()=>{const x=state.bindings.find(x=>x.id===b.dataset.binding);await startReview([x.request,...x.targets],[x.id],"Customer request: "+C.keyLabel(state,x.targets[0]));});
+}
+function reviewView(){
+ const r=selectedReview?state.reviews.find(x=>x.id===selectedReview):null,v=r?r.versions[r.versions.length-1]:null;
+ $("view").innerHTML='<section class="card"><h2>Decision review</h2>'+select("review-select",state.reviews.map(r=>[r.id,r.title+" · "+r.versions[r.versions.length-1].status]),selectedReview)+'<div id="review-body">'+(!r?'<p class="empty">Start a case from a snapshot comparison or a retained request binding.</p>':'<h3>'+esc(r.title)+'</h3><p>Current version'+v.version+' · <strong>'+esc(v.status)+'</strong> · '+esc(v.actor)+' · '+esc(v.at)+'</p><details open><summary>Original records</summary>'+r.source_refs.map(ref=>{const x=C.row(state,ref);return'<p>'+esc(x.source.filename)+" · source row"+(ref.row+1)+" · "+esc(x.source.sha256)+'</p><pre>'+esc(JSON.stringify(x.data,null,2))+'</pre>';}).join("")+'</details><div class="grid">'+field("Record next status","decision-status",select("decision-status",C.STATES,v.status,false))+field("Recorded reviewer","decision-actor",input("decision-actor",""))+field("Complete proposed disposition","decision-proposal",area("decision-proposal",v.proposal),true)+field("Decision / change reason","decision-reason",area("decision-reason",""),true)+field("Observed result in the operating system","decision-observed",area("decision-observed",v.observed_result),true)+field("Evidence source for an observed result","evidence-source",select("evidence-source",sources(),""))+field("Evidence original row(s), comma-separated","evidence-rows",input("evidence-rows",""))+'</div><p class="small muted">Changing the disposition creates a new proposed version. Approval precedes an observed result. Bind the later original record when recording an observed result; close after review. Every earlier version remains available.</p><button id="record-decision" class="primary">Append decision version</button><h3>Complete decision history</h3>'+r.versions.slice().reverse().map(x=>'<details><summary>Version'+x.version+" · "+esc(x.status)+" · "+esc(x.actor)+" · "+esc(x.at)+'</summary><pre>'+esc(JSON.stringify(x,null,2))+'</pre></details>').join(""))+'</div></section>';
+ $("review-select").onchange=()=>{selectedReview=$("review-select").value;reviewView();};
+ if(r)wire("record-decision",async()=>{const tokens=$("evidence-rows").value.trim(),evidence_refs=tokens?tokens.split(",").map(x=>{const n=Number(x.trim());if(!Number.isInteger(n)||n<1)throw Error("Evidence rows must be positive original row numbers.");return{source_id:$("evidence-source").value,row:n-1};}):[];await mutate({type:"record_decision",review_id:r.id,expected_version:v.version,status:$("decision-status").value,actor:$("decision-actor").value,proposal:$("decision-proposal").value,reason:$("decision-reason").value,observed_result:$("decision-observed").value,evidence_refs});msg("Decision version appended. Previous versions and original records remain retained.");});
+}
+function handoffView(){
+ $("view").innerHTML='<section class="card"><h2>Complete handoff</h2><p>The complete workspace contains every original file, parsed row, declared mapping, explicit request binding, proposal, approval and observed-result version. The recipient opens it in this same HTML desk as a separate local workspace.</p><div class="bar"><button id="handoff-complete" class="primary">Download complete editable workspace</button><button id="handoff-csv">Download decision history CSV</button><button id="handoff-report">Download readable report</button></div><h3>Original source inventory</h3>'+table(["File","Role / system","Rows","Original SHA-256"],state.sources.map(s=>[esc(s.filename),esc(s.kind)+" / "+esc(s.system),s.rows.length,esc(s.sha256)]))+'<h3>Operating notes</h3><ol><li>Agree the company scope, order/line grain and source period with the operator.</li><li>Map original identifiers exactly. Preserve original dates, quantities and units; interpret differences with the source owner.</li><li>Read each proposed request binding and record its reason.</li><li>Approve the intended disposition in this desk; carry it out through the business system and its normal authority.</li><li>Import the resulting record and bind it when recording an observed result.</li><li>Download the complete workspace and reopen it before handing it over.</li></ol><details><summary>Operation history</summary><pre>'+esc(JSON.stringify(state.events.map(e=>({id:e.id,at:e.at,revision:e.revision,type:e.type,result:e.result})),null,2))+'</pre></details></section>';
+ wire("handoff-complete",exportWorkspace);wire("handoff-csv",()=>download("Order_Review_Decisions.csv",C.decisionsCSV(state),"text/csv;charset=utf-8"));wire("handoff-report",()=>{const body='<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>'+esc(state.name)+'</title><style>body{font:15px/1.6 system-ui;max-width:1000px;margin:30px auto;padding:0 18px;color:#222}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#f4f4f4;padding:12px}section{border-top:1px solid #aaa;margin-top:22px}h1{font-size:25px}</style><h1>'+esc(state.name)+'</h1><p>Revision'+state.revision+' · '+state.sources.length+' original files · '+state.reviews.length+' decision cases.</p><p>The complete editable JSON workspace contains all original records and mappings.</p>'+state.reviews.map(r=>'<section><h2>'+esc(r.title)+'</h2><h3>Original source references</h3><pre>'+esc(JSON.stringify(r.source_refs.map(ref=>({filename:C.source(state,ref.source_id).filename,sha256:C.source(state,ref.source_id).sha256,row:ref.row+1,data:C.row(state,ref).data})),null,2))+'</pre><h3>Full decision history</h3><pre>'+esc(JSON.stringify(r.versions,null,2))+'</pre></section>').join("")+'</html>';download("Order_Review_Report.html",body,"text/html;charset=utf-8");});
+}
+
+function formKey(){return tab+(tab==="sources"?":"+viewSource:tab==="reviews"?":"+selectedReview:"");}
+function currentView(){return{tab,viewSource,selectedReview,page,query};}
+function toBase64(raw){let out="";for(let i=0;i<raw.length;i+=0x8000)out+=String.fromCharCode(...raw.subarray(i,i+0x8000));return btoa(out);}
+function fromBase64(value){return Uint8Array.from(atob(value),c=>c.charCodeAt(0));}
+function markWriting(){writingDirty=true;status();if(writingTimer!==null)clearTimeout(writingTimer);writingTimer=setTimeout(()=>{writingTimer=null;if(busy){markWriting();return;}run(flushWriting);},220);}
+function captureDraft(schedule=true){
+ if(!state)return;const f={};for(const el of $("view").querySelectorAll("input[id],select[id],textarea[id]")){if(el.type==="file"||el.id==="source-select"||el.id==="review-select")continue;f[el.id]=el.type==="checkbox"?(el.checked?"true":"false"):el.value;}
+ const key=formKey(),view=currentView();if(C.stable(drafts.forms[key]||{})===C.stable(f)&&C.stable(drafts.view)===C.stable(view))return;
+ drafts.forms[key]=f;drafts.view=view;if(schedule)markWriting();else writingDirty=true;
+}
+function restoreView(){const v=drafts.view||{};if(["overview","sources","compare","requests","reviews","handoff"].includes(v.tab))tab=v.tab;viewSource=state.sources.some(s=>s.id===v.viewSource)?v.viewSource:"";selectedReview=state.reviews.some(r=>r.id===v.selectedReview)?v.selectedReview:"";page=Number.isInteger(v.page)&&v.page>=0?v.page:0;query=typeof v.query==="string"?v.query:"";}
+function restoreDraft(){
+ if(!state)return;const f=drafts.forms[formKey()]||{};for(const[id,value]of Object.entries(f)){const el=$(id);if(!el||!$("view").contains(el)||el.type==="file")continue;if(el.type==="checkbox")el.checked=value==="true";else el.value=value;}
+ const view=currentView();if(C.stable(drafts.view)!==C.stable(view)){drafts.view=view;markWriting();}
+ const picker=$("source-file");if(picker){picker.onchange=()=>run(async()=>{const file=picker.files[0];if(!file)return;if(file.size>24*1024*1024)throw Error("Use a pending original within24MiB.");const raw=new Uint8Array(await file.arrayBuffer());drafts.pending_source={filename:file.name,bytes:raw.length,base64:toBase64(raw),sha256:await hashRaw(raw)};captureDraft(false);writingDirty=true;await flushWriting();restoreDraft();msg("Pending original retained, including its full bytes. Complete the import fields, then choose Retain original file.");});let note=$("pending-source-note");if(!note){note=document.createElement("p");note.id="pending-source-note";note.className="small muted";picker.parentElement.appendChild(note);}note.textContent=drafts.pending_source?"Pending original retained: "+drafts.pending_source.filename+" · "+drafts.pending_source.bytes+" bytes":"";}
+}
+async function flushWriting(){
+ if(writingTimer!==null){clearTimeout(writingTimer);writingTimer=null;}
+ if(writingSaving){await writingSaving;if(!writingDirty)return;}
+ if(!state||!writingDirty)return;if(dirty)throw Error("Download the complete in-memory workspace before reopening; its unfinished forms and pending file are retained.");
+ const snapshot=C.copy(drafts),next=C.apply(state,{type:"edit_writing",writing:snapshot},{id:uuid(),at:now()});
+ const old=persisted;state=next;dirty=true;status();
+ writingSaving=(async()=>{await save(next,old);persisted=next.revision;dirty=false;writingDirty=C.stable(drafts)!==C.stable(snapshot);await refreshList();})().finally(()=>{writingSaving=null;status();});
+ await writingSaving;if(writingDirty)await flushWriting();
+}
+const originalRender=render;render=function(){originalRender();restoreDraft();};
+const originalDetail=sourceDetail;sourceDetail=function(){originalDetail();restoreDraft();};
+const originalReview=reviewView;reviewView=function(){originalReview();restoreDraft();};
+document.addEventListener("input",e=>{if($("view").contains(e.target)&&e.target.type!=="file")captureDraft();},true);
+document.addEventListener("change",e=>{if($("view").contains(e.target)&&e.target.type!=="file")captureDraft();},true);
+
+window.addEventListener("beforeunload",e=>{if(dirty||busy||writingDirty||writingSaving||writingTimer!==null){e.preventDefault();e.returnValue="";}});
+$("new-workspace").onclick=()=>run(newWorkspace);$("open-workspace").onclick=()=>$("open-file").click();$("open-file").onchange=()=>{const f=$("open-file").files[0];if(f)run(()=>openFile(f));$("open-file").value="";};$("export-workspace").onclick=()=>run(exportWorkspace);
+$("workspace").onchange=()=>run(async()=>{const id=$("workspace").value;if(!id)return;await flushWriting();if(dirty&&!confirm("Current changes are not saved. Download them before switching. Continue anyway?"))return;const x=await read(id);C.validate(x);state=x;persisted=x.revision;dirty=false;drafts=C.copy(x.writing||{forms:{},view:{},pending_source:null});writingDirty=false;comparison=null;viewSource="";selectedReview="";selectedRequest=null;restoreView();render();msg("");});
+(async()=>{try{if(!crypto.subtle)throw Error("This browser does not expose local SHA-256. Open the file in a current browser with local-file crypto support.");db=await openDB();await refreshList();}catch(e){msg(e.message||String(e));}render();})();
+})();
+</script></body></html>
