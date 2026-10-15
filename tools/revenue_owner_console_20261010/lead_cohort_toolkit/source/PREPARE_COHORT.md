@@ -50,3 +50,8 @@ The maintained optional message preparation uses the exact complete selected cus
 ## Direct source of an observed workflow
 
 A profile may supply signal_source_url equal to one of its retained sources URLs. The compiler uses that exact URL for the customer’s Source link while retaining the company domain and homepage from sources[0]. Omit it to preserve the original homepage-source behavior. A dated article, release note or guide can therefore be opened directly from the first message without changing the company identity. An unretained source URL is rejected.
+
+
+## Hosted company product pages
+
+Optionally set `profile.company_url` to the exact published product URL, including its path, when a company uses a shared hosting domain. The normalized domain must match the company domain derived from `sources[0]`; this display URL does not change company-family deduplication. For example, a company whose first source is `https://sites.example/view/product/home` can explicitly retain that complete URL. When omitted, the prior origin-only company URL and complete original compiler output remain unchanged. Keep `signal_source_url` separately tied to the exact retained workflow evidence.

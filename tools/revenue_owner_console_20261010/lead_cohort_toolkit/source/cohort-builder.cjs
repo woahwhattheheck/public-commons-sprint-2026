@@ -39,6 +39,8 @@ function compile(cohort, config, deps) {
     domain(signalSource);
     if (!p.sources.includes(signalSource)) throw Error('The signal source must be one of the retained original source URLs');
     const companyDomain = domain(p.sources[0]);
+    const companyURL = p.company_url === undefined ? p.sources[0].split('/').slice(0,3).join('/')+'/' : required(p.company_url,'company_url');
+    if (domain(companyURL) !== companyDomain) throw Error('Explicit company_url must retain the original company domain');
     if (seen.has(companyDomain)) throw Error('Duplicate company domain: ' + companyDomain);
     seen.add(companyDomain);
     if (p.email && !/^[^@\s<>]+@[^@\s<>]+\.[^@\s<>]+$/.test(p.email)) throw Error('Invalid published email');
@@ -53,7 +55,7 @@ function compile(cohort, config, deps) {
       status_note:required(config.status_note,'status_note'),
       published_on:'',author_updated_on:'',deadline_on:'',deadline_at:'',budget:'',buyer_key:'',
       id:required(config.lead_ids[i],'lead ID'),organization:p.company,
-      company_domain:companyDomain,company_url:p.sources[0].split('/').slice(0,3).join('/')+'/',
+      company_domain:companyDomain,company_url:companyURL,
       person:p.person,source_url:signalSource,demand:p.current_workflow,
       fit:p.product_fit+'\n\nDemonstration: '+p.demonstration+'\n\nQualification: '+p.qualification,
       contact_url:contact,contact_instructions:instructions,geography:p.area,opening_message:p.opening,

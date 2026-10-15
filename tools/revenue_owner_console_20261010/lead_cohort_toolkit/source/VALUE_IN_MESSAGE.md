@@ -86,3 +86,10 @@ The meaningful receiving case is an explicitly unsent re-composition of a retain
 Run the actual existing cohort preparation with and without message, verify identical original customer files/core record, and verify message-receipt.cjs is present alongside its recorder. Exercise same-output continuation through the existing publication helper. No new sender or second delivery controller is introduced.
 
 Warm replies follow the current account's designated relationship owner. New sales correspondence follows the current sending-account direction and the original sender's current history/readiness checks. This preparation feature does not impose a mailbox quota, create a campaign or replace actual provider evidence.
+
+
+## Complimentary full editions and singular wording
+
+The composer accepts the core's existing `complimentary` delivery type with its exact recorded quantity and zero price. The original sample or previous edition is included through the fulfilment core's explicit `include_edition_ids` contract; composition does not bypass duplicate checks or create a new delivery. A nonzero current price for a complimentary edition is rejected. All exact edition bytes, source-bound cards and original openings remain retained.
+
+New messages use rendering version4, which says `1 complete profile` for a singular edition and keeps plural wording for larger packs. Receiving retains versions1,2,3 and4; earlier prepared records and their original bodies are unchanged. Complimentary admission does not change render output for previously supported edition types.
