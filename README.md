@@ -60,3 +60,7 @@ Build the `human-services-directory` selection using the [operating guide](produ
 The [complete Migration Acceptance Workbench](products/migration-acceptance/OPERATING.md) joins native dlt/DuckDB migration, complete typed parity, business acceptance and reversible consumer selection with the maintained Runtime Applications and 21 customer-agent tools. Its installed selection includes Installation commissioning, the existing Grant workspace, retained source and request history, full project/runtime export and independent receiving.
 
 Build the `migration-acceptance` source selection from an exact commit, then follow the [same original receiving course](products/migration-acceptance/RECEIVING.md). Review/Save and Connect precede Start; wait for both the release and the saved application's connection readiness. Source publication does not establish a completed customer installation or rendered acceptance.
+
+## Order Exception Review Desk
+
+The [Order Exception Review Desk](tools/order_exception_review_desk_20261015/README.md) is a self-contained local application for comparing original order exports, linking incoming requests and recording versioned review decisions. It retains original files, explicit company and order/line mappings, unfinished writing and complete portable workspaces. The accompanying native tools inspect and compare workspaces, extract exact originals and export decision history.

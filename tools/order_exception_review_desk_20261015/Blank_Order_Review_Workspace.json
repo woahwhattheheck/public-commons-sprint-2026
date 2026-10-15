@@ -1,0 +1,22 @@
+{
+  "schema": "tjl-order-review-portable.v1",
+  "sha256": "58bacbed8a8dc36a6f57ef738dfc7b3f2c491d410220a1fb6ef5d70529bab114",
+  "workspace": {
+    "schema": "tjl-order-review-workspace.v1",
+    "id": "blank-order-review",
+    "name": "Order exception review",
+    "created_at": "2026-10-15T05:30:00.000Z",
+    "revision": 0,
+    "origin": null,
+    "sources": [],
+    "mappings": [],
+    "bindings": [],
+    "reviews": [],
+    "events": [],
+    "writing": {
+      "forms": {},
+      "view": {},
+      "pending_source": null
+    }
+  }
+}

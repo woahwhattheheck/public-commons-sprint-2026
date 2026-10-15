@@ -1,0 +1,33 @@
+{
+  "schema": "tjl-order-review-execution.v1",
+  "environment": "Production core executed in V8 with explicit SHA-256 codec; authored operating records",
+  "checks": [
+    "Whole snapshot comparison distinguishes change, unchanged, missing, new and duplicate identities",
+    "Only declared quantity and promise differences appear",
+    "Request proposals preserve ambiguity and leading-zero identifiers",
+    "Company boundaries prevent an unrelated exact order number joining",
+    "Closure cannot skip approval and observed-result review",
+    "An older review version cannot replace the current decision",
+    "A source mapping used by a decision remains fixed",
+    "A new proposal retains the entire prior approved, observed and closed history",
+    "Complete portable export/reopen retains original BOM, line endings, message content and all hashes",
+    "A recipient continuation retains all prior decisions without replacing the original workspace",
+    "Decision-history CSV reopens all five versions",
+    "Declared delimiter and quoted multiline original fields are retained",
+    "Duplicate source headers are rejected"
+  ],
+  "workspace_revision": 14,
+  "source_count": 4,
+  "source_rows": 13,
+  "bindings": 1,
+  "review_versions": 5,
+  "complete_workspace_sha256": "71b65f63e33e00bbfd08c224a9ba0b2ba878eb4c625f8d328246a566d957beab",
+  "portable_bytes": 20606,
+  "comparison_counts": {
+    "changed": 1,
+    "unchanged": 1,
+    "missing_from_later": 1,
+    "ambiguous": 1,
+    "new_in_later": 1
+  }
+}
