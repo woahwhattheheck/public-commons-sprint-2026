@@ -1,0 +1,153 @@
+{
+  "schema": "tjlabs.planning-input.v1",
+  "scope": {
+    "siteId": "AUTHORED-PLANT",
+    "label": "Fictitious worked source; no actual plant data",
+    "asOf": "2026-10-15T08:00:00Z",
+    "horizonStart": "2026-10-15T06:00:00Z",
+    "horizonEnd": "2026-10-15T20:00:00Z",
+    "currency": "USD",
+    "clock": {
+      "mode": "offset-required",
+      "fixedOffsetMinutes": null
+    },
+    "coverage": {
+      "operations": true,
+      "availability": true,
+      "materials": true,
+      "precedence": true,
+      "changeovers": true
+    }
+  },
+  "tables": {
+    "jobs": {
+      "sourceId": "6a49a2b2de797325e46d4fa62cbd5edf1344ef58ba42a6ea65fddf3a46655fe3",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "product": "/product",
+        "quantity": "/quantity",
+        "unit": "/unit",
+        "due": "/due"
+      }
+    },
+    "operations": {
+      "sourceId": "6e43eb86fd2f36533e19d9b5b583436772f7b6421bb7c5e964c694c26967cc56",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "jobId": "/jobId",
+        "family": "/family",
+        "resourceClass": "/resourceClass",
+        "durationMinutes": "/durationMinutes",
+        "capacityDemand": "/capacityDemand",
+        "capacityUnit": "/capacityUnit",
+        "earliestStart": "/earliestStart",
+        "latestEnd": "/latestEnd",
+        "status": "/status",
+        "lockedStart": "/lockedStart",
+        "lockedEnd": "/lockedEnd",
+        "lockedResourceId": "/lockedResourceId"
+      }
+    },
+    "resources": {
+      "sourceId": "0599b62d7c978372bb60dfc8c313b8faaea94b6fbbd2b8098375198dc2793db3",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "class": "/class",
+        "mode": "/mode",
+        "capacity": "/capacity",
+        "capacityUnit": "/capacityUnit",
+        "initialFamily": "/initialFamily",
+        "changeoverPolicy": "/changeoverPolicy",
+        "hourlyCost": "/hourlyCost",
+        "rateBasis": "/rateBasis",
+        "currency": "/currency"
+      }
+    },
+    "availability": {
+      "sourceId": "714b93557bf0a8d37c3950ab4f129959002a6cd1701b3043a92fc5ba56b3ca35",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "resourceId": "/resourceId",
+        "start": "/start",
+        "end": "/end",
+        "kind": "/kind",
+        "capacity": "/capacity"
+      }
+    },
+    "supplies": {
+      "sourceId": "41afd21eabfcfb02030d7b3cfc5aa3363581b30fd6b6ed74ee7254fdafa746a5",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "materialId": "/materialId",
+        "unit": "/unit",
+        "availableAt": "/availableAt",
+        "quantity": "/quantity"
+      }
+    },
+    "requirements": {
+      "sourceId": "492107a98a23e240d71e600c9f082cd33be954b5a4be311f7dfd1672d345cee9",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "operationId": "/operationId",
+        "materialId": "/materialId",
+        "unit": "/unit",
+        "quantity": "/quantity",
+        "timing": "/timing"
+      }
+    },
+    "precedence": {
+      "sourceId": "649e314069c3e62ba7619e7df68ba12dfb1ad1d2086983647781abfb83871051",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "predecessorId": "/predecessorId",
+        "successorId": "/successorId",
+        "minLagMinutes": "/minLagMinutes",
+        "maxLagMinutes": "/maxLagMinutes"
+      }
+    },
+    "changeovers": {
+      "sourceId": "eecdc7aaa4d801d48586d64fbdad3f9f78f56e2e59136ba8f1e4f0223d7930e8",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "resourceId": "/resourceId",
+        "fromFamily": "/fromFamily",
+        "toFamily": "/toFamily",
+        "minutes": "/minutes",
+        "cost": "/cost",
+        "currency": "/currency"
+      }
+    },
+    "assignments": {
+      "sourceId": "61c45bdc27b8fad9d64aeaddb23b0d3c19018350d270f7b6d59365450cc55c7b",
+      "format": "json",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "/id",
+        "operationId": "/operationId",
+        "resourceId": "/resourceId",
+        "start": "/start",
+        "end": "/end"
+      }
+    }
+  },
+  "requiredDisciplines": [
+    "PLANNING",
+    "OPERATIONS"
+  ]
+}

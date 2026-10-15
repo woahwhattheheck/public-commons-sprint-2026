@@ -1,0 +1,33 @@
+{
+  "id": "planning-review-workspace-20261015",
+  "title": "Supplied production-plan review workspace",
+  "entrypoint": "tools/planning_review_workspace/native/build-desk.mjs",
+  "core": "tools/planning_review_workspace/planning/core.mjs",
+  "guide": "tools/planning_review_workspace/docs/OPERATOR.md",
+  "sourceManifest": "tools/planning_review_workspace/source-manifest.json",
+  "commands": [
+    "build-desk",
+    "planning-cli course",
+    "receive-operator",
+    "receive-capacity-transport",
+    "receive-storage-capacity"
+  ],
+  "capabilities": [
+    "retain original plant source",
+    "map nine source tables",
+    "review supplied baseline and recovery schedules",
+    "retain source-row corrections",
+    "compare complete frozen editions",
+    "record PLANNING and OPERATIONS decisions",
+    "durable browser version recovery",
+    "complete editable source and working handover"
+  ],
+  "dependencies": {
+    "node": "standard library",
+    "python": "standard library source materializer",
+    "browser": "IndexedDB"
+  },
+  "network": false,
+  "solver": false,
+  "hostedActions": false
+}

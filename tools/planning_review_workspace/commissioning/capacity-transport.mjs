@@ -1,0 +1,26 @@
+/* MIT. Receive the retained actual production capacity workspace through complete production carriers.
+Run against an existing exact workspace; this does not regenerate or enlarge the domain fixture. */
+export function runCapacityTransport({files,codec:C,build,workspaceText,progress=()=>{}}){
+ const started=Date.now(),stages=[],stage=(name,detail={})=>{const row={name,elapsedMs:Date.now()-started,...detail};stages.push(row);progress(row);},ok=(x,m)=>{if(!x)throw Error(m);},strip=s=>s.replace(/^export \{[^\n]*\};?\s*$/gm,"").replace(/^export /gm,"");
+ const runtime={encode:C.utf8Encode,decode:C.utf8Decode,sha256:x=>C.sha256Bytes(typeof x==="string"?C.utf8Encode(x):x),toBase64:C.toBase64,fromBase64:C.fromBase64},
+ api=new Function(strip(files["planning/core.mjs"])+";return createPlanningAPI;")()(runtime),
+ sessionFactory=new Function(strip(files["operator/session.mjs"])+";return createSessionAPI;")(),
+ S=sessionFactory(api,{encode:C.utf8Encode,sha256:x=>runtime.sha256(x)}),
+ Z=new Function("const module={exports:{}};"+files["operator/connected_zip.cjs"]+";return module.exports;")();
+ const original={bytes:C.utf8Encode(workspaceText).length,sha256:runtime.sha256(workspaceText)};stage("source identity",original);
+ const workspace=api.importWorkspace(workspaceText);stage("complete independent domain receive",{rootSha256:workspace.rootSha256});
+ const s=S.create({title:"Authored retained production capacity receiving",createdAt:"2026-10-15T00:00:00Z",input:api.blankInput()});s.workspace=workspace;s.draft.selectedEditionId=workspace.editions.at(-1).id;s.draft.selectedProposalId=workspace.proposals.at(-1)?.id||"";s.draft.actor="Authored capacity receiver";s.draft.rawInput='{"unfinished_capacity_input":';s.draft.mapping.raw='{"unfinished_capacity_mapping":';s.draft.proposal.reason="Retained pending proposal";s.draft.review.note="Retained pending named review";s.draft.view="transfer";
+ const carrier=S.pack(s),working=JSON.stringify(carrier)+"\n";stage("complete compact working",{bytes:C.utf8Encode(working).length,sha256:runtime.sha256(working)});
+ const built=build(Object.freeze({...files}),C,carrier),html=built.html,sourceFiles=JSON.parse(built.source).files;stage("editable HTML",{bytes:C.utf8Encode(html).length,sha256:runtime.sha256(html)});
+ const safe=x=>String(x||"source").replace(/[\\/\u0000-\u001f<>:"|?*]/g,"_").replace(/^\.+/,"_")||"source",entries=Object.entries(sourceFiles).map(([name,text])=>({name:"source/"+name,data:C.utf8Encode(text)}));
+ entries.push({name:"working/Planning_Working.json",data:C.utf8Encode(working)},{name:"working/Planning_Editable.html",data:C.utf8Encode(html)});
+ for(const source of workspace.sources)entries.push({name:"originals/"+safe(source.id)+"/"+safe(source.name),data:C.fromBase64(source.content_base64)});
+ const measured=22+entries.reduce((n,e)=>n+76+2*C.utf8Encode(e.name).length+e.data.length,0);ok(measured<=128*1024*1024&&entries.length<=2000,"Complete handover exceeds admitted capacity");
+ const packed=Z.packStoredZip(entries,{timestamp:"2026-10-15T00:00:00Z",maxBytes:128*1024*1024,maxEntries:2000}),zip=packed.data||packed.bytes||packed;ok(zip.length===measured,"Measured ZIP size differs");
+ const reopened=Z.readStoredZip(zip,{maxBytes:128*1024*1024,maxEntries:2000}),names=new Map(reopened.map(e=>[e.name,e.data]));for(const e of entries)ok(names.has(e.name)&&runtime.sha256(names.get(e.name))===runtime.sha256(e.data),"Changed ZIP member "+e.name);
+ stage("complete exact ZIP",{bytes:zip.length,sha256:runtime.sha256(zip),members:entries.length});
+ const boot=JSON.parse(html.match(/<script id="boot" type="application\/json">([\s\S]*?)<\/script>/)[1]),plain=C.inflateGzip(C.fromBase64(boot.content_base64));ok(plain.length===boot.bytes&&runtime.sha256(plain)===boot.sha256,"Editable boot changed");ok(C.utf8Decode(plain)===JSON.stringify(carrier),"Editable boot differs from complete working carrier");
+ const receiving= sessionFactory(api,{encode:C.utf8Encode,sha256:x=>runtime.sha256(x)}),received=receiving.receive(C.utf8Decode(plain));ok(received.workspace.rootSha256===workspace.rootSha256&&received.draft.rawInput===s.draft.rawInput&&received.draft.mapping.raw===s.draft.mapping.raw&&received.draft.proposal.reason===s.draft.proposal.reason&&received.draft.review.note===s.draft.review.note,"Reopened complete working or pending drafts differ");
+ ok(JSON.stringify(received.workspace)===JSON.stringify(workspace),"Reopened original domain changed");stage("fresh complete operator receive",{rootSha256:received.workspace.rootSha256});
+ return {runtime:"Actual production factories with caller-supplied runtime codec; no rendered-browser timing",original,stages,elapsedMs:Date.now()-started,counts:{sources:workspace.sources.length,editions:workspace.editions.length,proposals:workspace.proposals.length,reviews:workspace.reviews.length},workingBytes:C.utf8Encode(working).length,workingSha256:runtime.sha256(working),htmlBytes:C.utf8Encode(html).length,htmlSha256:runtime.sha256(html),zipBytes:zip.length,zipSha256:runtime.sha256(zip),memberCount:entries.length,limitBytes:128*1024*1024,withinLimit:true,rootSha256:workspace.rootSha256};
+}

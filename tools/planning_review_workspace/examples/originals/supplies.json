@@ -1,0 +1,9 @@
+[
+  {
+    "id": "stock-1",
+    "materialId": "BASE",
+    "unit": "kg",
+    "availableAt": "2026-10-15T05:00:00Z",
+    "quantity": "1500"
+  }
+]

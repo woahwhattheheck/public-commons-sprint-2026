@@ -1,0 +1,44 @@
+[
+  {
+    "id": "plan-A-mix",
+    "operationId": "A-mix",
+    "resourceId": "TANK-1",
+    "start": "2026-10-15T06:00:00Z",
+    "end": "2026-10-15T07:00:00Z"
+  },
+  {
+    "id": "plan-A-fill",
+    "operationId": "A-fill",
+    "resourceId": "FILL-1",
+    "start": "2026-10-15T08:00:00Z",
+    "end": "2026-10-15T09:00:00Z"
+  },
+  {
+    "id": "plan-B-mix",
+    "operationId": "B-mix",
+    "resourceId": "TANK-1",
+    "start": "2026-10-15T07:30:00Z",
+    "end": "2026-10-15T08:30:00Z"
+  },
+  {
+    "id": "plan-B-fill",
+    "operationId": "B-fill",
+    "resourceId": "FILL-1",
+    "start": "2026-10-15T09:30:00Z",
+    "end": "2026-10-15T10:30:00Z"
+  },
+  {
+    "id": "plan-C-mix",
+    "operationId": "C-mix",
+    "resourceId": "TANK-1",
+    "start": "2026-10-15T09:00:00Z",
+    "end": "2026-10-15T10:00:00Z"
+  },
+  {
+    "id": "plan-C-fill",
+    "operationId": "C-fill",
+    "resourceId": "FILL-1",
+    "start": "2026-10-15T11:00:00Z",
+    "end": "2026-10-15T12:00:00Z"
+  }
+]

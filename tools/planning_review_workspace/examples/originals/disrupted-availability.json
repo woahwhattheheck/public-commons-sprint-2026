@@ -1,0 +1,26 @@
+[
+  {
+    "id": "tank-shift",
+    "resourceId": "TANK-1",
+    "start": "2026-10-15T06:00:00Z",
+    "end": "2026-10-15T20:00:00Z",
+    "kind": "available",
+    "capacity": "1000"
+  },
+  {
+    "id": "fill-shift",
+    "resourceId": "FILL-1",
+    "start": "2026-10-15T06:00:00Z",
+    "end": "2026-10-15T20:00:00Z",
+    "kind": "available",
+    "capacity": "1"
+  },
+  {
+    "id": "authored-disruption",
+    "resourceId": "FILL-1",
+    "start": "2026-10-15T09:15:00Z",
+    "end": "2026-10-15T10:15:00Z",
+    "kind": "unavailable",
+    "capacity": "0"
+  }
+]

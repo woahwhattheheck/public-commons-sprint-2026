@@ -1,0 +1,26 @@
+[
+  {
+    "id": "material-A",
+    "operationId": "A-mix",
+    "materialId": "BASE",
+    "unit": "kg",
+    "quantity": "500",
+    "timing": "start"
+  },
+  {
+    "id": "material-B",
+    "operationId": "B-mix",
+    "materialId": "BASE",
+    "unit": "kg",
+    "quantity": "500",
+    "timing": "start"
+  },
+  {
+    "id": "material-C",
+    "operationId": "C-mix",
+    "materialId": "BASE",
+    "unit": "kg",
+    "quantity": "500",
+    "timing": "start"
+  }
+]

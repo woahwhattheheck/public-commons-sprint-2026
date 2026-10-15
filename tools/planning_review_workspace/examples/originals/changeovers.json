@@ -1,0 +1,56 @@
+[
+  {
+    "id": "TANK-1-A-A",
+    "resourceId": "TANK-1",
+    "fromFamily": "A",
+    "toFamily": "A",
+    "minutes": "0",
+    "cost": "0",
+    "currency": "USD"
+  },
+  {
+    "id": "TANK-1-A-B",
+    "resourceId": "TANK-1",
+    "fromFamily": "A",
+    "toFamily": "B",
+    "minutes": "15",
+    "cost": "5",
+    "currency": "USD"
+  },
+  {
+    "id": "TANK-1-B-C",
+    "resourceId": "TANK-1",
+    "fromFamily": "B",
+    "toFamily": "C",
+    "minutes": "15",
+    "cost": "5",
+    "currency": "USD"
+  },
+  {
+    "id": "FILL-1-A-A",
+    "resourceId": "FILL-1",
+    "fromFamily": "A",
+    "toFamily": "A",
+    "minutes": "0",
+    "cost": "0",
+    "currency": "USD"
+  },
+  {
+    "id": "FILL-1-A-B",
+    "resourceId": "FILL-1",
+    "fromFamily": "A",
+    "toFamily": "B",
+    "minutes": "15",
+    "cost": "5",
+    "currency": "USD"
+  },
+  {
+    "id": "FILL-1-B-C",
+    "resourceId": "FILL-1",
+    "fromFamily": "B",
+    "toFamily": "C",
+    "minutes": "15",
+    "cost": "5",
+    "currency": "USD"
+  }
+]

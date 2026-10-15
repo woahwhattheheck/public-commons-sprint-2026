@@ -1,0 +1,1 @@
+Complete maintained operator predecessors retained from tools/production_run_workspace/. New planning domain/report/forms are independently authored. Original codec/ZIP/private create-only filesystem publication remain unchanged.

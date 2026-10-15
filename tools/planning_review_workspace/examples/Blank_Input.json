@@ -1,0 +1,153 @@
+{
+  "schema": "tjlabs.planning-input.v1",
+  "scope": {
+    "siteId": "",
+    "label": "",
+    "asOf": "",
+    "horizonStart": "",
+    "horizonEnd": "",
+    "currency": "",
+    "clock": {
+      "mode": "offset-required",
+      "fixedOffsetMinutes": null
+    },
+    "coverage": {
+      "operations": false,
+      "availability": false,
+      "materials": false,
+      "precedence": false,
+      "changeovers": false
+    }
+  },
+  "tables": {
+    "jobs": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "product": "product",
+        "quantity": "quantity",
+        "unit": "unit",
+        "due": "due"
+      }
+    },
+    "operations": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "jobId": "jobId",
+        "family": "family",
+        "resourceClass": "resourceClass",
+        "durationMinutes": "durationMinutes",
+        "capacityDemand": "capacityDemand",
+        "capacityUnit": "capacityUnit",
+        "earliestStart": "earliestStart",
+        "latestEnd": "latestEnd",
+        "status": "status",
+        "lockedStart": "lockedStart",
+        "lockedEnd": "lockedEnd",
+        "lockedResourceId": "lockedResourceId"
+      }
+    },
+    "resources": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "class": "class",
+        "mode": "mode",
+        "capacity": "capacity",
+        "capacityUnit": "capacityUnit",
+        "initialFamily": "initialFamily",
+        "changeoverPolicy": "changeoverPolicy",
+        "hourlyCost": "hourlyCost",
+        "rateBasis": "rateBasis",
+        "currency": "currency"
+      }
+    },
+    "availability": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "resourceId": "resourceId",
+        "start": "start",
+        "end": "end",
+        "kind": "kind",
+        "capacity": "capacity"
+      }
+    },
+    "supplies": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "materialId": "materialId",
+        "unit": "unit",
+        "availableAt": "availableAt",
+        "quantity": "quantity"
+      }
+    },
+    "requirements": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "operationId": "operationId",
+        "materialId": "materialId",
+        "unit": "unit",
+        "quantity": "quantity",
+        "timing": "timing"
+      }
+    },
+    "precedence": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "predecessorId": "predecessorId",
+        "successorId": "successorId",
+        "minLagMinutes": "minLagMinutes",
+        "maxLagMinutes": "maxLagMinutes"
+      }
+    },
+    "changeovers": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "resourceId": "resourceId",
+        "fromFamily": "fromFamily",
+        "toFamily": "toFamily",
+        "minutes": "minutes",
+        "cost": "cost",
+        "currency": "currency"
+      }
+    },
+    "assignments": {
+      "sourceId": "",
+      "format": "csv",
+      "arrayPointer": "",
+      "mapping": {
+        "id": "id",
+        "operationId": "operationId",
+        "resourceId": "resourceId",
+        "start": "start",
+        "end": "end"
+      }
+    }
+  },
+  "requiredDisciplines": [
+    "PLANNING",
+    "OPERATIONS"
+  ]
+}

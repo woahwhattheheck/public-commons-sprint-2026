@@ -1,0 +1,26 @@
+[
+  {
+    "id": "TANK-1",
+    "class": "mix",
+    "mode": "exclusive",
+    "capacity": "1000",
+    "capacityUnit": "L",
+    "initialFamily": "A",
+    "changeoverPolicy": "declared",
+    "hourlyCost": "60",
+    "rateBasis": "assignment_hour",
+    "currency": "USD"
+  },
+  {
+    "id": "FILL-1",
+    "class": "fill",
+    "mode": "exclusive",
+    "capacity": "1",
+    "capacityUnit": "batch",
+    "initialFamily": "A",
+    "changeoverPolicy": "declared",
+    "hourlyCost": "90",
+    "rateBasis": "assignment_hour",
+    "currency": "USD"
+  }
+]

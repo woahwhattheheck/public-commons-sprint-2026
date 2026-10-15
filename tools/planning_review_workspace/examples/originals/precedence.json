@@ -1,0 +1,23 @@
+[
+  {
+    "id": "route-A",
+    "predecessorId": "A-mix",
+    "successorId": "A-fill",
+    "minLagMinutes": "15",
+    "maxLagMinutes": "120"
+  },
+  {
+    "id": "route-B",
+    "predecessorId": "B-mix",
+    "successorId": "B-fill",
+    "minLagMinutes": "15",
+    "maxLagMinutes": "120"
+  },
+  {
+    "id": "route-C",
+    "predecessorId": "C-mix",
+    "successorId": "C-fill",
+    "minLagMinutes": "15",
+    "maxLagMinutes": "120"
+  }
+]

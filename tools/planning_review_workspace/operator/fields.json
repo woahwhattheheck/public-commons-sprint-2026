@@ -1,0 +1,23 @@
+{
+  "scope": [
+    "siteId",
+    "label",
+    "asOf",
+    "horizonStart",
+    "horizonEnd",
+    "currency",
+    "clock",
+    "coverage"
+  ],
+  "tables": [
+    "jobs",
+    "operations",
+    "resources",
+    "availability",
+    "supplies",
+    "requirements",
+    "precedence",
+    "changeovers",
+    "assignments"
+  ]
+}
