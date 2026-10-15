@@ -18,6 +18,18 @@ import {
 
 export const RO_CRATE_CONTEXT = "https://w3id.org/ro/crate/1.2/context";
 
+function packetExportSnapshot(packet) {
+  const sourceItems = packet.items;
+  const snapshot = JSON.parse(JSON.stringify({
+    ...packet,
+    items: sourceItems.map(({ _bytes, ...item }) => item),
+  }));
+  sourceItems.forEach((item, index) => {
+    if (item._bytes instanceof Uint8Array) snapshot.items[index]._bytes = item._bytes.slice();
+  });
+  return snapshot;
+}
+
 function itemBytes(item) {
   if (item._bytes instanceof Uint8Array) return item._bytes;
   if (Object.prototype.hasOwnProperty.call(item, "textContent")) {
@@ -166,6 +178,17 @@ export function exportHtml(packet) {
     table { width: 100%; border-collapse: collapse; }
     th, td { border: 2px solid #141414; padding: 0.4rem; text-align: left; vertical-align: top; }
     code { word-break: break-all; }
+    .items-scroll { max-width: 100%; overflow-x: auto; }
+    .scroll-hint { display: none; }
+    @media (max-width: 40rem) {
+      .items-scroll table { min-width: 42rem; }
+      .scroll-hint { display: block; font-size: 0.9rem; }
+    }
+    @media print {
+      .items-scroll { overflow: visible; }
+      .items-scroll table { min-width: 0; table-layout: fixed; }
+      th, td { overflow-wrap: anywhere; }
+    }
     .notice { border: 2px solid #141414; padding: 0.75rem; margin: 0.75rem 0; }
   </style>
 </head>
@@ -187,7 +210,7 @@ export function exportHtml(packet) {
   <h2>Items</h2>
   ${
     packet.items.length
-      ? `<table><thead><tr><th>Name</th><th>Role</th><th>Bytes</th><th>SHA-256</th><th>Recognition</th><th>Caption</th></tr></thead><tbody>${rows}</tbody></table>`
+      ? `<p class="scroll-hint">On small screens, scroll the items table horizontally to see all columns.</p><div class="items-scroll" role="region" aria-label="Evidence items, scroll horizontally to see all columns" tabindex="0"><table><thead><tr><th>Name</th><th>Role</th><th>Bytes</th><th>SHA-256</th><th>Recognition</th><th>Caption</th></tr></thead><tbody>${rows}</tbody></table></div>`
       : "<p>No items. Empty export is intentional.</p>"
   }
   ${
@@ -312,6 +335,7 @@ export async function bagManifest(entries) {
 }
 
 export async function exportRoCrateZip(packet) {
+  packet = packetExportSnapshot(packet);
   const entries = await payloadEntries(packet);
   const used = new Set(entries.map((e) => collisionKey(e.path)));
   const crate = utf8Bytes(JSON.stringify(roCrateMetadata(packet, entries), null, 2));
@@ -331,6 +355,7 @@ export async function exportRoCrateZip(packet) {
 }
 
 export async function exportBagItZip(packet) {
+  packet = packetExportSnapshot(packet);
   let entries = await payloadEntries(packet);
   if (!entries.length) {
     entries = [
@@ -358,6 +383,7 @@ export async function exportBagItZip(packet) {
 }
 
 export async function exportFilesZip(packet) {
+  packet = packetExportSnapshot(packet);
   const entries = await payloadEntries(packet);
   const packagedPacket = {
     ...packet,
