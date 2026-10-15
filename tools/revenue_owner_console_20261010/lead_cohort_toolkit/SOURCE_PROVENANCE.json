@@ -2,7 +2,7 @@
   "schema": "commons.lead-cohort-toolkit-source.v1",
   "operation_id": "LEAD-TOOLKIT-PUBLIC-COMPLETE-20261014",
   "license": "Apache-2.0",
-  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation. Includes source-bound complimentary value messages, version4 singular wording, and explicit same-domain hosted company URLs. Includes complete original delivery-feedback receiving, resumable successor source closure, full inherited tool dependencies and exact expanded customer-archive preservation. Adds optional source-bound inline full openings while preserving earlier rendering contracts.",
+  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation. Includes source-bound complimentary value messages, version4 singular wording, and explicit same-domain hosted company URLs. Includes complete original delivery-feedback receiving, resumable successor source closure, full inherited tool dependencies and exact expanded customer-archive preservation. Adds optional source-bound inline full openings while preserving earlier rendering contracts. Includes exact published-route/DNS evidence triage and original-parser failure review without outbound operations.",
   "files": [
     {
       "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
@@ -161,8 +161,8 @@
     },
     {
       "path": "native/prepare-cohort.mjs",
-      "bytes": 7563,
-      "sha256": "67ebce8909c9682f7ab677b5b59db09148b032e88e2896851565a5ceb0bd7c44"
+      "bytes": 7734,
+      "sha256": "510768905b9f5ee64710b56a5f056a2fb7c38b7ab107beee7a9056912c99befd"
     },
     {
       "path": "native/reopen-cohort.mjs",
@@ -186,8 +186,8 @@
     },
     {
       "path": "native/record-delivery.mjs",
-      "bytes": 12747,
-      "sha256": "1c947158f2d27687d7f4cd41da6ce4c820f88c2ead042bb3fae11566985a18e6"
+      "bytes": 12918,
+      "sha256": "48ee19c118eb85f054e05f7a578843e3f3a81f917df3b4fe9c9b4efde310644e"
     },
     {
       "path": "native/materialize-source.py",
@@ -321,8 +321,8 @@
     },
     {
       "path": "native/receive-delivery-feedback.mjs",
-      "bytes": 8794,
-      "sha256": "2bbb05921640b8df2a8c59ce0c9f56283763ef2ed2cb0f73d67fc1c6bf3c25a6"
+      "bytes": 8965,
+      "sha256": "92fc98863527306925ef80bad9df843329d5abafb824319e67a6cbadf3bbd166"
     },
     {
       "path": "source/DELIVERY_FEEDBACK.md",
@@ -341,8 +341,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 10924,
-      "sha256": "533d2720e614a24d61bcd1090cd0852cf1824118a73a17bc5bf38c84eb44c3ff"
+      "bytes": 11589,
+      "sha256": "49e12feec76cf91356bf7f709eb9d3240ef11bbf509a7e3963fb9d411c235bbd"
     },
     {
       "path": "ROUTE_RECOVERY.md",
@@ -353,6 +353,31 @@
       "path": "course/route-recovery.cjs",
       "bytes": 1787,
       "sha256": "27c9bd6857c94d8ed82dd81408ca83f3224a530ba1fa58a5b00b2bcef0ba8bca"
+    },
+    {
+      "path": "source/contact-route-triage.cjs",
+      "bytes": 21062,
+      "sha256": "df00191ba92a3e970e6eb1667be73f2d828641b13f1a2fde54681f27fcc7f5bf"
+    },
+    {
+      "path": "native/triage-contact-route.mjs",
+      "bytes": 4854,
+      "sha256": "03b98eb269d82a551f45813da864b12d7ee7b56d917206d3269fdc0596655cd8"
+    },
+    {
+      "path": "source/CONTACT_ROUTE_TRIAGE.md",
+      "bytes": 10081,
+      "sha256": "bcb1514d5936e5e14701787dee62d83d282af151ddb70ea868cdf3f961976ef4"
+    },
+    {
+      "path": "course/contact-route-triage.cjs",
+      "bytes": 6303,
+      "sha256": "62ebe17c637eeaaa9948cac78326b2e0d9b5b3e2035de2679aff14fcba8bdf96"
+    },
+    {
+      "path": "course/contact-route-example.json",
+      "bytes": 1382,
+      "sha256": "95ea304d3d18e70b6a4369e312aca6618d95c8272efc85a1a82957cce09ce639"
     }
   ],
   "continuation_operation_id": "inline-full-openings-20261015"

@@ -1,0 +1,27 @@
+{
+  "schema": "commons.contact-route-triage.v1.input",
+  "caseReference": "AUTHORED-EXAMPLE-NOT-A-CUSTOMER",
+  "checkedAt": "2026-10-15T00:00:00Z",
+  "currentAddress": "partners@maker.example",
+  "documents": [
+    {
+      "id": "contact",
+      "url": "https://maker.example/contact",
+      "retrievedAt": "2026-10-15T00:00:00Z",
+      "format": "html",
+      "body": "<!doctype html><html><body><h1>Maker Example — business enquiries</h1><p>Partnerships: <a href=\"mailto:partners@maker.example\">partners@maker.example</a></p><p>General enquiries: hello@maker.example</p><p>Use our <a href=\"/contact/form\">business contact form</a> for project questions.</p><script>const demo=\"do-not-extract@noise.example\";</script><input type=\"email\" placeholder=\"you@sample.example\"></body></html>"
+    }
+  ],
+  "dns": [
+    {
+      "id": "mx",
+      "url": "https://dns.google/resolve?name=maker.example&type=MX",
+      "retrievedAt": "2026-10-15T00:00:00Z",
+      "format": "dns-json",
+      "domain": "maker.example",
+      "type": "MX",
+      "body": "{\n  \"Status\": 0,\n  \"TC\": false,\n  \"Question\": [\n    {\n      \"name\": \"maker.example.\",\n      \"type\": 15\n    }\n  ],\n  \"Answer\": [\n    {\n      \"name\": \"maker.example.\",\n      \"type\": 15,\n      \"TTL\": 300,\n      \"data\": \"10 mail.maker.example.\"\n    }\n  ]\n}"
+    }
+  ],
+  "reviews": []
+}
