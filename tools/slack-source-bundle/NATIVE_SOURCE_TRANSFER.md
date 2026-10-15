@@ -1,6 +1,6 @@
 # Native complete-source file transfer
 
-This extends the existing source-bundle tools with the native attachment route used to move complete source into an equipped receiving session. It retains complete UTF-8 bytes, source hashes, one original draft and the provider's original attachment identity. It also preserves an optional attachment on an explicitly selected, already authorized Notion page.
+This extends the existing source-bundle tools with the native attachment route used to move complete source into an equipped receiving session. It retains complete UTF-8 bytes, source hashes, one original draft and the provider's original attachment identity. It also preserves an optional attachment on an explicitly selected, already authorized Notion page, or an ordinary file in an existing private Drive folder.
 
 The operation is a tool caller, not another email sender or queue. It has no send, forward, delete, account discovery, login, subscription, credential loading or browser action. The caller supplies the existing connected actions and an existing durable journal; a private local file journal and complete command-line bridge are included. Generic code is public. Operational journals, account IDs, source contents and provider receipts belong in the existing internal project destination.
 
@@ -20,7 +20,7 @@ The `receive` command and `receiveExisting` API implement steps 1–3 against th
 
 | File | Purpose |
 | --- | --- |
-| `native_source_transfer.mjs` | Account-bound operation, original MIME/file reading, uncertain draft reconciliation and Notion continuation |
+| `native_source_transfer.mjs` | Account-bound operation, original MIME/file reading, uncertain draft reconciliation, private Drive delivery and Notion continuation |
 | `native_source_transfer_tools.mjs` | Exact binding to the current native `mcp__codex_apps__*` actions |
 | `native_source_transfer_journal.mjs` | Private atomic Node file journal with explicit orphan-lock inspection/recovery |
 | `native_source_transfer_cli.mjs` | Prepare, advance, receive, inspect and reconcile the existing operation |
@@ -28,7 +28,7 @@ The `receive` command and `receiveExisting` API implement steps 1–3 against th
 
 The code uses `createArchiveCodec` from the maintained Ecosystem source-tools module. It does not implement another UTF-8, Base64, gzip or SHA256 codec. Existing Python and exact-string source envelopes remain available; a carrier is an opaque original file to this operation.
 
-The native contract requires Gmail profile, create-draft, read-email, read-attachment and list-drafts actions. Optional Notion delivery additionally uses get-self, fetch, create-attachment, update-page, get-async-task, download-attachment and get-file-download-URLs. The tool binding calls only these actions. No generic network fetch is used.
+The native contract requires Gmail profile, create-draft, read-email, read-attachment and list-drafts actions. Optional Notion delivery additionally uses get-self, fetch, create-attachment, update-page, get-async-task, download-attachment and get-file-download-URLs. Optional private Drive delivery additionally uses get-profile, get-file-metadata, upload-file and raw fetch. The tool binding calls only these actions. No generic network fetch is used.
 
 ## Attachment-only transfer and retained operations
 
@@ -265,3 +265,56 @@ The attachment-only successor was exercised through the actual production functi
 The actual native route delivered five complete source carriers on 2026-10-13, including a 1.2 MiB carrier for an 8.5 MiB full input bank. The original receiving operation accepted the source and then exposed the cross-session file-alias issue addressed by `receiveExisting`. The maintained helper's read-only receiving path was executed against the existing source-reconciliation parent: current mailbox, exact MIME part and a fresh original file reference were returned without creating another draft. A separate complete 116,648-byte Notion download matched its independently recorded SHA256.
 
 Run the focused authored protocol course with `node tools/slack-source-bundle/native_source_transfer_course.mjs`. The authored protocol course exercises exact Unicode/CRLF source, original-versus-extraction selection, one-draft repeat reuse, concurrent creation, lost creation reply followed by original-byte reconciliation, recipient rejection, same-target Notion reuse, lost insertion reply, queued task continuation and receiving without a new upload. These are explicit authored service fixtures. They are not claims of another native source calculation, actual local file-journal execution or customer visual acceptance. Operational receipts remain in their original internal cases.
+
+
+## Preserve an original as a private ordinary Drive file
+
+The optional Drive route uses an existing original attachment and an explicitly selected **private folder owned by the connected Drive account**. It passes the complete provider-issued `file_uri` object directly to `google_drive_upload_file`: `file_id`, `download_url`, `file_name`, `mime_type` and any other retained transport fields stay together. A raw local path, a string URL, a manually invented file reference or extracted preview is not a substitute.
+
+This route is useful when the receiving engineer needs an ordinary file download outside Gmail. It does not convert source into a Google Doc. Actual Docs text export has introduced a BOM, CRLF and a different terminal newline; those transformations change an original file's hash and can affect JSON parsing or a script's first line. Ordinary-file download verification compares the actual decoded bytes without normalization.
+
+Select the existing destination in a private JSON spec:
+
+~~~json
+{
+  "account_id": "OBSERVED_CONNECTED_DRIVE_USER_ID",
+  "account_email": "operator@example.test",
+  "folder_id": "OBSERVED_EXISTING_PRIVATE_FOLDER_ID"
+}
+~~~
+
+The Gmail and Drive accounts are independently identified. The operator must already be authorized to transfer these source files into that selected account and folder. The helper checks the current Drive profile and folder on continuation; it accepts owner-only user permissions matching the selected account. Shared folders and shared drives are outside this private route. It never changes a permission, creates a public link, sends mail or rotates accounts. Existing provider approval decisions remain in force.
+
+From the same prepared/advanced source operation:
+
+~~~sh
+node tools/slack-source-bundle/native_source_transfer_cli.mjs to-drive \
+  --journal /private/original-operation/source-transfer \
+  --key ORIGINAL_OPERATION_KEY --index 0 \
+  --spec /private/original-operation/drive-target.json --bridge stdio
+~~~
+
+The operation refreshes the reference from the same checked MIME parent, records `upload_pending` before creation and retains the returned Drive ID immediately. It then checks the file's actual name, MIME type, parent, private owner metadata and size, downloads the full original with `download_raw_file:true,include_base64:true`, and verifies its byte count and SHA256. Some connector responses put `b64_string` outside `structuredContent`; both actual response locations are handled. Signed references and provider receipts stay in the private journal.
+
+The result includes the stable ordinary Drive URL, original identity, observed download filename and time of the full byte check. A connector may report a filename with an extra extension even when Drive's title is correct. Receiving instructions should preserve the intended original filename and inspect the actual normal download. Exact source bytes do not by themselves establish native application operation or visual inspection.
+
+Repeating `to-drive` returns the previously verified file and its recorded observation time. To download and verify that same file again:
+
+~~~sh
+node tools/slack-source-bundle/native_source_transfer_cli.mjs verify-drive \
+  --journal /private/original-operation/source-transfer \
+  --key ORIGINAL_OPERATION_KEY --index 0 --bridge stdio
+~~~
+
+If upload returned an ID but a later metadata or download check failed, the next `to-drive` resumes that ID. If the upload response was lost, the operation remains `upload_pending`: locate the existing file in that exact account/folder using the original operation receipt or current Drive view, then explicitly reconcile its actual ID:
+
+~~~sh
+node tools/slack-source-bundle/native_source_transfer_cli.mjs reconcile-drive-upload \
+  --journal /private/original-operation/source-transfer \
+  --key ORIGINAL_OPERATION_KEY --index 0 --file-id OBSERVED_DRIVE_FILE_ID \
+  --bridge stdio
+~~~
+
+Reconciliation performs the same complete metadata/byte checks before adopting the file. It never creates a replacement or treats an empty search as evidence that creation failed. The existing journal's compare-and-swap prevents concurrent continuations from issuing duplicate uploads. Changing the selected account or folder for an already-started delivery returns a target conflict, preserving the original operation.
+
+Connected JavaScript callers can use `toDrive(key,index,target)`, `reconcileDriveUpload(key,index,fileId)` and `verifyDrive(key,index)` on the same factory. The native tool binding admits only the four required Drive profile, metadata, upload and raw-download actions. The existing authored protocol course includes accepted-but-lost creation, known-ID download failure, concurrent continuation, outer-envelope byte recovery and explicit target checks; it makes no live writes.

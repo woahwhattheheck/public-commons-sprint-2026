@@ -7,11 +7,11 @@ import readline from "node:readline";
 import {createArchiveCodec} from "../../opportunities/upstate_forever_2026/source_tools/archive_codec.mjs";
 import {createNativeSourceTransfer} from "./native_source_transfer.mjs";
 import {openSourceTransferJournal} from "./native_source_transfer_journal.mjs";
-const HELP = "native_source_transfer_cli.mjs preview|inspect-request --spec FILE [--max-request-bytes BYTES]\nOr: prepare|advance|inspect|receive|reconcile-draft|refresh-original|to-notion|reconcile-notion-upload|download-notion|inspect-lock|recover-lock [--journal PRIVATE_DIR] [--key OPERATION_KEY] [--spec FILE] [--index N] [--caller EXISTING_MODULE | --bridge stdio] [--verify-original]";
+const HELP = "native_source_transfer_cli.mjs preview|inspect-request --spec FILE [--max-request-bytes BYTES]\nOr: prepare|advance|inspect|receive|reconcile-draft|refresh-original|to-notion|reconcile-notion-upload|download-notion|to-drive|reconcile-drive-upload|verify-drive|inspect-lock|recover-lock [--journal PRIVATE_DIR] [--key OPERATION_KEY] [--spec FILE] [--index N] [--caller EXISTING_MODULE | --bridge stdio] [--verify-original]";
 function argumentsOf(values){
   const command=values.shift(),opts={};
   while(values.length){const k=values.shift();if(k==="--verify-original"){opts.verify=true;continue;}if(k==="--confirm-quiescent"){opts.quiescent=true;continue;}if(!k.startsWith("--")||!values.length)throw new Error(HELP);if(opts[k]!==undefined)throw new Error("DUPLICATE_OPTION "+k);opts[k]=values.shift();}
-  const allowed=new Set(["--journal","--key","--spec","--index","--caller","--bridge","--draft","--message","--upload","--expect-lock-sha256","--max-request-bytes"]);
+  const allowed=new Set(["--journal","--key","--spec","--index","--caller","--bridge","--draft","--message","--upload","--expect-lock-sha256","--max-request-bytes","--file-id"]);
   for(const k of Object.keys(opts))if(k!=="verify"&&k!=="quiescent"&&!allowed.has(k))throw new Error("UNKNOWN_OPTION "+k);
   return {command,opts};
 }
@@ -97,8 +97,11 @@ try{
     else if(command==="recover-lock")result=await journal.recoverLock(key,{expected_sha256:opts["--expect-lock-sha256"],confirm_quiescent:opts.quiescent});
     else if(command==="inspect"){const s=await journal.load(key);if(!s)throw new Error("UNKNOWN_OPERATION");result={state:s.phase,record:s};}
     else if(command==="reconcile-draft")result=await api.reconcileDraft(key,{draft_id:opts["--draft"],message_id:opts["--message"]});
-    else if(["refresh-original","to-notion","reconcile-notion-upload","download-notion"].includes(command)){
+    else if(["refresh-original","to-notion","reconcile-notion-upload","download-notion","to-drive","reconcile-drive-upload","verify-drive"].includes(command)){
       if(!Number.isSafeInteger(index)||index<0)throw new Error("FILE_INDEX_REQUIRED");
+      if(command==="to-drive")result=await api.toDrive(key,index,await jsonFile(opts["--spec"]));
+      if(command==="reconcile-drive-upload")result=await api.reconcileDriveUpload(key,index,opts["--file-id"]);
+      if(command==="verify-drive")result=await api.verifyDrive(key,index);
       if(command==="refresh-original")result={state:"original_reference_refreshed",record:await api.refreshOriginal(key,index)};
       if(command==="to-notion")result=await api.toNotion(key,index,await jsonFile(opts["--spec"]));
       if(command==="reconcile-notion-upload")result=await api.reconcileNotionUpload(key,index,opts["--upload"]);

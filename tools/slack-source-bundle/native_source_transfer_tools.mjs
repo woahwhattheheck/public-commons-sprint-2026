@@ -2,6 +2,7 @@
 export function bindNativeSourceTools(tools) {
   const allowed = new Set([
     "gmail_get_profile","gmail_create_draft","gmail_read_email","gmail_read_attachment","gmail_list_drafts",
+    "google_drive_get_profile","google_drive_get_file_metadata","google_drive_upload_file","google_drive_fetch",
     "notion_notion_get_self","notion_fetch","notion_notion_create_attachment",
     "notion_notion_update_page","notion_notion_get_async_task","notion_notion_download_attachment","notion_notion_get_file_download_urls"
   ]);

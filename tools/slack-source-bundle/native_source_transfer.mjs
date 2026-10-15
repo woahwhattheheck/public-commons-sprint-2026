@@ -1,5 +1,5 @@
 /**
- * Same-account original source files through native Gmail drafts and Notion.
+ * Original source files through native Gmail drafts, private Drive and Notion.
  * Uses the caller's existing atomic journal. No send, delete, account switching,
  * credential loading, service installation, background worker, or hidden retry.
  * MIT.
@@ -326,6 +326,96 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     const bytes=bytesOf(await readOriginal(clone(f.original.file_uri)));assert(bytes.length===f.identity.bytes&&codec.sha256(bytes)===f.identity.sha256,"ORIGINAL_BYTES_MISMATCH");
     const files=clone(s.files);files[index].verified={bytes:bytes.length,sha256:f.identity.sha256,at:now(),via:"complete_original_read",file_id:f.original.file_uri.file_id,attachment_id:f.original.attachment_id};return save(s,{files});
   }
+
+  function driveTarget(target){
+    return {account_id:text(target?.account_id,"DRIVE_ACCOUNT_ID"),account_email:email(target.account_email),folder_id:text(target.folder_id,"DRIVE_FOLDER_ID")};
+  }
+  function privateDriveMetadata(value,target,{folder=false,file=null}={}){
+    assert(value&&typeof value==="object","DRIVE_METADATA_REQUIRED");
+    const id=folder?target.folder_id:file.id;
+    assert(value.id===id,"DRIVE_FILE_ID_MISMATCH");
+    const mime=value.mime_type??value.mimeType;
+    assert(mime===(folder?"application/vnd.google-apps.folder":file.identity.mime_type),"DRIVE_MIME_MISMATCH");
+    assert(value.trashed!==true,"DRIVE_ITEM_TRASHED");
+    const permissions=value.permissions;
+    assert(Array.isArray(permissions)&&permissions.length>0&&permissions.every(p=>
+      p.type==="user"&&p.role==="owner"&&
+      typeof (p.emailAddress??p.email_address)==="string"&&email(p.emailAddress??p.email_address)===target.account_email
+    ),"DRIVE_PRIVATE_OWNER_METADATA_REQUIRED");
+    assert(!(value.drive_id??value.driveId),"DRIVE_SHARED_DRIVE_NOT_SUPPORTED");
+    if(!folder){
+      assert((value.title??value.name)===file.identity.filename,"DRIVE_FILENAME_MISMATCH");
+      assert(Number(value.size)===file.identity.bytes,"DRIVE_SIZE_MISMATCH");
+      assert((value.parent_ids??value.parents??[]).includes(target.folder_id),"DRIVE_PARENT_MISMATCH");
+    }
+    return value;
+  }
+  async function driveIdentity(target){
+    const p=await invoke("google_drive_get_profile",{});
+    assert(String(p.value.id)===target.account_id&&email(p.value.email??p.value.emailAddress)===target.account_email,"DRIVE_ACCOUNT_IDENTITY_MISMATCH");
+    const r=await invoke("google_drive_get_file_metadata",{fileId:target.folder_id,fields:"id,name,mimeType,trashed,driveId,permissions"});
+    privateDriveMetadata(r.value,target,{folder:true});return r;
+  }
+  async function driveOriginal(target,file_id,expected){
+    text(file_id,"DRIVE_FILE_ID");
+    const meta=await invoke("google_drive_get_file_metadata",{fileId:file_id,fields:"id,name,mimeType,size,parents,trashed,driveId,permissions"});
+    privateDriveMetadata(meta.value,target,{file:{id:file_id,identity:expected}});
+    const downloaded=await invoke("google_drive_fetch",{url:"https://drive.google.com/file/d/"+file_id+"/view",download_raw_file:true,include_base64:true});
+    assert(downloaded.value.id===file_id,"DRIVE_DOWNLOAD_ID_MISMATCH");
+    // Some native responses retain original bytes outside structuredContent.
+    const encoded=downloaded.value.b64_string??downloaded.raw.b64_string;
+    assert(typeof encoded==="string","COMPLETE_DRIVE_BYTES_REQUIRED");
+    const bytes=codec.base64Decode(encoded);
+    assert(bytes.length===expected.bytes&&codec.sha256(bytes)===expected.sha256,"DRIVE_ORIGINAL_BYTES_MISMATCH");
+    return {file_id,url:"https://drive.google.com/file/d/"+file_id+"/view",
+      identity:clone(expected),download_filename:downloaded.value.file_name??null,
+      verified_at:now(),via:"complete_drive_raw_download"};
+  }
+  async function finishDrive(s,index,file_id,kind){
+    const entry=s.files[index],verified=await driveOriginal(entry.drive.target,file_id,entry.identity);
+    const files=clone(s.files);files[index].drive={...files[index].drive,phase:"verified",file_id,verified};
+    s=await save(s,{files,receipts:[...s.receipts,{kind,index,at:now(),file_id,verified:clone(verified)}]});
+    return {state:"drive_file_verified",record:s,delivery:verified};
+  }
+  async function toDrive(key,index,target){
+    let s=await current(key),f=s.files[index];assert(f?.original,"ORIGINAL_NOT_AVAILABLE");
+    const expected=driveTarget(target),d=f.drive;
+    if(d)assert(canonical(d.target)===canonical(expected),"DRIVE_TARGET_CONFLICT");
+    await driveIdentity(expected);
+    if(d?.phase==="verified")return {state:"drive_file_verified",record:s,delivery:clone(d.verified)};
+    if(d?.phase==="upload_pending")return {state:"reconciliation_required",record:s,
+      reason:"Drive upload may have succeeded. Reconcile the observed original file ID; no repeated upload is performed."};
+    if(d?.phase==="uploaded")return finishDrive(s,index,d.file_id,"drive_download_verified");
+    assert(!d,"INVALID_DRIVE_PHASE");
+    // Refresh from the same checked MIME parent; signed transport URLs can expire.
+    s=await refreshOriginal(key,index);f=s.files[index];
+    if(f.drive)return toDrive(key,index,expected);
+    await driveIdentity(expected);
+    const files=clone(s.files);files[index].drive={target:expected,phase:"upload_pending"};
+    s=await save(s,{files});
+    try{
+      const r=await invoke("google_drive_upload_file",{file_uri:clone(f.original.file_uri),
+        file_name:f.identity.filename,mime_type:f.identity.mime_type,parent_folder_id:expected.folder_id});
+      assert(r.value.success!==false,"DRIVE_UPLOAD_FAILED",r.raw);
+      text(r.value.id,"DRIVE_FILE_ID");
+      const uploaded=clone(s.files);uploaded[index].drive={...uploaded[index].drive,phase:"uploaded",file_id:r.value.id};
+      // Retain the actual ID before metadata/download checks, so they resume it.
+      s=await save(s,{files:uploaded,receipts:[...s.receipts,{kind:"drive_upload",index,at:now(),provider:r.raw}]});
+      return await finishDrive(s,index,r.value.id,"drive_download_verified");
+    }catch(e){return fault(s,e,"drive_upload_"+index);}
+  }
+  async function reconcileDriveUpload(key,index,file_id){
+    const s=await current(key),d=s.files[index]?.drive;
+    assert(d?.phase==="upload_pending","DRIVE_RECONCILIATION_NOT_NEEDED");
+    await driveIdentity(d.target);
+    return finishDrive(s,index,file_id,"drive_upload_reconciled");
+  }
+  async function verifyDrive(key,index){
+    const s=await current(key),d=s.files[index]?.drive;
+    assert(d&&["uploaded","verified"].includes(d.phase)&&d.file_id,"DRIVE_FILE_NOT_AVAILABLE");
+    await driveIdentity(d.target);return finishDrive(s,index,d.file_id,"drive_download_verified");
+  }
+
   async function notionIdentity(target,{readPage=true}={}){
     text(target.page_id,"PAGE_ID");text(target.workspace_id,"WORKSPACE_ID");text(target.user_id,"NOTION_USER_ID");
     const r=await invoke("notion_notion_get_self",{});
@@ -455,5 +545,5 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     return {schema:SCHEMA,operation_id,link_id,account_email,message_id,state:"original_files_available",files:out,bytes_verified:out.every(x=>x.verified),recipient_materialization:"pending"};
   }
 
-  return {receiveExisting,prepare,start,advance,reconcileDraft,refreshOriginal,verifyOriginal,toNotion,reconcileNotionUpload,downloadNotion,inspectMessage,draftArgs,preview,inspectDraftArguments,bodyResult};
+  return {toDrive,reconcileDriveUpload,verifyDrive,receiveExisting,prepare,start,advance,reconcileDraft,refreshOriginal,verifyOriginal,toNotion,reconcileNotionUpload,downloadNotion,inspectMessage,draftArgs,preview,inspectDraftArguments,bodyResult};
 }

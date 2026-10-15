@@ -8,6 +8,7 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
   async function rejects(fn,code){try{await fn();throw new Error("NOT_REJECTED "+code);}catch(e){if(e.code!==code&&e.message!==code)throw e;checks.push(code);}}
   function fixture({readComplete=true,manifestPreview=false}={}){
     const records=new Map(),originals=new Map(),drafts=new Map(),uploads=new Map();
+    const driveFiles=new Map();let driveCalls=0,loseDrive=false,badDrive=false,sharedFolder=false;
     let createCalls=0,attachCalls=0,page="# Authored source page\n",loseDraft=false,loseInsert=false,queuedInsert=false,taskReads=0,pendingContent="";
     const journal={load:async k=>clone(records.get(k)||null),compareAndSwap:async(k,rev,next)=>{if((records.get(k)?.revision??null)!==rev)return false;records.set(k,clone(next));return true;}};
     const call=async(name,args)=>{
@@ -32,7 +33,22 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
         const file_id="file-"+p.body.attachment_id;
         const preview=manifestPreview&&p.filename==="SOURCE_TRANSFER_MANIFEST.json"?JSON.stringify(JSON.parse(originals.get(file_id)),null,2):null;
         v={message_id:m.id,filename:p.filename,mime_type:p.mime_type,size_bytes:p.body.size,content:preview===null?"AUTHORED TRUNCATED PREVIEW":[{type:"text",text:preview}],content_truncated:preview===null,extraction_file_uri:{file_id:"extracted-"+file_id},file_uri:{file_id,download_url:"https://source.invalid/"+file_id,file_name:p.filename,mime_type:p.mime_type}};
-      }else if(name==="notion_notion_get_self")v={workspace:{id:"workspace-authored"},user:{id:"user-authored"}};
+      }else if(name==="google_drive_get_profile")v={id:"drive-actor",email:"operator@example.test"};
+      else if(name==="google_drive_get_file_metadata"){
+        if(args.fileId==="folder-authored")v={id:args.fileId,mime_type:"application/vnd.google-apps.folder",permissions:[{type:"user",role:"owner",emailAddress:"operator@example.test"},...(sharedFolder?[{type:"anyone",role:"reader"}]:[])]};
+        else{const f=driveFiles.get(args.fileId);v={id:args.fileId,title:f.name,mime_type:f.mime,size:String(codec.utf8Encode(f.text).length),parent_ids:[f.parent],permissions:[{type:"user",role:"owner",emailAddress:"operator@example.test"}]};}
+      }else if(name==="google_drive_upload_file"){
+        driveCalls++;const ref=args.file_uri;
+        if(!ref.file_id||!ref.download_url||!ref.file_name||!ref.mime_type)throw Error("ORIGINAL_ENVELOPE_LOST");
+        const id="drive-file-"+driveCalls;
+        driveFiles.set(id,{name:args.file_name,mime:args.mime_type,parent:args.parent_folder_id,text:originals.get(ref.file_id)});
+        if(loseDrive){loseDrive=false;throw Error("AUTHORED_DRIVE_REPLY_LOST");}
+        v={id,success:true};
+      }else if(name==="google_drive_fetch"){
+        const id=args.url.split("/").at(-2),f=driveFiles.get(id),b64_string=codec.base64Encode(codec.utf8Encode(badDrive?"changed":f.text));
+        return {b64_string,structuredContent:{id,file_name:f.name+".download"},isError:false};
+      }
+      else if(name==="notion_notion_get_self")v={workspace:{id:"workspace-authored"},user:{id:"user-authored"}};
       else if(name==="notion_fetch")v={id:"page-authored",text:page};
       else if(name==="notion_notion_create_attachment"){
         const id="upload-"+(uploads.size+1);uploads.set(id,args.content);
@@ -53,7 +69,7 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
     const input={operation_id:"authored-operation",link_id:"authored-link",account_email:"operator@example.test",files:[{filename:"source.json",content:'{\r\n  "literal": "a  b\\tand \u00a0 snowman ☃", "id": 9007199254740993\r\n}\r\n'}]};
     input.files[0].bytes=codec.utf8Encode(input.files[0].content).length;input.files[0].sha256=codec.sha256(codec.utf8Encode(input.files[0].content));
     const target={page_id:"page-authored",workspace_id:"workspace-authored",user_id:"user-authored"};
-    return {api,input,target,journal,records,drafts,call,originals,get createCalls(){return createCalls;},get attachCalls(){return attachCalls;},loseDraft:()=>{loseDraft=true;},loseInsert:()=>{loseInsert=true;},queueInsert:()=>{queuedInsert=true;}};
+    return {api,input,target,journal,records,drafts,call,originals,driveFiles,driveTarget:{account_id:"drive-actor",account_email:"operator@example.test",folder_id:"folder-authored"},get driveCalls(){return driveCalls;},loseDrive:()=>{loseDrive=true;},badDrive:value=>{badDrive=value;},shareFolder:()=>{sharedFolder=true;},get createCalls(){return createCalls;},get attachCalls(){return attachCalls;},loseDraft:()=>{loseDraft=true;},loseInsert:()=>{loseInsert=true;},queueInsert:()=>{queuedInsert=true;}};
   }
   const f=fixture(),p=f.api.prepare(f.input),s=await f.api.start(p);
   const args=f.api.draftArgs(p);
@@ -134,6 +150,31 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
   body.operation_id="other-operation";changed.originals.set(mfid,JSON.stringify(body));
   await rejects(()=>changed.api.advance(cp.key),"DRAFT_MANIFEST_MISMATCH");
   await rejects(()=>f.api.prepare({...f.input,files:[{...f.input.files[0],filename:"source_transfer_manifest.json"}]}),"RESERVED_MANIFEST_FILENAME");
+
+  const drive=fixture(),dp=drive.api.prepare(drive.input);await drive.api.start(dp);await drive.api.advance(dp.key);
+  const sentDrive=await drive.api.toDrive(dp.key,0,drive.driveTarget),againDrive=await drive.api.toDrive(dp.key,0,drive.driveTarget);
+  ok(sentDrive.state==="drive_file_verified"&&sentDrive.delivery.identity.sha256===dp.files[0].sha256&&sentDrive.delivery.download_filename==="source.json.download"&&againDrive.delivery.file_id===sentDrive.delivery.file_id&&drive.driveCalls===1,"Drive retains full reference, verifies outer raw bytes and reuses one original file");
+  const freshDrive=await drive.api.verifyDrive(dp.key,0);
+  ok(freshDrive.delivery.file_id===sentDrive.delivery.file_id&&drive.driveCalls===1,"explicit Drive verification refreshes same original without upload");
+  await rejects(()=>drive.api.toDrive(dp.key,0,{...drive.driveTarget,folder_id:"other-folder"}),"DRIVE_TARGET_CONFLICT");
+  const du=fixture(),dup=du.api.prepare(du.input);await du.api.start(dup);await du.api.advance(dup.key);du.loseDrive();
+  try{await du.api.toDrive(dup.key,0,du.driveTarget);}catch(e){ok(e.message==="AUTHORED_DRIVE_REPLY_LOST","uncertain Drive creation retains pending journal");}
+  const uncertain=await du.api.toDrive(dup.key,0,du.driveTarget);
+  ok(uncertain.state==="reconciliation_required"&&du.driveCalls===1,"uncertain Drive creation never repeats upload");
+  const reconciled=await du.api.reconcileDriveUpload(dup.key,0,"drive-file-1");
+  ok(reconciled.state==="drive_file_verified"&&du.driveCalls===1,"observed Drive original reconciles by folder, filename and every original byte");
+  const db=fixture(),dbp=db.api.prepare(db.input);await db.api.start(dbp);await db.api.advance(dbp.key);db.badDrive(true);
+  await rejects(()=>db.api.toDrive(dbp.key,0,db.driveTarget),"DRIVE_ORIGINAL_BYTES_MISMATCH");
+  ok((await db.journal.load(dbp.key)).files[0].drive.file_id==="drive-file-1","known Drive ID persists before download failure");
+  db.badDrive(false);await db.api.toDrive(dbp.key,0,db.driveTarget);
+  ok(db.driveCalls===1,"corrected download resumes retained file rather than creating a duplicate");
+  const ds=fixture(),dsp=ds.api.prepare(ds.input);await ds.api.start(dsp);await ds.api.advance(dsp.key);ds.shareFolder();
+  await rejects(()=>ds.api.toDrive(dsp.key,0,ds.driveTarget),"DRIVE_PRIVATE_OWNER_METADATA_REQUIRED");
+  ok(ds.driveCalls===0,"private destination rejects a shared folder before upload");
+  const dc=fixture(),dcp=dc.api.prepare(dc.input);await dc.api.start(dcp);await dc.api.advance(dcp.key);
+  const driveParallel=await Promise.allSettled([dc.api.toDrive(dcp.key,0,dc.driveTarget),dc.api.toDrive(dcp.key,0,dc.driveTarget)]);
+  ok(dc.driveCalls===1&&driveParallel.some(x=>x.status==="fulfilled"),"concurrent private Drive continuation admits one upload");
+
   return {schema:"commons.native-source-transfer-course/v1",scope:"authored protocol behavior; no live service writes",checks};
 }
 
