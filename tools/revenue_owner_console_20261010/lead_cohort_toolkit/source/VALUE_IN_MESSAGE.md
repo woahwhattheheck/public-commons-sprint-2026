@@ -93,3 +93,9 @@ Warm replies follow the current account's designated relationship owner. New sal
 The composer accepts the core's existing `complimentary` delivery type with its exact recorded quantity and zero price. The original sample or previous edition is included through the fulfilment core's explicit `include_edition_ids` contract; composition does not bypass duplicate checks or create a new delivery. A nonzero current price for a complimentary edition is rejected. All exact edition bytes, source-bound cards and original openings remain retained.
 
 New messages use rendering version4, which says `1 complete profile` for a singular edition and keeps plural wording for larger packs. Receiving retains versions1,2,3 and4; earlier prepared records and their original bodies are unchanged. Complimentary admission does not change render output for previously supported edition types.
+
+## Inline full openings
+
+Set `layout.mode` to `inline-openings` to place every complete opening directly beneath its own contact and original source card. Supply the same source-bound `cards` as `concise` and `opening_indices` containing every lead index exactly once in source order. The current renderer emits version 5 for this mode. Observed workflow and possible-use paragraphs remain in the source recipe and customer edition; the email omits those repetitions. Every original opening is included verbatim.
+
+Existing complete and concise rendering contracts are unchanged. Receiving supports original versions 1–4 as before and reconstructs version 5 against the exact retained edition and recipe. The new mode does not alter a customer edition, send a message or authorize contacting a prospect.

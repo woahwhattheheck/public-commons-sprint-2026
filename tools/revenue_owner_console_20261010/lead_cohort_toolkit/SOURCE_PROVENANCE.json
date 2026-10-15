@@ -2,7 +2,7 @@
   "schema": "commons.lead-cohort-toolkit-source.v1",
   "operation_id": "LEAD-TOOLKIT-PUBLIC-COMPLETE-20261014",
   "license": "Apache-2.0",
-  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation. Includes source-bound complimentary value messages, version4 singular wording, and explicit same-domain hosted company URLs. Includes complete original delivery-feedback receiving, resumable successor source closure, full inherited tool dependencies and exact expanded customer-archive preservation.",
+  "description": "Complete portable cohort preparation, value-first messages, actual delivery receiving and lossless archive runtime; current pack-scoped lead identity and historical buyer-route receipt validation. Includes source-bound complimentary value messages, version4 singular wording, and explicit same-domain hosted company URLs. Includes complete original delivery-feedback receiving, resumable successor source closure, full inherited tool dependencies and exact expanded customer-archive preservation. Adds optional source-bound inline full openings while preserving earlier rendering contracts.",
   "files": [
     {
       "path": "runtime/tools/revenue_owner_console_20261010/lead_fulfillment_core.cjs",
@@ -231,8 +231,8 @@
     },
     {
       "path": "runtime/tools/revenue_owner_console_20261010/lead_value_message_core.cjs",
-      "bytes": 14961,
-      "sha256": "a1f4d83b6e88b5f13f98bc1c223edfe6c8b4b3a18d2555e515ca3583873a2242"
+      "bytes": 16055,
+      "sha256": "ff8eb8c53587c223344a8c8fe75379e4c8a2360208cd7176a576c536ede14865"
     },
     {
       "path": "source/value-message.cjs",
@@ -241,8 +241,8 @@
     },
     {
       "path": "source/VALUE_IN_MESSAGE.md",
-      "bytes": 11886,
-      "sha256": "fd17411b891c7900a562e0f5f0a22eaa64d5f0c51d209c0075c9bf07c5fa5a4e"
+      "bytes": 12692,
+      "sha256": "0ab8392f242258d49194a1cca83cf7c233ac8e400a950c57a34bceb236b089be"
     },
     {
       "path": "native/compose-message.mjs",
@@ -355,5 +355,5 @@
       "sha256": "27c9bd6857c94d8ed82dd81408ca83f3224a530ba1fa58a5b00b2bcef0ba8bca"
     }
   ],
-  "continuation_operation_id": "LEAD-DELIVERY-FEEDBACK-RUNTIME-20261015"
+  "continuation_operation_id": "inline-full-openings-20261015"
 }
