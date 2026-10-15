@@ -42,6 +42,54 @@ The journal schema remains `commons.native-source-transfer/v1`. Historical plans
 
 Readback checks the complete attached manifest before releasing or refreshing source references. With an original-file reader, its bytes and SHA256 are verified. Without that reader, the provider must return complete, untruncated extracted JSON whose full parsed contents equal the expected manifest. Extraction may reformat JSON; this is recorded as `content_verified.via:"complete_extracted_json"` and leaves manifest byte verification empty. A truncated or missing extraction returns `COMPLETE_MANIFEST_READER_REQUIRED`; rerun the same operation with `--verify-original`. The existing draft remains available and is not recreated. Source `bytes_verified` always depends on reading each complete original source file.
 
+## Preview the complete request before creation
+
+Use the existing builder rather than manually composing attachment parts. Its unchanged `draftArgs(plan)` emits URL-safe Base64 for exact original bytes and omits attachment-level charset. An optional legacy inline text body may retain its UTF-8 charset. Receiving still preserves historical payloads as authored; this guidance does not rewrite earlier requests.
+
+The CLI can inspect a complete source spec without opening a journal or calling a provider:
+
+~~~sh
+node tools/slack-source-bundle/native_source_transfer_cli.mjs preview \
+  --spec /private/original-operation/source-spec.json \
+  --max-request-bytes 12582912
+~~~
+
+The number above is an example operator-selected advisory, **not a discovered Gmail or connector limit**. Omit it for size measurement alone. Preview returns the original source manifest, deterministic operation identity, exact UTF-8 byte count and SHA256 of the serialized invocation, each complete decoded attachment identity, the generated manifest's contribution and any recipe findings. It does not output the attachment bodies or claim account/provider acceptance. A byte advisory never changes files, plan fingerprints, the journal or the existing advance behavior.
+
+For an already prepared create/update request saved as JSON:
+
+~~~sh
+node tools/slack-source-bundle/native_source_transfer_cli.mjs inspect-request \
+  --spec /private/original-operation/exact-request.json \
+  --max-request-bytes 12582912
+~~~
+
+This pure inspection flags attachment-level charset, non-Base64URL attachment bodies, malformed Base64, duplicate filenames, recipient fields and other deviations from the maintained minimal recipe. It preserves the input. `recipe_compatible` describes this recipe, not every valid Gmail MIME form; it is not a provider schema validator or proof that a mailbox operation will succeed. Size measures the exact object serialized by the caller, excluding unknown external transport overhead.
+
+The same APIs are available to a connected JavaScript caller:
+
+~~~js
+const plan = operation.prepare(existingSpec);
+const preview = operation.preview(plan, {maxRequestBytes: selectedAdvisory});
+const existingRequest = operation.inspectDraftArguments(retainedArguments);
+// Use operation.start(plan) / operation.advance(plan.key) for the existing transfer.
+~~~
+
+In a later controlled same-draft update, attachment-level charset caused an argument-binding/schema-validation rejection; removing those attachment fields admitted the same Base64URL content. A separate smaller request with the rejected fields also failed. These observations support this minimal recipe, not a universal provider MIME rule or an inferred request-size cap.
+
+Keep the complete provider error and its stage. An `argument_binding/schema_validation` result does not by itself establish a size limit. The observed compatible attachment shape is:
+
+~~~json
+{
+  "mime_type": "application/json",
+  "filename": "complete-source.json",
+  "content_disposition": "attachment",
+  "body": {"base64_url_content": "EXACT_ORIGINAL_BASE64URL"}
+}
+~~~
+
+Before reducing a large pickup, inspect its actual serialized request and retain every original in the complete source. Use the maintained [lossless source archive packer](../revenue_owner_console_20261010/lead_cohort_toolkit/source/SOURCE_ARCHIVES.md) to carry repeated embedded applications once without changing reconstructed bytes. Select that complete carrier, its existing materializer/opener and the useful readable scope or guide. A separately attached expanded copy of the same application may be omitted only when its exact bytes are already inside the verified complete carrier. Record the selected attachment manifest; do not silently drop unique source or split an existing operation after a provider outcome becomes uncertain.
+
 ## Prepare complete original files
 
 Requires Node.js 20 or newer and a private local filesystem with atomic rename and directory fsync. Select an existing authorized account; record its exact connected link and expected mailbox email. Prepare a JSON spec in the original private operation directory:

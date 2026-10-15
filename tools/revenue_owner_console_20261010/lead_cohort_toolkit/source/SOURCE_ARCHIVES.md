@@ -132,3 +132,8 @@ Retry the same input, tools and output path after interruption. The initial dura
 source/source-archive.cjs exports SCHEMA, packSource(text, options), unpackSource(archive, options) and archiveStatistics(archive). packSource accepts minimumStringLength (default256, minimum32), decompositionDepth (default32, maximum256), and maxExpandedBytes (default512MiB). unpackSource accepts maxExpandedBytes. Statistics summarize an already admitted archive and do not replace receiving.
 
 native/materialize-source.py contains the complete decoder itself, so the distributed helper needs only Python's standard library. native/pack-source.mjs uses Node's standard filesystem, path, crypto and zlib modules plus the maintained source archive, SHA-256 and create-only publication modules. Existing prepare/reopen/record/compose commands retain their ordinary source-bank format; choosing an archive is an additive transport step.
+
+
+## Ordinary internal file pickup
+
+Use the existing [native source-transfer helper and preview](../../../slack-source-bundle/NATIVE_SOURCE_TRANSFER.md#preview-the-complete-request-before-creation) for a recipient-free ordinary pickup. Its attachment builder preserves complete Base64URL bytes and omits attachment-level charset. Preview measures the exact serialized invocation, independently of decoded source size, and supports an explicit advisory rather than inventing a provider limit. Select the complete archive carrier, materializer and useful readable files; do not also attach an expanded application merely to duplicate bytes already recoverable from the complete carrier. Preserve unique source and the original operation if a provider result is uncertain.
