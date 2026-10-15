@@ -47,6 +47,7 @@ def main(argv=None):
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--playwright-module", required=True, type=Path)
     parser.add_argument("--chromium", required=True, type=Path)
+    parser.add_argument("--eight-quarters", action="store_true", help="Operate the full 25-institution/eight-quarter authored reference")
     args = parser.parse_args(argv)
     source = Path(__file__).resolve().parent
     analyst = args.analyst_directory.resolve()
@@ -73,7 +74,17 @@ def main(argv=None):
             Path(source_module.__file__).resolve() == analyst / "bankregdata_sources.py",
             "Loaded native modules differ from the explicit selected installation")
     Workspace, Sources = workspace_module.Workspace, source_module.BankRegDataSources
-    reference = strict_json(stable_bytes(source / "reference" / "input.json", MAX_BYTES), "authored reference")
+    reference_path = source / "reference" / "input.json"
+    if args.eight_quarters:
+        reference_path = out / "authored-eight-quarter-input.json"
+        generated = subprocess.run([str(node), str(source / "reference" / "eight_quarters.mjs"),
+                                    str(reference_path), "25"], capture_output=True, text=True,
+                                   encoding="utf-8", timeout=180, check=False)
+        require(generated.returncode == 0, "Authored extended input failed: " + generated.stderr[-4000:])
+    reference = strict_json(stable_bytes(reference_path, MAX_BYTES), "authored reference")
+    extended = reference.get("authoredReceiving")
+    expected_views = len(reference["originals"])
+    source_periods = extended["sourcePeriods"] if extended else ["2025-09-30", "2026-09-30"]
     actor = "Authored receiving course"
     working = Workspace(out / "native-workspace")
     try:
@@ -102,15 +113,18 @@ def main(argv=None):
                 "reporting_note": "Authored native parser-to-report receiving reference",
                 "identity_kind": "provider_label"
             }
+            if extended:
+                mapping = reference["nativeMapping"]
             saved = api.create_view({"source_id": received["source"]["id"],
                                     "title": original["filename"], "mapping": mapping}, actor)
             selected_views.append(saved["view"])
-        require(len(selected_views) == 5, "This course expects five retained reference editions")
+        require(len(selected_views) == expected_views, "This course must retain every reference edition")
         comparison = api.create({
             "title": "Authored full source comparison", "request_key": "institution-native-course-comparison",
-            "before": {"view_id": selected_views[0]["id"], "period": "2025-09-30"},
-            "after": {"view_id": selected_views[-1]["id"], "period": "2026-09-30"},
-            "entities": ["A", "B", "C"], "metrics": ["income_ytd", "assets"],
+            "before": {"view_id": selected_views[0]["id"], "period": source_periods[0]},
+            "after": {"view_id": selected_views[-1]["id"], "period": source_periods[-1]},
+            "entities": [x["id"] for x in reference["institutions"]],
+            "metrics": [x["label"] for x in reference["nativeMapping"]["metrics"]] if extended else ["income_ytd", "assets"],
             "supporting_views": [x["id"] for x in selected_views[1:-1]]
         }, actor)
         api.review({"id": comparison["id"], "key": "", "decision": "reviewed",
@@ -157,15 +171,31 @@ def main(argv=None):
             "Rejected changed selection altered the original delivery")
     delivered = run_node(node, source, out / "assembled" / "input.json", out / "report")
     report = strict_json(stable_bytes(out / "report" / "report.json", MAX_BYTES), "complete report")
-    require(len(report["institutionRows"]) == 48 and len(report["peerRows"]) == 16 and
-            len(report["exceptions"]) == 4, "Native reference row/coverage result differs")
-    q4 = next(x for x in report["institutionRows"] if
-              (x["entity"], x["period"], x["measure"]) == ("A", "2025-12-31", "income_quarter"))
-    ratio = next(x for x in report["peerRows"] if
-                 (x["subject"], x["period"], x["measure"]) == ("A", "2025-12-31", "income_to_assets"))
-    require(q4["display"] == "30.00" and ratio["statistic"]["display"] == "2.25" and
-            ratio["eligibleCount"] == 3 and ratio["observedCount"] == 2,
-            "Actual native observations did not produce the approved quarter/peer result")
+    if extended:
+        require(len(report["institutionRows"]) == extended["expectedInstitutionRows"] and
+                len(report["peerRows"]) == extended["expectedPeerRows"] and
+                len(report["periodRows"]) == extended["expectedPeriodRows"] and
+                len(report["exceptions"]) == 2, "Extended native row/coverage result differs")
+        q4 = next(x for x in report["institutionRows"] if
+                  (x["entity"], x["period"], x["measure"]) == ("B001", "2024-12-31", "income_quarter"))
+        annual = next(x for x in report["periodRows"] if
+                      (x["subject"], x["comparisonId"], x["measure"]) == ("B001", "year-1", "income_ytd"))
+        ratio = next(x for x in report["peerRows"] if
+                     (x["subject"], x["period"], x["measure"]) == ("B001", "2026-06-30", "deposits_assets"))
+        require(q4["display"] == "100000.00" and annual["change"]["absolute"] == "40000.00" and
+                annual["change"]["relativePercent"] == "10.00" and
+                ratio["eligibleCount"] == 25 and ratio["observedCount"] == 24,
+                "Extended native quarter/year/peer result differs")
+    else:
+        require(len(report["institutionRows"]) == 48 and len(report["peerRows"]) == 16 and
+                len(report["exceptions"]) == 4, "Native reference row/coverage result differs")
+        q4 = next(x for x in report["institutionRows"] if
+                  (x["entity"], x["period"], x["measure"]) == ("A", "2025-12-31", "income_quarter"))
+        ratio = next(x for x in report["peerRows"] if
+                     (x["subject"], x["period"], x["measure"]) == ("A", "2025-12-31", "income_to_assets"))
+        require(q4["display"] == "30.00" and ratio["statistic"]["display"] == "2.25" and
+                ratio["eligibleCount"] == 3 and ratio["observedCount"] == 2,
+                "Actual native observations did not produce the approved quarter/peer result")
     receiver = Workspace(out / "independent-native-receiver")
     try:
         receiving = Sources(receiver)
@@ -173,7 +203,7 @@ def main(argv=None):
         repeated = receiving.receive_handover(original_zip, actor)
         require(received["received"] is True and repeated["received"] is False,
                 "Original native receive/replay differs")
-        require(len(receiving.state()["views"]) == 5, "Independent receiver lost a source edition")
+        require(len(receiving.state()["views"]) == expected_views, "Independent receiver lost a source edition")
     finally:
         receiver.close()
     restored = workspace_module.restore(stable_bytes(out / "original-native-backup.zip", MAX_BYTES),
@@ -181,7 +211,7 @@ def main(argv=None):
     reopened = Workspace(out / "restored-native-workspace", create=False)
     try:
         require(reopened.revision == native_revision, "Full native backup revision changed")
-        require(len(Sources(reopened).state()["views"]) == 5, "Full backup lost native views")
+        require(len(Sources(reopened).state()["views"]) == expected_views, "Full backup lost native views")
     finally:
         reopened.close()
     second = publish(selection_raw, load_handovers([out / "assembled" / "original-handovers" /
@@ -199,10 +229,12 @@ def main(argv=None):
     result = {
         "schema": "commons.institution-native-receiving-result.v1", "state": "COMPLETE",
         "runtime": {"python": sys.version, "platform": sys.platform, "node": str(node)},
-        "source": observed, "nativeRevision": native_revision, "nativeViews": 5,
+        "source": observed, "nativeRevision": native_revision, "nativeViews": expected_views,
         "handoverSha256": sha(original_zip), "inputSha256": sha(assembled_raw),
-        "institutionRows": 48, "peerRows": 16, "exceptions": 4,
+        "institutionRows": len(report["institutionRows"]), "peerRows": len(report["peerRows"]),
+        "periodRows": len(report.get("periodRows", [])), "exceptions": len(report["exceptions"]),
         "q4Income": q4["display"], "peerRatioOfSums": ratio["statistic"]["display"],
+        "yearComparison": annual["change"] if extended else None,
         "exactAdapterRetry": True, "changedSelectionPreserved": True,
         "independentNativeReceiveAndReplay": True, "nativeBackupReopened": True,
         "independentInputAndReportExact": True, "reportFiles": delivered["files"],

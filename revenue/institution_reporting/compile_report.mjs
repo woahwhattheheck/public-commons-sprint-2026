@@ -16,13 +16,41 @@ export function compileInstitutionReport(input, runtime) {
   const format=(a,places)=>{need(Number.isInteger(places)&&places>=0&&places<=12,'Invalid decimal places');const scale=10n**BigInt(places),sign=a.n<0n?-1n:1n,n=a.n*sign*scale;let q=n/a.d;const r=n%a.d;if(r*2n>=a.d)q++;let s=q.toString().padStart(places+1,'0');if(places)s=s.slice(0,-places)+'.'+s.slice(-places);return(sign<0n&&q!==0n?'-':'')+s;};
   const exact=a=>({numerator:a.n.toString(),denominator:a.d.toString()});
   const quarter=p=>{need(typeof p==='string'&&/^\d{4}-(03-31|06-30|09-30|12-31)$/.test(p),'Calendar quarter end required: '+p);return{year:Number(p.slice(0,4)),q:['03-31','06-30','09-30','12-31'].indexOf(p.slice(5))+1};};
-  const periods=list(input.periods,'display periods',4);periods.forEach(quarter);need(new Set(periods).size===periods.length,'Duplicate display period');
+  const periods=list(input.periods,'display periods',8);periods.forEach(quarter);need(new Set(periods).size===periods.length,'Duplicate display period');
   need(periods.every((p,i)=>!i||p>periods[i-1]),'Display periods must increase');
+  const layout=input.reportLayout??'three_sections';
+  need(['three_sections','four_sections'].includes(layout),'Unknown report layout');
+  const pairs=input.comparisonPairs===undefined?[]:list(input.comparisonPairs,'explicit period pairs',28);
+  unique(pairs,x=>x.id,'period pair id');
+  const pairKeys=new Set();
+  for(const p of pairs){
+    text(p.label,'period pair label');
+    need(periods.includes(p.from)&&periods.includes(p.to)&&p.from<p.to,'Comparison endpoints must be increasing displayed periods');
+    const key=p.from+'|'+p.to;need(!pairKeys.has(key),'Duplicate comparison endpoints');pairKeys.add(key);
+  }
+  need(layout!=='four_sections'||pairs.length>0,'Four sections require explicit period pairs');
   const entities=unique(list(input.institutions,'institutions',50),x=>x.id,'institution');
   for(const x of entities.values()){text(x.name,'institution name');need(['bank','credit_union'].includes(x.family),'Select bank or credit_union');}
   need(new Set([...entities.values()].map(x=>x.family)).size===1,'One source family per report');
-  const measures=unique(list(input.measures,'measures',15),x=>x.id,'measure');
+  const measures=unique(list(input.measures,'measures',20),x=>x.id,'measure');
   
+  for(const p of pairs)if(p.measureIds!==undefined){
+    list(p.measureIds,'comparison measures',20);
+    need(new Set(p.measureIds).size===p.measureIds.length&&p.measureIds.every(id=>measures.has(id)),'Unknown/duplicate comparison measure');
+  }
+  if(input.review?.findings!==undefined){
+    need(Array.isArray(input.review.findings)&&input.review.findings.length<=1000,'Invalid review findings');
+    unique(input.review.findings,x=>x.id,'review finding');
+    for(const f of input.review.findings){
+      need(typeof f.finding==='string'&&f.finding.length>0&&f.finding.length<=4000,'Write the recorded finding');
+      for(const k of ['entity','period','measure','sourceReference','action','owner','status','reviewer','reviewedAt'])
+        need(f[k]===undefined||f[k]===null||typeof f[k]==='string'&&f[k].length<=(k==='action'?4000:1000),'Invalid finding '+k);
+      need(!f.entity||entities.has(f.entity),'Finding institution must be selected');
+      need(!f.period||periods.includes(f.period),'Finding period must be selected');
+      need(!f.measure||measures.has(f.measure),'Finding measure must be selected');
+      need(!f.status||['proposed','open','in_progress','resolved','accepted','rejected'].includes(f.status),'Unknown recorded finding status');
+    }
+  }
   for(const m of measures.values()){
     text(m.label,'measure label');text(m.unit,'measure unit');need(Number.isInteger(m.decimals)&&m.decimals>=0&&m.decimals<=12,'Set measure decimals');
     need(['reported','quarter_from_ytd','ratio'].includes(m.operation),'Unknown measure operation');
@@ -58,7 +86,7 @@ export function compileInstitutionReport(input, runtime) {
       observations.push({viewHash:vh,o});
     }
   }
-  const selections=list(input.sourceSelections,'source selections',80),selected=new Map();
+  const selections=list(input.sourceSelections,'source selections',320),selected=new Map();
   for(const s of selections){
     text(s.metric,'selected source metric');quarter(s.period);need(sources.has(s.sourceSha256),'Selected original missing');
     text(s.tableId,'selected table');text(s.definitionId,'source definition');text(s.compatibility?.group,'source compatibility group');text(s.compatibility?.approvedBy,'compatibility approver');text(s.compatibility?.approvedAt,'compatibility approval');text(s.compatibility?.note,'compatibility definition');const key=JSON.stringify([s.metric,s.period]);need(!selected.has(key),'Duplicate source selection');selected.set(key,s);
@@ -136,11 +164,34 @@ export function compileInstitutionReport(input, runtime) {
     }
     peerRows.push({subject,period,measure:id,cohortId:cohort.id,cohortDefinition:cohort.definition,memberIds:cohort.memberIds,includesSubject:cohort.includeSubject,eligibleCount:cohort.memberIds.length,observedCount:available.length,missingIds:cohort.memberIds.filter(x=>!available.some(a=>a.entity===x)),method:m.peerStatistic,statistic:statistic?{display:format(statistic,m.decimals),exact:exact(statistic),unit:m.unit}:null,reason,subjectValue:publicValue(subjectValue,m),rank,change});
   }
+  const periodRows=[];
+  const compactValue=(v,m)=>{const p=publicValue(v,m);delete p.traces;return p;};
+  for(const subject of subjects)for(const pair of pairs)for(const [id,m] of measures){
+    if(pair.measureIds&&!pair.measureIds.includes(id))continue;
+    const before=value(subject,pair.from,id),after=value(subject,pair.to,id);
+    let change;
+    if(m.comparisonPolicy==='display_only'||(m.comparisonPolicy==='same_calendar_quarter'&&quarter(pair.from).q!==quarter(pair.to).q)){
+      change={status:'unavailable',reason:'Period definitions do not permit this comparison'};
+    }else if(before.status!=='available'||after.status!=='available'){
+      change={status:'unavailable',reason:'One or both selected period values unavailable'};
+    }else{
+      const delta=sub(after.value,before.value),relative=before.value.n>0n?mul(div(delta,before.value),rat(100n)):null;
+      change={status:'available',absolute:format(delta,m.decimals),absoluteExact:exact(delta),unit:m.unit==='percent'?'percentage_points':m.unit,
+        relativePercent:relative?format(relative,2):null,relativeExact:relative?exact(relative):null,relativeReason:relative?null:'Baseline must be positive'};
+    }
+    periodRows.push({subject,measure:id,comparisonId:pair.id,label:pair.label,from:pair.from,to:pair.to,
+      comparisonPolicy:m.comparisonPolicy,comparisonNote:m.comparisonNote,
+      fromValue:compactValue(before,m),toValue:compactValue(after,m),change,
+      sourceRows:[{entity:subject,period:pair.from,measure:id},{entity:subject,period:pair.to,measure:id}]});
+  }
   const selectionHash=runtime.sha256(JSON.stringify(input)),output={schema:'commons.institution-report.v1',selectionHash,title:text(input.title,'report title'),periods,institutions:[...entities.values()],measures:[...measures.values()],cohorts:[...cohorts.values()],institutionRows,peerRows,exceptions,sourceCoverage:input.sourceSelections.map(s=>({...s,originalFilename:sources.get(s.sourceSha256).filename,selectedObservationCount:[...index.values()].filter(x=>x.o.metric===s.metric&&x.o.period===s.period&&x.o.source.sha256===s.sourceSha256&&x.o.source.table_id===s.tableId).length})),review:input.review??{reviewer:null,reviewedAt:null,corrections:[]},rounding:'Exact rational arithmetic; display rounds half away from zero; no intermediate rounding'};
+  if(input.reportLayout!==undefined)output.reportLayout=layout;
+  if(pairs.length){output.comparisonPairs=pairs;output.periodRows=periodRows;}
   return JSON.parse(JSON.stringify(output));
 }
 const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 export function reportHtml(report){
+  if(report.reportLayout==='four_sections')return fourSectionReportHtml(report);
   const e=escapeHtml,table=(heads,rows)=>'<div class="table-scroll" tabindex="0"><table><thead><tr>'+heads.map(h=>'<th>'+e(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+e(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
   const names=new Map(report.institutions.map(x=>[x.id,x.name])),labels=new Map(report.measures.map(x=>[x.id,x.label]));
   const definitions=table(['Measure','Operation / operands','Unit','Comparison policy','Definition group'],report.measures.map(m=>[m.label,m.operation==='ratio'?m.numerator+' / '+m.denominator+' × '+m.multiplier:m.operation+' ('+m.sourceMetric+', '+m.sourceBasis+')',m.unit,m.comparisonPolicy+': '+m.comparisonNote,m.sourceDefinitionGroup??'From operands']));
@@ -155,4 +206,19 @@ export function reportCsv(report){
   const q=x=>{let s=String(x??'');if(/^[\u0000-\u0020]*[=+@-]/.test(s)&&!/^[-+]?\d+(?:\.\d+)?$/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
   const rows=[['entity','period','measure','value','unit','status','reason','exact_numerator','exact_denominator','source_traces_json'],...report.institutionRows.map(x=>[x.entity,x.period,x.measure,x.display,x.unit,x.status,x.reason,x.exact?.numerator,x.exact?.denominator,JSON.stringify(x.traces)])];
   return rows.map(r=>r.map(q).join(',')).join('\r\n')+'\r\n';
+}
+
+function fourSectionReportHtml(report){
+  const e=escapeHtml,table=(heads,rows)=>'<div class="table-scroll" tabindex="0"><table><thead><tr>'+heads.map(h=>'<th scope="col">'+e(h)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(c=>'<td>'+e(c)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
+  const names=new Map(report.institutions.map(x=>[x.id,x.name])),labels=new Map(report.measures.map(x=>[x.id,x.label]));
+  const definitions=table(['Measure','Operation / operands','Unit','Period policy','Definition group'],report.measures.map(m=>[m.label,m.operation==='ratio'?m.numerator+' / '+m.denominator+' × '+m.multiplier:m.operation+' ('+m.sourceMetric+', '+m.sourceBasis+')',m.unit,m.comparisonPolicy+': '+m.comparisonNote,m.sourceDefinitionGroup??'From operands']));
+  const subjects=new Set(report.cohorts.map(x=>x.subjectId));
+  const profiles=report.institutions.map(i=>'<details data-subject="'+(subjects.has(i.id)?'true':'false')+'"'+(subjects.has(i.id)?' open':'')+'><summary>'+e(i.name)+' — '+report.periods.length+' periods, '+report.measures.length+' measures</summary>'+table(['Period','Measure','Value','Unit','Interpretation / availability'],report.institutionRows.filter(x=>x.entity===i.id).map(x=>[x.period,labels.get(x.measure),x.display??'Unavailable',x.unit,x.reason??(x.derivation?JSON.stringify(x.derivation):'Reported')]))+'</details>').join('');
+  const comparisons=table(['Subject','Comparison','Measure / policy','From period / value','To period / value','Absolute change','Relative change / availability'],(report.periodRows??[]).map(x=>[names.get(x.subject),x.label,labels.get(x.measure)+' / '+x.comparisonPolicy,x.from+' / '+(x.fromValue.display??'Unavailable')+' '+x.fromValue.unit,x.to+' / '+(x.toValue.display??'Unavailable')+' '+x.toValue.unit,x.change.status==='available'?x.change.absolute+' '+x.change.unit:'Unavailable',x.change.status!=='available'?x.change.reason:x.change.relativePercent!==null?x.change.relativePercent+'%':x.change.relativeReason]));
+  const cohortTable=table(['Subject','Cohort','Included institutions','Subject included','Approved by / at'],report.cohorts.map(k=>[names.get(k.subjectId),k.definition,k.memberIds.map(id=>names.get(id)).join('; '),k.includeSubject?'Yes':'No',k.approvedBy+' / '+k.approvedAt]));
+  const peers=table(['Subject','Period','Measure','Subject value','Peer value / unit','Statistic','Observed / eligible','Rank / missing peers'],report.peerRows.map(x=>[names.get(x.subject),x.period,labels.get(x.measure),x.subjectValue.display??'Unavailable',(x.statistic?.display??'Unavailable')+' '+(x.statistic?.unit??x.subjectValue.unit),x.method,x.observedCount+' / '+x.eligibleCount,(x.rank?x.rank.position+' of '+x.rank.of+'; tied '+x.rank.tied:'Rank not selected/applicable')+(x.missingIds.length?'; unavailable: '+x.missingIds.map(id=>names.get(id)).join(', '):'')]));
+  const coverage=table(['Metric','Period','Original file','SHA256 / table','Definition / compatibility','Approval','Selected observations'],report.sourceCoverage.map(x=>[x.metric,x.period,x.originalFilename,x.sourceSha256+' / '+x.tableId,x.definitionId+' / '+x.compatibility.group,x.compatibility.approvedBy+' / '+x.compatibility.approvedAt,x.selectedObservationCount]));
+  const exceptions=table(['Institution','Period','Measure','Issue'],report.exceptions.map(x=>[names.get(x.entity),x.period,labels.get(x.measure),x.reason]));
+  const findings=table(['Finding','Source / selected observation','Recorded action','Owner / status','Reviewer / date'],(report.review.findings??[]).map(f=>[f.id+': '+f.finding,[names.get(f.entity)??f.entity,f.period,labels.get(f.measure)??f.measure,f.sourceReference].filter(Boolean).join(' / '),f.action,[f.owner,f.status].filter(Boolean).join(' / '),[f.reviewer,f.reviewedAt].filter(Boolean).join(' / ')]));
+  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+e(report.title)+'</title><style>body{font:15px/1.5 system-ui,sans-serif;color:#161616;background:#fff;margin:32px}h1{font-size:26px;overflow-wrap:anywhere}h2{font-size:20px;margin-top:36px}h3{font-size:17px}nav{display:flex;gap:12px 20px;flex-wrap:wrap;margin:16px 0}a{color:inherit}table{border-collapse:collapse;width:100%;min-width:760px;font-size:13px}.table-scroll{overflow-x:auto;max-width:100%;margin:16px 0}th,td{text-align:left;vertical-align:top;border:1px solid #b7b7b7;padding:8px;overflow-wrap:anywhere}th{background:#eee}details{border:1px solid #bbb;padding:12px;margin:12px 0}summary{font-weight:600;cursor:pointer}button{font:inherit;color:inherit;background:#f3f3f3;border:1px solid #777;padding:7px 12px;cursor:pointer}.institution-controls{display:flex;gap:12px;flex-wrap:wrap}pre,code{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#444}a:focus-visible,button:focus-visible,summary:focus-visible,.table-scroll:focus-visible{outline:2px solid #333;outline-offset:3px}@media(max-width:600px){body{margin:16px}}@media print{body{margin:12mm}thead{display:table-header-group}tr{break-inside:avoid}.table-scroll{overflow:visible}table{min-width:0}details{break-inside:auto}.institution-controls{display:none}}</style></head><body><h1>'+e(report.title)+'</h1><nav aria-label="Report sections"><a href="#institution">Institution profile</a><a href="#periods">Period developments</a><a href="#peers">Peer context</a><a href="#sources">Source and review</a></nav><nav aria-label="Report downloads"><a href="input.json" download>Complete input</a><a href="report.json" download>Report JSON</a><a href="observations.csv" download>Observation CSV</a><a href="manifest.json" download>File manifest</a></nav><p>Periods: '+report.periods.map(e).join(', ')+'</p><p>'+e(report.rounding)+'</p><h2 id="institution">1. Institution profile</h2>'+definitions+'<p>Subject institutions open initially. Expand another institution to inspect every selected value; complete observations also remain in the CSV and JSON.</p><div class="institution-controls"><button type="button" id="expand-institutions">Expand all institutions</button> <button type="button" id="show-subjects">Show subjects only</button></div>'+profiles+'<h2 id="periods">2. Period developments</h2><p>Each comparison uses the explicitly selected endpoints. Percentage-point differences and relative percent changes have separate units. Full exact changes and original institution-row references remain in the JSON.</p>'+comparisons+'<h2 id="peers">3. Peer context</h2>'+cohortTable+peers+'<p>Rank uses explicit cohort membership and competition ranking. Subject rank is shown only when that subject is included.</p><h2 id="sources">4. Source coverage and review</h2>'+coverage+exceptions+'<h3>Recorded findings and actions</h3>'+findings+'<p>Statuses and actions are the retained reviewer record. The report does not create a management decision.</p><h3>Complete review record</h3><pre>'+e(JSON.stringify(report.review,null,2))+'</pre><small>Selection SHA256: <code>'+e(report.selectionHash)+'</code>. Preserve the complete input and report JSON alongside this readable output.</small><script>const institutions=[...document.querySelectorAll("details[data-subject]")];document.querySelector("#expand-institutions").addEventListener("click",()=>institutions.forEach(x=>x.open=true));document.querySelector("#show-subjects").addEventListener("click",()=>institutions.forEach(x=>x.open=x.dataset.subject==="true"));let beforePrint=null;addEventListener("beforeprint",()=>{beforePrint=institutions.map(x=>x.open);institutions.forEach(x=>x.open=true);});addEventListener("afterprint",()=>{if(beforePrint)institutions.forEach((x,i)=>x.open=beforePrint[i]);beforePrint=null;});</script></body></html>\n';
 }
