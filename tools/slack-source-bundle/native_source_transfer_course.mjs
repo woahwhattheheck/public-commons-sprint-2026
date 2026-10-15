@@ -58,6 +58,26 @@ export async function runNativeSourceTransferCourse(codec, createTransfer) {
   const f=fixture(),p=f.api.prepare(f.input),s=await f.api.start(p);
   const args=f.api.draftArgs(p);
   ok(p.transport==="attachment-manifest-v2"&&args.payload.parts.every(p=>p.filename&&p.content_disposition==="attachment"&&!p.charset&&!p.body.content)&&!Object.hasOwn(args,"from_address"),"new plans use minimal attachment-only MIME with a complete manifest file");
+
+  const beforePreview=JSON.stringify(args),summary=f.api.preview(p,{maxRequestBytes:1});
+  ok(summary.recipe_compatible&&summary.request_utf8_bytes===codec.utf8Encode(beforePreview).length&&summary.request_sha256===codec.sha256(codec.utf8Encode(beforePreview)),"preview measures exact serialized invocation rather than original file sizes");
+  ok(summary.attachment_count===2&&summary.attachment_bytes===summary.attachments.reduce((n,x)=>n+x.bytes,0)&&summary.attachments.find(x=>x.filename==="source.json").sha256===p.files[0].sha256,"preview retains full source identities and separately measures the generated manifest");
+  ok(summary.size_advisory.exceeded===true&&!summary.size_advisory.provider_limit_inferred&&JSON.stringify(f.api.draftArgs(p))===beforePreview&&f.createCalls===0,"explicit size advisory leaves request, plan, journal and provider untouched");
+  const withCharset=clone(args);withCharset.payload.parts[1].charset="UTF-8";
+  const charsetBefore=JSON.stringify(withCharset),charsetReport=f.api.inspectDraftArguments(withCharset);
+  ok(!charsetReport.recipe_compatible&&charsetReport.findings.some(x=>x.code==="ATTACHMENT_CHARSET_OUTSIDE_MINIMAL_RECIPE")&&JSON.stringify(withCharset)===charsetBefore,"attachment charset deviation is identified without editing retained arguments");
+  const binaryArgs=clone(args),binary=new Uint8Array([0,255,128,1]);
+  binaryArgs.payload.parts[1]={mime_type:"application/octet-stream",filename:"authored.bin",content_disposition:"attachment",body:{base64_url_content:codec.base64Encode(binary).replace(/\+/g,"-").replace(/\//g,"_")}};
+  const binaryReport=f.api.inspectDraftArguments(binaryArgs);
+  ok(binaryReport.recipe_compatible&&binaryReport.attachments[1].bytes===4&&binaryReport.attachments[1].sha256===codec.sha256(binary),"inspection accepts exact padded binary Base64URL without adding binary transfer support to source plans");
+  const badBase64=clone(binaryArgs);badBase64.payload.parts[1].body.base64_url_content="Zh";
+  ok(f.api.inspectDraftArguments(badBase64).findings.some(x=>x.code==="BASE64URL_INVALID"),"noncanonical unused Base64 bits remain invalid");
+  const invalidMime=clone(args);invalidMime.payload.parts[1].mime_type="application/invalid type";
+  ok(f.api.inspectDraftArguments(invalidMime).findings.some(x=>x.code==="BARE_MIME_TYPE_REQUIRED"),"MIME token syntax rejects whitespace");
+  const recipients=clone(args);recipients.to="receiver@example.test";
+  ok(!f.api.inspectDraftArguments(recipients).recipe_compatible,"recipient-bearing requests are outside recipient-free pickup recipe");
+  await rejects(()=>f.api.preview(p,{maxRequestBytes:true}),"INVALID_REQUEST_BYTE_ADVISORY");
+
   const first=await f.api.advance(s.key),again=await f.api.advance(s.key);
   ok(first.record.manifest.verified&&first.record.manifest.content_verified.via==="complete_original_read","manifest original bytes verified separately from source files");
   ok(first.bytes_verified&&again.bytes_verified&&f.createCalls===1,"complete UTF8 original and repeat reuse one draft");

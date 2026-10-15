@@ -116,6 +116,79 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     const content='<p>Internal source transfer. Do not send.</p><pre id="source-transfer-manifest">'+escaped(canonical(plan.manifest))+"</pre>";
     return {link_id:plan.link_id,from_address:plan.account_email,subject:plan.subject,payload:{mime_type:"multipart/mixed",parts:[{mime_type:"text/html",charset:"UTF-8",body:{content}},...plan.files.map(f=>({mime_type:f.mime_type,filename:f.filename,content_disposition:"attachment",body:{base64_url_content:f.content_base64.replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"")}}))]},response_fields:["id","message"]};
   }
+
+  /**
+   * Pure inspection of the minimal recipient-free connector recipe. Findings
+   * describe deviations from this recipe, not every provider-valid MIME form.
+   * Size is exact JSON.stringify UTF-8; a supplied budget is advisory only.
+   */
+  function inspectDraftArguments(args,{maxRequestBytes=null}={}){
+    assert(maxRequestBytes===null||(Number.isSafeInteger(maxRequestBytes)&&maxRequestBytes>0),"INVALID_REQUEST_BYTE_ADVISORY");
+    assert(args&&typeof args==="object"&&!Array.isArray(args),"DRAFT_ARGUMENTS_REQUIRED");
+    let serialized;try{serialized=JSON.stringify(args);}catch{fail("DRAFT_ARGUMENTS_NOT_JSON");}
+    const request=bytesOf(serialized),findings=[],attachments=[],inline=[];
+    const finding=(code,path,detail)=>findings.push({code,path,...(detail===undefined?{}:{detail})});
+    const keys=(v,allowed,path)=>{
+      if(!v||typeof v!=="object"||Array.isArray(v)){finding("OBJECT_REQUIRED",path);return false;}
+      for(const k of Object.keys(v))if(!allowed.includes(k))finding("FIELD_OUTSIDE_MINIMAL_RECIPE",path+"."+k);
+      return true;
+    };
+    keys(args,["link_id","subject","payload","response_fields","from_address","draft_id"],"$");
+    for(const k of ["link_id"])if(typeof args[k]!=="string"||!args[k])finding("REQUIRED_TEXT_MISSING","$."+k);
+    if(!Object.hasOwn(args,"draft_id")&&(typeof args.subject!=="string"||!args.subject))finding("REQUIRED_TEXT_MISSING","$.subject");
+    if(Object.hasOwn(args,"draft_id")&&(typeof args.draft_id!=="string"||!args.draft_id))finding("REQUIRED_TEXT_MISSING","$.draft_id");
+    if(typeof args.subject==="string"&&/[\r\n]/.test(args.subject))finding("HEADER_LINE_BREAK","$.subject");
+    const payload=args.payload;
+    if(keys(payload,["mime_type","parts"],"$.payload")){
+      if(payload.mime_type!=="multipart/mixed")finding("MIXED_PAYLOAD_REQUIRED","$.payload.mime_type");
+      if(!Array.isArray(payload.parts)||!payload.parts.length)finding("PARTS_REQUIRED","$.payload.parts");
+      else payload.parts.forEach((part,index)=>{
+        const path="$.payload.parts["+index+"]";
+        if(!part||typeof part!=="object"||Array.isArray(part)){finding("OBJECT_REQUIRED",path);return;}
+        const attached=Object.hasOwn(part,"filename")||part.content_disposition==="attachment";
+        keys(part,attached?["mime_type","filename","content_disposition","body"]:["mime_type","charset","body"],path);
+        if(attached&&Object.hasOwn(part,"charset"))finding("ATTACHMENT_CHARSET_OUTSIDE_MINIMAL_RECIPE",path+".charset","Keep charset on an optional inline text part; the maintained attachment recipe omits it.");
+        if(typeof part.mime_type!=="string"||!/^[a-z0-9!#$&^_.+-]+\/[a-z0-9!#$&^_.+-]+$/i.test(part.mime_type||""))finding("BARE_MIME_TYPE_REQUIRED",path+".mime_type");
+        if(attached){
+          if(typeof part.filename!=="string"||!part.filename||/[\u0000-\u001f\u007f]/.test(part.filename))finding("FILENAME_REQUIRED",path+".filename");
+          if(part.content_disposition!=="attachment")finding("ATTACHMENT_DISPOSITION_REQUIRED",path+".content_disposition");
+          const entry={index,filename:part.filename??null,mime_type:part.mime_type??null,bytes:null,sha256:null};
+          attachments.push(entry);
+          if(!keys(part.body,["base64_url_content"],path+".body"))return;
+          const value=part.body.base64_url_content;
+          if(typeof value!=="string"||!/^[A-Za-z0-9_-]*={0,2}$/.test(value)){finding("BASE64URL_ATTACHMENT_REQUIRED",path+".body");return;}
+          const bare=value.replace(/=+$/,""),padding=value.length-bare.length;
+          if(bare.length%4===1||(padding&&padding!==(4-bare.length%4)%4)){finding("BASE64URL_INVALID",path+".body");return;}
+          try{
+            const standard=bare.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-bare.length%4)%4);
+            const bytes=codec.base64Decode(standard);
+            const roundtrip=codec.base64Encode(bytes).replace(/\+/g,"-").replace(/\//g,"_").replace(/=+$/,"");
+            if(roundtrip!==bare){finding("BASE64URL_INVALID",path+".body");return;}
+            entry.bytes=bytes.length;entry.sha256=codec.sha256(bytes);
+          }catch{finding("BASE64URL_INVALID",path+".body");}
+        }else{
+          if(!["text/plain","text/html"].includes(part.mime_type))finding("INLINE_TEXT_TYPE_REQUIRED",path+".mime_type");
+          if(part.charset!==undefined&&String(part.charset).toLowerCase()!=="utf-8")finding("INLINE_CHARSET_OUTSIDE_RECIPE",path+".charset");
+          if(keys(part.body,["content"],path+".body")&&typeof part.body.content==="string"){
+            const bytes=bytesOf(part.body.content);inline.push({index,mime_type:part.mime_type,bytes:bytes.length,sha256:codec.sha256(bytes)});
+          }else finding("INLINE_TEXT_REQUIRED",path+".body.content");
+        }
+      });
+    }
+    if(!attachments.length)finding("SOURCE_ATTACHMENTS_REQUIRED","$.payload.parts");
+    const seen=new Set();for(const f of attachments){if(typeof f.filename!=="string")continue;const key=f.filename.toLowerCase();if(seen.has(key))finding("DUPLICATE_ATTACHMENT_FILENAME","$.payload.parts["+f.index+"].filename");seen.add(key);}
+    const complete=attachments.every(f=>f.bytes!==null);
+    return {schema:"commons.native-source-request-preview/v1",recipe:"recipient-free-base64url-attachments",
+      recipe_compatible:findings.length===0,findings,request_utf8_bytes:request.length,request_sha256:codec.sha256(request),
+      attachment_count:attachments.length,attachment_bytes:complete?attachments.reduce((n,f)=>n+f.bytes,0):null,
+      attachments,inline_parts:inline,
+      size_advisory:{configured_bytes:maxRequestBytes,exceeded:maxRequestBytes===null?null:request.length>maxRequestBytes,provider_limit_inferred:false},
+      provider_acceptance:"not_observed"};
+  }
+  function preview(plan,options={}){
+    return inspectDraftArguments(draftArgs(plan),options);
+  }
+
   function mimeParts(p){return [p,...(p.parts||[]).flatMap(mimeParts)];}
   function inspectMessage(plan,message){
     assert(Array.isArray(message.label_ids)&&message.label_ids.includes("DRAFT")&&!message.label_ids.includes("SENT"),"MESSAGE_IS_NOT_UNSENT_DRAFT");
@@ -382,5 +455,5 @@ export function createNativeSourceTransfer({codec, call, journal, now = () => ne
     return {schema:SCHEMA,operation_id,link_id,account_email,message_id,state:"original_files_available",files:out,bytes_verified:out.every(x=>x.verified),recipient_materialization:"pending"};
   }
 
-  return {receiveExisting,prepare,start,advance,reconcileDraft,refreshOriginal,verifyOriginal,toNotion,reconcileNotionUpload,downloadNotion,inspectMessage,draftArgs,bodyResult};
+  return {receiveExisting,prepare,start,advance,reconcileDraft,refreshOriginal,verifyOriginal,toNotion,reconcileNotionUpload,downloadNotion,inspectMessage,draftArgs,preview,inspectDraftArguments,bodyResult};
 }
