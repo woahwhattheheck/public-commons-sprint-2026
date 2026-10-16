@@ -15,6 +15,7 @@ MAX_RECEIPT_BYTES = 1_000_000
 MAX_MODEL_IDENTITY_CHARS = 500
 MAX_FINDINGS = 12
 MIN_SUPPORT_SCORE = 0.16
+MIN_ASSERTIVE_SUPPORT_SCORE = 0.50
 
 _LINE_ID = re.compile(r"^E[0-9]{4}$")
 _FINDING_ID = re.compile(r"^F[0-9]{1,2}$")
@@ -184,6 +185,25 @@ def citation_support_score(claim: str, cited_text: str) -> float:
     return len(claim_tokens & evidence_tokens) / len(claim_tokens)
 
 
+# Recovered causal-overclaim screen. This is a conservative
+# lexical screen, not a proof of causation, negation handling, or entailment.
+_ASSERTIVE_CLAIM = re.compile(
+    r"\b(?:caus(?:e|ed|es|ing|al|ation)|root\s+cause|result(?:ed|s)?\s+in|led\s+to|due\s+to|because\s+of|"
+    r"trigger(?:ed|s)?|responsible\s+for|confirm(?:ed|s|ation)?|"
+    r"prov(?:e|ed|es|en)|demonstrat(?:e|ed|es)|establish(?:ed|es)?)\b", re.I,
+)
+
+
+def _assertion_support_failure(claim: str, support_lines: list[str], score: float) -> str | None:
+    if not _ASSERTIVE_CLAIM.search(claim):
+        return None
+    if not any(_ASSERTIVE_CLAIM.search(line) for line in support_lines):
+        return "causal or conclusive language is absent from cited evidence"
+    if score < MIN_ASSERTIVE_SUPPORT_SCORE:
+        return f"causal or conclusive evidence support {score:.2f} below {MIN_ASSERTIVE_SUPPORT_SCORE:.2f}"
+    return None
+
+
 def _validate_investigator(payload: Any, evidence: EvidenceDocument) -> dict[str, Any]:
     root = _require_object(payload, "investigator result")
     _exact_keys(root, {"schema", "evidence_sha256", "summary", "findings"}, "investigator result")
@@ -323,6 +343,11 @@ def analyze(text: str, model: ModelClient) -> dict[str, Any]:
             reasons.append("citations rely only on instruction-shaped evidence")
         if score < MIN_SUPPORT_SCORE:
             reasons.append(f"lexical evidence support {score:.2f} below {MIN_SUPPORT_SCORE:.2f}")
+        assertion_failure = None if missing else _assertion_support_failure(
+            finding["claim"], support_lines, score
+        )
+        if assertion_failure:
+            reasons.append(assertion_failure)
         if skeptic_verdict["status"] != "ACCEPT":
             reasons.append(f"skeptic rejected: {skeptic_verdict['reason']}")
         status = "PASS" if not reasons else "HOLD"
@@ -477,6 +502,11 @@ def _receipt_finding_valid(finding: Any, line_map: dict[str, str]) -> bool:
         reasons.append("citations rely only on instruction-shaped evidence")
     if score < MIN_SUPPORT_SCORE:
         reasons.append(f"lexical evidence support {score:.2f} below {MIN_SUPPORT_SCORE:.2f}")
+    assertion_failure = None if missing else _assertion_support_failure(
+        finding["claim"], support_lines, score
+    )
+    if assertion_failure:
+        reasons.append(assertion_failure)
     if skeptic["status"] != "ACCEPT":
         reasons.append(f"skeptic rejected: {skeptic['reason']}")
     expected_status = "PASS" if not reasons else "HOLD"
