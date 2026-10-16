@@ -1,0 +1,87 @@
+{
+  "evidence_boundary": {
+    "competition_submission": false,
+    "credentials": false,
+    "external_weights": false,
+    "medical_identifiers": false,
+    "provider_execution": false
+  },
+  "files": {
+    "DATA_CONTRACT.md": {
+      "bytes": 6321,
+      "sha256": "7d65d83ebc154d39ab8ce32694287dac0854a1cf79a1fcf72fbb0adfd0120f8c"
+    },
+    "DELIVERY_MANIFEST.json": {
+      "bytes": 2711,
+      "sha256": "9dfb0c617bb9301114370c4b4ec237b8017447dd6312a32a4f9b5c1f4b573a3c"
+    },
+    "DISPATCH_NOTES.md": {
+      "bytes": 1990,
+      "sha256": "ad24421b6bf15513f496822d9c1de08f095d351bbe214417d613b0873d6b498a"
+    },
+    "INFERENCE_RECEIVING.md": {
+      "bytes": 5339,
+      "sha256": "c7beaf68d52414d0f42cae1813499231bd88540247b233a99ac89b818d14d131"
+    },
+    "KAGGLE_SAVE_REQUEST.json": {
+      "bytes": 122060,
+      "sha256": "e6cadfaa7bb40249c44c8fbe0f0ce2ec50929a9e48fbab9b3bb37095fdd3114e"
+    },
+    "README.md": {
+      "bytes": 1694,
+      "sha256": "d9a76bd22a9d6fc6ee4d746bf0a5acb954404f23995685228236b41437f3269a"
+    },
+    "rsna_data.py": {
+      "bytes": 27899,
+      "sha256": "a7e14e03703e42933a92c2e17e89cc0236d785e8c43797226329219347175e03"
+    },
+    "rsna_image_model.py": {
+      "bytes": 11915,
+      "sha256": "0e694bbc533e8058bfc35f60c6d0bc3d59f34c3ea05e13dd641fadc64c9c46fa"
+    },
+    "rsna_infer.py": {
+      "bytes": 14031,
+      "sha256": "883f9d2b57c6466247cb6cbb150425c4703dd7c514648d181178d7222143e174"
+    },
+    "rsna_metrics.py": {
+      "bytes": 18683,
+      "sha256": "c73a18067c3d5bef421135d518f02bd6b6eff33189398fc3577bf51deda4e74f"
+    },
+    "rsna_offline_inference.ipynb": {
+      "bytes": 4332,
+      "sha256": "5b64fd450e642239d0dad1c1f2abec8246e3c19d2c0755d28adbd1e6bf00a71b"
+    },
+    "rsna_offline_training.ipynb": {
+      "bytes": 121180,
+      "sha256": "6a3db3dfdf1143fd80b7c8cfce9f375fc631c69f4b335bdb8f48cf4dc6328ad9"
+    },
+    "train_rsna.py": {
+      "bytes": 26384,
+      "sha256": "85641dd9f628e40c312621e1f7689c3221f48b760954e833690835671857a164"
+    }
+  },
+  "generated_utc_date": "2026-10-16",
+  "notebook": {
+    "code_cells_ast_validated": 4,
+    "embedded_source_sha256": {
+      "rsna_data.py": "a7e14e03703e42933a92c2e17e89cc0236d785e8c43797226329219347175e03",
+      "rsna_image_model.py": "0e694bbc533e8058bfc35f60c6d0bc3d59f34c3ea05e13dd641fadc64c9c46fa",
+      "rsna_metrics.py": "c73a18067c3d5bef421135d518f02bd6b6eff33189398fc3577bf51deda4e74f",
+      "train_rsna.py": "85641dd9f628e40c312621e1f7689c3221f48b760954e833690835671857a164"
+    },
+    "nbformat": 4
+  },
+  "operation_id": "ROOT-RSNA-EXISTING-MODEL-RUNNER-20261015-01",
+  "request": {
+    "competition_sources": [
+      "rsna-knee-abnormality-detection"
+    ],
+    "gpu": true,
+    "internet": false,
+    "machine_shape": "NvidiaTeslaT4",
+    "notebook_text_sha256": "394e7e3284ef900a4147309bb32f0a9c01889f5c1aa0c4ab53a17e6e6b4d859a",
+    "private": true,
+    "sha256": "e6cadfaa7bb40249c44c8fbe0f0ce2ec50929a9e48fbab9b3bb37095fdd3114e"
+  },
+  "schema_version": 1
+}

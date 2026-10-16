@@ -1,0 +1,56 @@
+{
+  "operation_id": "ROOT-RSNA-EXISTING-MODEL-RUNNER-20261015-01",
+  "state": "prepared_for_authorized_official_data_run",
+  "outcome": "Complete image-only RSNA Knee training, evaluation, and offline inference source package",
+  "competition": {
+    "id": 154281,
+    "slug": "rsna-knee-abnormality-detection",
+    "entrant": "tokenjunkielabs",
+    "entrant_user_id": 36520554,
+    "rules_accepted_at": "2026-10-14T12:51:15.161Z",
+    "final_submission_deadline": "2026-10-22T23:59:00Z"
+  },
+  "sources": [
+    {
+      "target": "slack:C0C1F274SGH/1791587823.459189",
+      "revision": "1792117225.459269"
+    },
+    {
+      "target": "https://www.kaggle.com/competitions/rsna-knee-abnormality-detection/overview",
+      "revision": "refreshed-2026-10-16"
+    },
+    {
+      "target": "https://www.kaggle.com/competitions/rsna-knee-abnormality-detection/overview/evaluation",
+      "revision": "refreshed-2026-10-16"
+    }
+  ],
+  "artifacts": [
+    {"name": "DATA_CONTRACT.md", "sha256": "7d65d83ebc154d39ab8ce32694287dac0854a1cf79a1fcf72fbb0adfd0120f8c"},
+    {"name": "INFERENCE_RECEIVING.md", "sha256": "c7beaf68d52414d0f42cae1813499231bd88540247b233a99ac89b818d14d131"},
+    {"name": "rsna_data.py", "sha256": "a7e14e03703e42933a92c2e17e89cc0236d785e8c43797226329219347175e03"},
+    {"name": "rsna_image_model.py", "sha256": "0e694bbc533e8058bfc35f60c6d0bc3d59f34c3ea05e13dd641fadc64c9c46fa"},
+    {"name": "rsna_infer.py", "sha256": "883f9d2b57c6466247cb6cbb150425c4703dd7c514648d181178d7222143e174"},
+    {"name": "rsna_metrics.py", "sha256": "c73a18067c3d5bef421135d518f02bd6b6eff33189398fc3577bf51deda4e74f"},
+    {"name": "rsna_offline_inference.ipynb", "sha256": "5b64fd450e642239d0dad1c1f2abec8246e3c19d2c0755d28adbd1e6bf00a71b"},
+    {"name": "train_rsna.py", "sha256": "85641dd9f628e40c312621e1f7689c3221f48b760954e833690835671857a164"}
+  ],
+  "accepted_validation": [
+    "All Python sources compile",
+    "Training and evaluation CLIs parse",
+    "Notebook contains four compilable code cells",
+    "Focused contract checks reject invalid provenance and partial submission output"
+  ],
+  "remaining": [
+    "Recover or establish current team ID and notebook version with the existing authenticated entrant operator",
+    "Run on the authorized official MRI mount with torch and pydicom",
+    "Retain real fold audit, metrics, trained checkpoint, runtime and submission receipts",
+    "Submit only through the existing entrant after preserving prior counted candidates"
+  ],
+  "facts_not_claimed": [
+    "patient-independent split without a verified patient mapping",
+    "trained weights",
+    "numeric local or official score",
+    "notebook run or submission ID",
+    "leaderboard rank"
+  ]
+}
