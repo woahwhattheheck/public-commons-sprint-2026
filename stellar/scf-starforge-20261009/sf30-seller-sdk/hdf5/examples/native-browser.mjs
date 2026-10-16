@@ -1,18 +1,46 @@
 // MIT. One actual original operator journey; published HDF Group values are unchanged.
 import {createRequire} from 'node:module';
-import {readFile,readlink,mkdir} from 'node:fs/promises';
+import {readFile,readlink,realpath,mkdir} from 'node:fs/promises';
+import {spawn} from 'node:child_process';
+import {createInterface} from 'node:readline';
+import {fileURLToPath} from 'node:url';
 import {join,resolve} from 'node:path';
 import {once} from 'node:events';
 import {randomUUID} from 'node:crypto';
 import {exact,json,privateDirectory,sha,verifiedFile} from '../custody.mjs';
 
-async function identity(pid){
- const raw=await readFile('/proc/'+pid+'/stat','utf8'),fields=raw.slice(raw.lastIndexOf(')')+2).split(' ');
- return {pid,startTicks:fields[19],pgid:Number(fields[2]),boot:(await readFile('/proc/sys/kernel/random/boot_id','utf8')).trim(),namespace:await readlink('/proc/'+pid+'/ns/pid')};
+async function identity(child,executable,python){
+ // pidfd_open uses the spawner's active namespace; its fdinfo identifies the
+ // same task in the mounted procfs view, without enumerating other processes.
+ const raw=await readFile('/proc/self/stat','utf8'),fields=raw.slice(raw.lastIndexOf(')')+2).trim().split(/\s+/);
+ const nspid=(await readFile('/proc/self/status','utf8')).split('\n').find(x=>x.startsWith('NSpid:')).split(':')[1].trim().split(/\s+/).map(Number);
+ const request={pid:child.pid,spawnerPid:process.pid,spawnerProcfsPid:Number(await readlink('/proc/self')),
+  spawnerStartTicks:fields[19],namespace:await readlink('/proc/self/ns/pid'),namespaceIndex:nspid.length-1,executable:await realpath(executable)};
+ if(nspid.at(-1)!==process.pid||child.exitCode!==null||child.signalCode!==null)throw new Error('The exact spawning Node/Chrome process is not live.');
+ const helper=spawn(python,['-B',fileURLToPath(new URL('./native-receiving.py',import.meta.url)),'--browser-identity',JSON.stringify(request)],{stdio:['pipe','pipe','pipe']});
+ const completion=once(helper,'close');let stderr='';helper.stderr.on('data',data=>{stderr=(stderr+data.toString()).slice(-8192);});
+ const reader=createInterface({input:helper.stdout}),lines=reader[Symbol.asyncIterator]();
+ let firstTimeout=setTimeout(()=>helper.kill('SIGTERM'),30000);firstTimeout.unref();
+ try{
+  const first=await lines.next();clearTimeout(firstTimeout);firstTimeout=null;
+  if(first.done)throw new Error('The exact Chrome identity helper ended before a bound pidfd observation: '+stderr);
+  const value=JSON.parse(first.value);
+  if(value.pid!==child.pid||value.spawner?.pid!==process.pid||value.spawner?.procfsPid!==request.spawnerProcfsPid||value.spawner?.startTicks!==request.spawnerStartTicks||value.namespace!==request.namespace||value.executable!==request.executable||value.ownershipProof!=='held-pidfd-and-exact-spawner'||child.exitCode!==null||child.signalCode!==null)
+   throw new Error('The held-pidfd observation differs from the exact original Chrome child.');
+  return {value,async closed(){
+   helper.stdin.end('closed\n');const proof=await lines.next(),outcome=await completion;reader.close();
+   if(proof.done||outcome[0]!==0||outcome[1])throw new Error('Exact Chrome pidfd helper has no normal closure: '+stderr);
+   const closure=JSON.parse(proof.value);
+   if(closure.pidfdTerminated!==true||closure.pid!==value.pid||closure.procfsPid!==value.procfsPid||closure.startTicks!==value.startTicks)throw new Error('Held-pidfd closure identifies another Chrome.');
+   return {...closure,helperExitCode:outcome[0]};
+  }};
+ }catch(error){
+  clearTimeout(firstTimeout);helper.stdin.end();await completion;reader.close();throw error;
+ }
 }
 export async function browserJourney({server,root,attempt,intentSha256,editions,imported,arrays,deliveries,playwrightModule,chromiumExecutable,signal}){
  const playwright=playwrightModule?createRequire(import.meta.url)(resolve(playwrightModule)):await import('playwright');
- let browserServer,browser,context;const errors=[],screens=[],browserAttempt=randomUUID();
+ let browserServer,browser,context,browserIdentity,ownerSha256;const errors=[],screens=[],browserAttempt=randomUUID();
  const output=await privateDirectory(join(root,'browser',browserAttempt),{create:true});
  const owners=await privateDirectory(join(root,'browser-owners'),{create:true});
  const abort=()=>{void browserServer?.close().catch(()=>{});};signal.addEventListener('abort',abort,{once:true});
@@ -20,10 +48,11 @@ export async function browserJourney({server,root,attempt,intentSha256,editions,
   signal.throwIfAborted();
   browserServer=await playwright.chromium.launchServer({headless:true,...(chromiumExecutable?{executablePath:resolve(chromiumExecutable)}:{}),
     args:['--disable-dev-shm-usage',...(process.getuid?.()===0?['--no-sandbox']:[])]});
-  const child=browserServer.process(),owned=await identity(child.pid);
+  const child=browserServer.process();browserIdentity=await identity(child,chromiumExecutable?resolve(chromiumExecutable):playwright.chromium.executablePath(),server.workbench.configuration.python);const owned=browserIdentity.value;
   if(owned.pid!==owned.pgid)throw new Error('The actual owned Chromium process is not its recorded group leader.');
-  await exact(join(owners,browserAttempt+'.json'),json({schema:'stellar-forge.hdf5-browser-owner.v1',directory:root,intentSha256,
-    attempt:browserAttempt,journeyAttempt:attempt,identity:owned}));
+  const ownerBytes=json({schema:'stellar-forge.hdf5-browser-owner.v1',directory:root,intentSha256,
+    attempt:browserAttempt,journeyAttempt:attempt,identity:owned});
+  await exact(join(owners,browserAttempt+'.json'),ownerBytes);ownerSha256=sha(ownerBytes);
   signal.throwIfAborted();
   browser=await playwright.chromium.connect(browserServer.wsEndpoint());
   context=await browser.newContext({viewport:{width:1440,height:1000},acceptDownloads:true});
@@ -80,7 +109,7 @@ export async function browserJourney({server,root,attempt,intentSha256,editions,
   if(delivered.archive.sha256!==deliveries.gzip.archive.sha256)throw new Error('The actual operator exported different selected source bytes.');
   const url=server.origin+'/api/artifact?delivery='+exportOperation;
   const head=await fetch(url,{method:'HEAD',headers:{authorization:'Bearer '+server.token},signal});
-  if(!head.ok()||Number(head.headers.get('content-length'))!==delivered.archive.bytes)throw new Error('Original operator HEAD differs from retained packet.');
+  if(!head.ok||Number(head.headers.get('content-length'))!==delivered.archive.bytes)throw new Error('Original operator HEAD differs from retained packet.');
   const ranged=await fetch(url,{headers:{authorization:'Bearer '+server.token,range:'bytes=0-1023'},signal});
   const bytes=Buffer.from(await ranged.arrayBuffer());
   const original=await verifiedFile(delivered.path,delivered.archive);
@@ -132,6 +161,14 @@ export async function browserJourney({server,root,attempt,intentSha256,editions,
  }finally{
   signal.removeEventListener('abort',abort);
   const closed=[];for(const owner of [context,browser,browserServer])if(owner)try{await owner.close();}catch(error){closed.push(error);}
+  if(browserIdentity)try{
+   const proof=await browserIdentity.closed();
+   if(ownerSha256){
+    const closures=await privateDirectory(join(root,'browser-closures'),{create:true});
+    await exact(join(closures,browserAttempt+'.json'),json({schema:'stellar-forge.hdf5-browser-closure.v1',directory:root,intentSha256,
+     attempt:browserAttempt,ownerSha256,...proof}));
+   }
+  }catch(error){closed.push(error);}
   if(closed.length)throw new AggregateError(closed,'The original browser owners did not all close normally.');
  }
 }
