@@ -73,6 +73,54 @@ function sameExpression(left, right) {
   catch (_) { return false; }
 }
 
+/** Compile documented channel mentions without resolving or broadening scope.
+ * Call before starting a cursor chain and retain both original and wire args.
+ * A cursor already obtained under another expression cannot be transplanted.
+ */
+function normalizeSlackSearchChannelScopes(originalArgs) {
+  record(originalArgs, 'original search arguments');
+  const args = clone(originalArgs), changes = [];
+  for (const field of ['query', 'filters']) {
+    if (args[field] === undefined) continue;
+    if (typeof args[field] !== 'string' || args[field].includes('\0')) {
+      fail('SEARCH_SCOPE_INVALID', field + ' must be a string without NUL');
+    }
+    if (!args[field].trim()) continue;
+    queryTokens(args[field]); // Validate complete quotes/escapes first.
+    const value = args[field];
+    let start = 0, quoted = false, escaped = false, out = '';
+    const append = end => {
+      const token = value.slice(start, end);
+      const match = /^in:([CG][A-Z0-9]{1,127})$/.exec(token);
+      if (match) {
+        const replacement = 'in:<#' + match[1] + '>';
+        changes.push({field, start, end, channel_id: match[1],
+          original: token, normalized: replacement});
+        out += replacement;
+      } else out += token;
+    };
+    for (let i = 0; i < value.length; i++) {
+      const ch = value[i];
+      if (escaped) { escaped = false; continue; }
+      if (ch === '\\') { escaped = true; continue; }
+      if (ch === '"') { quoted = !quoted; continue; }
+      if (!quoted && /\s/u.test(ch)) {
+        append(i); out += ch; start = i + 1;
+      }
+    }
+    append(value.length);
+    args[field] = out;
+  }
+  if (changes.length && args.cursor !== undefined) {
+    fail('SEARCH_CHANNEL_CURSOR_RESTART_REQUIRED',
+      'Retain the existing cursor chain. Normalize channel IDs only in an explicit fresh search request.',
+      {changes, cursor_preserved: args.cursor});
+  }
+  return {schema: 'commons.slack_search_channel_scope/v1',
+    original_args: clone(originalArgs), args, changes,
+    scope: 'same_literal_channel_identity', native_calls: 0};
+}
+
 function structuredIntent(args) {
   const keywords = args.keywords === undefined ? [] : args.keywords;
   if (!Array.isArray(keywords) || keywords.some(word => typeof word !== 'string')) {
@@ -134,7 +182,8 @@ function describeSlackSearchContract(contract, expectedName) {
 /** Compile one original intent without adding a field absent from fresh discovery. */
 function compileSlackSearchArgs(originalArgs, contract, expectedName) {
   record(originalArgs, 'original search arguments');
-  const args = clone(originalArgs);
+  const normalized = normalizeSlackSearchChannelScopes(originalArgs);
+  const args = normalized.args;
   const described = describeSlackSearchContract(contract, expectedName);
   const supports = key => own(described.properties, key);
   let intent = structuredIntent(args);
@@ -197,7 +246,8 @@ function compileSlackSearchArgs(originalArgs, contract, expectedName) {
   for (const key of described.required) {
     if (!own(result, key)) fail('SEARCH_ARGUMENT_REQUIRED', 'Fresh discovery requires field: ' + key);
   }
-  return {tool_name: expectedName, args: clone(result), original_args: args,
+  return {tool_name: expectedName, args: clone(result), original_args: clone(originalArgs),
+    channel_scope: normalized,
     expected_query: intent.expression, contract_signature: described.signature};
 }
 
@@ -367,5 +417,5 @@ function planSlackSearchScopeContinuation(failedResponse, freshContract) {
 }
 
 module.exports = {SEARCH_BINDINGS, SlackSearchScopeError, describeSlackSearchContract,
-  compileSlackSearchArgs, inspectSlackSearchScope, createScopeCheckedSlackTools,
+  normalizeSlackSearchChannelScopes, compileSlackSearchArgs, inspectSlackSearchScope, createScopeCheckedSlackTools,
   planSlackSearchScopeContinuation};

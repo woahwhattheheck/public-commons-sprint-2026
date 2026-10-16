@@ -1,11 +1,12 @@
 {
   "schema": "commons.connected_slack_thread_source/v1",
-  "edition": "2026-10-13-direction-2",
+  "edition": "2026-10-16-channel-scope-adoption",
   "runtime_paths": [
     "host/connected_slack_pages.cjs",
     "host/connected_slack_thread_intake.cjs",
     "host/connected_slack_publish.cjs",
-    "host/connected_slack_native_envelope.cjs"
+    "host/connected_slack_native_envelope.cjs",
+    "host/connected_slack_search_scope.cjs"
   ],
   "files": [
     {
@@ -35,13 +36,23 @@
     },
     {
       "path": "host/CONNECTED_SLACK_THREAD_RECOVERY.md",
-      "bytes": 8593,
-      "sha256": "3d9ce8f0282784bd84be9166093e17e15109387e917fd547205a3e631def6327"
+      "bytes": 9042,
+      "sha256": "7459c13a59ce23e09a1c3a28a1ee1534578ee959b38a72670af045740f8571dc"
     },
     {
       "path": "host/CONNECTED_SLACK_THREAD_INTAKE.md",
       "bytes": 23194,
       "sha256": "566a835c2e9e7a6b8d7c9bdc22cf5ab49825e59d0065b4c82f3b98a3b4f2de3f"
+    },
+    {
+      "path": "host/connected_slack_search_scope.cjs",
+      "bytes": 20696,
+      "sha256": "f220ea8ac1d8b9b19b8e94806e56df60d75c77bab2ee342b18a61ed96e55a0fe"
+    },
+    {
+      "path": "host/CONNECTED_SLACK_SEARCH_SCOPE.md",
+      "bytes": 10704,
+      "sha256": "c04b5a5a4434cd9e14d8fe4ab834924439893f2667c3dc5351418119c0d7ed37"
     }
   ],
   "optional_source_helpers": [
@@ -61,7 +72,8 @@
   "provenance": {
     "implementation": "Maintained Commons Slack reader/intake",
     "direction_revision": "ES-9960 revision 2",
-    "public_adoption": "ASTRA13; neutral declared/rendered-cap reproduction and public runtime closure"
+    "public_adoption": "ASTRA13; neutral declared/rendered-cap reproduction and public runtime closure",
+    "channel_scope_adoption": "Existing SEARCH-SCOPE-7E9C continuation; literal channel mention normalization and current-thread consumer guidance"
   },
   "private_runtime_data": "Captures, bookmarks, source identities and messages belong to the original private caller operation; they are not distributed."
 }

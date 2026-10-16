@@ -57,6 +57,12 @@ await persistReceiving(received);
 ```
 
 Omit either time selector when it is not part of the original requested window.
+Keep decimal strings; a whole-second string is rejected before dispatch.
+The observed connector excludes a reply exactly equal to `latest`. If an
+explicitly selected inclusive endpoint is needed, retain that message identity
+and choose the later decimal boundary deliberately. Do not relabel an old
+integer request or assume that a provider END includes a boundary-equal reply.
+The existing continuation arithmetic already uses an overlapping tick.
 A per-call page/time budget permits resumption of that same operation; it does
 not silently shorten the selected window. `known_message_ts` is optional and
 contains at most 1,000 distinct original reply identities in that same window.
