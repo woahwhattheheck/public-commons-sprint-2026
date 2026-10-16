@@ -44,12 +44,16 @@ function applyBusy(){
 function valueText(value){return value===null?'null':value===undefined?'—':typeof value==='object'?pretty(value):String(value);}
 function facts(object,keys){return keys.map(key=>'<dt>'+esc(key.replaceAll('_',' '))+'</dt><dd>'+esc(valueText(object?.[key]))+'</dd>').join('');}
 function badge(value){const text=String(value??'—'),kind=/FAILED|INVALID|REJECTED|ERROR/.test(text)?'error':/UNKNOWN|PENDING|QUEUED|RUNNING|PROCESSING|PREPARED|DEFERRED|AUTHENTICATION_REQUIRED|ELIGIBILITY_REVIEW|NEEDS_REPLAN|DUPLICATE_REVIEW|INTERRUPTED|INCOMPLETE_ROWS/.test(text)?'warning':'neutral';return '<span class="badge '+kind+'">'+esc(text)+'</span>';}
+function cell(value){
+ if(value!==null&&typeof value==='object')return '<details><summary>View '+(Array.isArray(value)?value.length+' entries':'structured value')+'</summary><pre>'+esc(pretty(value))+'</pre></details>';
+ return esc(valueText(value));
+}
 function table(items,{columns,select,selected,empty='No retained records in this page.'}={}){
  if(!items.length)return '<div class="empty">'+esc(empty)+'</div>';
  const keys=columns??[...new Set(items.flatMap(item=>Object.keys(item??{})))].slice(0,9);
  return '<div class="table-scroll"><table><thead><tr>'+keys.map(k=>'<th>'+esc(k.replaceAll('_',' '))+'</th>').join('')+'<th>Original record</th></tr></thead><tbody>'+items.map((row,index)=>{
   const id=row.id??row.sha256??row.job_id??'',mark=id===selected?' class="selected"':'';
-  return '<tr'+mark+'>'+keys.map(k=>'<td>'+(k==='status'?badge(row[k]):esc(valueText(row[k])))+'</td>').join('')+'<td>'+(select&&id?'<button class="button small" data-select="'+esc(select)+'" data-id="'+esc(id)+'">Inspect</button>':'<details><summary>View full record</summary><pre>'+esc(pretty(row))+'</pre></details>')+'</td></tr>';
+  return '<tr'+mark+'>'+keys.map(k=>'<td>'+(k==='status'?badge(row[k]):cell(row[k]))+'</td>').join('')+'<td>'+(select&&id?'<button class="button small" data-select="'+esc(select)+'" data-id="'+esc(id)+'">Inspect</button>':'<details><summary>View full record</summary><pre>'+esc(pretty(row))+'</pre></details>')+'</td></tr>';
  }).join('')+'</tbody></table></div>';
 }
 function listReply(reply){if(!reply||!Array.isArray(reply.items)||!Number.isSafeInteger(reply.total))throw new Error('The original paged response must contain items and total.');return reply;}
