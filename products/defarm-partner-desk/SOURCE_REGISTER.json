@@ -19,7 +19,7 @@
       ]
     }
   ],
-  "authored": "core.mjs, server.mjs, app.mjs, index.html, style.css, receive-case.mjs and this application's packaging/guides, source-reader.mjs, sha256.mjs, offline-build.mjs, offline-app.mjs, offline-recipient.mjs, recipient.html and OFFLINE_RECIPIENT.md",
+  "authored": "core.mjs, server.mjs, app.mjs, case-receiving.mjs, index.html, style.css, receive-case.mjs and this application's packaging/guides, source-reader.mjs, sha256.mjs, offline-build.mjs, offline-app.mjs, offline-recipient.mjs, recipient.html and OFFLINE_RECIPIENT.md",
   "gateway_contract": {
     "ingest": "Original DefarmClient.ingest(items, {preview}) with unchanged JSON {items} and X-API-Key",
     "verify": "Original DefarmClient.verify(dfid), public aggregator",
@@ -30,5 +30,10 @@
     "core": "Unchanged original importCase/report and complete package text",
     "reader": "Shared complete-row source view; separate package-bound recipient review",
     "gateway": "No network or gateway action in standalone recipient"
+  },
+  "desktop_receiving": {
+    "original_utf8": "Strict file decoding and exact original-package-text envelope; original outer BOM and whitespace retained",
+    "publication": "Received-original content identity retained before working-case publication; replay preserves current local history",
+    "readback": "Separate received-original download and current complete-case export"
   }
 }
