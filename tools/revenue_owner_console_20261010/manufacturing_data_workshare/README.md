@@ -30,7 +30,7 @@ node build.mjs /absolute/new/output-directory
 
 An optional second argument is a JSON configuration file containing `title`, `workspaceId`, `storageKey`, `introduction` and `unitHelp`. Customer-specific configuration and operational data belong in the authorized private delivery. The reusable source contains no customer operational records.
 
-The build creates one self-contained `data-desk.html`, four header-only CSV templates and a source/output manifest. Open the HTML attachment in a normal browser, enable JavaScript, then use its controls. It runs without a server, network service or ERP connection. The embedded module sources are exact UTF-8 data URLs. A restrictive document-preview sandbox may disable module execution or downloads; download and open the complete HTML in the receiving browser.
+The build creates one self-contained `data-desk.html`, four header-only CSV templates and a source/output manifest. Open the HTML attachment in a normal browser, enable JavaScript, then use its controls. It runs without a server, network service or ERP connection. The bundle embeds the complete core, comparison and controller once in one inline module script, preserving their exported bindings without nested base64 copies. A restrictive document-preview sandbox may disable module execution or downloads; download and open the complete HTML in the receiving browser.
 
 The writer creates new files or reuses identical files and refuses to replace a different completed edition. Use a new output directory for a changed build.
 
