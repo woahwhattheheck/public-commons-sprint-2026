@@ -1,0 +1,10 @@
+private/
+out/
+live-*.jsonl
+*.sqlite3
+*.sqlite3-shm
+*.sqlite3-wal
+*.resume.json
+*.rendered.html
+__pycache__/
+*.pyc
