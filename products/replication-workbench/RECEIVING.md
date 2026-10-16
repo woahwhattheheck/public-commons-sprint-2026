@@ -165,3 +165,24 @@ This inspection is part of delivery and leads directly to concrete repairs. It m
 Persist this rule in every active owner-controlled instruction surface that the provider and workers actually read: global/project AGENTS, CLAUDE, GEMINI and rules files, provider boot instructions, Commons source mirrors, cloud repository instruction copies, and current build/receiving guides. Include it in child assignments. Preserve other owner controls, historical evidence and third-party/vendor instructions. Do not force restarts, add watchers or restart owner-stopped work. Existing project-specific owner cutoffs remain in force.
 
 Bryce's placement instruction: “that rule goes in every policy file the agents read not just a slack ping” and “and not just local sessions or ones from this provider”. Original coordination transport: https://tokenjunkielabs.slack.com/archives/C0BU51F1PL3/p1791881496221999 .
+
+
+## Independent closure of retained owners
+
+The public receiving course retains each launch’s exact application, review and request IDs. It journals selected, dispatching and entered states around the original Start call. A selected launch that is still absent from Applications can close as cancelled before dispatch. An uncertain dispatch reopens the exact original Start request before requesting its Stop.
+
+Each host saves an immutable closure proof before marking its journal entry closed. The proof is either the exact CANCELLED, launched:false application cancellation receipt or an inactive SUCCEEDED result with a dated original-command outcome and positive process closure. A LAUNCH_FAILED outcome additionally requires the maintained managed-command-closure.v1 record confirming child and observer closure. Pending, queued, interrupted and unavailable observations retain the original owner.
+
+Whole-course close starts each retained application drain and the agent manager’s cleanup independently. Concurrent callers join one drain. The original lease remains held through every owner and the final durable journal snapshot. Operation writes are ordered; lost proof acknowledgements reopen the existing proof, and a final journal outage retries without another native Stop.
+
+The public Applications connection boundary remains release plus connectionReady:true. This is the public contract; use the complete selected public runtime rather than mixing an older public command runner with a newer receiver. The selected current public source includes managed-command.mjs with explicit child/observer closure, application-provider.mjs with closeResult(), application-command.mjs and managed-result.mjs under stellar/scf-starforge-20261009/distribution/runtime-workspace/. The original public runtimeWorkspaceError result shape is preserved.
+
+Build the complete replication-workbench distribution from the immutable source commit containing this receiver and those current runtime dependencies. Retain its actual manifest/runtime-ready identities. Source adoption follows the existing receiving operation contract; preserve the historical source selection and all already completed native phases.
+
+For the focused source-level closure course, from the repository root run:
+
+~~~sh
+node products/replication-workbench/receiving-owner-closure-course-cli.mjs
+~~~
+
+The course executes the complete production receiver class through explicit filesystem, Applications and deferred-owner adapters. It covers independent drain, exact proof replay, original selected and uncertain dispatches, ordered writes and a final journal outage. Continue the original equipped native/browser course for process execution and the rendered-product inspection specified above.
