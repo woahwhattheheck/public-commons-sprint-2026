@@ -158,7 +158,7 @@ async function coldReceive(page,root,bundle,selected){
  const source=await api(page,'/api/workspace/record?id='+selected.source.id),week=await api(page,'/api/workspace/record?id='+selected.week.id),review=await api(page,'/api/workspace/record?id='+selected.review.id);
  need(same(source,selected.source)&&same(week,selected.week)&&same(review,selected.review),'Cold received energy source/plan/review identities differ.');inspectEnergyReview(review.detail.review,source,week);
  await keep(directory,'Received_Record_Identities.json',json({household:state.workspace.selectedId,source:source.sha256,week:week.sha256,review:review.sha256,origin:received.payload.household.origin}));
- await open(page,new URL(page.url()).origin);await exported(page,directory,review,source,week);
+ await open(page,new URL(page.url()).origin);await page.locator('#reload').click();await idle(page);await exported(page,directory,review,source,week);
  return{household_id:state.workspace.selectedId,source_id:source.id,week_id:week.id,review_id:review.id};
 }
 export async function receiveEnergyReview({page,receivingPage,source,weekId,title,note='',output,operationId,applicationPacket,sourceCompanions=[],authoredWeek=null}){
