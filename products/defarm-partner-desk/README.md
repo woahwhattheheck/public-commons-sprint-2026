@@ -43,7 +43,9 @@ The HTML report contains original source identity, selected request identity, al
 
 ## Receive and reopen
 
-The browser's Receive a complete case action verifies the whole package and every declared source/request/response identity, saves the original package unchanged, retains its complete operation history, and opens the selected case. It does not repeat an ingestion. If a differing history for that identity already exists, use a separate workspace directory so both originals remain available.
+The browser's Receive a complete case action reads strict UTF-8, retains the exact original package text including its byte-order mark and whitespace, verifies the complete case and its declared source/request/response identities, and opens a local working edition. It saves the first received package unchanged and retains each admitted original wrapper under its SHA256. Download received original retrieves that first exact file; Download complete case exports the current working history.
+
+Receiving the same original again preserves later local notes, operations and revision. An interruption after original-file retention resumes the missing local receipt once, including when an identical local case already existed; it preserves any local work recorded before retry. Receiving never repeats an ingestion. A different case history for that identity requires a separate workspace directory so both originals remain available. Existing API callers that submit a parsed package object remain supported; exact outer-file bytes are available when callers use the original-text receiving envelope.
 
 For a file-only recipient:
 

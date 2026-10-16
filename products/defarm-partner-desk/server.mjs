@@ -5,6 +5,7 @@ import {resolve,join,dirname} from "node:path";
 import {fileURLToPath} from "node:url";
 import {hostname} from "node:os";
 import * as core from "./core.mjs";
+import {decodeReceivedCase,receiveCaseState,ORIGINAL_TEXT_SCHEMA} from "./case-receiving.mjs";
 import {recipientHTML} from "./offline-recipient.mjs";
 const hash=text=>createHash("sha256").update(text).digest("hex"),now=()=>new Date().toISOString();
 const root=resolve(process.env.DEFARM_DESK_DIR||"./partner-workspace");
@@ -93,24 +94,34 @@ const server=http.createServer(async(req,res)=>{try{
   return await exclusive(c.id,async()=>{try{const prior=await get(c.id);return reply(res,200,prior);}catch(e){if(e.code!=="ENOENT")throw e;}await save(c);reply(res,201,c);});
  }
  if(req.method==="POST"&&path==="/api/import"){
-  const pkg=await body(req),original=core.importCase(pkg,hash);
+  const selected=decodeReceivedCase(await body(req),hash),original=selected.original;
   return await exclusive(original.id,async()=>{
    const packagePath=join(root,"cases",original.id+".received-package.json");
-   let priorPackage=null;
-   try{priorPackage=JSON.parse(await readFile(packagePath,"utf8"));core.importCase(priorPackage,hash);core.need(priorPackage.case_sha256===pkg.case_sha256&&priorPackage.case_text===pkg.case_text,"A different incoming edition is already retained; receive into a separate workspace");}catch(e){if(e.code!=="ENOENT")throw e;}
-   try{const existing=await get(original.id);if(priorPackage)return reply(res,200,existing);core.need(JSON.stringify(existing)===JSON.stringify(original),"An existing case has different history; receive into a fresh desk directory to preserve both");return reply(res,200,existing);}catch(e){if(e.code!=="ENOENT")throw e;}
-   if(!priorPackage)await atomic(packagePath,JSON.stringify(pkg,null,2)+"\n");
-   const c=core.interrupted(original,now(),hash);c.notes.push({at:now(),kind:"received",original_package_sha256:pkg.case_sha256});
-   // A previous preview belongs to its original host/key. A fresh local preview is required.
-   for(const e of c.events)delete e.execution_scope;
-   if(!c.events.some(e=>e.kind==="commit"||e.kind==="reconcile"))c.state="draft";
-   c.revision++;await save(c);return reply(res,201,c);
+   let previousPackageText=null,current=null;
+   try{previousPackageText=new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(await readFile(packagePath));}
+   catch(e){if(e.code!=="ENOENT")throw e;}
+   try{current=await get(original.id);}catch(e){if(e.code!=="ENOENT")throw e;}
+   const received=receiveCaseState(selected,{previousPackageText,current,at:now()},hash);
+   // Retain every admitted original text independently; wrapper whitespace and
+   // the original BOM remain available even when the same case body is replayed.
+   const exactPath=join(root,"cases",original.id+".received-original-"+selected.sha256+".json");
+   try{const retained=await readFile(exactPath);core.need(retained.length===selected.bytes&&hash(retained)===selected.sha256,"The retained received original changed");}
+   catch(e){if(e.code!=="ENOENT")throw e;await atomic(exactPath,selected.text);}
+   if(previousPackageText===null)await atomic(packagePath,selected.text);
+   if(received.replayed)return reply(res,200,received.case);
+   await save(received.case);return reply(res,201,received.case);
   });
  }
  const match=path.match(/^\/api\/cases\/([a-f0-9]{64})(?:\/([a-z-]+))?$/);
  if(match){
   const[,id,action]=match;
   if(req.method==="GET"&&!action)return reply(res,200,await get(id));
+  if(req.method==="GET"&&action==="received"){
+   const originalText=new TextDecoder("utf-8",{fatal:true,ignoreBOM:true}).decode(await readFile(join(root,"cases",id+".received-package.json")));
+   const selected=decodeReceivedCase({schema:ORIGINAL_TEXT_SCHEMA,original_package_text:originalText},hash);
+   core.need(selected.original.id===id,"Received original belongs to another case");
+   return reply(res,200,{schema:ORIGINAL_TEXT_SCHEMA,original_package_text:originalText,bytes:selected.bytes,sha256:selected.sha256});
+  }
   if(req.method==="GET"&&action==="export")return reply(res,200,core.exportCase(await get(id),hash,now()));
   if(req.method==="GET"&&action==="offline"){const c=await get(id);return reply(res,200,await recipientHTML(JSON.stringify(core.exportCase(c,hash,now()),null,2)+"\n"),"text/html");}
   if(req.method==="GET"&&action==="report"){res.setHeader("Content-Security-Policy","default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'self'");return reply(res,200,core.report(await get(id)),"text/html");}
