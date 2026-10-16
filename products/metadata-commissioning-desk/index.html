@@ -1,0 +1,10 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Metadata Commissioning Desk</title><link rel="stylesheet" href="style.css"></head>
+<body><header><p class="eyebrow">TokenJunkie Labs · Implementation and handover</p><h1>Metadata Commissioning Desk</h1><p>Review complete DataHub source and target observations, prepare exact aspect changes, and carry the original work through receiving.</p></header>
+<main><label>Project name<input id="project-title"></label><div class="toolbar"><button id="new">New project</button><button id="open-browser">Open saved project</button><button id="save">Save browser copy</button><button id="download">Download full workspace</button></div>
+<div class="import-grid"><label>Import source or target observation<input id="import-observation" type="file" accept=".json,application/json"></label><label>Import complete native run<input id="import-run" type="file" accept=".json,application/json"></label><label>Open complete workspace<input id="open-workspace" type="file" accept=".json,application/json"></label></div>
+<p id="status" role="status" aria-live="polite">New project ready. Import your complete source and target observations.</p>
+<nav id="tabs" aria-label="Workspace"><button data-tab="overview">Overview</button><button data-tab="snapshots">Sources</button><button data-tab="compare">Compare</button><button data-tab="changes">Changes</button><button data-tab="runs">Native runs</button><button data-tab="handover">Handover</button></nav><div id="content"></div>
+<dialog id="browser-dialog"><h2>Saved projects</h2><div id="browser-list"></div><button id="close-dialog">Close</button></dialog>
+</main><footer>Exact incoming files remain with the project. The native helper runs the selected DataHub operation.</footer>
+<script src="sha256.js"></script><script src="model.js"></script><script src="app.js"></script></body></html>

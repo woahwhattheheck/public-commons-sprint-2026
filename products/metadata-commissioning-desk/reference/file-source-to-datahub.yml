@@ -1,0 +1,10 @@
+# Copy privately and select the approved complete source and existing GMS.
+source:
+  type: file
+  config:
+    path: /absolute/original-source.json
+sink:
+  type: datahub-rest
+  config:
+    server: https://GMS_HOST
+    token: ${DATAHUB_HANDOVER_TOKEN}

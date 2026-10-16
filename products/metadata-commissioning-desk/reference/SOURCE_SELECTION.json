@@ -1,0 +1,70 @@
+{
+  "schema": "tjl.datahub.source-selection.v1",
+  "upstream_repository": "https://github.com/datahub-project/datahub",
+  "source_review_commit": "b385ec5261cac18752da413f0e891def401f65df",
+  "fixture": {
+    "path": "metadata-ingestion/examples/mce_files/bootstrap_mce.json",
+    "git_blob": "b584e5419a79cda6e54c308ab7193e33ce1e3dfe",
+    "records": 103,
+    "raw_aspects": 213,
+    "bytes": 156267,
+    "sha256": "69293e0ad47be06bb0a7e6d25ccdc83c726aed0551459a621dc405e446038340"
+  },
+  "contracts": [
+    {
+      "path": "metadata-ingestion/src/datahub/ingestion/source/file.py",
+      "git_blob": "62949fa2ef86932909b1e8d8254804700869f838",
+      "bytes": 16406,
+      "sha256": "59b8827a8cbec31e172081f1e509f74d9159faed5114857f96acffece6623153"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/emitter/mce_builder.py",
+      "git_blob": "80fdbe5f3515c5b9b17fb308dab0e1909118c9b4",
+      "bytes": 18625,
+      "sha256": "f8900b970750be7af5af24c75f711a02af0c2ee232e25bee8c30b455daaccc3a"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/ingestion/sink/file.py",
+      "git_blob": "0ae7453ad6ffec6b265861e8931c90dc366d2da9",
+      "bytes": 4870,
+      "sha256": "afa53bf45c8a69babc3ea875925fb69be3d1dabc9f5baff65f00a887f485020c"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/emitter/serialization_helper.py",
+      "git_blob": "ab9402ec8918874ccd0665686e40659d440258af",
+      "bytes": 3652,
+      "sha256": "ab5d80be67fbd15cb8b6d406309a132a513912cc9b30a360db0dcc41e6621ef9"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/emitter/mcp.py",
+      "git_blob": "12ca39d13691ad7ad1f46ea81d2159294c6ecc5c",
+      "bytes": 10484,
+      "sha256": "bba2e98728696dd16a6e84c02fff4ccd78468dce39a3f05e3e80c5064104616a"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/ingestion/graph/client.py",
+      "git_blob": "74568f7c23afd951dbac51931ea0d82795066d05",
+      "bytes": 91919,
+      "sha256": "8234895f2c3d8257001582dfd195462fbd770b297f1f40bc7b606f0d81ca2ac1"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/emitter/rest_emitter.py",
+      "git_blob": "25f6f2434bc2e55616b2d4d258a74fc08cbf6955",
+      "bytes": 55874,
+      "sha256": "4c31bbd6dd0411793b3e490020c4dea5d46a42c392223d3330f9828db8c17957"
+    },
+    {
+      "path": "metadata-ingestion/src/datahub/emitter/aspect.py",
+      "git_blob": "0be2b3336980cb51008a1b6b5471bc2de15956a3",
+      "bytes": 480,
+      "sha256": "79fd0357272a83eb513eeae462373ee7392798b3f6a766364713f9e5692f0047"
+    }
+  ],
+  "runtime": {
+    "core": "v1.7.0.1",
+    "core_commit": "e99431ec510d7a2001f815c6bf70913c493af76e",
+    "sdk": "1.7.0.14",
+    "wheel_sha256": "ed2b1d2c8d75dbef8840a0e878ca2c6c20d4d4af3ce7c92714a541576eb04c58",
+    "sdist_sha256": "4956e380d7c745d93092a0c0db75cf3ff1d3d62c93198a88a1a3487e2f451c58"
+  }
+}

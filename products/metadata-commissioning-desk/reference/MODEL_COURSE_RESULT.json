@@ -1,0 +1,18 @@
+{
+  "schema": "tjl.datahub.model-course.v1",
+  "fixture_records": 103,
+  "selected_original_urn": "urn:li:dataset:(urn:li:dataPlatform:kafka,SampleKafkaDataset,PROD)",
+  "findings": [
+    "Exact original aspect retained",
+    "Large integer and decimal tokens distinct",
+    "Duplicate keys rejected",
+    "Object key order ignored",
+    "Proposal bound to original target",
+    "Fresh revert retains original values",
+    "New comparison needs its own decisions",
+    "Named restore retains full displaced work",
+    "Complete reopen retains unfinished writing"
+  ],
+  "observations_are_authored": true,
+  "native_requests": 0
+}
