@@ -9,7 +9,7 @@ const here=path.dirname(fileURLToPath(import.meta.url));
 const entries=new Map([
  ['/',['desk.html','text/html; charset=utf-8']],
  ['/desk.html',['desk.html','text/html; charset=utf-8']],
- ...['desk.mjs','case-source.mjs','source-json.mjs','case-report.mjs'].map(n=>['/'+n,[n,'text/javascript; charset=utf-8']]),
+ ...['desk.mjs','case-source.mjs','source-json.mjs','case-report.mjs','programme.mjs','programme-host.mjs','programme-app.mjs','programme-boot.mjs','programme-build.mjs'].map(n=>['/'+n,[n,'text/javascript; charset=utf-8']]),
  ['/desk.css',['desk.css','text/css; charset=utf-8']],
  ...['framework-v1.json','framework-v2.json'].map(n=>['/examples/'+n,['../examples/'+n,'application/json; charset=utf-8']])
 ]);
