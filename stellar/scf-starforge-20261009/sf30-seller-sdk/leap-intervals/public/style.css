@@ -1026,3 +1026,5 @@ table {
 
 }
 
+
+.table-scroll td>details{min-width:240px}
