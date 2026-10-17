@@ -1,0 +1,21 @@
+#!/usr/bin/env node
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import ledger from './provider_delivery_ledger.cjs';
+const [priorFile,inputFile,outputDir]=process.argv.slice(2);
+if(process.argv.length!==5)throw Error('Usage: node tools/reconcile_provider_delivery.mjs PRIOR_LEDGER_JSON_OR_DASH OBSERVATIONS_JSON NEW_OUTPUT_DIRECTORY');
+const input=JSON.parse(await fs.readFile(inputFile,'utf8'));
+const prior=priorFile==='-'?ledger.empty():JSON.parse(await fs.readFile(priorFile,'utf8'));
+const result=ledger.applyObservations(prior,input.observations);
+const summaries=(input.windows||[]).map(w=>ledger.windowSummary(result.state,w));
+const output=path.resolve(outputDir);
+const sourcePaths=[inputFile,...(priorFile==='-'?[]:[priorFile])].map(f=>path.resolve(f));
+if(sourcePaths.some(p=>p===output||p.startsWith(output+path.sep)))throw Error('Output cannot contain the original input files');
+await fs.mkdir(output,{recursive:false});
+const write=(name,value)=>fs.writeFile(path.join(output,name),JSON.stringify(value,null,2)+'\n',{flag:'wx'});
+await write('ledger.json',result.state);
+await write('delivery-status.json',{records:result.records,unresolved:result.unresolved});
+await write('quota-summary.json',summaries);
+await fs.copyFile(inputFile,path.join(output,'observations-input.json'));
+if(priorFile!=='-')await fs.copyFile(priorFile,path.join(output,'previous-ledger.json'));
+console.log(JSON.stringify({output,confirmed_sends:result.state.sends.length,notifications:result.state.notifications.length,unresolved:result.unresolved.length,windows:summaries.map(({records,...s})=>s)},null,2));
