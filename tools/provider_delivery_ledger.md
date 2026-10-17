@@ -53,6 +53,8 @@ A send starts with status `sent`. Structured reports can mark it failed, delayed
 
 Notifications arriving before their original send is added remain in the ledger and are reconciled after later observations. Matching requires the same account, an unambiguous original RFC Message-ID, and the original or final recipient in the original send. This avoids assigning a bounce to another introduction in the same conversation.
 
+A narrowly defined Gmail provider notice is also recognized: its exact attachment-virus rejection text, mailer-daemon sender, account recipient and direct original message identity must all match. That notice marks the whole send failed and retains the literal provider diagnostic without inventing an SMTP status code. Other plain-text notices remain unresolved.
+
 The parser follows [RFC 3464](https://www.rfc-editor.org/rfc/rfc3464) recipient/action/status fields and unfolded diagnostic lines. Its input is retained provider output; it does not authenticate a third party notification independently. Missing structured bodies or unmatched originals remain visible for the existing case owner to resolve.
 
 Keep operational observations and generated ledgers with the existing private customer/source records. This repository contains only generic code and example fixtures. The library has no external dependencies and also executes in a JavaScript-only connected runtime.

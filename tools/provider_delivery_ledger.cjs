@@ -48,7 +48,13 @@ function dsnObservation(o){
   const final=rfcRecipient(f['final-recipient']),original=rfcRecipient(f['original-recipient']);
   reports.push({action,status,final_recipient:final,original_recipient:original,diagnostic:f['diagnostic-code']||'',last_attempt_at:f['last-attempt-date']||null,fields:f});
  }
- return {...e,account:mailbox(o.account),original_message_ids:originalIds,reports,structured:sections.length>0};
+ const account=mailbox(o.account),plain=[];walk(m.payload,p=>{if((p.mime_type??p.mimeType)==='text/plain'&&typeof p.body?.content==='string')plain.push(p.body.content);});
+ const rejection='One of your attachments contained a virus. Your message was not sent.';
+ let provider_rejection=null;
+ if(!sections.length&&plain.some(t=>t.trimStart().startsWith(rejection+'\r\n')||t.trimStart().startsWith(rejection+'\n')||t.trim()===rejection)){
+  try{if(mailbox(one(m.payload,'From'))==='mailer-daemon@googlemail.com'&&recipients(m.payload).includes(account)&&originalIds.length===1)provider_rejection={kind:'gmail-attachment-rejection',diagnostic:rejection};}catch{}
+ }
+ return {...e,account,original_message_ids:originalIds,reports,structured:sections.length>0,provider_rejection};
 }
 function empty(){return {schema:SCHEMA,sends:[],notifications:[]};}
 function stable(v){if(Array.isArray(v))return '['+v.map(stable).join(',')+']';if(v&&typeof v==='object')return '{'+Object.keys(v).sort().map(k=>JSON.stringify(k)+':'+stable(v[k])).join(',')+'}';return JSON.stringify(v);}
@@ -62,6 +68,12 @@ function reconcile(state){
  const records=state.sends.map(row=>({...row.value,key:row.key,observations:row.observations,status:'sent',outcomes:[]}));
  const unresolved=[];
  for(const row of state.notifications){const n=row.value;
+  if(n.provider_rejection){
+   const matches=records.filter(s=>s.account===n.account&&s.rfc_message_id&&n.original_message_ids.includes(s.rfc_message_id));
+   if(matches.length!==1||Date.parse(n.provider_at)<Date.parse(matches[0]?.sent_at)){unresolved.push({notification_key:row.key,reason:'provider-rejection-original-not-matched'});continue;}
+   for(const recipient of matches[0].recipients)matches[0].outcomes.push({action:'failed',status:null,final_recipient:recipient,original_recipient:recipient,diagnostic:n.provider_rejection.diagnostic,provider_notice_kind:n.provider_rejection.kind,notification_key:row.key,provider_at:n.provider_at,report_index:0,source_refs:row.observations.map(x=>x.source_ref)});
+   continue;
+  }
   if(!n.structured||!n.reports.length){unresolved.push({notification_key:row.key,reason:'no-readable-structured-report'});continue;}
   for(let i=0;i<n.reports.length;i++){const report=n.reports[i],candidates=records.filter(s=>
    s.account===n.account&&s.rfc_message_id&&n.original_message_ids.includes(s.rfc_message_id)&&
