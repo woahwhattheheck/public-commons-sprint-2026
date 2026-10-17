@@ -80,12 +80,12 @@ function reconcile(state){
    [report.original_recipient,report.final_recipient].some(r=>r&&s.recipients.includes(r)));
    if(candidates.length!==1){unresolved.push({notification_key:row.key,report_index:i,reason:candidates.length?'ambiguous-original':'original-not-yet-matched'});continue;}
    const s=candidates[0];if(Date.parse(n.provider_at)<Date.parse(s.sent_at)){unresolved.push({notification_key:row.key,report_index:i,reason:'notification-precedes-send'});continue;}
-   s.outcomes.push({...report,notification_key:row.key,provider_at:n.provider_at,report_index:i,source_refs:row.observations.map(x=>x.source_ref)});
+   s.outcomes.push({...report,matched_recipient:s.recipients.includes(report.original_recipient)?report.original_recipient:report.final_recipient,notification_key:row.key,provider_at:n.provider_at,report_index:i,source_refs:row.observations.map(x=>x.source_ref)});
   }
  }
  for(const s of records){
   s.recipient_status=s.recipients.map(recipient=>{
-   const events=s.outcomes.filter(x=>[x.original_recipient,x.final_recipient].includes(recipient)).sort((a,b)=>a.provider_at.localeCompare(b.provider_at)||a.notification_key.localeCompare(b.notification_key)||a.report_index-b.report_index);
+   const events=s.outcomes.filter(x=>(x.matched_recipient||x.original_recipient||x.final_recipient)===recipient).sort((a,b)=>a.provider_at.localeCompare(b.provider_at)||a.notification_key.localeCompare(b.notification_key)||a.report_index-b.report_index);
    const terminal=new Set(events.filter(x=>['failed','delivered'].includes(x.action)).map(x=>x.action));
    const last=events[events.length-1],status=terminal.size>1?'conflict':terminal.has('failed')?'failed':terminal.has('delivered')?'delivered':last?.action||'sent';
    return {recipient,status};
